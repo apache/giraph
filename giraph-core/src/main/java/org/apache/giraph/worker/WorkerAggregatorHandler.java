@@ -113,7 +113,8 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
    * @param name Name of the reducer
    * @param valueToReduce Partial value to reduce
    */
-  protected void reducePartial(String name, Writable valueToReduce) {
+  @Override
+  public void reducePartial(String name, Writable valueToReduce) {
     Reducer<Object, Writable> reducer = reducerMap.get(name);
     if (reducer != null) {
       progressable.progress();
@@ -323,6 +324,19 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
         reducer.reduceSingle(value);
       } else {
         throw new IllegalStateException("reduce: " +
+            AggregatorUtils.getUnregisteredAggregatorMessage(name,
+                threadReducerMap.size() != 0, conf));
+      }
+    }
+
+    @Override
+    public void reducePartial(String name, Writable value) {
+      Reducer<Object, Writable> reducer = threadReducerMap.get(name);
+      if (reducer != null) {
+        progressable.progress();
+        reducer.reducePartial(value);
+      } else {
+        throw new IllegalStateException("reducePartial: " +
             AggregatorUtils.getUnregisteredAggregatorMessage(name,
                 threadReducerMap.size() != 0, conf));
       }

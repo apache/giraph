@@ -54,6 +54,11 @@ public abstract class WorkerAggregatorDelegator<I extends WritableComparable,
   }
 
   @Override
+  public void reducePartial(String name, Writable value) {
+    workerGlobalCommUsage.reducePartial(name, value);
+  }
+
+  @Override
   public final <B extends Writable> B getBroadcast(String name) {
     return workerGlobalCommUsage.getBroadcast(name);
   }

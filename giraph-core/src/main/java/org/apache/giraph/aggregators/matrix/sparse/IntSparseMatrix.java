@@ -26,9 +26,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
  */
 public class IntSparseMatrix {
   /** The number of rows in the matrix */
-  private int numRows;
+  private final int numRows;
   /** The rows of the matrix */
-  private Int2ObjectOpenHashMap<IntSparseVector> rows;
+  private final Int2ObjectOpenHashMap<IntSparseVector> rows;
 
   /**
    * Create a new matrix with the given number of rows.
@@ -88,7 +88,7 @@ public class IntSparseMatrix {
    * @param i the row number
    * @return the row of the matrix
    */
-  IntSparseVector getRow(int i) {
+  public IntSparseVector getRow(int i) {
     return rows.get(i);
   }
 
@@ -98,7 +98,7 @@ public class IntSparseMatrix {
    * @param i the row
    * @param vec the vector to set as the row
    */
-  void setRow(int i, IntSparseVector vec) {
+  public void setRow(int i, IntSparseVector vec) {
     rows.put(i, vec);
   }
 }

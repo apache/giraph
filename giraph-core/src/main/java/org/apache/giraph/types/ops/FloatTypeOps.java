@@ -21,7 +21,8 @@ import org.apache.giraph.types.ops.collections.BasicArrayList.BasicFloatArrayLis
 import org.apache.hadoop.io.FloatWritable;
 
 /** TypeOps implementation for working with FloatWritable type */
-public enum FloatTypeOps implements PrimitiveTypeOps<FloatWritable> {
+public enum FloatTypeOps
+    implements PrimitiveTypeOps<FloatWritable>, NumericTypeOps<FloatWritable> {
   /** Singleton instance */
   INSTANCE();
 
@@ -48,5 +49,35 @@ public enum FloatTypeOps implements PrimitiveTypeOps<FloatWritable> {
   @Override
   public BasicFloatArrayList createArrayList(int capacity) {
     return new BasicFloatArrayList(capacity);
+  }
+
+  @Override
+  public FloatWritable createMinNegativeValue() {
+    return new FloatWritable(Float.NEGATIVE_INFINITY);
+  }
+
+  @Override
+  public FloatWritable createMaxPositiveValue() {
+    return new FloatWritable(Float.POSITIVE_INFINITY);
+  }
+
+  @Override
+  public FloatWritable createZero() {
+    return new FloatWritable(0);
+  }
+
+  @Override
+  public void plusInto(FloatWritable value, FloatWritable increment) {
+    value.set(value.get() + increment.get());
+  }
+
+  @Override
+  public void multiplyInto(FloatWritable value, FloatWritable multiplier) {
+    value.set(value.get() * multiplier.get());
+  }
+
+  @Override
+  public void negate(FloatWritable value) {
+    value.set(-value.get());
   }
 }

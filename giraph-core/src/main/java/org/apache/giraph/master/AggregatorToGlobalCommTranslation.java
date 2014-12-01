@@ -135,10 +135,10 @@ public class AggregatorToGlobalCommTranslation
       AggregatorReduceOperation<Writable> cleanReduceOp =
           entry.getValue().createReduceOp();
       if (entry.getValue().isPersistent()) {
-        globalComm.registerReduce(
+        globalComm.registerReducer(
             entry.getKey(), cleanReduceOp, value);
       } else {
-        globalComm.registerReduce(
+        globalComm.registerReducer(
             entry.getKey(), cleanReduceOp);
       }
       entry.getValue().setCurrentValue(null);

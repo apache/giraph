@@ -26,7 +26,8 @@ import org.apache.giraph.types.ops.collections.BasicSet.BasicLongOpenHashSet;
 import org.apache.hadoop.io.LongWritable;
 
 /** TypeOps implementation for working with LongWritable type */
-public enum LongTypeOps implements PrimitiveIdTypeOps<LongWritable> {
+public enum LongTypeOps
+    implements PrimitiveIdTypeOps<LongWritable>, NumericTypeOps<LongWritable> {
   /** Singleton instance */
   INSTANCE;
 
@@ -64,5 +65,35 @@ public enum LongTypeOps implements PrimitiveIdTypeOps<LongWritable> {
   public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
       int capacity) {
     return new BasicLong2ObjectOpenHashMap<>(capacity);
+  }
+
+  @Override
+  public LongWritable createMinNegativeValue() {
+    return new LongWritable(Long.MIN_VALUE);
+  }
+
+  @Override
+  public LongWritable createMaxPositiveValue() {
+    return new LongWritable(Long.MAX_VALUE);
+  }
+
+  @Override
+  public LongWritable createZero() {
+    return new LongWritable(0);
+  }
+
+  @Override
+  public void plusInto(LongWritable value, LongWritable increment) {
+    value.set(value.get() + increment.get());
+  }
+
+  @Override
+  public void multiplyInto(LongWritable value, LongWritable multiplier) {
+    value.set(value.get() * multiplier.get());
+  }
+
+  @Override
+  public void negate(LongWritable value) {
+    value.set(-value.get());
   }
 }

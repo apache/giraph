@@ -17,6 +17,11 @@
  */
 package org.apache.giraph.types.ops;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -145,5 +150,27 @@ public class TypeOpsUtils {
       throw new IllegalArgumentException(
           type + " not supported in TypeOps");
     }
+  }
+
+  /**
+   * Write TypeOps object into a stream
+   * @param typeOps type ops instance
+   * @param output output stream
+   * @param <T> Corresponding type
+   */
+  public static <T> void writeTypeOps(TypeOps<T> typeOps,
+      DataOutput output) throws IOException {
+    WritableUtils.writeEnum((Enum) typeOps, output);
+  }
+
+  /**
+   * Read TypeOps object from the stream
+   * @param input input stream
+   * @param <O> Concrete TypeOps type
+   * @return type ops instance
+   */
+  public static <O extends TypeOps<?>> O readTypeOps(
+      DataInput input) throws IOException {
+    return  (O) WritableUtils.readEnum(input);
   }
 }

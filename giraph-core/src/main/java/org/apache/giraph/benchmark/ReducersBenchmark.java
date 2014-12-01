@@ -126,15 +126,15 @@ public class ReducersBenchmark extends GiraphBenchmark {
         String mi = "m" + i;
         String pi = "p" + i;
 
-        registerReduce(wi, TestLongSumReducer.INSTANCE);
-        registerReduce(mi, new TestLongSumReducer());
+        registerReducer(wi, TestLongSumReducer.INSTANCE);
+        registerReducer(mi, new TestLongSumReducer());
 
         if (superstep > 0) {
           broadcast(wi, getReduced(wi));
           broadcast(mi, new LongWritable(-superstep * i));
           broadcast(pi, getReduced(pi));
 
-          registerReduce(pi, new TestLongSumReducer(),
+          registerReducer(pi, new TestLongSumReducer(),
               (LongWritable) getReduced(pi));
 
           assertEquals(superstep * (getTotalNumVertices() * i) + w,
@@ -142,7 +142,7 @@ public class ReducersBenchmark extends GiraphBenchmark {
           assertEquals(superstep * getTotalNumVertices() * i,
               ((LongWritable) getReduced(pi)).get());
         } else {
-          registerReduce(pi, new TestLongSumReducer());
+          registerReducer(pi, new TestLongSumReducer());
         }
       }
     }

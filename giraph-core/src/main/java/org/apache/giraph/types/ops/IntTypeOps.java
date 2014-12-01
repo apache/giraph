@@ -26,7 +26,8 @@ import org.apache.giraph.types.ops.collections.BasicSet.BasicIntOpenHashSet;
 import org.apache.hadoop.io.IntWritable;
 
 /** TypeOps implementation for working with IntWritable type */
-public enum IntTypeOps implements PrimitiveIdTypeOps<IntWritable> {
+public enum IntTypeOps
+    implements PrimitiveIdTypeOps<IntWritable>, NumericTypeOps<IntWritable> {
   /** Singleton instance */
   INSTANCE;
 
@@ -64,5 +65,35 @@ public enum IntTypeOps implements PrimitiveIdTypeOps<IntWritable> {
   public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
       int capacity) {
     return new BasicInt2ObjectOpenHashMap<>(capacity);
+  }
+
+  @Override
+  public IntWritable createMinNegativeValue() {
+    return new IntWritable(Integer.MIN_VALUE);
+  }
+
+  @Override
+  public IntWritable createMaxPositiveValue() {
+    return new IntWritable(Integer.MAX_VALUE);
+  }
+
+  @Override
+  public IntWritable createZero() {
+    return new IntWritable(0);
+  }
+
+  @Override
+  public void plusInto(IntWritable value, IntWritable increment) {
+    value.set(value.get() + increment.get());
+  }
+
+  @Override
+  public void multiplyInto(IntWritable value, IntWritable multiplier) {
+    value.set(value.get() * multiplier.get());
+  }
+
+  @Override
+  public void negate(IntWritable value) {
+    value.set(-value.get());
   }
 }

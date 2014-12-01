@@ -19,13 +19,12 @@
 package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.hadoop.io.Writable;
 
@@ -82,6 +81,15 @@ public class DoubleSparseVector implements Writable {
    */
   public void set(int i, double value) {
     entries.put(i, value);
+  }
+
+  /**
+   * Increment value for a given key
+   * @param key Key
+   * @param value Increment
+   */
+  public void add(int key, double value) {
+    entries.addTo(key, value);
   }
 
   /**

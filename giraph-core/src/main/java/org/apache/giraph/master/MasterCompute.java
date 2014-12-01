@@ -190,15 +190,15 @@ public abstract class MasterCompute
   }
 
   @Override
-  public final <S, R extends Writable> void registerReduce(
+  public final <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp) {
-    serviceMaster.getGlobalCommHandler().registerReduce(name, reduceOp);
+    serviceMaster.getGlobalCommHandler().registerReducer(name, reduceOp);
   }
 
   @Override
-  public final <S, R extends Writable> void registerReduce(
+  public final <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp, R globalInitialValue) {
-    serviceMaster.getGlobalCommHandler().registerReduce(
+    serviceMaster.getGlobalCommHandler().registerReducer(
         name, reduceOp, globalInitialValue);
   }
 

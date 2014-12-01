@@ -27,6 +27,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -857,4 +858,42 @@ public class WritableUtils {
     return res;
   }
 
+  /**
+   * Writes enum into a stream, by serializing class name and it's index
+   * @param enumValue Enum value
+   * @param output Output stream
+   * @param <T> Enum type
+   */
+  public static <T extends Enum<T>> void writeEnum(T enumValue,
+      DataOutput output) throws IOException {
+    writeClass(
+        enumValue != null ? enumValue.getDeclaringClass() : null, output);
+    if (enumValue != null) {
+      Varint.writeUnsignedVarInt(enumValue.ordinal(), output);
+    }
+  }
+
+  /**
+   * Reads enum from the stream, serialized by writeEnum
+   * @param input Input stream
+   * @param <T> Enum type
+   * @return Enum value
+   */
+  public static <T extends Enum<T>> T readEnum(DataInput input) throws
+      IOException {
+    Class<T> clazz = readClass(input);
+    if (clazz != null) {
+      int ordinal = Varint.readUnsignedVarInt(input);
+      try {
+        T[] values = (T[]) clazz.getDeclaredMethod("values").invoke(null);
+        return values[ordinal];
+      } catch (IllegalAccessException | IllegalArgumentException
+          | InvocationTargetException | NoSuchMethodException
+          | SecurityException e) {
+        throw new IOException("Cannot read enum", e);
+      }
+    } else {
+      return null;
+    }
+  }
 }

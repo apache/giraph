@@ -58,6 +58,17 @@ public abstract class BasicArrayList<T> implements Writable {
    */
   public abstract int size();
   /**
+   * Sets the size of this list.
+   *
+   * <P>
+   * If the specified size is smaller than the current size,
+   * the last elements are discarded.
+   * Otherwise, they are filled with 0/<code>null</code>/<code>false</code>.
+   *
+   * @param newSize the new size.
+   */
+  public abstract void size(int newSize);
+  /**
    * Capacity of currently allocated memory
    * @return capacity
    */
@@ -168,6 +179,11 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void size(int newSize) {
+      list.size(newSize);
+    }
+
+    @Override
     public int capacity() {
       return list.elements().length;
     }
@@ -247,6 +263,11 @@ public abstract class BasicArrayList<T> implements Writable {
     @Override
     public int size() {
       return list.size();
+    }
+
+    @Override
+    public void size(int newSize) {
+      list.size(newSize);
     }
 
     @Override
@@ -332,6 +353,11 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void size(int newSize) {
+      list.size(newSize);
+    }
+
+    @Override
     public int capacity() {
       return list.elements().length;
     }
@@ -411,6 +437,11 @@ public abstract class BasicArrayList<T> implements Writable {
     @Override
     public int size() {
       return list.size();
+    }
+
+    @Override
+    public void size(int newSize) {
+      list.size(newSize);
     }
 
     @Override
@@ -496,6 +527,11 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void size(int newSize) {
+      list.size(newSize);
+    }
+
+    @Override
     public int capacity() {
       return list.elements().length;
     }
@@ -575,6 +611,11 @@ public abstract class BasicArrayList<T> implements Writable {
     @Override
     public int size() {
       return list.size();
+    }
+
+    @Override
+    public void size(int newSize) {
+      list.size(newSize);
     }
 
     @Override

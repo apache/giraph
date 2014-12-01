@@ -21,7 +21,9 @@ import org.apache.giraph.types.ops.collections.BasicArrayList.BasicDoubleArrayLi
 import org.apache.hadoop.io.DoubleWritable;
 
 /** TypeOps implementation for working with DoubleWritable type */
-public enum DoubleTypeOps implements PrimitiveTypeOps<DoubleWritable> {
+public enum DoubleTypeOps
+    implements PrimitiveTypeOps<DoubleWritable>,
+    NumericTypeOps<DoubleWritable> {
   /** Singleton instance */
   INSTANCE();
 
@@ -48,5 +50,35 @@ public enum DoubleTypeOps implements PrimitiveTypeOps<DoubleWritable> {
   @Override
   public BasicDoubleArrayList createArrayList(int capacity) {
     return new BasicDoubleArrayList(capacity);
+  }
+
+  @Override
+  public DoubleWritable createMinNegativeValue() {
+    return new DoubleWritable(Double.NEGATIVE_INFINITY);
+  }
+
+  @Override
+  public DoubleWritable createMaxPositiveValue() {
+    return new DoubleWritable(Double.POSITIVE_INFINITY);
+  }
+
+  @Override
+  public DoubleWritable createZero() {
+    return new DoubleWritable(0);
+  }
+
+  @Override
+  public void plusInto(DoubleWritable value, DoubleWritable increment) {
+    value.set(value.get() + increment.get());
+  }
+
+  @Override
+  public void multiplyInto(DoubleWritable value, DoubleWritable multiplier) {
+    value.set(value.get() * multiplier.get());
+  }
+
+  @Override
+  public void negate(DoubleWritable value) {
+    value.set(-value.get());
   }
 }

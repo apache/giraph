@@ -19,13 +19,12 @@
 package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.hadoop.io.Writable;
 
@@ -82,6 +81,15 @@ public class LongSparseVector implements Writable {
    */
   public void set(int i, long value) {
     entries.put(i, value);
+  }
+
+  /**
+   * Increment value for a given key
+   * @param key Key
+   * @param value Increment
+   */
+  public void add(int key, long value) {
+    entries.addTo(key, value);
   }
 
   /**

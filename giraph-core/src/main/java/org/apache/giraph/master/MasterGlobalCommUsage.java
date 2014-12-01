@@ -33,7 +33,7 @@ public interface MasterGlobalCommUsage {
    * @param <S> Single value type
    * @param <R> Reduced value type
    */
-  <S, R extends Writable> void registerReduce(
+  <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp);
 
   /**
@@ -48,7 +48,7 @@ public interface MasterGlobalCommUsage {
    * @param <S> Single value type
    * @param <R> Reduced value type
    */
-  <S, R extends Writable> void registerReduce(
+  <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp, R globalInitialValue);
 
   /**

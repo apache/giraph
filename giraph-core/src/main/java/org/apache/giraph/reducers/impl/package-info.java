@@ -15,25 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.worker;
-
-import org.apache.hadoop.io.Writable;
-
 /**
- * Methods on worker can provide values to reduce through this interface
+ * Package of Giraph reducers.
  */
-public interface WorkerReduceUsage {
-  /**
-   * Reduce given value.
-   * @param name Name of the reducer
-   * @param value Single value to reduce
-   */
-  void reduce(String name, Object value);
-
-  /**
-   * Reduce given partial value.
-   * @param name Name of the reducer
-   * @param value Single value to reduce
-   */
-  void reducePartial(String name, Writable value);
-}
+package org.apache.giraph.reducers.impl;

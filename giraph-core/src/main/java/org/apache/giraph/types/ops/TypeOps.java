@@ -23,6 +23,9 @@ package org.apache.giraph.types.ops;
  * but still having efficient code.
  * For example, by reducing object allocation via reuse.
  *
+ * Use enum singleton pattern, having single enum value - INSTANCE.
+ * Serialization code depends on implementations being enums.
+ *
  * @param <T> Type
  */
 public interface TypeOps<T> {

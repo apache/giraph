@@ -80,13 +80,13 @@ public class MasterAggregatorHandler
   }
 
   @Override
-  public final <S, R extends Writable> void registerReduce(
+  public final <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp) {
-    registerReduce(name, reduceOp, reduceOp.createInitialValue());
+    registerReducer(name, reduceOp, reduceOp.createInitialValue());
   }
 
   @Override
-  public <S, R extends Writable> void registerReduce(
+  public <S, R extends Writable> void registerReducer(
       String name, ReduceOperation<S, R> reduceOp,
       R globalInitialValue) {
     if (reducerMap.containsKey(name)) {
