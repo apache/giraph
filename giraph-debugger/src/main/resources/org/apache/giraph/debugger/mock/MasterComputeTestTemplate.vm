@@ -1,0 +1,57 @@
+#if ($package)
+package $package;
+#end
+
+import static org.mockito.Mockito.*;
+
+import org.junit.Test;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.master.MasterAggregatorHandler;
+
+import $classUnderTestFullName;
+#if ($usedTypesByAggregators)
+#foreach ($type in $usedTypesByAggregators)
+import $type.Name;
+#end
+#end
+
+public class $className {
+
+  @Test
+  public void test() {
+    GiraphConfiguration config = new GiraphConfiguration();
+    config.setMasterComputeClass($classUnderTestName#[[.class]]#);
+    setupConfiguration(config);
+    ImmutableClassesGiraphConfiguration conf = new ImmutableClassesGiraphConfiguration<>(config);
+
+    $classUnderTestName classUnderTest = ($classUnderTestName) conf.createMasterCompute();
+
+    GraphState graphState = mock(GraphState.class);
+    when(graphState.getSuperstep()).thenReturn($superstepNo#[[l]]#);
+    when(graphState.getTotalNumVertices()).thenReturn($nVertices#[[l]]#);
+    when(graphState.getTotalNumEdges()).thenReturn($nEdges#[[l]]#);
+    classUnderTest.setGraphState(graphState);
+
+    MasterAggregatorHandler aggregatorHandler = mock(MasterAggregatorHandler.class);
+#foreach ($aggr in $aggregators)
+    when(aggregatorHandler.getAggregatedValue("$aggr.key")).thenReturn($helper.formatWritable($aggr.value));
+#end
+    CentralizedServiceMaster serviceMaster = mock(CentralizedServiceMaster.class);
+    when(serviceMaster.getAggregatorHandler()).thenReturn(aggregatorHandler);
+    classUnderTest.setMasterService(serviceMaster);
+
+    classUnderTest.compute();
+  }
+  
+  
+  #parse("ReadWritableFromStringTemplate.vm")
+
+  public void setupConfiguration(GiraphConfiguration config) {
+#foreach( $config in $configs )
+    config.set#evaluate($config.classStr)("$config.key", $helper.format($config.value));
+#end
+  }
+}

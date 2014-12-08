@@ -1,0 +1,41 @@
+#if ($package)
+package $package;
+#end
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.ReusableEdge;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.worker.WorkerAggregatorUsage;
+import org.junit.Before;
+import org.junit.Test;
+
+import $classUnderTestFullName;
+#if ($usedTypes)
+#foreach ($type in $usedTypes)
+import $type.Name;
+#end
+#end
+
+public class $className {
+
+  private ImmutableClassesGiraphConfiguration<$vertexIdType, $vertexValueType, $edgeValueType> conf;
+
+#parse("ComputeTestFuncTemplate.vm")
+
+
+#parse("ComputeSetUpFuncTemplate.vm")
+
+
+#parse("ReadWritableFromByteArrayTemplate.vm")
+
+}

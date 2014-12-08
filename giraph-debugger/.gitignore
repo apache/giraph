@@ -1,0 +1,8 @@
+# Maven stuffs
+/target
+
+# Eclipse files
+/.classpath
+/.project
+/.settings
+/.checkstyle

@@ -1,0 +1,14 @@
+  @Before
+  public void setUp() throws Exception {
+    GiraphConfiguration config = new GiraphConfiguration();
+    config.setComputationClass($classUnderTestName#[[.class]]#);
+    GiraphConfiguration.VERTEX_ID_CLASS.set(config, $vertexIdType#[[.class]]#);
+    GiraphConfiguration.VERTEX_VALUE_CLASS.set(config, $vertexValueType#[[.class]]#);
+    GiraphConfiguration.EDGE_VALUE_CLASS.set(config, $edgeValueType#[[.class]]#);
+    GiraphConfiguration.INCOMING_MESSAGE_VALUE_CLASS.set(config, $inMsgType#[[.class]]#);
+    GiraphConfiguration.OUTGOING_MESSAGE_VALUE_CLASS.set(config, $outMsgType#[[.class]]#);
+#foreach( $config in $configs )
+    config.set#evaluate($config.classStr)("$config.key", $helper.format($config.value));
+#end
+    conf = new ImmutableClassesGiraphConfiguration<>(config);
+  }

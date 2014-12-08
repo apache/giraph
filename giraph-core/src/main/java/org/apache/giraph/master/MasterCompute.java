@@ -252,15 +252,15 @@ public abstract class MasterCompute
     serviceMaster.getJobProgressTracker().logInfo(line);
   }
 
-  final void setGraphState(GraphState graphState) {
+  public final void setGraphState(GraphState graphState) {
     this.graphState = graphState;
   }
 
-  final void setMasterService(CentralizedServiceMaster serviceMaster) {
+  public final void setMasterService(CentralizedServiceMaster serviceMaster) {
     this.serviceMaster = serviceMaster;
   }
 
-  final void setSuperstepClasses(SuperstepClasses superstepClasses) {
+  public final void setSuperstepClasses(SuperstepClasses superstepClasses) {
     this.superstepClasses = superstepClasses;
   }
 }
