@@ -1203,4 +1203,25 @@ public abstract class BspService<I extends WritableComparable,
   }
 
 
+  /**
+   * For every worker this method returns unique number
+   * between 0 and N, where N is the total number of workers.
+   * This number stays the same throughout the computation.
+   * TaskID may be different from this number and task ID
+   * is not necessarily continuous
+   * @param workerInfo worker info object
+   * @return worker number
+   */
+  protected int getWorkerId(WorkerInfo workerInfo) {
+    return getWorkerInfoList().indexOf(workerInfo);
+  }
+
+  /**
+   * Returns worker info corresponding to specified worker id.
+   * @param id unique worker id
+   * @return WorkerInfo
+   */
+  protected WorkerInfo getWorkerInfoById(int id) {
+    return getWorkerInfoList().get(id);
+  }
 }

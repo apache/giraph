@@ -22,8 +22,6 @@ import static org.apache.giraph.conf.GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT;
 import static org.apache.giraph.conf.GiraphConstants.KEEP_ZOOKEEPER_DATA;
 import static org.apache.giraph.conf.GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT;
 import static org.apache.giraph.conf.GiraphConstants.USE_INPUT_SPLIT_LOCALITY;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -413,9 +411,14 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     for (String workerInfoPath : workerInfoPathList) {
       WorkerInfo workerInfo = new WorkerInfo();
-      WritableUtils.readFieldsFromZnode(
-          getZkExt(), workerInfoPath, true, null, workerInfo);
-      workerInfoList.add(workerInfo);
+      try {
+        WritableUtils.readFieldsFromZnode(
+            getZkExt(), workerInfoPath, true, null, workerInfo);
+        workerInfoList.add(workerInfo);
+      } catch (IllegalStateException e) {
+        LOG.warn("Can't get info from worker, did it die in between? " +
+            "workerInfoPath=" + workerInfoPath, e);
+      }
     }
     return workerInfoList;
   }
@@ -785,11 +788,6 @@ public class BspServiceMaster<I extends WritableComparable,
     getConfiguration().updateSuperstepClasses(superstepClasses);
     int prefixFileCount = finalizedStream.readInt();
 
-
-    Int2ObjectMap<WorkerInfo> workersMap = new Int2ObjectOpenHashMap<>();
-    for (WorkerInfo worker : chosenWorkerInfoList) {
-      workersMap.put(worker.getTaskId(), worker);
-    }
     String checkpointFile =
         finalizedStream.readUTF();
     for (int i = 0; i < prefixFileCount; ++i) {
@@ -798,7 +796,7 @@ public class BspServiceMaster<I extends WritableComparable,
       DataInputStream metadataStream = fs.open(new Path(checkpointFile +
           "." + mrTaskId + CheckpointingUtils.CHECKPOINT_METADATA_POSTFIX));
       long partitions = metadataStream.readInt();
-      WorkerInfo worker = workersMap.get(mrTaskId);
+      WorkerInfo worker = getWorkerInfoById(mrTaskId);
       for (long p = 0; p < partitions; ++p) {
         int partitionId = metadataStream.readInt();
         PartitionOwner partitionOwner = new BasicPartitionOwner(partitionId,
@@ -1107,7 +1105,7 @@ public class BspServiceMaster<I extends WritableComparable,
     finalizedOutputStream.writeInt(chosenWorkerInfoList.size());
     finalizedOutputStream.writeUTF(getCheckpointBasePath(superstep));
     for (WorkerInfo chosenWorkerInfo : chosenWorkerInfoList) {
-      finalizedOutputStream.writeInt(chosenWorkerInfo.getTaskId());
+      finalizedOutputStream.writeInt(getWorkerId(chosenWorkerInfo));
     }
     globalCommHandler.write(finalizedOutputStream);
     aggregatorTranslation.write(finalizedOutputStream);

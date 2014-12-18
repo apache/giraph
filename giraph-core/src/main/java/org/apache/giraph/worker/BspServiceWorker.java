@@ -1462,8 +1462,8 @@ public class BspServiceWorker<I extends WritableComparable,
    * @throws IOException
    */
   private Path createCheckpointFilePathSafe(String name) throws IOException {
-    Path validFilePath = new Path(getCheckpointBasePath(getSuperstep()) + "." +
-        getTaskPartition() + name);
+    Path validFilePath = new Path(getCheckpointBasePath(getSuperstep()) + '.' +
+        getWorkerId(workerInfo) + name);
     // Remove these files if they already exist (shouldn't though, unless
     // of previous failure of this worker)
     if (getFs().delete(validFilePath, false)) {
@@ -1481,8 +1481,8 @@ public class BspServiceWorker<I extends WritableComparable,
    * @return fill file path to checkpoint file
    */
   private Path getSavedCheckpoint(long superstep, String name) {
-    return new Path(getSavedCheckpointBasePath(superstep) + "." +
-        getTaskPartition() + name);
+    return new Path(getSavedCheckpointBasePath(superstep) + '.' +
+        getWorkerId(workerInfo) + name);
   }
 
   /**

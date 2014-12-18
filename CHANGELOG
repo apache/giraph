@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  
+  GIRAPH-972: Race condition in checkpointing (edunov)
+
   GIRAPH-905: Giraph Debugger (netj via edunov)
 
   GIRAPH-966: Add a way to ignore some thread exceptions (majakabiljo)
