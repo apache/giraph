@@ -26,6 +26,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.VertexIdEdgeIterator;
 import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
@@ -244,6 +245,9 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
                     for (Edge<I, E> edge : outEdges) {
                       vertex.addEdge(edge);
                     }
+                  }
+                  if (vertex instanceof Trimmable) {
+                    ((Trimmable) vertex).trim();
                   }
                   // Some Partition implementations (e.g. ByteArrayPartition)
                   // require us to put back the vertex after modifying it.
