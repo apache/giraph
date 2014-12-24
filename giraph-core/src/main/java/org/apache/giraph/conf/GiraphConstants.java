@@ -554,6 +554,15 @@ public interface GiraphConstants {
           "Msecs to wait before retrying a failed ZooKeeper op due to " +
           "connection loss.");
 
+  /**
+   * Should start zookeeper inside master java process or separately?
+   * In process by default.
+   */
+  BooleanConfOption ZOOKEEEPER_RUNS_IN_PROCESS = new BooleanConfOption(
+      "giraph.zkRunsInProcess",
+      true, "If true run zookeeper in master process, if false starts " +
+      "separate process for zookeeper");
+
   /** TCP backlog (defaults to number of workers) */
   IntConfOption TCP_BACKLOG = new IntConfOption("giraph.tcpBacklog", 1,
       "TCP backlog (defaults to number of workers)");

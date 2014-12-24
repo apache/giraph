@@ -956,7 +956,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (graphFunctions.isZooKeeper()) {
       // ZooKeeper may have had an issue
       if (zkManager != null) {
-        zkManager.logZooKeeperOutput(Level.WARN);
+        zkManager.cleanup();
       }
     }
   }

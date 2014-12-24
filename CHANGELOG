@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-975: In-proc ZooKeeper server with Master process (edunov)
+
   GIRAPH-977: useMessageSizeEncoding is broken (majakabiljo)
 
   GIRAPH-976: More command line logging (majakabiljo)
