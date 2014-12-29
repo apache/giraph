@@ -89,7 +89,7 @@ public class JobProgressTrackerService implements JobProgressTracker {
               !workerProgresses.isEmpty()) {
             // Combine and log
             CombinedWorkerProgress combinedWorkerProgress =
-                new CombinedWorkerProgress(workerProgresses.values());
+                new CombinedWorkerProgress(workerProgresses.values(), conf);
             if (LOG.isInfoEnabled()) {
               LOG.info(combinedWorkerProgress.toString());
             }

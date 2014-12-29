@@ -651,8 +651,8 @@ public class BspServiceMaster<I extends WritableComparable,
           "check input of " + inputFormat.getClass().getName() + "!");
       getContext().setStatus("Failing job due to 0 input splits, " +
           "check input of " + inputFormat.getClass().getName() + "!");
-      setJobStateFailed("Please check your input tables - partitions which " +
-          "you specified are missing. Failing the job!!!");
+      setJobStateFailed("******* PLEASE CHECK YOUR INPUT TABLES - PARTITIONS " +
+          "WHICH YOU SPECIFIED ARE MISSING. FAILING THE JOB *******");
     }
     if (minSplitCountHint > splitList.size()) {
       LOG.warn(logPrefix + ": Number of inputSplits=" +
@@ -1410,9 +1410,18 @@ public class BspServiceMaster<I extends WritableComparable,
                 workerInfoHealthyPath,
                 workerInfoList));
         if (!ignoreDeath && deadWorkers.size() > 0) {
-          LOG.error("barrierOnWorkerList: Missing chosen " +
-              "workers " + deadWorkers +
-              " on superstep " + getSuperstep());
+          String errorMessage = "******* WORKERS " + deadWorkers +
+              " FAILED *******";
+          // If checkpointing is not used, we should fail the job
+          if (!getConfiguration().useCheckpointing()) {
+            setJobStateFailed(errorMessage);
+          } else {
+            LOG.error("barrierOnWorkerList: Missing chosen " +
+                "workers " + deadWorkers +
+                " on superstep " + getSuperstep());
+            // Log worker failure to command line
+            getGraphTaskManager().getJobProgressTracker().logInfo(errorMessage);
+          }
           return false;
         }
       } catch (KeeperException e) {

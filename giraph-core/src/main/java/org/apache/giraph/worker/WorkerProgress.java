@@ -79,6 +79,8 @@ public class WorkerProgress {
 
   /** Free memory */
   protected double freeMemoryMB;
+  /** Fraction of memory that's free */
+  protected double freeMemoryFraction;
 
   /**
    * Get singleton instance of WorkerProgress.
@@ -216,7 +218,8 @@ public class WorkerProgress {
    * Update memory info
    */
   public synchronized void updateMemory() {
-    freeMemoryMB = MemoryUtils.freeMemoryMB();
+    freeMemoryMB = MemoryUtils.freePlusUnallocatedMemoryMB();
+    freeMemoryFraction = MemoryUtils.freeMemoryFraction();
   }
 
   @ThriftField(1)
@@ -312,6 +315,11 @@ public class WorkerProgress {
   @ThriftField(19)
   public synchronized double getFreeMemoryMB() {
     return freeMemoryMB;
+  }
+
+  @ThriftField(20)
+  public synchronized double getFreeMemoryFraction() {
+    return freeMemoryFraction;
   }
 
   public synchronized boolean isInputSuperstep() {
@@ -414,6 +422,11 @@ public class WorkerProgress {
   @ThriftField
   public void setFreeMemoryMB(double freeMemoryMB) {
     this.freeMemoryMB = freeMemoryMB;
+  }
+
+  @ThriftField
+  public void setFreeMemoryFraction(double freeMemoryFraction) {
+    this.freeMemoryFraction = freeMemoryFraction;
   }
 
   @ThriftField
