@@ -97,6 +97,47 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   }
 
   @Override
+  public void add(I vertexId, M message) {
+    if (!useMessageSizeEncoding) {
+      super.add(vertexId, message);
+    } else {
+      try {
+        vertexId.write(extendedDataOutput);
+        writeMessageWithSize(message);
+      } catch (IOException e) {
+        throw new IllegalStateException("add: IOException occurred");
+      }
+    }
+  }
+
+  @Override
+  public void add(byte[] serializedId, int idPos, M message) {
+    if (!useMessageSizeEncoding) {
+      super.add(serializedId, idPos, message);
+    } else {
+      try {
+        extendedDataOutput.write(serializedId, 0, idPos);
+        writeMessageWithSize(message);
+      } catch (IOException e) {
+        throw new IllegalStateException("add: IOException occurred");
+      }
+    }
+  }
+
+  /**
+   * Write a size of the message and message
+   *
+   * @param message Message to write
+   */
+  private void writeMessageWithSize(M message) throws IOException {
+    int pos = extendedDataOutput.getPos();
+    extendedDataOutput.skipBytes(4);
+    writeData(extendedDataOutput, message);
+    extendedDataOutput.writeInt(
+        pos, extendedDataOutput.getPos() - pos - 4);
+  }
+
+  @Override
   public ByteStructVertexIdMessageBytesIterator<I, M>
   getVertexIdMessageBytesIterator() {
     if (!useMessageSizeEncoding) {

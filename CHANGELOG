@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-977: useMessageSizeEncoding is broken (majakabiljo)
+
   GIRAPH-976: More command line logging (majakabiljo)
   
   GIRAPH-972: Race condition in checkpointing (edunov)
