@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-979: Add type of input to 'missing input' error message (majakabiljo)
+
   GIRAPH-975: In-proc ZooKeeper server with Master process (edunov)
 
   GIRAPH-977: useMessageSizeEncoding is broken (majakabiljo)

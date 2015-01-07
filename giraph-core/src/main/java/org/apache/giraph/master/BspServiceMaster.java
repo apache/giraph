@@ -652,7 +652,8 @@ public class BspServiceMaster<I extends WritableComparable,
       getContext().setStatus("Failing job due to 0 input splits, " +
           "check input of " + inputFormat.getClass().getName() + "!");
       setJobStateFailed("******* PLEASE CHECK YOUR INPUT TABLES - PARTITIONS " +
-          "WHICH YOU SPECIFIED ARE MISSING. FAILING THE JOB *******");
+          "WHICH YOU SPECIFIED ARE MISSING (for " + inputSplitType +
+          " input). FAILING THE JOB *******");
     }
     if (minSplitCountHint > splitList.size()) {
       LOG.warn(logPrefix + ": Number of inputSplits=" +
