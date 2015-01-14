@@ -15,17 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.bsp;
-
 /**
- * Enum represents possible checkpoint state.
+ * Package of generic bulk synchronous processing objects.
  */
-public enum CheckpointStatus {
-  /** Do nothing, no checkpoint required */
-  NONE,
-  /** Regular checkpoint */
-  CHECKPOINT,
-  /** Do checkpoint and then halt further computation */
-  CHECKPOINT_AND_HALT
-}
+package org.apache.giraph.bsp.checkpoints;

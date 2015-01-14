@@ -19,6 +19,8 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
+import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
+import org.apache.giraph.bsp.checkpoints.DefaultCheckpointSupportedChecker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
@@ -1159,13 +1161,26 @@ public interface GiraphConstants {
   /**
    * Compression algorithm to be used for checkpointing.
    * Defined by extension for hadoop compatibility reasons.
-  */
+   */
   StrConfOption CHECKPOINT_COMPRESSION_CODEC =
       new StrConfOption("giraph.checkpoint.compression.codec",
           ".deflate",
           "Defines compression algorithm we will be using for " +
               "storing checkpoint. Available options include but " +
               "not restricted to: .deflate, .gz, .bz2, .lzo");
+
+  /**
+   * Defines if and when checkpointing is supported by this job.
+   * By default checkpointing is always supported unless output during the
+   * computation is enabled.
+   */
+  ClassConfOption<CheckpointSupportedChecker> CHECKPOINT_SUPPORTED_CHECKER =
+      ClassConfOption.create("giraph.checkpoint.supported.checker",
+          DefaultCheckpointSupportedChecker.class,
+          CheckpointSupportedChecker.class,
+          "This is the way to specify if checkpointing is " +
+              "supported by the job");
+
 
   /** Number of threads to use in async message store, 0 means
    * we should not use async message processing */

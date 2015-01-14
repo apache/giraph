@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.graph;
 
-import org.apache.giraph.bsp.CheckpointStatus;
+import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
 
 /**
  * Immutable graph stats after the completion of a superstep

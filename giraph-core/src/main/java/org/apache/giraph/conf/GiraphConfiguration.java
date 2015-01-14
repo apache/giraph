@@ -19,6 +19,7 @@
 package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
+import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
@@ -1000,6 +1001,18 @@ public class GiraphConfiguration extends Configuration
    */
   public boolean useCheckpointing() {
     return getCheckpointFrequency() != 0;
+  }
+
+  /**
+   * Set runtime checkpoint support checker.
+   * The instance of this class will have to decide whether
+   * checkpointing is allowed on current superstep.
+   *
+   * @param clazz checkpoint supported checker class
+   */
+  public void setCheckpointSupportedChecker(
+      Class<? extends CheckpointSupportedChecker> clazz) {
+    GiraphConstants.CHECKPOINT_SUPPORTED_CHECKER.set(this, clazz);
   }
 
   /**

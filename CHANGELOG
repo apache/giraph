@@ -1,7 +1,9 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
-
+ 
+  GIRAPH-980 Way to disable checkpoints for particular job and on particular supersteps (edunov)
+ 
   GIRAPH-983 Remove checkpoint related error messages from console (edunov)
 
   GIRAPH-978 Giraph-Debugger Test Graphs not working (nishantgandhi99 via edunov)

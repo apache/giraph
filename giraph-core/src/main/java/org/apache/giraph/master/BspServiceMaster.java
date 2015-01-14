@@ -50,12 +50,14 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.bsp.CheckpointStatus;
+import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
 import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterServer;
 import org.apache.giraph.comm.netty.NettyMasterClient;
 import org.apache.giraph.comm.netty.NettyMasterServer;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.counters.GiraphStats;
@@ -89,6 +91,7 @@ import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReactiveJMapHistoDumper;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.zk.BspEvent;
@@ -193,6 +196,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private final int checkpointFrequency;
   /** Current checkpoint status */
   private CheckpointStatus checkpointStatus;
+  /** Checks if checkpointing supported */
+  private CheckpointSupportedChecker checkpointSupportedChecker;
 
   /**
    * Constructor for setting up the master.
@@ -231,6 +236,9 @@ public class BspServiceMaster<I extends WritableComparable,
 
     this.checkpointFrequency = conf.getCheckpointFrequency();
     this.checkpointStatus = CheckpointStatus.NONE;
+    this.checkpointSupportedChecker =
+        ReflectionUtils.newInstance(
+            GiraphConstants.CHECKPOINT_SUPPORTED_CHECKER.get(conf));
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
     GiraphStats.init(context);
@@ -1759,7 +1767,12 @@ public class BspServiceMaster<I extends WritableComparable,
     try {
       if (getZkExt().
           exists(basePath + FORCE_CHECKPOINT_USER_FLAG, false) != null) {
-        return CheckpointStatus.CHECKPOINT_AND_HALT;
+        if (isCheckpointingSupported(getConfiguration(), masterCompute)) {
+          return CheckpointStatus.CHECKPOINT_AND_HALT;
+        } else {
+          LOG.warn("Attempted to manually checkpoint the job that " +
+              "does not support checkpoints. Ignoring");
+        }
       }
     } catch (KeeperException e) {
       throw new IllegalStateException(
@@ -1779,10 +1792,28 @@ public class BspServiceMaster<I extends WritableComparable,
       return CheckpointStatus.NONE;
     }
     if (((superstep - firstCheckpoint) % checkpointFrequency) == 0) {
-      return CheckpointStatus.CHECKPOINT;
+      if (isCheckpointingSupported(getConfiguration(), masterCompute)) {
+        return CheckpointStatus.CHECKPOINT;
+      }
     }
     return CheckpointStatus.NONE;
   }
+
+  /**
+   * Returns false if job doesn't support checkpoints.
+   * Job may not support checkpointing if it does output during
+   * computation, uses static variables to keep data between supersteps,
+   * starts new threads etc.
+   * @param conf Immutable configuration of the job
+   * @param masterCompute instance of master compute
+   * @return true if it is safe to checkpoint the job
+   */
+  private boolean isCheckpointingSupported(
+      GiraphConfiguration conf, MasterCompute masterCompute) {
+    return checkpointSupportedChecker.isCheckpointSupported(
+        conf, masterCompute);
+  }
+
 
   /**
    * This doMasterCompute is only called
