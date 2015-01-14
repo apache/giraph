@@ -103,24 +103,26 @@ public class CheckpointingUtils {
    */
   public static long getLastCheckpointedSuperstep(
       FileSystem fs, String checkpointBasePath) throws IOException {
-    FileStatus[] fileStatusArray =
-        fs.listStatus(new Path(checkpointBasePath),
-            new FinalizedCheckpointPathFilter());
-    if (fileStatusArray == null) {
-      return -1;
-    }
-    long lastCheckpointedSuperstep = Long.MIN_VALUE;
-    for (FileStatus file : fileStatusArray) {
-      long superstep = getCheckpoint(file);
-      if (superstep > lastCheckpointedSuperstep) {
-        lastCheckpointedSuperstep = superstep;
+    Path cpPath = new Path(checkpointBasePath);
+    if (fs.exists(cpPath)) {
+      FileStatus[] fileStatusArray =
+          fs.listStatus(cpPath, new FinalizedCheckpointPathFilter());
+      if (fileStatusArray != null) {
+        long lastCheckpointedSuperstep = Long.MIN_VALUE;
+        for (FileStatus file : fileStatusArray) {
+          long superstep = getCheckpoint(file);
+          if (superstep > lastCheckpointedSuperstep) {
+            lastCheckpointedSuperstep = superstep;
+          }
+        }
+        if (LOG.isInfoEnabled()) {
+          LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
+              lastCheckpointedSuperstep);
+        }
+        return lastCheckpointedSuperstep;
       }
     }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
-          lastCheckpointedSuperstep);
-    }
-    return lastCheckpointedSuperstep;
+    return -1;
   }
 
   /**
