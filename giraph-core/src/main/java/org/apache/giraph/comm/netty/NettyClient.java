@@ -30,9 +30,16 @@ import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.BooleanConfOption;
+import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricNames;
+import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.utils.PipelineUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ThreadUtils;
@@ -43,6 +50,7 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
+import com.yammer.metrics.core.Counter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -84,17 +92,23 @@ import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 /**
  * Netty client for sending requests.  Thread-safe.
  */
-public class NettyClient {
+public class NettyClient implements ResetSuperstepMetricsObserver {
   /** Do we have a limit on number of open requests we can have */
-  public static final String LIMIT_NUMBER_OF_OPEN_REQUESTS =
-      "giraph.waitForRequestsConfirmation";
-  /** Default choice about having a limit on number of open requests */
-  public static final boolean LIMIT_NUMBER_OF_OPEN_REQUESTS_DEFAULT = false;
+  public static final BooleanConfOption LIMIT_NUMBER_OF_OPEN_REQUESTS =
+      new BooleanConfOption("giraph.waitForRequestsConfirmation", false,
+          "Whether to have a limit on number of open requests or not");
   /** Maximum number of requests without confirmation we should have */
-  public static final String MAX_NUMBER_OF_OPEN_REQUESTS =
-      "giraph.maxNumberOfOpenRequests";
-  /** Default maximum number of requests without confirmation */
-  public static final int MAX_NUMBER_OF_OPEN_REQUESTS_DEFAULT = 10000;
+  public static final IntConfOption MAX_NUMBER_OF_OPEN_REQUESTS =
+      new IntConfOption("giraph.maxNumberOfOpenRequests", 10000,
+          "Maximum number of requests without confirmation we should have");
+  /**
+   * After pausing a thread due to too large number of open requests,
+   * which fraction of these requests need to be closed before we continue
+   */
+  public static final FloatConfOption
+  FRACTION_OF_REQUESTS_TO_CLOSE_BEFORE_PROCEEDING =
+      new FloatConfOption("giraph.fractionOfRequestsToCloseBeforeProceeding",
+          0.2f, "Fraction of requsts to close before proceeding");
   /** Maximum number of requests to list (for debugging) */
   public static final int MAX_REQUESTS_TO_LIST = 10;
   /**
@@ -147,6 +161,11 @@ public class NettyClient {
   private final boolean limitNumberOfOpenRequests;
   /** Maximum number of requests without confirmation we can have */
   private final int maxNumberOfOpenRequests;
+  /**
+   * Maximum number of requests that can be open after the pause in order to
+   * proceed
+   */
+  private final int numberOfRequestsToProceed;
   /** Maximum number of connection failures */
   private final int maxConnectionFailures;
   /** Maximum number of milliseconds for a request */
@@ -181,6 +200,8 @@ public class NettyClient {
    */
   private final LogOnErrorChannelFutureListener logErrorListener =
       new LogOnErrorChannelFutureListener();
+  /** Counter for time spent waiting on too many open requests */
+  private Counter timeWaitingOnOpenRequests;
 
   /**
    * Only constructor
@@ -201,33 +222,31 @@ public class NettyClient {
     sendBufferSize = CLIENT_SEND_BUFFER_SIZE.get(conf);
     receiveBufferSize = CLIENT_RECEIVE_BUFFER_SIZE.get(conf);
 
-    limitNumberOfOpenRequests = conf.getBoolean(
-        LIMIT_NUMBER_OF_OPEN_REQUESTS,
-        LIMIT_NUMBER_OF_OPEN_REQUESTS_DEFAULT);
+    limitNumberOfOpenRequests = LIMIT_NUMBER_OF_OPEN_REQUESTS.get(conf);
     if (limitNumberOfOpenRequests) {
-      maxNumberOfOpenRequests = conf.getInt(
-          MAX_NUMBER_OF_OPEN_REQUESTS,
-          MAX_NUMBER_OF_OPEN_REQUESTS_DEFAULT);
+      maxNumberOfOpenRequests = MAX_NUMBER_OF_OPEN_REQUESTS.get(conf);
+      numberOfRequestsToProceed = (int) (maxNumberOfOpenRequests *
+          (1 - FRACTION_OF_REQUESTS_TO_CLOSE_BEFORE_PROCEEDING.get(conf)));
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyClient: Limit number of open requests to " +
-            maxNumberOfOpenRequests);
+            maxNumberOfOpenRequests + " and proceed when <= " +
+            numberOfRequestsToProceed);
       }
     } else {
       maxNumberOfOpenRequests = -1;
+      numberOfRequestsToProceed = 0;
     }
 
     maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
-
     maxConnectionFailures = NETTY_MAX_CONNECTION_FAILURES.get(conf);
-
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
-
     maxPoolSize = GiraphConstants.NETTY_CLIENT_THREADS.get(conf);
-
     maxResolveAddressAttempts = MAX_RESOLVE_ADDRESS_ATTEMPTS.get(conf);
 
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
+
+    GiraphMetrics.get().addSuperstepResetObserver(this);
 
     handlerToUseExecutionGroup =
         NETTY_CLIENT_EXECUTION_AFTER_HANDLER.get(conf);
@@ -352,6 +371,12 @@ public class NettyClient {
 /*end[HADOOP_NON_SECURE]*/
           }
         });
+  }
+
+  @Override
+  public void newSuperstep(SuperstepMetricsRegistry metrics) {
+    timeWaitingOnOpenRequests = metrics.getCounter(
+        MetricNames.TIME_SPENT_WAITING_ON_TOO_MANY_OPEN_REQUESTS_MS);
   }
 
   /**
@@ -673,7 +698,7 @@ public class NettyClient {
    * @param destTaskId Destination task id
    * @param request Request to send
    */
-  public void sendWritableRequest(Integer destTaskId,
+  public void sendWritableRequest(int destTaskId,
       WritableRequest request) {
     InetSocketAddress remoteServer = taskIdAddressMap.get(destTaskId);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
@@ -709,7 +734,9 @@ public class NettyClient {
 
     if (limitNumberOfOpenRequests &&
         clientRequestIdRequestInfoMap.size() > maxNumberOfOpenRequests) {
-      waitSomeRequests(maxNumberOfOpenRequests);
+      long startTime = System.currentTimeMillis();
+      waitSomeRequests(numberOfRequestsToProceed);
+      timeWaitingOnOpenRequests.inc(System.currentTimeMillis() - startTime);
     }
   }
 

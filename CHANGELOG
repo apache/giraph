@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-985: Add more metrics (majakabiljo)
+
   GIRAPH-986: Add more stuff to TypeOps (ikabiljo via majakabiljo)
 
   GIRAPH-962: TextAggregatorWriter with frequency AT_THE_END writes in every superstep (mju via majakabiljo)

@@ -61,6 +61,10 @@ public interface MetricNames {
   /** Counter for sending aggregators from worker owner to other workers */
   String SEND_AGGREGATORS_TO_WORKER_REQUESTS =
       "send-aggregators-to-worker-requests";
+
+  /** Counter for time spent waiting on too many open requests */
+  String TIME_SPENT_WAITING_ON_TOO_MANY_OPEN_REQUESTS_MS =
+      "time-spent-waiting-on-too-many-open-requests-ms";
   //////////////////////////////////////////////////////////////////////////////
   // End of Request counters per superstep
   //////////////////////////////////////////////////////////////////////////////
@@ -91,4 +95,7 @@ public interface MetricNames {
   String VERTICES_FILTERED = "vertices-filtered";
   /** Percent of vertices filtered out */
   String VERTICES_FILTERED_PCT = "vertices-filtered-pct";
+
+  /** Name of metric for compute times per partition */
+  String HISTOGRAM_COMPUTE_PER_PARTITION = "compute-per-partition-ms";
 }

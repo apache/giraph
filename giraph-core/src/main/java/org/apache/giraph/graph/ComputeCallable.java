@@ -45,6 +45,7 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Histogram;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -99,6 +100,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private final Counter messagesSentCounter;
   /** Message bytes sent */
   private final Counter messageBytesSentCounter;
+  /** Compute time per partition */
+  private final Histogram histogramComputePerPartition;
 
   /**
    * Constructor
@@ -127,6 +130,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     messagesSentCounter = metrics.getCounter(MetricNames.MESSAGES_SENT);
     messageBytesSentCounter =
       metrics.getCounter(MetricNames.MESSAGE_BYTES_SENT);
+    histogramComputePerPartition = metrics.getUniformHistogram(
+        MetricNames.HISTOGRAM_COMPUTE_PER_PARTITION);
   }
 
   @Override
@@ -150,6 +155,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
       Partition<I, V, E> partition =
           serviceWorker.getPartitionStore().getOrCreatePartition(partitionId);
+      long startTime = System.currentTimeMillis();
 
       Computation<I, V, E, M1, M2> computation =
           (Computation<I, V, E, M1, M2>) configuration.createComputation();
@@ -183,6 +189,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       }
 
       computation.postSuperstep();
+
+      histogramComputePerPartition.update(
+          System.currentTimeMillis() - startTime);
     }
 
     // Return VertexWriter after the usage

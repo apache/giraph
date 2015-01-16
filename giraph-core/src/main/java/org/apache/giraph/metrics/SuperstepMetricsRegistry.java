@@ -21,6 +21,7 @@ package org.apache.giraph.metrics;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.bsp.BspService;
 
+import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Metric;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.MetricPredicate;
@@ -111,6 +112,14 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
         return name.getType().equals(getType());
       }
     };
-    new ConsoleReporter(getInternalRegistry(), out, superstepFilter).run();
+    new ConsoleReporter(getInternalRegistry(), out, superstepFilter) {
+      @Override
+      public void processHistogram(MetricName name, Histogram histogram,
+          PrintStream stream) {
+        super.processHistogram(name, histogram, stream);
+        stream.printf("             count = %d%n", histogram.count());
+        stream.printf("               sum = %,2.2f%n", histogram.sum());
+      }
+    } .run();
   }
 }
