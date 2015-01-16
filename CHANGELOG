@@ -1,6 +1,7 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-967: (Strongly Connected Components) bug fix (mhan via majakabiljo)
  
   GIRAPH-980 Way to disable checkpoints for particular job and on particular supersteps (edunov)
  

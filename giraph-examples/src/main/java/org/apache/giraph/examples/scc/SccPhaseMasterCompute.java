@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.examples.scc;
 
-import org.apache.giraph.aggregators.BooleanOverwriteAggregator;
+import org.apache.giraph.aggregators.BooleanOrAggregator;
 import org.apache.giraph.aggregators.IntOverwriteAggregator;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.hadoop.io.BooleanWritable;
@@ -64,8 +64,8 @@ public class SccPhaseMasterCompute extends DefaultMasterCompute {
   public void initialize() throws InstantiationException,
       IllegalAccessException {
     registerPersistentAggregator(PHASE, IntOverwriteAggregator.class);
-    registerAggregator(NEW_MAXIMUM, BooleanOverwriteAggregator.class);
-    registerAggregator(CONVERGED, BooleanOverwriteAggregator.class);
+    registerAggregator(NEW_MAXIMUM, BooleanOrAggregator.class);
+    registerAggregator(CONVERGED, BooleanOrAggregator.class);
   }
 
   @Override
