@@ -114,7 +114,8 @@ public class TextAggregatorWriter
    */
   private boolean shouldWrite(long superstep) {
     return (frequency == AT_THE_END && superstep == LAST_SUPERSTEP) ||
-        (frequency != NEVER && superstep % frequency == 0);
+        (frequency != NEVER && frequency != AT_THE_END &&
+            superstep % frequency == 0);
   }
 
   @Override
