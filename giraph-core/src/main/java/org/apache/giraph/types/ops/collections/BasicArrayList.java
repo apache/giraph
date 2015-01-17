@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import org.apache.giraph.types.ops.BooleanTypeOps;
@@ -102,6 +103,25 @@ public abstract class BasicArrayList<T> implements Writable {
   public abstract void set(int index, T value);
 
   /**
+   * Sets given range of elements to a specified value.
+   *
+   * @param from From index (inclusive)
+   * @param to To index (exclusive)
+   * @param value Value
+   */
+  public abstract void fill(int from, int to, T value);
+
+  /**
+   * Returns underlying primitive collection:
+   * it.unimi.dsi.fastutil.{T}s.{T}ArrayList.
+   *
+   * Allows for direct access where primitive type is fixed.
+   *
+   * @return underlying primitive collection
+   */
+  public abstract Object unwrap();
+
+  /**
    * TypeOps for type of elements this object holds
    * @return TypeOps
    */
@@ -154,6 +174,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<BooleanWritable> {
     /** List */
     private final BooleanArrayList list;
+
+    /** Constructor */
+    public BasicBooleanArrayList() {
+      list = new BooleanArrayList();
+    }
 
     /**
      * Constructor
@@ -218,6 +243,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, BooleanWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public BooleanArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -229,7 +269,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readBoolean());
       }
@@ -241,6 +281,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<ByteWritable> {
     /** List */
     private final ByteArrayList list;
+
+    /** Constructor */
+    public BasicByteArrayList() {
+      list = new ByteArrayList();
+    }
 
     /**
      * Constructor
@@ -305,6 +350,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, ByteWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public ByteArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -316,7 +376,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readByte());
       }
@@ -328,6 +388,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<IntWritable> {
     /** List */
     private final IntArrayList list;
+
+    /** Constructor */
+    public BasicIntArrayList() {
+      list = new IntArrayList();
+    }
 
     /**
      * Constructor
@@ -392,6 +457,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, IntWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public IntArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -403,7 +483,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readInt());
       }
@@ -415,6 +495,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<LongWritable> {
     /** List */
     private final LongArrayList list;
+
+    /** Constructor */
+    public BasicLongArrayList() {
+      list = new LongArrayList();
+    }
 
     /**
      * Constructor
@@ -479,6 +564,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, LongWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public LongArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -490,7 +590,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readLong());
       }
@@ -502,6 +602,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<FloatWritable> {
     /** List */
     private final FloatArrayList list;
+
+    /** Constructor */
+    public BasicFloatArrayList() {
+      list = new FloatArrayList();
+    }
 
     /**
      * Constructor
@@ -566,6 +671,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, FloatWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public FloatArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -577,7 +697,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readFloat());
       }
@@ -589,6 +709,11 @@ public abstract class BasicArrayList<T> implements Writable {
       extends BasicArrayList<DoubleWritable> {
     /** List */
     private final DoubleArrayList list;
+
+    /** Constructor */
+    public BasicDoubleArrayList() {
+      list = new DoubleArrayList();
+    }
 
     /**
      * Constructor
@@ -653,6 +778,21 @@ public abstract class BasicArrayList<T> implements Writable {
     }
 
     @Override
+    public void fill(int from, int to, DoubleWritable value) {
+      if (to > list.size()) {
+        throw new ArrayIndexOutOfBoundsException(
+            "End index (" + to + ") is greater than array length (" +
+                list.size() + ")");
+      }
+      Arrays.fill(list.elements(), from, to, value.get());
+    }
+
+    @Override
+    public DoubleArrayList unwrap() {
+      return list;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -664,7 +804,7 @@ public abstract class BasicArrayList<T> implements Writable {
     public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       list.clear();
-      setCapacity(size);
+      list.ensureCapacity(size);
       for (int i = 0; i < size; ++i) {
         list.add(in.readDouble());
       }

@@ -27,6 +27,17 @@ package org.apache.giraph.types.ops;
  */
 public interface NumericTypeOps<T> extends TypeOps<T> {
   /**
+   * Value of zero
+   * @return New object with value of zero
+   */
+  T createZero();
+  /**
+   * Value of one
+   * @return New object with value of one
+   */
+  T createOne();
+
+  /**
    * Minimal negative value representable via current type.
    * Negative infinity for floating point numbers.
    * @return New object with min negative value
@@ -38,11 +49,7 @@ public interface NumericTypeOps<T> extends TypeOps<T> {
    * @return New object with max positive value
    */
   T createMaxPositiveValue();
-  /**
-   * Value of zero
-   * @return New object with value of zero
-   */
-  T createZero();
+
 
   /**
    * value+=adder

@@ -34,6 +34,12 @@ import org.apache.giraph.types.ops.collections.BasicArrayList;
 public interface PrimitiveTypeOps<T> extends TypeOps<T> {
   // primitive collections
   /**
+   * Create BasicArrayList of type T.
+   * @return BasicArrayList
+   */
+  BasicArrayList<T> createArrayList();
+
+  /**
    * Create BasicArrayList of type T, given capacity.
    * @param capacity Capacity
    * @return BasicArrayList

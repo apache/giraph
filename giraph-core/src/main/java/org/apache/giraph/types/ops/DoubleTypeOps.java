@@ -48,8 +48,23 @@ public enum DoubleTypeOps
   }
 
   @Override
+  public BasicDoubleArrayList createArrayList() {
+    return new BasicDoubleArrayList();
+  }
+
+  @Override
   public BasicDoubleArrayList createArrayList(int capacity) {
     return new BasicDoubleArrayList(capacity);
+  }
+
+  @Override
+  public DoubleWritable createZero() {
+    return new DoubleWritable(0);
+  }
+
+  @Override
+  public DoubleWritable createOne() {
+    return new DoubleWritable(1);
   }
 
   @Override
@@ -60,11 +75,6 @@ public enum DoubleTypeOps
   @Override
   public DoubleWritable createMaxPositiveValue() {
     return new DoubleWritable(Double.POSITIVE_INFINITY);
-  }
-
-  @Override
-  public DoubleWritable createZero() {
-    return new DoubleWritable(0);
   }
 
   @Override

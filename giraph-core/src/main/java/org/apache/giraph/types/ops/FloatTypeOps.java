@@ -47,8 +47,23 @@ public enum FloatTypeOps
   }
 
   @Override
+  public BasicFloatArrayList createArrayList() {
+    return new BasicFloatArrayList();
+  }
+
+  @Override
   public BasicFloatArrayList createArrayList(int capacity) {
     return new BasicFloatArrayList(capacity);
+  }
+
+  @Override
+  public FloatWritable createZero() {
+    return new FloatWritable(0);
+  }
+
+  @Override
+  public FloatWritable createOne() {
+    return new FloatWritable(1);
   }
 
   @Override
@@ -59,11 +74,6 @@ public enum FloatTypeOps
   @Override
   public FloatWritable createMaxPositiveValue() {
     return new FloatWritable(Float.POSITIVE_INFINITY);
-  }
-
-  @Override
-  public FloatWritable createZero() {
-    return new FloatWritable(0);
   }
 
   @Override

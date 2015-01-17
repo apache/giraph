@@ -47,6 +47,11 @@ public enum BooleanTypeOps implements PrimitiveTypeOps<BooleanWritable> {
   }
 
   @Override
+  public BasicBooleanArrayList createArrayList() {
+    return new BasicBooleanArrayList();
+  }
+
+  @Override
   public BasicBooleanArrayList createArrayList(int capacity) {
     return new BasicBooleanArrayList(capacity);
   }

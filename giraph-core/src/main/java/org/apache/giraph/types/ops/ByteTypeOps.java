@@ -21,7 +21,9 @@ import org.apache.giraph.types.ops.collections.BasicArrayList.BasicByteArrayList
 import org.apache.hadoop.io.ByteWritable;
 
 /** TypeOps implementation for working with ByteWritable type */
-public enum ByteTypeOps implements PrimitiveTypeOps<ByteWritable> {
+public enum ByteTypeOps
+    implements PrimitiveTypeOps<ByteWritable>,
+    NumericTypeOps<ByteWritable> {
   /** Singleton instance */
   INSTANCE();
 
@@ -46,7 +48,47 @@ public enum ByteTypeOps implements PrimitiveTypeOps<ByteWritable> {
   }
 
   @Override
+  public BasicByteArrayList createArrayList() {
+    return new BasicByteArrayList();
+  }
+
+  @Override
   public BasicByteArrayList createArrayList(int capacity) {
     return new BasicByteArrayList(capacity);
+  }
+
+  @Override
+  public ByteWritable createZero() {
+    return new ByteWritable((byte) 0);
+  }
+
+  @Override
+  public ByteWritable createOne() {
+    return new ByteWritable((byte) 1);
+  }
+
+  @Override
+  public ByteWritable createMinNegativeValue() {
+    return new ByteWritable(Byte.MIN_VALUE);
+  }
+
+  @Override
+  public ByteWritable createMaxPositiveValue() {
+    return new ByteWritable(Byte.MAX_VALUE);
+  }
+
+  @Override
+  public void plusInto(ByteWritable value, ByteWritable increment) {
+    value.set((byte) (value.get() + increment.get()));
+  }
+
+  @Override
+  public void multiplyInto(ByteWritable value, ByteWritable multiplier) {
+    value.set((byte) (value.get() * multiplier.get()));
+  }
+
+  @Override
+  public void negate(ByteWritable value) {
+    value.set((byte) -value.get());
   }
 }

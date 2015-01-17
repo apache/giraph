@@ -52,8 +52,8 @@ public enum IntTypeOps
   }
 
   @Override
-  public BasicSet<IntWritable> createOpenHashSet(int capacity) {
-    return new BasicIntOpenHashSet(capacity);
+  public BasicArrayList<IntWritable> createArrayList() {
+    return new BasicIntArrayList();
   }
 
   @Override
@@ -62,9 +62,24 @@ public enum IntTypeOps
   }
 
   @Override
+  public BasicSet<IntWritable> createOpenHashSet(int capacity) {
+    return new BasicIntOpenHashSet(capacity);
+  }
+
+  @Override
   public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
       int capacity) {
     return new BasicInt2ObjectOpenHashMap<>(capacity);
+  }
+
+  @Override
+  public IntWritable createZero() {
+    return new IntWritable(0);
+  }
+
+  @Override
+  public IntWritable createOne() {
+    return new IntWritable(1);
   }
 
   @Override
@@ -75,11 +90,6 @@ public enum IntTypeOps
   @Override
   public IntWritable createMaxPositiveValue() {
     return new IntWritable(Integer.MAX_VALUE);
-  }
-
-  @Override
-  public IntWritable createZero() {
-    return new IntWritable(0);
   }
 
   @Override

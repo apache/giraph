@@ -23,10 +23,12 @@ import java.io.IOException;
 
 import org.apache.giraph.reducers.OnSameReduceOperation;
 import org.apache.giraph.types.ops.DoubleTypeOps;
+import org.apache.giraph.types.ops.IntTypeOps;
 import org.apache.giraph.types.ops.LongTypeOps;
 import org.apache.giraph.types.ops.NumericTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -42,6 +44,9 @@ public class MaxReduce<T extends WritableComparable>
   /** LongWritable specialization */
   public static final MaxReduce<LongWritable> LONG =
       new MaxReduce<>(LongTypeOps.INSTANCE);
+  /** IntWritable specialization */
+  public static final MaxReduce<IntWritable> INT =
+      new MaxReduce<>(IntTypeOps.INSTANCE);
 
   /** Value type operations */
   private NumericTypeOps<T> typeOps;

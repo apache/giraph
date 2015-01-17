@@ -52,8 +52,8 @@ public enum LongTypeOps
   }
 
   @Override
-  public BasicSet<LongWritable> createOpenHashSet(int capacity) {
-    return new BasicLongOpenHashSet(capacity);
+  public BasicArrayList<LongWritable> createArrayList() {
+    return new BasicLongArrayList();
   }
 
   @Override
@@ -62,9 +62,24 @@ public enum LongTypeOps
   }
 
   @Override
+  public BasicSet<LongWritable> createOpenHashSet(int capacity) {
+    return new BasicLongOpenHashSet(capacity);
+  }
+
+  @Override
   public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
       int capacity) {
     return new BasicLong2ObjectOpenHashMap<>(capacity);
+  }
+
+  @Override
+  public LongWritable createZero() {
+    return new LongWritable(0);
+  }
+
+  @Override
+  public LongWritable createOne() {
+    return new LongWritable(1);
   }
 
   @Override
@@ -75,11 +90,6 @@ public enum LongTypeOps
   @Override
   public LongWritable createMaxPositiveValue() {
     return new LongWritable(Long.MAX_VALUE);
-  }
-
-  @Override
-  public LongWritable createZero() {
-    return new LongWritable(0);
   }
 
   @Override
