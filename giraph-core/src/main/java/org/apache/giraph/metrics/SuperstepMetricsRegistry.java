@@ -18,8 +18,10 @@
 
 package org.apache.giraph.metrics;
 
-import org.apache.giraph.conf.GiraphConfiguration;
+import java.io.PrintStream;
+
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.conf.GiraphConfiguration;
 
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Metric;
@@ -28,8 +30,6 @@ import com.yammer.metrics.core.MetricPredicate;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.ConsoleReporter;
 import com.yammer.metrics.reporting.JmxReporter;
-
-import java.io.PrintStream;
 
 /**
  * Wrapper around MetricsRegistry for per-superstep metrics.
@@ -116,9 +116,9 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
       @Override
       public void processHistogram(MetricName name, Histogram histogram,
           PrintStream stream) {
+        stream.printf("               sum = %,2.2f%n", histogram.sum());
         super.processHistogram(name, histogram, stream);
         stream.printf("             count = %d%n", histogram.count());
-        stream.printf("               sum = %,2.2f%n", histogram.sum());
       }
     } .run();
   }
