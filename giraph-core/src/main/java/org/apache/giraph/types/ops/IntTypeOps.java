@@ -62,6 +62,11 @@ public enum IntTypeOps
   }
 
   @Override
+  public BasicSet<IntWritable> createOpenHashSet() {
+    return new BasicIntOpenHashSet();
+  }
+
+  @Override
   public BasicSet<IntWritable> createOpenHashSet(int capacity) {
     return new BasicIntOpenHashSet(capacity);
   }

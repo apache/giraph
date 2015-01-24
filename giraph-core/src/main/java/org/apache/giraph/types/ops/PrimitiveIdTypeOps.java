@@ -37,6 +37,12 @@ public interface PrimitiveIdTypeOps<T> extends PrimitiveTypeOps<T> {
   // primitive collections
 
   /**
+   * Create BasicSet of type T.
+   * @return BasicSet
+   */
+  BasicSet<T> createOpenHashSet();
+
+  /**
    * Create BasicSet of type T, given capacity.
    * @param capacity Capacity
    * @return BasicSet

@@ -82,6 +82,11 @@ public interface BasicSet<T> extends Writable {
     /** Set */
     private final IntOpenHashSet set;
 
+    /** Constructor */
+    public BasicIntOpenHashSet() {
+      set = new IntOpenHashSet();
+    }
+
     /**
      * Constructor
      * @param capacity Capacity
@@ -145,6 +150,11 @@ public interface BasicSet<T> extends Writable {
       implements BasicSet<LongWritable> {
     /** Set */
     private final LongOpenHashSet set;
+
+    /** Constructor */
+    public BasicLongOpenHashSet() {
+      set = new LongOpenHashSet();
+    }
 
     /**
      * Constructor
