@@ -36,19 +36,25 @@ Hadoop versions for use with Giraph:
 
 Secure Hadoop versions:
 
-- Apache Hadoop 0.20.203.0
+- Apache Hadoop 1 (latest version: 1.2.1)
 
   This is the default version used by Giraph: if you do not specify a
-profile with the -P flag, maven will use this version. You may also
-explicitly specify it with "mvn -Phadoop_0.20.203 <goals>".
+  profile with the -P flag, maven will use this version. You may also
+  explicitly specify it with "mvn -Phadoop_1 <goals>".
 
-- Apache Hadoop 1.0.2
+- Apache Hadoop 2 (latest version: 2.5.1)
 
-  You may tell maven to use this version with "mvn -Phadoop_1.0 <goals>".
+  This is the latest version of Hadoop 2 (supporting YARN in addition
+  to MapReduce) Giraph could use. You may tell maven to use this version
+  with "mvn -Phadoop_2 <goals>".
 
 - Apache Hadoop 0.23.1
 
   You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
+
+- Apache Hadoop 0.20.203.0
+
+  You may tell maven to use this version with "mvn -Phadoop_0.20.203 <goals>".
 
 - Apache Hadoop Yarn with 2.2.0
 

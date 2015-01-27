@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-990. Current trunk will build for hadoop 1.2.0 not 0.20.203 as stated by documentation
+
   GIRAPH-992: Zookeeper logs have too many NodeExists (edunov)
 
   GIRAPH-991: Update version of swift (edunov)
