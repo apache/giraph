@@ -35,5 +35,5 @@ public interface WorkerReduceUsage {
    * @param name Name of the reducer
    * @param value Single value to reduce
    */
-  void reducePartial(String name, Writable value);
+  void reduceMerge(String name, Writable value);
 }

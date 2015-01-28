@@ -54,8 +54,8 @@ public abstract class WorkerAggregatorDelegator<I extends WritableComparable,
   }
 
   @Override
-  public void reducePartial(String name, Writable value) {
-    workerGlobalCommUsage.reducePartial(name, value);
+  public void reduceMerge(String name, Writable value) {
+    workerGlobalCommUsage.reduceMerge(name, value);
   }
 
   @Override

@@ -109,7 +109,7 @@ public class OwnerAggregatorServerData {
   public void reduce(String name, Writable value) {
     Reducer<Object, Writable> reducer = myReducerMap.get(name);
     synchronized (reducer) {
-      reducer.reducePartial(value);
+      reducer.reduceMerge(value);
     }
     progressable.progress();
   }

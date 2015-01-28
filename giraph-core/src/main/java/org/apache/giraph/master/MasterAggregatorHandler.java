@@ -243,7 +243,7 @@ public class MasterAggregatorHandler
       valueToReduce.readFields(reducedValuesInput);
 
       if (reducer.getCurrentValue() != null) {
-        reducer.reducePartial(valueToReduce);
+        reducer.reduceMerge(valueToReduce);
       } else {
         reducer.setCurrentValue(valueToReduce);
       }

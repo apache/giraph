@@ -21,7 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.reducers.OnSameReduceOperation;
+import org.apache.giraph.reducers.ReduceSameTypeOperation;
 import org.apache.hadoop.io.BooleanWritable;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.hadoop.io.BooleanWritable;
  * The default value when nothing is aggregated is true.
  *
  */
-public class AndReduce extends OnSameReduceOperation<BooleanWritable> {
+public class AndReduce extends ReduceSameTypeOperation<BooleanWritable> {
   /** Instance */
   public static final AndReduce INSTANCE = new AndReduce();
 
@@ -40,7 +40,7 @@ public class AndReduce extends OnSameReduceOperation<BooleanWritable> {
   }
 
   @Override
-  public BooleanWritable reduceSingle(
+  public BooleanWritable reduce(
       BooleanWritable curValue, BooleanWritable valueToReduce) {
     curValue.set(curValue.get() && valueToReduce.get());
     return curValue;

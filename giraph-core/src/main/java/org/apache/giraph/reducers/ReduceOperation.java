@@ -49,7 +49,7 @@ public interface ReduceOperation<S, R extends Writable> extends Writable {
    * @param valueToReduce Single value to be reduced
    * @return reduced value
    */
-  R reduceSingle(R curValue, S valueToReduce);
+  R reduce(R curValue, S valueToReduce);
   /**
    * Add partially reduced value to current partially reduced value.
    *
@@ -59,5 +59,5 @@ public interface ReduceOperation<S, R extends Writable> extends Writable {
    * @param valueToReduce Partial value to be reduced
    * @return reduced value
    */
-  R reducePartial(R curValue, R valueToReduce);
+  R reduceMerge(R curValue, R valueToReduce);
 }

@@ -21,7 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.reducers.OnSameReduceOperation;
+import org.apache.giraph.reducers.ReduceSameTypeOperation;
 import org.apache.giraph.types.ops.DoubleTypeOps;
 import org.apache.giraph.types.ops.IntTypeOps;
 import org.apache.giraph.types.ops.LongTypeOps;
@@ -37,7 +37,7 @@ import org.apache.hadoop.io.Writable;
  * @param <T> Value type
  */
 public class SumReduce<T extends Writable>
-    extends OnSameReduceOperation<T> {
+    extends ReduceSameTypeOperation<T> {
   /** DoubleWritable specialization */
   public static final SumReduce<DoubleWritable> DOUBLE =
       new SumReduce<>(DoubleTypeOps.INSTANCE);
@@ -69,7 +69,7 @@ public class SumReduce<T extends Writable>
   }
 
   @Override
-  public T reduceSingle(T curValue, T valueToReduce) {
+  public T reduce(T curValue, T valueToReduce) {
     typeOps.plusInto(curValue, valueToReduce);
     return curValue;
   }

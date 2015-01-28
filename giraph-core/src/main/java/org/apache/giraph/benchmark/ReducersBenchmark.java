@@ -31,7 +31,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.reducers.OnSameReduceOperation;
+import org.apache.giraph.reducers.ReduceSameTypeOperation;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
@@ -54,7 +54,7 @@ public class ReducersBenchmark extends GiraphBenchmark {
 
   /** LongSumReducer */
   public static class TestLongSumReducer
-      extends OnSameReduceOperation<LongWritable> {
+      extends ReduceSameTypeOperation<LongWritable> {
     /** Singleton */
     public static final TestLongSumReducer INSTANCE = new TestLongSumReducer();
 
@@ -64,7 +64,7 @@ public class ReducersBenchmark extends GiraphBenchmark {
     }
 
     @Override
-    public LongWritable reduceSingle(
+    public LongWritable reduce(
         LongWritable curValue, LongWritable valueToReduce) {
       curValue.set(curValue.get() + valueToReduce.get());
       return curValue;

@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.reducers.OnSameReduceOperation;
+import org.apache.giraph.reducers.ReduceSameTypeOperation;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
@@ -35,7 +35,7 @@ import org.apache.hadoop.io.Writable;
  * @param <A> Aggregation object type
  */
 public class AggregatorReduceOperation<A extends Writable>
-    extends OnSameReduceOperation<A> implements GiraphConfigurationSettable {
+    extends ReduceSameTypeOperation<A> implements GiraphConfigurationSettable {
   /** Aggregator class */
   private Class<? extends Aggregator<A>> aggregatorClass;
   /** Aggregator */
@@ -90,7 +90,7 @@ public class AggregatorReduceOperation<A extends Writable>
   }
 
   @Override
-  public synchronized A reduceSingle(A curValue, A valueToReduce) {
+  public synchronized A reduce(A curValue, A valueToReduce) {
     aggregator.setAggregatedValue(curValue);
     aggregator.aggregate(valueToReduce);
     A aggregated = aggregator.getAggregatedValue();

@@ -21,7 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.reducers.OnSameReduceOperation;
+import org.apache.giraph.reducers.ReduceSameTypeOperation;
 import org.apache.giraph.types.ops.DoubleTypeOps;
 import org.apache.giraph.types.ops.IntTypeOps;
 import org.apache.giraph.types.ops.LongTypeOps;
@@ -37,7 +37,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <T> Value type
  */
 public class MaxReduce<T extends WritableComparable>
-    extends OnSameReduceOperation<T> {
+    extends ReduceSameTypeOperation<T> {
   /** DoubleWritable specialization */
   public static final MaxReduce<DoubleWritable> DOUBLE =
       new MaxReduce<>(DoubleTypeOps.INSTANCE);
@@ -69,7 +69,7 @@ public class MaxReduce<T extends WritableComparable>
   }
 
   @Override
-  public T reduceSingle(T curValue, T valueToReduce) {
+  public T reduce(T curValue, T valueToReduce) {
     if (curValue.compareTo(valueToReduce) < 0) {
       typeOps.set(curValue, valueToReduce);
     }

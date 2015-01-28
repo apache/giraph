@@ -66,15 +66,15 @@ public class Reducer<S, R extends Writable> {
    * Reduce given value into current reduced value.
    * @param valueToReduce Single value to reduce
    */
-  public void reduceSingle(S valueToReduce) {
-    currentValue = reduceOp.reduceSingle(currentValue, valueToReduce);
+  public void reduce(S valueToReduce) {
+    currentValue = reduceOp.reduce(currentValue, valueToReduce);
   }
   /**
    * Reduce given partially reduced value into current reduced value.
    * @param valueToReduce Partial value to reduce
    */
-  public void reducePartial(R valueToReduce) {
-    currentValue = reduceOp.reducePartial(currentValue, valueToReduce);
+  public void reduceMerge(R valueToReduce) {
+    currentValue = reduceOp.reduceMerge(currentValue, valueToReduce);
   }
   /**
    * Return new initial reduced value.

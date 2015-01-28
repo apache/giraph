@@ -25,10 +25,10 @@ import org.apache.hadoop.io.Writable;
  *
  * @param <R> Reduced object type.
  */
-public abstract class OnSameReduceOperation<R extends Writable>
+public abstract class ReduceSameTypeOperation<R extends Writable>
     implements ReduceOperation<R, R> {
   @Override
-  public final R reducePartial(R curValue, R valueToReduce) {
-    return reduceSingle(curValue, valueToReduce);
+  public final R reduceMerge(R curValue, R valueToReduce) {
+    return reduce(curValue, valueToReduce);
   }
 }
