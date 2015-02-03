@@ -18,10 +18,9 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.utils.MemoryUtils;
-
 import com.facebook.swift.codec.ThriftField;
 import com.facebook.swift.codec.ThriftStruct;
+import org.apache.giraph.utils.MemoryUtils;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -31,56 +30,16 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 @ThriftStruct
-public class WorkerProgress {
+public final class WorkerProgress extends WorkerProgressStats {
   /** Singleton instance for everyone to use */
   private static final WorkerProgress INSTANCE = new WorkerProgress();
 
-  /** Superstep which worker is executing, Long.MAX_VALUE if it's output */
-  protected long currentSuperstep = -1;
-
-  /** How many vertices were loaded until now */
-  protected long verticesLoaded = 0;
-  /** How many vertex input splits were loaded until now */
-  protected int vertexInputSplitsLoaded = 0;
-  /** Whether worker finished loading vertices */
-  protected boolean loadingVerticesDone = false;
-  /** How many edges were loaded */
-  protected long edgesLoaded = 0;
-  /** How many edge input splits were loaded until now */
-  protected int edgeInputSplitsLoaded = 0;
-  /** Whether worker finished loading edges until now */
-  protected boolean loadingEdgesDone = false;
-
-  /** How many vertices are there to compute in current superstep */
-  protected long verticesToCompute = 0;
-  /** How many vertices were computed in current superstep until now */
-  protected long verticesComputed = 0;
-  /** How many partitions are there to compute in current superstep */
-  protected int partitionsToCompute = 0;
-  /** How many partitions were computed in current superstep  until now */
-  protected int partitionsComputed = 0;
-
-  /** Whether all compute supersteps are done */
-  protected boolean computationDone = false;
-
-  /** How many vertices are there to store */
-  protected long verticesToStore = 0;
-  /** How many vertices were stored until now */
-  protected long verticesStored = 0;
-  /** How many partitions are there to store */
-  protected int partitionsToStore = 0;
-  /** How many partitions were stored until now */
-  protected int partitionsStored = 0;
-  /** Whether worker finished storing data */
-  protected boolean storingDone = false;
-
-  /** Id of the mapper */
-  protected int taskId;
-
-  /** Free memory */
-  protected double freeMemoryMB;
-  /** Fraction of memory that's free */
-  protected double freeMemoryFraction;
+  /**
+   * Public constructor for thrift to create us.
+   * Please use WorkerProgress.get() to get the static instance.
+   */
+  public WorkerProgress() {
+  }
 
   /**
    * Get singleton instance of WorkerProgress.

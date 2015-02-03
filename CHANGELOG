@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-991: Update versions of guava and swift (edunov)
+
   GIRAPH-987: Improve naming for ReduceOperation (ikabiljo via majakabiljo)
 
   GIRAPH-986: Add no-arg constructor to BasicSet (ikabiljo via edunov)

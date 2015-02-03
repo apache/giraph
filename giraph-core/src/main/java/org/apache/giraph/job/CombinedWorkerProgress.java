@@ -18,22 +18,21 @@
 
 package org.apache.giraph.job;
 
+import com.google.common.collect.Iterables;
 import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.worker.WorkerProgress;
+import org.apache.giraph.worker.WorkerProgressStats;
 import org.apache.hadoop.conf.Configuration;
 
-import com.google.common.collect.Iterables;
-
-import java.text.DecimalFormat;
-
 import javax.annotation.concurrent.NotThreadSafe;
+import java.text.DecimalFormat;
 
 /**
  * Class which combines multiple workers' progresses to get overall
  * application progress
  */
 @NotThreadSafe
-public class CombinedWorkerProgress extends WorkerProgress {
+public class CombinedWorkerProgress extends WorkerProgressStats {
   /** Decimal format which rounds numbers to two decimal places */
   public static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
   /**
