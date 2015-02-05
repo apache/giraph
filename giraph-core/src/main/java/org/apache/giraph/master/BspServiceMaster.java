@@ -678,6 +678,17 @@ public class BspServiceMaster<I extends WritableComparable,
       LOG.info(logPrefix + ": Starting to write input split data " +
           "to zookeeper with " + inputSplitThreadCount + " threads");
     }
+    try {
+      getZkExt().createExt(inputSplitsPath, null,
+          Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT,
+          false);
+    } catch (KeeperException e) {
+      LOG.info(logPrefix + ": Node " +
+          inputSplitsPath + " keeper exception " + e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(logPrefix + ' ' + e.getMessage(), e);
+    }
     ExecutorService taskExecutor =
         Executors.newFixedThreadPool(inputSplitThreadCount);
     boolean writeLocations = USE_INPUT_SPLIT_LOCALITY.get(conf);

@@ -1,7 +1,9 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
-  GIRAPH-991: Update versions of guava and swift (edunov)
+  GIRAPH-992: Zookeeper logs have too many NodeExists (edunov)
+
+  GIRAPH-991: Update version of swift (edunov)
 
   GIRAPH-987: Improve naming for ReduceOperation (ikabiljo via majakabiljo)
 
