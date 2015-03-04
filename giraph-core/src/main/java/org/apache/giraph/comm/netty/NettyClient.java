@@ -159,6 +159,8 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
   private final int receiveBufferSize;
   /** Do we have a limit on number of open requests */
   private final boolean limitNumberOfOpenRequests;
+  /** Warn if request size is bigger than the buffer size by this factor */
+  private final float requestSizeWarningThreshold;
   /** Maximum number of requests without confirmation we can have */
   private final int maxNumberOfOpenRequests;
   /**
@@ -221,6 +223,8 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
     this.channelsPerServer = GiraphConstants.CHANNELS_PER_SERVER.get(conf);
     sendBufferSize = CLIENT_SEND_BUFFER_SIZE.get(conf);
     receiveBufferSize = CLIENT_RECEIVE_BUFFER_SIZE.get(conf);
+    this.requestSizeWarningThreshold =
+        GiraphConstants.REQUEST_SIZE_WARNING_THRESHOLD.get(conf);
 
     limitNumberOfOpenRequests = LIMIT_NUMBER_OF_OPEN_REQUESTS.get(conf);
     if (limitNumberOfOpenRequests) {
@@ -727,6 +731,12 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
           "have a previous request id = " + request.getRequestId() + ", " +
           "request info of " + oldRequestInfo);
       }
+    }
+    if (request.getSerializedSize() >
+      requestSizeWarningThreshold * sendBufferSize) {
+      LOG.warn("Creating large request of type " + request.getClass() +
+        ", size " + request.getSerializedSize() +
+        " bytes. Check netty buffer size.");
     }
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);

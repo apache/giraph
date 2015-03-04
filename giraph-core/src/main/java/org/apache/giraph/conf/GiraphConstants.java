@@ -732,6 +732,13 @@ public interface GiraphConstants {
           "request size is M, and a worker has P partitions, than its " +
           "initial partition buffer size will be (M / P) * (1 + A).");
 
+
+  /** Warn if msg request size exceeds default size by this factor */
+  FloatConfOption REQUEST_SIZE_WARNING_THRESHOLD = new FloatConfOption(
+      "giraph.msgRequestWarningThreshold", 2.0f,
+      "If request sizes are bigger than the buffer size by this factor " +
+      "warnings are printed to the log and to the command line");
+
   /** Maximum size of vertices (in bytes) per peer before flush */
   IntConfOption MAX_VERTEX_REQUEST_SIZE =
       new IntConfOption("giraph.vertexRequestSize", 512 * ONE_KB,
