@@ -155,14 +155,16 @@ public class AggregatorToGlobalCommTranslation
   public <A extends Writable> boolean registerAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return registerAggregator(name, aggregatorClass, false) != null;
+    registerAggregator(name, aggregatorClass, false);
+    return true;
   }
 
   @Override
   public <A extends Writable> boolean registerPersistentAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return registerAggregator(name, aggregatorClass, true) != null;
+    registerAggregator(name, aggregatorClass, true);
+    return true;
   }
 
   @Override

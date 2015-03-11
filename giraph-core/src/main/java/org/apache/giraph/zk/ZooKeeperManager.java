@@ -333,7 +333,7 @@ public class ZooKeeperManager {
           }
           if (!hostnameTaskMap.containsKey(hostnameTaskArray[0])) {
             hostnameTaskMap.put(hostnameTaskArray[0],
-                new Integer(hostnameTaskArray[1]));
+                Integer.valueOf(hostnameTaskArray[1]));
           }
         }
         if (LOG.isInfoEnabled()) {
@@ -834,8 +834,10 @@ public class ZooKeeperManager {
    * Do necessary cleanup in zookeeper wrapper.
    */
   public void cleanup() {
-    if (zkRunner != null) {
-      zkRunner.cleanup();
+    synchronized (this) {
+      if (zkRunner != null) {
+        zkRunner.cleanup();
+      }
     }
   }
 }
