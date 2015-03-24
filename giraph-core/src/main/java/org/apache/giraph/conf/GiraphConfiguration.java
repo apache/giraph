@@ -31,6 +31,7 @@ import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.EdgeInputFilter;
@@ -268,6 +269,16 @@ public class GiraphConfiguration extends Configuration
   public void setEdgeInputFormatClass(
       Class<? extends EdgeInputFormat> edgeInputFormatClass) {
     EDGE_INPUT_FORMAT_CLASS.set(this, edgeInputFormatClass);
+  }
+
+  /**
+   * Set the mapping input format class (optional)
+   *
+   * @param mappingInputFormatClass Determines how mappings are input
+   */
+  public void setMappingInputFormatClass(
+    Class<? extends MappingInputFormat> mappingInputFormatClass) {
+    MAPPING_INPUT_FORMAT_CLASS.set(this, mappingInputFormatClass);
   }
 
   /**

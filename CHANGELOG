@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-999: Add support for Mapping multi-input formats (dlogothetis via majakabiljo)
+
   GIRAPH-997: Upgrade findbugs to 3.0.0 (dlogothetis via majakabiljo)
 
   GIRAPH-996: Large requests degrade performance. Print out warnings. (dlogothetis via majakabiljo)

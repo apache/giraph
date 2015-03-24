@@ -643,6 +643,19 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
+   * Set MappingInputFormat held
+   *
+   * @param mappingInputFormatClass MappingInputFormat to set
+   * @return this
+   */
+  public GiraphClasses setMappingInputFormatClass(
+    Class<? extends MappingInputFormat<I, V, E, Writable>>
+      mappingInputFormatClass) {
+    this.mappingInputFormatClass = mappingInputFormatClass;
+    return this;
+  }
+
+  /**
    * Set VertexInputFormat held
    *
    * @param vertexInputFormatClass VertexInputFormat to set

@@ -323,6 +323,18 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Set MappingInputFormatClass
+   *
+   * @param mappingInputFormatClass Determines how mappings are input
+   */
+  @Override
+  public void setMappingInputFormatClass(
+    Class<? extends MappingInputFormat> mappingInputFormatClass) {
+    super.setMappingInputFormatClass(mappingInputFormatClass);
+    classes.setMappingInputFormatClass(mappingInputFormatClass);
+  }
+
+  /**
    * Check if mappingInputFormat is set
    *
    * @return true if mappingInputFormat is set
