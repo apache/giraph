@@ -19,17 +19,18 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
+import org.apache.giraph.factories.DefaultMessageValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.DefaultVertexValueCombiner;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.MappingInputFormat;
@@ -45,6 +46,7 @@ import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.SimplePartition;
+import org.apache.giraph.types.NoMessage;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
@@ -99,9 +101,11 @@ public class GiraphClasses<I extends WritableComparable,
 
   /** Aggregator writer class - cached for fast access */
   protected Class<? extends AggregatorWriter> aggregatorWriterClass;
-  /** Message combiner class - cached for fast access */
-  protected Class<? extends MessageCombiner<I, ? extends Writable>>
-  messageCombinerClass;
+
+  /** Incoming message classes */
+  protected MessageClasses<I, ? extends Writable> incomingMessageClasses;
+  /** Outgoing message classes */
+  protected MessageClasses<I, ? extends Writable> outgoingMessageClasses;
 
   /** Vertex resolver class - cached for fast access */
   protected Class<? extends VertexResolver<I, V, E>> vertexResolverClass;
@@ -124,32 +128,19 @@ public class GiraphClasses<I extends WritableComparable,
    * Empty constructor. Initialize with default classes or null.
    */
   public GiraphClasses() {
-    // Note: the cast to Object is required in order for javac to accept the
-    // downcast.
-    computationFactoryClass = (Class<? extends ComputationFactory<I, V, E,
-          ? extends Writable, ? extends Writable>>) (Object)
-        DefaultComputationFactory.class;
+    computationFactoryClass = (Class) DefaultComputationFactory.class;
     giraphTypes = new GiraphTypes<I, V, E>();
-    outEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
-        ByteArrayEdges.class;
-    inputOutEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
-        ByteArrayEdges.class;
-    graphPartitionerFactoryClass =
-        (Class<? extends GraphPartitionerFactory<I, V, E>>) (Object)
-            HashPartitionerFactory.class;
+    outEdgesClass = (Class) ByteArrayEdges.class;
+    inputOutEdgesClass = (Class) ByteArrayEdges.class;
+    graphPartitionerFactoryClass = (Class) HashPartitionerFactory.class;
     aggregatorWriterClass = TextAggregatorWriter.class;
-    vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
-        (Object) DefaultVertexResolver.class;
-    vertexValueCombinerClass = (Class<? extends VertexValueCombiner<V>>)
-        (Object) DefaultVertexValueCombiner.class;
+    vertexResolverClass = (Class) DefaultVertexResolver.class;
+    vertexValueCombinerClass = (Class) DefaultVertexValueCombiner.class;
     workerContextClass = DefaultWorkerContext.class;
     masterComputeClass = DefaultMasterCompute.class;
-    partitionClass = (Class<? extends Partition<I, V, E>>) (Object)
-        SimplePartition.class;
-    edgeInputFilterClass = (Class<? extends EdgeInputFilter<I, E>>)
-        (Object) DefaultEdgeInputFilter.class;
-    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E>>)
-        (Object) DefaultVertexInputFilter.class;
+    partitionClass = (Class) SimplePartition.class;
+    edgeInputFilterClass = (Class) DefaultEdgeInputFilter.class;
+    vertexInputFilterClass = (Class) DefaultVertexInputFilter.class;
   }
 
   /**
@@ -190,9 +181,21 @@ public class GiraphClasses<I extends WritableComparable,
         MAPPING_INPUT_FORMAT_CLASS.get(conf);
 
     aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
-    messageCombinerClass =
-        (Class<? extends MessageCombiner<I, ? extends Writable>>)
-        MESSAGE_COMBINER_CLASS.get(conf);
+
+    // incoming messages shouldn't be used in first iteration at all
+    // but empty message stores are created, etc, so using NoMessage
+    // to enforce not a single message is read/written
+    incomingMessageClasses = new DefaultMessageClasses(
+        NoMessage.class,
+        DefaultMessageValueFactory.class,
+        null,
+        MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION);
+    outgoingMessageClasses = new DefaultMessageClasses(
+        giraphTypes.getInitialOutgoingMessageValueClass(),
+        OUTGOING_MESSAGE_VALUE_FACTORY_CLASS.get(conf),
+        MESSAGE_COMBINER_CLASS.get(conf),
+        MESSAGE_ENCODE_AND_STORE_TYPE.get(conf));
+
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
         VERTEX_RESOLVER_CLASS.get(conf);
     vertexValueCombinerClass = (Class<? extends VertexValueCombiner<V>>)
@@ -266,24 +269,15 @@ public class GiraphClasses<I extends WritableComparable,
     return giraphTypes.getEdgeValueClass();
   }
 
-  /**
-   * Get incoming Message Value class - messages which have been sent in the
-   * previous superstep and are processed in the current one
-   *
-   * @return Message Value class
-   */
-  public Class<? extends Writable> getIncomingMessageValueClass() {
-    return giraphTypes.getIncomingMessageValueClass();
+
+  public MessageClasses<? extends WritableComparable, ? extends Writable>
+  getIncomingMessageClasses() {
+    return incomingMessageClasses;
   }
 
-  /**
-   * Get outgoing Message Value class - messages which are going to be sent
-   * during current superstep
-   *
-   * @return Message Value class
-   */
-  public Class<? extends Writable> getOutgoingMessageValueClass() {
-    return giraphTypes.getOutgoingMessageValueClass();
+  public MessageClasses<? extends WritableComparable, ? extends Writable>
+  getOutgoingMessageClasses() {
+    return outgoingMessageClasses;
   }
 
   /**
@@ -432,25 +426,6 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Check if MessageCombiner is set
-   *
-   * @return true if MessageCombiner is set
-   */
-  public boolean hasMessageCombinerClass() {
-    return messageCombinerClass != null;
-  }
-
-  /**
-   * Get MessageCombiner used
-   *
-   * @return MessageCombiner
-   */
-  public Class<? extends MessageCombiner<I, ? extends Writable>>
-  getMessageCombinerClass() {
-    return messageCombinerClass;
-  }
-
-  /**
    * Check if VertexResolver is set
    *
    * @return true if VertexResolver is set
@@ -581,12 +556,12 @@ public class GiraphClasses<I extends WritableComparable,
    * Set incoming Message Value class held - messages which have been sent in
    * the previous superstep and are processed in the current one
    *
-   * @param incomingMessageValueClass Message Value class to set
+   * @param incomingMessageClasses Message classes value to set
    * @return this
    */
-  public GiraphClasses setIncomingMessageValueClass(
-      Class<? extends Writable> incomingMessageValueClass) {
-    giraphTypes.setIncomingMessageValueClass(incomingMessageValueClass);
+  public GiraphClasses setIncomingMessageClasses(
+      MessageClasses<I, ? extends Writable> incomingMessageClasses) {
+    this.incomingMessageClasses = incomingMessageClasses;
     return this;
   }
 
@@ -594,12 +569,12 @@ public class GiraphClasses<I extends WritableComparable,
    * Set outgoing Message Value class held - messages which are going to be sent
    * during current superstep
    *
-   * @param outgoingMessageValueClass Message Value class to set
+   * @param outgoingMessageClasses Message classes value to set
    * @return this
    */
-  public GiraphClasses setOutgoingMessageValueClass(
-      Class<? extends Writable> outgoingMessageValueClass) {
-    giraphTypes.setOutgoingMessageValueClass(outgoingMessageValueClass);
+  public GiraphClasses setOutgoingMessageClasses(
+      MessageClasses<I, ? extends Writable> outgoingMessageClasses) {
+    this.outgoingMessageClasses = outgoingMessageClasses;
     return this;
   }
 
@@ -700,18 +675,6 @@ public class GiraphClasses<I extends WritableComparable,
   public GiraphClasses setAggregatorWriterClass(
       Class<? extends AggregatorWriter> aggregatorWriterClass) {
     this.aggregatorWriterClass = aggregatorWriterClass;
-    return this;
-  }
-
-  /**
-   * Set MessageCombiner class used
-   *
-   * @param combinerClass MessageCombiner class to set
-   * @return this
-   */
-  public GiraphClasses setMessageCombiner(
-      Class<? extends MessageCombiner<I, ? extends Writable>> combinerClass) {
-    this.messageCombinerClass = combinerClass;
     return this;
   }
 

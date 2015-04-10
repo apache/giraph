@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.factories;
 
+import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,21 +29,16 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex ID
  */
 public class DefaultVertexIdFactory<I extends WritableComparable>
-    implements VertexIdFactory<I> {
+    implements VertexIdFactory<I>, GiraphConfigurationSettable {
   /** Cached vertex value class. */
   private Class<I> vertexIdClass;
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
   @Override
-  public void initialize(ImmutableClassesGiraphConfiguration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
     vertexIdClass = conf.getVertexIdClass();
-  }
-
-  @Override
-  public Class<I> getValueClass() {
-    return vertexIdClass;
   }
 
   @Override

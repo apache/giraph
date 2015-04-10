@@ -152,7 +152,7 @@ public class
     NullWritable edgeValue =
         immutableClassesGiraphConfiguration.createEdgeValue();
     Writable messageValue =
-        immutableClassesGiraphConfiguration.getOutgoingMessageValueFactory()
+        immutableClassesGiraphConfiguration.createOutgoingMessageValueFactory()
             .newInstance();
     assertSame(vertexValue.getClass(), NullWritable.class);
     assertSame(vertexValue, edgeValue);

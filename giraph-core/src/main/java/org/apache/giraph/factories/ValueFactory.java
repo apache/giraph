@@ -17,7 +17,8 @@
  */
 package org.apache.giraph.factories;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.Serializable;
+
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -25,30 +26,11 @@ import org.apache.hadoop.io.Writable;
  *
  * @param <W> Writable type
  */
-public interface ValueFactory<W extends Writable> {
-  /**
-   * Initialize factory settings from the conf.
-   * This gets called on startup and also if there are changes to the message
-   * classes used. For example if the user's
-   * {@link org.apache.giraph.master.MasterCompute} changes the
-   * {@link org.apache.giraph.graph.Computation} and the next superstep has a
-   * different message value type.
-   *
-   * @param conf Configuration
-   */
-  void initialize(ImmutableClassesGiraphConfiguration conf);
-
+public interface ValueFactory<W extends Writable> extends Serializable {
   /**
    * Create a new value.
    *
    * @return new value.
    */
   W newInstance();
-
-  /**
-   * Get the java Class representing messages this factory creates
-   *
-   * @return Class<M>
-   */
-  Class<W> getValueClass();
 }

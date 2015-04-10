@@ -30,8 +30,6 @@ public class PerGraphTypeBoolean {
   private boolean vertexValue;
   /** data for edge value */
   private boolean edgeValue;
-  /** data for incoming message */
-  private boolean incomingMessage;
   /** data for outgoing message */
   private boolean outgoingMessage;
 
@@ -60,7 +58,6 @@ public class PerGraphTypeBoolean {
     setVertexId(options.getVertexId(), conf);
     setVertexValue(options.getVertexValue(), conf);
     setEdgeValue(options.getEdgeValue(), conf);
-    setIncomingMessage(options.getIncomingMessage(), conf);
     setOutgoingMessage(options.getOutgoingMessage(), conf);
   }
 
@@ -95,16 +92,6 @@ public class PerGraphTypeBoolean {
   }
 
   /**
-   * Set the incoming message value data from the option
-   *
-   * @param option EnumConfOption option to use
-   * @param conf Configuration
-   */
-  public void setIncomingMessage(BooleanConfOption option, Configuration conf) {
-    incomingMessage = option.get(conf);
-  }
-
-  /**
    * Set the outgoing message value data from the option
    *
    * @param option EnumConfOption option to use
@@ -128,8 +115,6 @@ public class PerGraphTypeBoolean {
       return vertexValue;
     case EDGE_VALUE:
       return edgeValue;
-    case INCOMING_MESSAGE_VALUE:
-      return incomingMessage;
     case OUTGOING_MESSAGE_VALUE:
       return outgoingMessage;
     default:
@@ -140,10 +125,6 @@ public class PerGraphTypeBoolean {
 
   public boolean getEdgeValue() {
     return edgeValue;
-  }
-
-  public boolean getIncomingMessage() {
-    return incomingMessage;
   }
 
   public boolean getOutgoingMessage() {

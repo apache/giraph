@@ -28,31 +28,22 @@ import com.google.common.base.Objects;
  *
  * @param <M> Message Value
  */
-public abstract class AbstractMessageValueFactory<M extends Writable>
+public class DefaultMessageValueFactory<M extends Writable>
     implements MessageValueFactory<M> {
   /** Message value class */
-  private Class<M> messageValueClass;
+  private final Class<M> messageValueClass;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration conf;
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
-   * Get the message value class from the configuration
-   *
-   * @param conf Configuration
-   * @return message value Class
+   * Constructor
+   * @param messageValueClass message value class
+   * @param conf configuration
    */
-  protected abstract Class<M> extractMessageValueClass(
-      ImmutableClassesGiraphConfiguration conf);
-
-  @Override
-  public Class<M> getValueClass() {
-    return messageValueClass;
-  }
-
-  @Override
-  public void initialize(ImmutableClassesGiraphConfiguration conf) {
+  public DefaultMessageValueFactory(Class<M> messageValueClass,
+      ImmutableClassesGiraphConfiguration conf) {
+    this.messageValueClass = messageValueClass;
     this.conf = conf;
-    messageValueClass = extractMessageValueClass(conf);
   }
 
   @Override public M newInstance() {

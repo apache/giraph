@@ -24,7 +24,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.conf.MessageClasses;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -70,8 +70,8 @@ public class DiskBackedMessageStoreFactory<I extends WritableComparable,
 
   @Override
   public MessageStore<I, M>
-  newStore(MessageValueFactory<M> messageValueFactory) {
-    return new DiskBackedMessageStore<I, V, E, M>(messageValueFactory,
+  newStore(MessageClasses<I, M> messageClasses) {
+    return new DiskBackedMessageStore<I, V, E, M>(messageClasses,
         service, maxMessagesInMemory, fileStoreFactory);
   }
 

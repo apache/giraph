@@ -17,15 +17,16 @@
  */
 package org.apache.giraph.comm.netty;
 
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.util.PercentGauge;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.SendOneMessageToManyCache;
 import org.apache.giraph.comm.SendEdgeCache;
 import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
+import org.apache.giraph.comm.SendOneMessageToManyCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
@@ -58,9 +59,9 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.Map;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.util.PercentGauge;
 
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
@@ -89,8 +90,6 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       new SendMutationsCache<I, V, E>();
   /** NettyClient that could be shared among one or more instances */
   private final WorkerClient<I, V, E> workerClient;
-  /** Messages sent during the last superstep */
-  private long totalMsgsSentInSuperstep = 0;
   /** Maximum size of messages per remote worker to cache before sending */
   private final int maxMessagesSizePerWorker;
   /** Maximum size of vertices per remote worker to cache before sending. */
@@ -118,11 +117,13 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * @param context Context
    * @param conf Configuration
    * @param serviceWorker Service worker
+   * @param useOneMessageToManyIdsEncoding should use one message to many
    */
   public NettyWorkerClientRequestProcessor(
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      CentralizedServiceWorker<I, V, E> serviceWorker) {
+      CentralizedServiceWorker<I, V, E> serviceWorker,
+      boolean useOneMessageToManyIdsEncoding) {
     this.workerClient = serviceWorker.getWorkerClient();
     this.configuration = conf;
 
@@ -134,7 +135,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         GiraphConfiguration.MAX_MSG_REQUEST_SIZE.get(conf);
     maxVerticesSizePerWorker =
         GiraphConfiguration.MAX_VERTEX_REQUEST_SIZE.get(conf);
-    if (this.configuration.useOneMessageToManyIdsEncoding()) {
+    if (useOneMessageToManyIdsEncoding) {
       sendMessageCache =
         new SendOneMessageToManyCache<I, Writable>(conf, serviceWorker,
           this, maxMessagesSizePerWorker);
@@ -205,7 +206,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         serverData.getCurrentMessageStore();
     ByteArrayVertexIdMessages<I, Writable> vertexIdMessages =
         new ByteArrayVertexIdMessages<I, Writable>(
-            configuration.getOutgoingMessageValueFactory());
+            configuration.createOutgoingMessageValueFactory());
     vertexIdMessages.setConf(configuration);
     vertexIdMessages.initialize();
     for (I vertexId :
@@ -228,7 +229,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         doRequest(workerInfo, messagesRequest);
         vertexIdMessages =
             new ByteArrayVertexIdMessages<I, Writable>(
-                configuration.getOutgoingMessageValueFactory());
+                configuration.createOutgoingMessageValueFactory());
         vertexIdMessages.setConf(configuration);
         vertexIdMessages.initialize();
       }

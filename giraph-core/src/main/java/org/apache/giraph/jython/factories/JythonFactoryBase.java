@@ -18,6 +18,7 @@
 package org.apache.giraph.jython.factories;
 
 import org.apache.giraph.conf.ClassConfOption;
+import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.StrConfOption;
 import org.apache.giraph.factories.ValueFactory;
@@ -37,7 +38,7 @@ import org.python.core.PyObject;
  * @param <W> writable type
  */
 public abstract class JythonFactoryBase<W extends Writable>
-    implements ValueFactory<W> {
+    implements ValueFactory<W>, GiraphConfigurationSettable {
   /** Logger */
   private static final Logger LOG = Logger.getLogger(JythonFactoryBase.class);
 
@@ -84,7 +85,7 @@ public abstract class JythonFactoryBase<W extends Writable>
   }
 
   @Override
-  public void initialize(
+  public void setConf(
       ImmutableClassesGiraphConfiguration conf) {
     jythonClassName = jythonClassNameOption().get(conf);
     useWrapper = conf.getValueNeedsWrappers().get(getGraphType());
@@ -102,14 +103,6 @@ public abstract class JythonFactoryBase<W extends Writable>
       return wrapper;
     } else {
       return JythonUtils.newInstance(jythonClassName, writableValueClass());
-    }
-  }
-
-  @Override public Class<W> getValueClass() {
-    if (useWrapper) {
-      return (Class<W>) JythonWritableWrapper.class;
-    } else {
-      return (Class<W>) writableValueClass();
     }
   }
 

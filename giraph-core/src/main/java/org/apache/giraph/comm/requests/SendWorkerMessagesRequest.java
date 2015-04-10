@@ -18,14 +18,14 @@
 
 package org.apache.giraph.comm.requests;
 
+import java.io.IOException;
+
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -56,7 +56,7 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   @Override
   public VertexIdMessages<I, M> createVertexIdData() {
     return new ByteArrayVertexIdMessages<I, M>(
-        getConf().getOutgoingMessageValueFactory());
+        getConf().createOutgoingMessageValueFactory());
   }
 
   @Override

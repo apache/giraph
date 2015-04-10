@@ -17,12 +17,16 @@
  */
 package org.apache.giraph.utils;
 
+import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.DefaultEdgeValueFactory;
-import org.apache.giraph.factories.DefaultIncomingMessageValueFactory;
-import org.apache.giraph.factories.DefaultOutgoingMessageValueFactory;
+import org.apache.giraph.factories.DefaultMessageValueFactory;
 import org.apache.giraph.factories.DefaultVertexIdFactory;
 import org.apache.giraph.factories.DefaultVertexValueFactory;
 import org.apache.giraph.factories.EdgeValueFactory;
@@ -39,11 +43,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
-import static org.junit.Assert.assertEquals;
 
 public class TestReflectionUtils {
   @Test
@@ -100,12 +99,7 @@ public class TestReflectionUtils {
     assertEquals(Writable.class, classes[0]);
 
     classes = getTypeArguments(MessageValueFactory.class,
-        DefaultIncomingMessageValueFactory.class);
-    assertEquals(1, classes.length);
-    assertEquals(Writable.class, classes[0]);
-
-    classes = getTypeArguments(MessageValueFactory.class,
-        DefaultOutgoingMessageValueFactory.class);
+        DefaultMessageValueFactory.class);
     assertEquals(1, classes.length);
     assertEquals(Writable.class, classes[0]);
 

@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.conf;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
@@ -32,8 +35,7 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
 import org.apache.giraph.factories.DefaultEdgeValueFactory;
-import org.apache.giraph.factories.DefaultIncomingMessageValueFactory;
-import org.apache.giraph.factories.DefaultOutgoingMessageValueFactory;
+import org.apache.giraph.factories.DefaultMessageValueFactory;
 import org.apache.giraph.factories.DefaultVertexIdFactory;
 import org.apache.giraph.factories.DefaultVertexValueFactory;
 import org.apache.giraph.factories.EdgeValueFactory;
@@ -77,9 +79,6 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Constants used all over Giraph for configuration.
@@ -169,17 +168,11 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.edgeValueFactoryClass",
           DefaultEdgeValueFactory.class, EdgeValueFactory.class,
           "Edge value factory class - optional");
-  /** Incoming message value factory class - optional */
-  ClassConfOption<MessageValueFactory>
-  INCOMING_MESSAGE_VALUE_FACTORY_CLASS =
-      ClassConfOption.create("giraph.incomingMessageValueFactoryClass",
-          DefaultIncomingMessageValueFactory.class, MessageValueFactory.class,
-          "Incoming message value factory class - optional");
   /** Outgoing message value factory class - optional */
   ClassConfOption<MessageValueFactory>
   OUTGOING_MESSAGE_VALUE_FACTORY_CLASS =
       ClassConfOption.create("giraph.outgoingMessageValueFactoryClass",
-          DefaultOutgoingMessageValueFactory.class, MessageValueFactory.class,
+          DefaultMessageValueFactory.class, MessageValueFactory.class,
           "Outgoing message value factory class - optional");
 
   /** Vertex edges class - optional */
@@ -381,10 +374,6 @@ public interface GiraphConstants {
   ClassConfOption<Writable> EDGE_VALUE_CLASS =
       ClassConfOption.create("giraph.edgeValueClass", null, Writable.class,
           "Edge value class");
-  /** Incoming message value class */
-  ClassConfOption<Writable> INCOMING_MESSAGE_VALUE_CLASS =
-      ClassConfOption.create("giraph.incomingMessageValueClass", null,
-          Writable.class, "Incoming message value class");
   /** Outgoing message value class */
   ClassConfOption<Writable> OUTGOING_MESSAGE_VALUE_CLASS =
       ClassConfOption.create("giraph.outgoingMessageValueClass", null,

@@ -74,8 +74,8 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
 
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
-    oneMessageToManyIds = new ByteArrayOneMessageToManyIds<I, M>(
-      getConf().<M>getOutgoingMessageValueFactory());
+    oneMessageToManyIds = new ByteArrayOneMessageToManyIds<>(
+        getConf().<M>createOutgoingMessageValueFactory());
     oneMessageToManyIds.setConf(getConf());
     oneMessageToManyIds.readFields(input);
   }
@@ -132,7 +132,7 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
               .get(partitionId);
           if (idMsgs == null) {
             idMsgs = new ByteArrayVertexIdMessages<>(
-                getConf().<M>getOutgoingMessageValueFactory());
+                getConf().<M>createOutgoingMessageValueFactory());
             idMsgs.setConf(getConf());
             idMsgs.initialize(initialSize);
             partitionIdMsgs.put(partitionId, idMsgs);

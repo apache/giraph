@@ -62,7 +62,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   /** Message value factory */
   private final MessageValueFactory<M> messageValueFactory;
   /** Message messageCombiner */
-  private final MessageCombiner<I, M> messageCombiner;
+  private final MessageCombiner<? super I, M> messageCombiner;
   /** Service worker */
   private final CentralizedServiceWorker<I, ?, ?> service;
   /** Giraph configuration */
@@ -95,7 +95,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   public IdOneMessagePerVertexStore(
       MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
-      MessageCombiner<I, M> messageCombiner,
+      MessageCombiner<? super I, M> messageCombiner,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     this.service = service;
     this.config = config;

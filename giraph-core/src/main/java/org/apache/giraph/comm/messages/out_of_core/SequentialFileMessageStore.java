@@ -42,6 +42,7 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.MessageClasses;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.io.DataInputOutput;
@@ -407,11 +408,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
 
     @Override
     public SequentialFileMessageStore<I, M> newStore(
-        MessageValueFactory<M> messageValueFactory) {
+        MessageClasses<I, M> messageClasses) {
       int idx = Math.abs(storeCounter.getAndIncrement());
       String fileName =
           directories[idx % directories.length] + "messages-" + idx;
-      return new SequentialFileMessageStore<I, M>(messageValueFactory, config,
+      return new SequentialFileMessageStore<I, M>(
+          messageClasses.createMessageValueFactory(config), config,
           bufferSize, fileName);
     }
 

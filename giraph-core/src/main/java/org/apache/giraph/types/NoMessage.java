@@ -15,20 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.factories;
+package org.apache.giraph.types;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.apache.hadoop.io.Writable;
 
 /**
- * Factory class to create default outgoing message values.
- *
- * @param <M> Outgoing Message Value
+ * Type marking that in a particular superstep there will not be
+ * sent messages.
+ * We cannot use NullWritable for this, as you could send NullWritable,
+ * to send a signal (whether a vertex receives a message or not)
  */
-public class DefaultOutgoingMessageValueFactory<M extends Writable> extends
-    AbstractMessageValueFactory<M> {
-  @Override protected Class<M> extractMessageValueClass(
-      ImmutableClassesGiraphConfiguration conf) {
-    return conf.getOutgoingMessageValueClass();
+public class NoMessage implements Writable {
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    throw new IllegalStateException("NoMessage should never be read");
+  }
+
+  @Override
+  public void write(DataOutput out) throws IOException {
+    throw new IllegalStateException("NoMessage should never be written");
   }
 }

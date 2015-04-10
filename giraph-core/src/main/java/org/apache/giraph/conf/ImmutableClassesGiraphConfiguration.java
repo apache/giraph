@@ -27,6 +27,7 @@ import io.netty.handler.codec.compression.SnappyFramedEncoder;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.EdgeStoreFactory;
@@ -142,8 +143,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         GiraphConstants.GRAPH_TYPE_LANGUAGES, conf);
     valueNeedsWrappers = PerGraphTypeBoolean.readFromConf(
         GiraphConstants.GRAPH_TYPES_NEEDS_WRAPPERS, conf);
-    valueFactories = new ValueFactories<I, V, E>(conf);
-    valueFactories.initializeIVE(this);
+    valueFactories = new ValueFactories<I, V, E>(this);
   }
 
   /**
@@ -530,40 +530,6 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the user's subclassed
-   * {@link org.apache.giraph.combiner.MessageCombiner} class.
-   *
-   * @return User's combiner class
-   */
-  @Override
-  public Class<? extends MessageCombiner<I, ? extends Writable>>
-  getMessageCombinerClass() {
-    return classes.getMessageCombinerClass();
-  }
-
-  /**
-   * Create a user combiner class
-   *
-   * @param <M> Message data
-   * @return Instantiated user combiner class
-   */
-  @SuppressWarnings("rawtypes")
-  public <M extends Writable> MessageCombiner<I, M> createMessageCombiner() {
-    Class<? extends MessageCombiner<I, M>> klass =
-        classes.getMessageCombinerClass();
-    return ReflectionUtils.newInstance(klass, this);
-  }
-
-  /**
-   * Check if user set a combiner
-   *
-   * @return True iff user set a combiner class
-   */
-  public boolean useMessageCombiner() {
-    return classes.hasMessageCombinerClass();
-  }
-
-  /**
-   * Get the user's subclassed
    * {@link org.apache.giraph.graph.VertexValueCombiner} class.
    *
    * @return User's vertex value combiner class
@@ -905,47 +871,92 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return User's vertex message value class
    */
   public <M extends Writable> Class<M> getIncomingMessageValueClass() {
-    return classes.getIncomingMessageValueClass();
-  }
-
-  /**
-   * Get the factory for creating incoming message values
-   *
-   * @param <M> Incoming Message type
-   * @return MessageValueFactory
-   */
-  public <M extends Writable> MessageValueFactory<M>
-  getIncomingMessageValueFactory() {
-    Class<? extends MessageValueFactory> klass =
-        valueFactories.getInMsgFactoryClass();
-    MessageValueFactory<M> factory = ReflectionUtils.newInstance(klass, this);
-    factory.initialize(this);
-    return factory;
+    return classes.getIncomingMessageClasses().getMessageClass();
   }
 
   /**
    * Get the user's subclassed outgoing message value class.
    *
-   * @param <M> Message data
+   * @param <M> Message type
    * @return User's vertex message value class
    */
   public <M extends Writable> Class<M> getOutgoingMessageValueClass() {
-    return classes.getOutgoingMessageValueClass();
+    return classes.getOutgoingMessageClasses().getMessageClass();
   }
 
   /**
-   * Get the factory for creating outgoing message values
-   *
-   * @param <M> Outgoing Message type
-   * @return MessageValueFactory
+   * Get incoming message classes
+   * @param <M> message type
+   * @return incoming message classes
    */
-  public <M extends Writable> MessageValueFactory<M>
-  getOutgoingMessageValueFactory() {
-    Class<? extends MessageValueFactory> klass =
-        valueFactories.getOutMsgFactoryClass();
-    MessageValueFactory<M> factory = ReflectionUtils.newInstance(klass, this);
-    factory.initialize(this);
-    return factory;
+  public <M extends Writable>
+  MessageClasses<I, M> getIncomingMessageClasses() {
+    return classes.getIncomingMessageClasses();
+  }
+
+  /**
+   * Get outgoing message classes
+   * @param <M> message type
+   * @return outgoing message classes
+   */
+  public <M extends Writable>
+  MessageClasses<I, M> getOutgoingMessageClasses() {
+    return classes.getOutgoingMessageClasses();
+  }
+
+  /**
+   * Create new outgoing message value factory
+   * @param <M> message type
+   * @return outgoing message value factory
+   */
+  public <M extends Writable>
+  MessageValueFactory<M> createOutgoingMessageValueFactory() {
+    return classes.getOutgoingMessageClasses().createMessageValueFactory(this);
+  }
+
+  /**
+   * Create new incoming message value factory
+   * @param <M> message type
+   * @return incoming message value factory
+   */
+  public <M extends Writable>
+  MessageValueFactory<M> createIncomingMessageValueFactory() {
+    return classes.getIncomingMessageClasses().createMessageValueFactory(this);
+  }
+
+  @Override
+  public void setMessageCombinerClass(
+      Class<? extends MessageCombiner> messageCombinerClass) {
+    throw new IllegalArgumentException(
+        "Cannot set message combiner on ImmutableClassesGiraphConfigurable");
+  }
+
+  /**
+   * Create a user combiner class
+   *
+   * @param <M> Message data
+   * @return Instantiated user combiner class
+   */
+  public <M extends Writable> MessageCombiner<? super I, M>
+  createOutgoingMessageCombiner() {
+    return classes.getOutgoingMessageClasses().createMessageCombiner(this);
+  }
+
+  /**
+   * Check if user set a combiner
+   *
+   * @return True iff user set a combiner class
+   */
+  public boolean useOutgoingMessageCombiner() {
+    return classes.getOutgoingMessageClasses().useMessageCombiner();
+  }
+
+  /**
+   * Get outgoing message encode and store type
+   * @return outgoing message encode and store type
+   */
+  public MessageEncodeAndStoreType getOutgoingMessageEncodeAndStoreType() {
+    return classes.getOutgoingMessageClasses().getMessageEncodeAndStoreType();
   }
 
   @Override
@@ -1227,20 +1238,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @param superstepClasses SuperstepClasses
    */
   public void updateSuperstepClasses(SuperstepClasses superstepClasses) {
-    Class<? extends Computation> computationClass =
-        superstepClasses.getComputationClass();
-    classes.setComputationClass(computationClass);
-    Class<? extends Writable> incomingMsgValueClass =
-        superstepClasses.getIncomingMessageClass();
-    if (incomingMsgValueClass != null) {
-      classes.setIncomingMessageValueClass(incomingMsgValueClass);
-    }
-    Class<? extends Writable> outgoingMsgValueClass =
-        superstepClasses.getOutgoingMessageClass();
-    if (outgoingMsgValueClass != null) {
-      classes.setOutgoingMessageValueClass(outgoingMsgValueClass);
-    }
-    classes.setMessageCombiner(superstepClasses.getMessageCombinerClass());
+    superstepClasses.updateGiraphClasses(classes);
   }
 
   /**

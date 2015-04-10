@@ -18,22 +18,23 @@
 
 package org.apache.giraph.comm.messages.out_of_core;
 
-import com.google.common.collect.Maps;
-
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.EmptyIterable;
-import org.apache.giraph.utils.VertexIdMessageIterator;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.conf.MessageClasses;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Maps;
 
 /**
  * Message store which separates data by partitions,
@@ -48,7 +49,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     MessageStore<I, M> {
   /** Message value factory */
-  private final MessageValueFactory<M> messageValueFactory;
+  private final MessageClasses<I, M> messageClasses;
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E> service;
   /** Number of messages to keep in memory */
@@ -63,19 +64,19 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   /**
    * Constructor
    *
-   * @param messageValueFactory         Factory for creating message values
+   * @param messageClasses              Message classes information
    * @param service                     Service worker
    * @param maxNumberOfMessagesInMemory Number of messages to keep in memory
    * @param partitionStoreFactory       Factory for creating stores for a
    *                                    partition
    */
   public DiskBackedMessageStore(
-      MessageValueFactory<M> messageValueFactory,
+      MessageClasses<I, M> messageClasses,
       CentralizedServiceWorker<I, V, E> service,
       int maxNumberOfMessagesInMemory,
       MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I,
           M>> partitionStoreFactory) {
-    this.messageValueFactory = messageValueFactory;
+    this.messageClasses = messageClasses;
     this.service = service;
     this.maxNumberOfMessagesInMemory = maxNumberOfMessagesInMemory;
     this.partitionStoreFactory = partitionStoreFactory;
@@ -238,7 +239,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     if (messageStore != null) {
       return messageStore;
     }
-    messageStore = partitionStoreFactory.newStore(messageValueFactory);
+    messageStore = partitionStoreFactory.newStore(messageClasses);
     PartitionDiskBackedMessageStore<I, M> store =
         partitionMessageStores.putIfAbsent(partitionId, messageStore);
     return (store == null) ? messageStore : store;
@@ -260,7 +261,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
       PartitionDiskBackedMessageStore<I, M> messageStore =
-          partitionStoreFactory.newStore(messageValueFactory);
+          partitionStoreFactory.newStore(messageClasses);
       messageStore.readFields(in);
       partitionMessageStores.put(partitionId, messageStore);
     }

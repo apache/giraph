@@ -86,10 +86,6 @@ public class JythonOptions {
   public static final JythonGraphTypeOptions JYTHON_EDGE_VALUE =
       new JythonGraphTypeOptions(GraphType.EDGE_VALUE);
 
-  /** incoming message value options */
-  public static final JythonGraphTypeOptions JYTHON_IN_MSG_VALUE =
-      new JythonGraphTypeOptions(GraphType.INCOMING_MESSAGE_VALUE);
-
   /** outgonig message value options */
   public static final JythonGraphTypeOptions JYTHON_OUT_MSG_VALUE =
       new JythonGraphTypeOptions(GraphType.OUTGOING_MESSAGE_VALUE);

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.master;
 
+import java.io.IOException;
+
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -32,74 +34,77 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.junit.Test;
 
-import java.io.IOException;
-
 /** Test type verification when switching computation and combiner types */
 public class TestComputationCombinerTypes {
+  private void testConsecutiveComp(
+      Class<? extends Computation> firstComputationClass,
+      Class<? extends Computation> secondComputationClass) {
+    testConsecutiveComp(firstComputationClass, secondComputationClass, null);
+  }
+
+  private void testConsecutiveComp(
+      Class<? extends Computation> firstComputationClass,
+      Class<? extends Computation> secondComputationClass,
+      Class<? extends MessageCombiner> messageCombinerClass) {
+    ImmutableClassesGiraphConfiguration conf =
+        createConfiguration(firstComputationClass);
+    SuperstepClasses classes = SuperstepClasses.createAndExtractTypes(conf);
+    classes.setComputationClass(secondComputationClass);
+    classes.setMessageCombinerClass(messageCombinerClass);
+    classes.verifyTypesMatch(true);
+  }
+
   @Test
   public void testAllMatchWithoutCombiner() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntNoOpComputation.class, null);
-    classes.verifyTypesMatch(createConfiguration(IntNoOpComputation.class), true);
+    testConsecutiveComp(IntNoOpComputation.class, IntNoOpComputation.class);
   }
 
   @Test
   public void testAllMatchWithCombiner() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            IntDoubleMessageCombiner.class);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class,
+        IntIntIntLongDoubleComputation.class,
+        IntDoubleMessageCombiner.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentIdTypes() {
-    SuperstepClasses classes =
-        new SuperstepClasses(LongIntIntLongIntComputation.class, null);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class, LongIntIntLongIntComputation.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentVertexValueTypes() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntLongIntLongIntComputation.class, null);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class, IntLongIntLongIntComputation.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentEdgeDataTypes() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntIntLongLongIntComputation.class, null);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class, IntIntLongLongIntComputation.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentMessageTypes() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntIntIntIntLongComputation.class, null);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntLongDoubleComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntLongDoubleComputation.class, IntIntIntIntLongComputation.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentCombinerIdType() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            DoubleDoubleMessageCombiner.class);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class,
+        IntIntIntLongDoubleComputation.class,
+        DoubleDoubleMessageCombiner.class);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDifferentCombinerMessageType() {
-    SuperstepClasses classes =
-        new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            IntLongMessageCombiner.class);
-    classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class), true);
+    testConsecutiveComp(
+        IntIntIntIntLongComputation.class,
+        IntIntIntLongDoubleComputation.class,
+        IntLongMessageCombiner.class);
   }
 
   private static ImmutableClassesGiraphConfiguration createConfiguration(

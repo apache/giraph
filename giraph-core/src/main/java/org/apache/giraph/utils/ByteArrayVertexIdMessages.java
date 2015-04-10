@@ -18,13 +18,13 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Stores vertex id and message pairs in a single byte array.
@@ -37,7 +37,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   M extends Writable> extends ByteArrayVertexIdData<I, M>
   implements VertexIdMessages<I, M> {
   /** Message value class */
-  private MessageValueFactory<M> messageValueFactory;
+  private final MessageValueFactory<M> messageValueFactory;
   /** Add the message size to the stream? (Depends on the message store) */
   private boolean useMessageSizeEncoding = false;
 
@@ -57,7 +57,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
    * de-serialized right away, so this won't help.
    */
   private void setUseMessageSizeEncoding() {
-    if (!getConf().useMessageCombiner()) {
+    if (!getConf().useOutgoingMessageCombiner()) {
       useMessageSizeEncoding = getConf().useMessageSizeEncoding();
     } else {
       useMessageSizeEncoding = false;

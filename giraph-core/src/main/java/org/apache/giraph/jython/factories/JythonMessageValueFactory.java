@@ -32,9 +32,4 @@ public abstract class JythonMessageValueFactory<M extends Writable>
   public M newInstance() {
     return (M) newJythonClassInstance();
   }
-
-  @Override
-  public Class<M> getValueClass() {
-    return (Class<M>) writableValueClass();
-  }
 }

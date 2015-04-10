@@ -17,6 +17,12 @@
  */
 package org.apache.giraph.graph;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStore;
@@ -46,12 +52,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 
 /**
  * Compute as many vertex partitions as possible.  Every thread will has its
@@ -139,7 +139,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     // Thread initialization (for locality)
     WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor =
         new NettyWorkerClientRequestProcessor<I, V, E>(
-            context, configuration, serviceWorker);
+            context, configuration, serviceWorker,
+            configuration.getOutgoingMessageEncodeAndStoreType().
+              useOneMessageToManyIdsEncoding());
     WorkerThreadGlobalCommUsage aggregatorUsage =
         serviceWorker.getAggregatorHandler().newThreadAggregatorUsage();
     WorkerContext workerContext = serviceWorker.getWorkerContext();

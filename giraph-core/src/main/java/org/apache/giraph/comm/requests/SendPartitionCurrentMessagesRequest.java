@@ -21,6 +21,7 @@ package org.apache.giraph.comm.requests;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.Writable;
@@ -69,8 +70,8 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
     partitionId = input.readInt();
     // At this moment the Computation class have already been replaced with
     // the new one, and we deal with messages from previous superstep
-    vertexIdMessageMap = new ByteArrayVertexIdMessages<I, M>(
-        getConf().<M>getIncomingMessageValueFactory());
+    vertexIdMessageMap = new ByteArrayVertexIdMessages<>(
+        getConf().<M>createIncomingMessageValueFactory());
     vertexIdMessageMap.setConf(getConf());
     vertexIdMessageMap.initialize();
     vertexIdMessageMap.readFields(input);

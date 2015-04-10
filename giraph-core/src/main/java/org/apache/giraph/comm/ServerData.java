@@ -191,9 +191,9 @@ public class ServerData<I extends WritableComparable,
     }
     currentMessageStore =
         incomingMessageStore != null ? incomingMessageStore :
-            messageStoreFactory.newStore(conf.getIncomingMessageValueFactory());
+            messageStoreFactory.newStore(conf.getIncomingMessageClasses());
     incomingMessageStore =
-        messageStoreFactory.newStore(conf.getOutgoingMessageValueFactory());
+        messageStoreFactory.newStore(conf.getOutgoingMessageClasses());
     // finalize current message-store before resolving mutations
     currentMessageStore.finalizeStore();
 

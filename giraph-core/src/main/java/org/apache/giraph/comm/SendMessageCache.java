@@ -18,6 +18,9 @@
 
 package org.apache.giraph.comm;
 
+import static org.apache.giraph.conf.GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
+
 import java.util.Iterator;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -28,16 +31,13 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-
-import static org.apache.giraph.conf.GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE;
-import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
 
 /**
  * Aggregates the messages to be sent to workers so they can be sent
@@ -81,7 +81,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
   @Override
   public VertexIdMessages<I, M> createVertexIdData() {
     return new ByteArrayVertexIdMessages<I, M>(
-        getConf().getOutgoingMessageValueFactory());
+        getConf().<M>createOutgoingMessageValueFactory());
   }
 
   /**
@@ -177,7 +177,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
    */
   private class TargetVertexIdIterator implements Iterator<I> {
     /** An edge iterator */
-    private Iterator<Edge<I, Writable>> edgesIterator;
+    private final Iterator<Edge<I, Writable>> edgesIterator;
 
     /**
      * Constructor.

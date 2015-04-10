@@ -17,6 +17,37 @@
  */
 package org.apache.giraph.hive.jython;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.giraph.conf.GiraphConstants.EDGE_INPUT_FORMAT_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.GRAPH_TYPE_LANGUAGES;
+import static org.apache.giraph.conf.GiraphConstants.MAX_WORKERS;
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_COMBINER_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.MIN_WORKERS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_INPUT_FORMAT_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_VALUE_READER_JYTHON_NAME;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_VALUE_WRITER_JYTHON_NAME;
+import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_SOURCE_ID_COLUMN;
+import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_TARGET_ID_COLUMN;
+import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_VALUE_COLUMN;
+import static org.apache.giraph.hive.jython.JythonVertexToHive.VERTEX_VALUE_COLUMN;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -35,12 +66,11 @@ import org.apache.giraph.hive.values.HiveValueReader;
 import org.apache.giraph.hive.values.HiveValueWriter;
 import org.apache.giraph.io.formats.multi.MultiEdgeInputFormat;
 import org.apache.giraph.io.formats.multi.MultiVertexInputFormat;
+import org.apache.giraph.jython.JythonJob;
+import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.jython.factories.JythonEdgeValueFactory;
 import org.apache.giraph.jython.factories.JythonFactoryBase;
-import org.apache.giraph.jython.factories.JythonIncomingMessageValueFactory;
-import org.apache.giraph.jython.JythonJob;
 import org.apache.giraph.jython.factories.JythonOutgoingMessageValueFactory;
-import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.jython.factories.JythonVertexIdFactory;
 import org.apache.giraph.jython.factories.JythonVertexValueFactory;
 import org.apache.giraph.jython.wrappers.JythonWritableWrapper;
@@ -65,37 +95,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Closeables;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.giraph.conf.GiraphConstants.EDGE_INPUT_FORMAT_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.GRAPH_TYPE_LANGUAGES;
-import static org.apache.giraph.conf.GiraphConstants.MAX_WORKERS;
-import static org.apache.giraph.conf.GiraphConstants.MIN_WORKERS;
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_COMBINER_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_INPUT_FORMAT_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_VALUE_READER_JYTHON_NAME;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_VALUE_WRITER_JYTHON_NAME;
-import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_SOURCE_ID_COLUMN;
-import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_TARGET_ID_COLUMN;
-import static org.apache.giraph.hive.jython.JythonHiveToEdge.EDGE_VALUE_COLUMN;
-import static org.apache.giraph.hive.jython.JythonVertexToHive.VERTEX_VALUE_COLUMN;
 
 /**
  * Plugin to {@link HiveJythonRunner} to use Hive.
@@ -377,10 +376,6 @@ public class HiveJythonUtils {
     types.setEdgeValueClass(initValueType(conf, GraphType.EDGE_VALUE,
         jythonJob.getEdge_value().getType(), new JythonEdgeValueFactory(),
         interpreter));
-    types.setIncomingMessageValueClass(
-        initValueType(conf, GraphType.INCOMING_MESSAGE_VALUE,
-            jythonJob.getIncoming_message_value().getType(),
-            new JythonIncomingMessageValueFactory(), interpreter));
     types.setOutgoingMessageValueClass(
         initValueType(conf, GraphType.OUTGOING_MESSAGE_VALUE,
             jythonJob.getOutgoing_message_value().getType(),
@@ -444,8 +439,6 @@ public class HiveJythonUtils {
    * @param jythonJob JythonJob
    */
   private static void checkMessageTypes(JythonJob jythonJob) {
-    checkMessageType(jythonJob.getIncoming_message_value(),
-        GraphType.INCOMING_MESSAGE_VALUE, jythonJob);
     checkMessageType(jythonJob.getOutgoing_message_value(),
         GraphType.OUTGOING_MESSAGE_VALUE, jythonJob);
   }

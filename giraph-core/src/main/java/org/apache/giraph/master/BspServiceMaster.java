@@ -50,8 +50,8 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
 import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
 import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterServer;
@@ -197,7 +197,7 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Current checkpoint status */
   private CheckpointStatus checkpointStatus;
   /** Checks if checkpointing supported */
-  private CheckpointSupportedChecker checkpointSupportedChecker;
+  private final CheckpointSupportedChecker checkpointSupportedChecker;
 
   /**
    * Constructor for setting up the master.
@@ -803,7 +803,8 @@ public class BspServiceMaster<I extends WritableComparable,
     GlobalStats globalStats = new GlobalStats();
     globalStats.readFields(finalizedStream);
     updateCounters(globalStats);
-    SuperstepClasses superstepClasses = new SuperstepClasses();
+    SuperstepClasses superstepClasses =
+        SuperstepClasses.createToRead(getConfiguration());
     superstepClasses.readFields(finalizedStream);
     getConfiguration().updateSuperstepClasses(superstepClasses);
     int prefixFileCount = finalizedStream.readInt();
@@ -1576,7 +1577,7 @@ public class BspServiceMaster<I extends WritableComparable,
         GiraphStats.getInstance().getEdges().getValue(),
         getContext());
     SuperstepClasses superstepClasses =
-      new SuperstepClasses(getConfiguration());
+        SuperstepClasses.createAndExtractTypes(getConfiguration());
     masterCompute.setGraphState(graphState);
     masterCompute.setSuperstepClasses(superstepClasses);
     return superstepClasses;
@@ -1732,8 +1733,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // match) and if the computation is halted, no need to check any of
     // the types.
     if (!globalStats.getHaltComputation()) {
-      superstepClasses.verifyTypesMatch(
-          getConfiguration(), getSuperstep() != 0);
+      superstepClasses.verifyTypesMatch(getSuperstep() > 0);
     }
     getConfiguration().updateSuperstepClasses(superstepClasses);
 

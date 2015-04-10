@@ -90,27 +90,6 @@ public enum GraphType {
       return conf.getEdgeValueFactory();
     }
   },
-  /** Incoming message value */
-  INCOMING_MESSAGE_VALUE {
-    @Override
-    public ClassConfOption<? extends Writable> writableConfOption() {
-      return GiraphConstants.INCOMING_MESSAGE_VALUE_CLASS;
-    }
-    @Override
-    public ClassConfOption<? extends ValueFactory> factoryClassOption() {
-      return GiraphConstants.INCOMING_MESSAGE_VALUE_FACTORY_CLASS;
-    }
-    @Override
-    public <T extends Writable> Class<T> get(
-        ImmutableClassesGiraphConfiguration conf) {
-      return conf.getIncomingMessageValueClass();
-    }
-    @Override
-    public <T extends Writable> ValueFactory<T> factory(
-        ImmutableClassesGiraphConfiguration conf) {
-      return conf.getIncomingMessageValueFactory();
-    }
-  },
   /** Outgoing message value */
   OUTGOING_MESSAGE_VALUE {
     @Override
@@ -129,7 +108,7 @@ public enum GraphType {
     @Override
     public <T extends Writable> ValueFactory<T> factory(
         ImmutableClassesGiraphConfiguration conf) {
-      return conf.getOutgoingMessageValueFactory();
+      return conf.createOutgoingMessageValueFactory();
     }
   };
 

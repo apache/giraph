@@ -22,10 +22,12 @@ import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.MessageClasses;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
@@ -173,8 +175,10 @@ public abstract class MasterCompute
 
   /**
    * Set incoming message class to be used
+   *
    * @param incomingMessageClass incoming message class
    */
+  @Deprecated
   public final void setIncomingMessage(
       Class<? extends Writable> incomingMessageClass) {
     superstepClasses.setIncomingMessageClass(incomingMessageClass);
@@ -182,11 +186,23 @@ public abstract class MasterCompute
 
   /**
    * Set outgoing message class to be used
+   *
    * @param outgoingMessageClass outgoing message class
    */
   public final void setOutgoingMessage(
       Class<? extends Writable> outgoingMessageClass) {
     superstepClasses.setOutgoingMessageClass(outgoingMessageClass);
+  }
+
+  /**
+   * Set outgoing message classes to be used
+   *
+   * @param outgoingMessageClasses outgoing message classes
+   */
+  public void setOutgoingMessageClasses(
+      MessageClasses<? extends WritableComparable, ? extends Writable>
+        outgoingMessageClasses) {
+    superstepClasses.setOutgoingMessageClasses(outgoingMessageClasses);
   }
 
   @Override

@@ -22,23 +22,23 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
-import org.apache.giraph.comm.requests.SendWorkerOneMessageToManyRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerOneMessageToManyRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
-import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-
-import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Aggregates the messages to be sent to workers so they can be sent
@@ -145,7 +145,7 @@ public class SendOneMessageToManyCache<I extends WritableComparable,
       msgVidsCache[workerInfo.getTaskId()];
     if (workerData == null) {
       workerData = new ByteArrayOneMessageToManyIds<I, M>(
-        getConf().getOutgoingMessageValueFactory());
+          getConf().<M>createOutgoingMessageValueFactory());
       workerData.setConf(getConf());
       workerData.initialize(getSendWorkerInitialBufferSize(
         workerInfo.getTaskId()));

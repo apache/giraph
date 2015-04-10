@@ -18,6 +18,8 @@
 
 package org.apache.giraph.vertex;
 
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_FACTORY_CLASS;
+
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -35,8 +37,6 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
-
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_FACTORY_CLASS;
 
 
 public class TestComputationTypes {
@@ -63,7 +63,7 @@ public class TestComputationTypes {
     /**
      * Matches the {@link GeneratedComputationMatch}
      */
-    private static class GeneratedVertexMatchMessageCombiner
+    public static class GeneratedVertexMatchMessageCombiner
         extends
         MessageCombiner<LongWritable, FloatWritable> {
       @Override
@@ -74,14 +74,14 @@ public class TestComputationTypes {
 
       @Override
       public FloatWritable createInitialMessage() {
-        return null;
+        return new FloatWritable();
       }
     }
 
     /**
      * Mismatches the {@link GeneratedComputationMatch}
      */
-    private static class GeneratedVertexMismatchMessageCombiner
+    public static class GeneratedVertexMismatchMessageCombiner
         extends
         MessageCombiner<LongWritable, DoubleWritable> {
       @Override
@@ -92,24 +92,15 @@ public class TestComputationTypes {
 
       @Override
       public DoubleWritable createInitialMessage() {
-        return null;
+        return new DoubleWritable();
       }
     }
 
     /**
      * Mismatches the {@link GeneratedComputationMatch}
      */
-    private static class GeneratedVertexMismatchValueFactory implements
+    public static class GeneratedVertexMismatchValueFactory implements
         VertexValueFactory<DoubleWritable> {
-
-      @Override
-      public void initialize(ImmutableClassesGiraphConfiguration conf) { }
-
-      @Override
-      public Class<DoubleWritable> getValueClass() {
-        return DoubleWritable.class;
-      }
-
       @Override
       public DoubleWritable newInstance() {
         return new DoubleWritable();
@@ -181,7 +172,7 @@ public class TestComputationTypes {
       validator.validateConfiguration();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = IllegalStateException.class)
     public void testMismatchingVertex() throws SecurityException,
       NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;
@@ -196,7 +187,7 @@ public class TestComputationTypes {
       validator.validateConfiguration();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = IllegalStateException.class)
     public void testMismatchingCombiner() throws SecurityException,
       NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;
@@ -213,7 +204,7 @@ public class TestComputationTypes {
       validator.validateConfiguration();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = IllegalStateException.class)
     public void testMismatchingVertexValueFactory() throws SecurityException,
         NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;

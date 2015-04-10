@@ -25,13 +25,14 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.MessageClasses;
 import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.RepresentativeByteStructIterator;
+import org.apache.giraph.utils.VerboseByteStructMessageWrite;
 import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.giraph.utils.VertexIdMessageBytesIterator;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.giraph.utils.RepresentativeByteStructIterator;
-import org.apache.giraph.utils.VerboseByteStructMessageWrite;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -209,8 +210,9 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
     @Override
     public MessageStore<I, M> newStore(
-        MessageValueFactory<M> messageValueFactory) {
-      return new ByteArrayMessagesPerVertexStore<I, M>(messageValueFactory,
+        MessageClasses<I, M> messageClasses) {
+      return new ByteArrayMessagesPerVertexStore<I, M>(
+          messageClasses.createMessageValueFactory(config),
           service, config);
     }
 

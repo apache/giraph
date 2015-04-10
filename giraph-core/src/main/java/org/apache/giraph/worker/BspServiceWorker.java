@@ -931,7 +931,8 @@ public class BspServiceWorker<I extends WritableComparable,
     waitForOtherWorkers(superstepFinishedNode);
 
     GlobalStats globalStats = new GlobalStats();
-    SuperstepClasses superstepClasses = new SuperstepClasses();
+    SuperstepClasses superstepClasses = SuperstepClasses.createToRead(
+        getConfiguration());
     WritableUtils.readFieldsFromZnode(
         getZkExt(), superstepFinishedNode, false, null, globalStats,
         superstepClasses);
@@ -1659,7 +1660,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
       // Load global stats and superstep classes
       GlobalStats globalStats = new GlobalStats();
-      SuperstepClasses superstepClasses = new SuperstepClasses();
+      SuperstepClasses superstepClasses = SuperstepClasses.createToRead(
+          getConfiguration());
       String finalizedCheckpointPath = getSavedCheckpointBasePath(superstep) +
           CheckpointingUtils.CHECKPOINT_FINALIZED_POSTFIX;
       DataInputStream finalizedStream =
@@ -1717,7 +1719,8 @@ else[HADOOP_NON_SECURE]*/
     Collections.shuffle(randomEntryList);
     WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor =
         new NettyWorkerClientRequestProcessor<I, V, E>(getContext(),
-            getConfiguration(), this);
+            getConfiguration(), this,
+            false /* useOneMessageToManyIdsEncoding */);
     for (Entry<WorkerInfo, List<Integer>> workerPartitionList :
       randomEntryList) {
       for (Integer partitionId : workerPartitionList.getValue()) {

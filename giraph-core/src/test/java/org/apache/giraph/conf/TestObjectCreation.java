@@ -18,6 +18,11 @@
 
 package org.apache.giraph.conf;
 
+import static org.junit.Assert.assertEquals;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -31,12 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-
-import static org.junit.Assert.assertEquals;
-
 /**
  * Benchmark tests to insure that object creation via
  * {@link ImmutableClassesGiraphConfiguration} is fast
@@ -49,7 +48,7 @@ public class TestObjectCreation {
   private long startNanos = -1;
   private long totalNanos = -1;
   private long total = 0;
-  private long expected = COUNT * (COUNT - 1) / 2L;
+  private final long expected = COUNT * (COUNT - 1) / 2L;
   private ImmutableClassesGiraphConfiguration<LongWritable, LongWritable,
       LongWritable> configuration;
 
@@ -59,7 +58,6 @@ public class TestObjectCreation {
     GiraphConstants.VERTEX_ID_CLASS.set(conf, IntWritable.class);
     GiraphConstants.VERTEX_VALUE_CLASS.set(conf, LongWritable.class);
     GiraphConstants.EDGE_VALUE_CLASS.set(conf, DoubleWritable.class);
-    GiraphConstants.INCOMING_MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
     GiraphConstants.OUTGOING_MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
     conf.setComputationClass(LongNoOpComputation.class);
     configuration =

@@ -32,8 +32,6 @@ public class PerGraphTypeEnumConfOption<T extends Enum<T>> {
   private final EnumConfOption<T> vertexValue;
   /** option for edge value */
   private final EnumConfOption<T> edgeValue;
-  /** option for incoming message */
-  private final EnumConfOption<T> incomingMessage;
   /** option for outgoing message */
   private final EnumConfOption<T> outgoingMessage;
 
@@ -52,8 +50,6 @@ public class PerGraphTypeEnumConfOption<T extends Enum<T>> {
     vertexValue = EnumConfOption.create(keyPrefix + ".vertex.value", klass,
         defaultValue, description);
     edgeValue = EnumConfOption.create(keyPrefix + ".edge.value",
-        klass, defaultValue, description);
-    incomingMessage = EnumConfOption.create(keyPrefix + ".incoming.message",
         klass, defaultValue, description);
     outgoingMessage = EnumConfOption.create(keyPrefix + ".outgoing.message",
         klass, defaultValue, description);
@@ -89,8 +85,6 @@ public class PerGraphTypeEnumConfOption<T extends Enum<T>> {
       return vertexValue;
     case EDGE_VALUE:
       return edgeValue;
-    case INCOMING_MESSAGE_VALUE:
-      return incomingMessage;
     case OUTGOING_MESSAGE_VALUE:
       return outgoingMessage;
     default:
@@ -112,10 +106,6 @@ public class PerGraphTypeEnumConfOption<T extends Enum<T>> {
 
   public EnumConfOption<T> getEdgeValue() {
     return edgeValue;
-  }
-
-  public EnumConfOption<T> getIncomingMessage() {
-    return incomingMessage;
   }
 
   public EnumConfOption<T> getOutgoingMessage() {

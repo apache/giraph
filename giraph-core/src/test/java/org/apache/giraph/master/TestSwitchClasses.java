@@ -140,9 +140,6 @@ public class TestSwitchClasses {
           break;
         case 4:
           setComputation(Computation1.class);
-          // message types removed
-          setIncomingMessage(null);
-          setOutgoingMessage(null);
           break;
         default:
           haltComputation();

@@ -18,17 +18,23 @@
 
 package org.apache.giraph.conf;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+
+import java.net.UnknownHostException;
+
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
 import org.apache.giraph.factories.ComputationFactory;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexValueCombiner;
-import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.MappingInputFormat;
@@ -49,12 +55,6 @@ import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.net.DNS;
-
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
-
-import java.net.UnknownHostException;
 
 /**
  * Adds user methods specific to Giraph.  This will be put into an
@@ -524,15 +524,6 @@ public class GiraphConfiguration extends Configuration
    */
   public void setNumOutputThreads(int numOutputThreads) {
     NUM_OUTPUT_THREADS.set(this, numOutputThreads);
-  }
-
-  /**
-   * Get the message combiner class (optional)
-   *
-   * @return messageCombinerClass Determines how vertex messages are combined
-   */
-  public Class<? extends MessageCombiner> getMessageCombinerClass() {
-    return MESSAGE_COMBINER_CLASS.get(this);
   }
 
   /**
@@ -1205,16 +1196,6 @@ public class GiraphConfiguration extends Configuration
     value = value.replace("%TASK_ID%", context.getTaskAttemptID().toString());
     value = value.replace("%USER%", get("user.name", "unknown_user"));
     return value;
-  }
-
-  /**
-   * Return if oneMessageToManyIds encoding can be enabled
-   *
-   * @return True if this option is true.
-   */
-  public boolean useOneMessageToManyIdsEncoding() {
-    return MESSAGE_ENCODE_AND_STORE_TYPE.get(this)
-      .useOneMessageToManyIdsEncoding();
   }
 
   /**

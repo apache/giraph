@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-1002: Improve message changing through iters (ikabiljo via edunov)
+
   GIRAPH-998: Close writers in parallel (majaakbiljo)
 
   GIRAPH-999: Add support for Mapping multi-input formats (dlogothetis via majakabiljo)

@@ -18,6 +18,11 @@
 
 package org.apache.giraph.worker;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.concurrent.Callable;
+
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -42,11 +47,6 @@ import org.apache.zookeeper.KeeperException;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.util.PercentGauge;
-
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.util.concurrent.Callable;
 
 /**
  * Abstract base class for loading vertex/edge input splits.
@@ -103,7 +103,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     this.context = context;
     this.workerClientRequestProcessor =
         new NettyWorkerClientRequestProcessor<I, V, E>(
-            context, configuration, bspServiceWorker);
+            context, configuration, bspServiceWorker,
+            false /* useOneMessageToManyIdsEncoding, not useful for input */);
     this.useLocality = configuration.useInputSplitLocality();
     this.splitsHandler = splitsHandler;
     this.configuration = configuration;

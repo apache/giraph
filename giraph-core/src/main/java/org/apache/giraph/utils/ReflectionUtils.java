@@ -18,6 +18,8 @@
 
 package org.apache.giraph.utils;
 
+import java.lang.reflect.Modifier;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.jodah.typetools.TypeResolver;
 
@@ -110,5 +112,49 @@ public class ReflectionUtils {
     }
     ConfigurationUtils.configureIfPossible(result, configuration);
     return result;
+  }
+
+  /**
+   * Verify that found type matches the expected type. If types don't match an
+   * {@link IllegalStateException} will be thrown.
+   *
+   * @param concreteChild Concrete child type
+   * @param parent Parent type
+   * @param typeDesc String description of the type (for exception description)
+   * @param mainClass Class in which the actual type was found (for exception
+   *                  description)
+   */
+  public static void verifyTypes(Class<?> concreteChild, Class<?> parent,
+      String typeDesc, Class<?> mainClass) {
+    // unknown means object
+    if (parent == TypeResolver.Unknown.class) {
+      parent = Object.class;
+    }
+
+    verifyConcrete(concreteChild, typeDesc);
+
+    if (!parent.isAssignableFrom(concreteChild)) {
+      throw new IllegalStateException("verifyTypes: " + typeDesc + " types " +
+          "don't match, in " + mainClass.getName() + " " + concreteChild +
+          " expected, but " + parent + " found");
+    }
+  }
+
+  /**
+   * Verify that given type is a concrete type that can be instantiated.
+   *
+   * @param concrete type to check
+   * @param typeDesc String description of the type (for exception description)
+   */
+  public static void verifyConcrete(
+      Class<?> concrete, String typeDesc) {
+    if (concrete.isInterface()) {
+      throw new IllegalStateException("verifyTypes: " +
+          "Type " + typeDesc + " must be concrete class " + concrete);
+    }
+    if (Modifier.isAbstract(concrete.getModifiers())) {
+      throw new IllegalStateException("verifyTypes: " +
+          "Type " + typeDesc + "can't be abstract class" + concrete);
+    }
   }
 }
