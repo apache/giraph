@@ -23,6 +23,7 @@ import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.BasicArrayList.BasicIntArrayList;
 import org.apache.giraph.types.ops.collections.BasicSet;
 import org.apache.giraph.types.ops.collections.BasicSet.BasicIntOpenHashSet;
+import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.IntWritable;
 
 /** TypeOps implementation for working with IntWritable type */
@@ -73,8 +74,14 @@ public enum IntTypeOps
 
   @Override
   public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
-      int capacity) {
-    return new BasicInt2ObjectOpenHashMap<>(capacity);
+      WritableWriter<V> valueWriter) {
+    return new BasicInt2ObjectOpenHashMap<>(valueWriter);
+  }
+
+  @Override
+  public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
+      int capacity, WritableWriter<V> valueWriter) {
+    return new BasicInt2ObjectOpenHashMap<>(capacity, valueWriter);
   }
 
   @Override

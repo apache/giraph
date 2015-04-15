@@ -106,7 +106,8 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
           service.getPartitionStore().getOrCreatePartition(partitionId);
       Basic2ObjectMap<I, DataInputOutput> partitionMap =
           idTypeOps.create2ObjectOpenHashMap(
-              Math.max(10, (int) partition.getVertexCount()));
+              Math.max(10, (int) partition.getVertexCount()),
+              dataInputOutputWriter);
 
       map.put(partitionId, partitionMap);
       service.getPartitionStore().putPartition((Partition) partition);
@@ -221,15 +222,15 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
   public void writePartition(DataOutput out, int partitionId)
     throws IOException {
     Basic2ObjectMap<I, DataInputOutput> partitionMap = map.get(partitionId);
-    partitionMap.write(out, dataInputOutputWriter);
+    partitionMap.write(out);
   }
 
   @Override
   public void readFieldsForPartition(DataInput in, int partitionId)
     throws IOException {
     Basic2ObjectMap<I, DataInputOutput> partitionMap =
-        idTypeOps.create2ObjectOpenHashMap(10);
-    partitionMap.readFields(in, dataInputOutputWriter);
+        idTypeOps.create2ObjectOpenHashMap(dataInputOutputWriter);
+    partitionMap.readFields(in);
     synchronized (map) {
       map.put(partitionId, partitionMap);
     }

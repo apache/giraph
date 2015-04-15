@@ -109,7 +109,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
       Partition<I, ?, ?> partition =
           service.getPartitionStore().getOrCreatePartition(partitionId);
       Basic2ObjectMap<I, M> partitionMap = idTypeOps.create2ObjectOpenHashMap(
-          (int) partition.getVertexCount());
+          Math.max(10, (int) partition.getVertexCount()), messageWriter);
       map.put(partitionId, partitionMap);
       service.getPartitionStore().putPartition((Partition) partition);
     }
@@ -202,14 +202,15 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   public void writePartition(DataOutput out,
       int partitionId) throws IOException {
     Basic2ObjectMap<I, M> partitionMap = map.get(partitionId);
-    partitionMap.write(out, messageWriter);
+    partitionMap.write(out);
   }
 
   @Override
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
-    Basic2ObjectMap<I, M> partitionMap = idTypeOps.create2ObjectOpenHashMap(10);
-    partitionMap.readFields(in, messageWriter);
+    Basic2ObjectMap<I, M> partitionMap = idTypeOps.create2ObjectOpenHashMap(
+        messageWriter);
+    partitionMap.readFields(in);
     synchronized (map) {
       map.put(partitionId, partitionMap);
     }

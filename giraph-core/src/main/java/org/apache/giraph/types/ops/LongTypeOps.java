@@ -23,6 +23,7 @@ import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.BasicArrayList.BasicLongArrayList;
 import org.apache.giraph.types.ops.collections.BasicSet;
 import org.apache.giraph.types.ops.collections.BasicSet.BasicLongOpenHashSet;
+import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.LongWritable;
 
 /** TypeOps implementation for working with LongWritable type */
@@ -73,8 +74,14 @@ public enum LongTypeOps
 
   @Override
   public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
-      int capacity) {
-    return new BasicLong2ObjectOpenHashMap<>(capacity);
+      WritableWriter<V> valueWriter) {
+    return new BasicLong2ObjectOpenHashMap<>(valueWriter);
+  }
+
+  @Override
+  public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
+      int capacity, WritableWriter<V> valueWriter) {
+    return new BasicLong2ObjectOpenHashMap<>(capacity, valueWriter);
   }
 
   @Override

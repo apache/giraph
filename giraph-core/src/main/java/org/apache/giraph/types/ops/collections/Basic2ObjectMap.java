@@ -35,6 +35,7 @@ import org.apache.giraph.types.ops.LongTypeOps;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Basic2ObjectMap with only basic set of operations.
@@ -44,7 +45,7 @@ import org.apache.hadoop.io.LongWritable;
  * @param <K> Key type
  * @param <V> Value type
  */
-public abstract class Basic2ObjectMap<K, V> {
+public abstract class Basic2ObjectMap<K, V> implements Writable {
   /** Removes all of the elements from this list. */
   public abstract void clear();
   /**
@@ -99,31 +100,14 @@ public abstract class Basic2ObjectMap<K, V> {
   public abstract Iterator<K> fastKeyIterator();
 
   /**
-   * Serializes the object, given a writer for values.
-   * @param out <code>DataOuput</code> to serialize object into.
-   * @param writer Writer of values
-   * @throws IOException
-   */
-  public abstract void write(DataOutput out, WritableWriter<V> writer)
-    throws IOException;
-  /**
-   * Deserialize the object, given a writer for values.
-   * @param in <code>DataInput</code> to deseriablize object from.
-   * @param writer Writer of values
-   * @throws IOException
-   */
-  public abstract void readFields(DataInput in, WritableWriter<V> writer)
-    throws IOException;
-
-  /**
    * Iterator that reuses key object.
    *
    * @param <Iter> Primitive key iterator type
    */
   protected abstract class ReusableIterator<Iter extends Iterator<?>>
-      implements Iterator<K> {
+      implements ResettableIterator<K> {
     /** Primitive Key iterator */
-    protected final Iter iter;
+    protected Iter iter;
     /** Reusable key object */
     protected final K reusableKey = getKeyTypeOps().create();
 
@@ -151,13 +135,29 @@ public abstract class Basic2ObjectMap<K, V> {
       extends Basic2ObjectMap<IntWritable, V> {
     /** Map */
     private final Int2ObjectOpenHashMap<V> map;
+    /** Value writer */
+    private final WritableWriter<V> valueWriter;
 
     /**
      * Constructor
-     * @param capacity Capacity
+     *
+     * @param valueWriter Writer of values
      */
-    public BasicInt2ObjectOpenHashMap(int capacity) {
+    public BasicInt2ObjectOpenHashMap(WritableWriter<V> valueWriter) {
+      this.map = new Int2ObjectOpenHashMap<>();
+      this.valueWriter = valueWriter;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param capacity Capacity
+     * @param valueWriter Writer of values
+     */
+    public BasicInt2ObjectOpenHashMap(
+        int capacity, WritableWriter<V> valueWriter) {
       this.map = new Int2ObjectOpenHashMap<>(capacity);
+      this.valueWriter = valueWriter;
     }
 
     @Override
@@ -203,31 +203,35 @@ public abstract class Basic2ObjectMap<K, V> {
           reusableKey.set(iter.nextInt());
           return reusableKey;
         }
+
+        @Override
+        public void reset() {
+          iter = map.keySet().iterator();
+        }
       };
     }
 
     @Override
-    public void write(DataOutput out, WritableWriter<V> writer)
-      throws IOException {
+    public void write(DataOutput out) throws IOException {
       out.writeInt(map.size());
       ObjectIterator<Int2ObjectMap.Entry<V>> iterator =
           map.int2ObjectEntrySet().fastIterator();
       while (iterator.hasNext()) {
         Int2ObjectMap.Entry<V> entry = iterator.next();
         out.writeInt(entry.getIntKey());
-        writer.write(out, entry.getValue());
+        valueWriter.write(out, entry.getValue());
       }
     }
 
     @Override
-    public void readFields(DataInput in, WritableWriter<V> writer)
+    public void readFields(DataInput in)
       throws IOException {
       int size = in.readInt();
       map.clear();
       map.trim(size);
       while (size-- > 0) {
         int key = in.readInt();
-        V value = writer.readFields(in);
+        V value = valueWriter.readFields(in);
         map.put(key, value);
       }
     }
@@ -238,13 +242,29 @@ public abstract class Basic2ObjectMap<K, V> {
       extends Basic2ObjectMap<LongWritable, V> {
     /** Map */
     private final Long2ObjectOpenHashMap<V> map;
+    /** Value writer */
+    private final WritableWriter<V> valueWriter;
 
     /**
      * Constructor
-     * @param capacity Capacity
+     *
+     * @param valueWriter Writer of values
      */
-    public BasicLong2ObjectOpenHashMap(int capacity) {
+    public BasicLong2ObjectOpenHashMap(WritableWriter<V> valueWriter) {
+      this.map = new Long2ObjectOpenHashMap<>();
+      this.valueWriter = valueWriter;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param capacity Capacity
+     * @param valueWriter Writer of values
+     */
+    public BasicLong2ObjectOpenHashMap(
+        int capacity, WritableWriter<V> valueWriter) {
       this.map = new Long2ObjectOpenHashMap<>(capacity);
+      this.valueWriter = valueWriter;
     }
 
     @Override
@@ -290,31 +310,34 @@ public abstract class Basic2ObjectMap<K, V> {
           reusableKey.set(iter.nextLong());
           return reusableKey;
         }
+
+        @Override
+        public void reset() {
+          iter = map.keySet().iterator();
+        }
       };
     }
 
     @Override
-    public void write(DataOutput out, WritableWriter<V> writer)
-      throws IOException {
+    public void write(DataOutput out) throws IOException {
       out.writeInt(map.size());
       ObjectIterator<Long2ObjectMap.Entry<V>> iterator =
           map.long2ObjectEntrySet().fastIterator();
       while (iterator.hasNext()) {
         Long2ObjectMap.Entry<V> entry = iterator.next();
         out.writeLong(entry.getLongKey());
-        writer.write(out, entry.getValue());
+        valueWriter.write(out, entry.getValue());
       }
     }
 
     @Override
-    public void readFields(DataInput in, WritableWriter<V> writer)
-      throws IOException {
+    public void readFields(DataInput in) throws IOException {
       int size = in.readInt();
       map.clear();
       map.trim(size);
       while (size-- > 0) {
         long key = in.readLong();
-        V value = writer.readFields(in);
+        V value = valueWriter.readFields(in);
         map.put(key, value);
       }
     }
