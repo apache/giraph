@@ -24,18 +24,18 @@ package org.apache.giraph.comm.messages;
  */
 public enum MessageEncodeAndStoreType {
   /**
-   * Use message-store which is based on list of pointers to encoded messages
+   * Use a byte-array to store messages for each partition
    */
-  POINTER_LIST_PER_VERTEX(true),
+  BYTEARRAY_PER_PARTITION(false),
   /**
    * Extract a byte array per partition from one message to many ids encoding
    * and then store
    */
   EXTRACT_BYTEARRAY_PER_PARTITION(true),
   /**
-   * Use a byte-array to store messages for each partition
+   * Use message-store which is based on list of pointers to encoded messages
    */
-  BYTEARRAY_PER_PARTITION(false);
+  POINTER_LIST_PER_VERTEX(true);
 
   /** Can use one message to many ids encoding? */
   private final boolean oneMessageToManyIdsEncoding;
