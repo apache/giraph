@@ -19,7 +19,6 @@
 package org.apache.giraph.job;
 
 import org.apache.giraph.bsp.BspInputFormat;
-import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -249,7 +248,8 @@ public class GiraphJob {
       submittedJob.setNumReduceTasks(0);
       submittedJob.setMapperClass(GraphMapper.class);
       submittedJob.setInputFormatClass(BspInputFormat.class);
-      submittedJob.setOutputFormatClass(BspOutputFormat.class);
+      submittedJob.setOutputFormatClass(
+          GiraphConstants.HADOOP_OUTPUT_FORMAT_CLASS.get(conf));
       if (jobProgressTrackerService != null) {
         jobProgressTrackerService.setJob(submittedJob);
       }

@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
+import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
 import org.apache.giraph.bsp.checkpoints.DefaultCheckpointSupportedChecker;
 import org.apache.giraph.combiner.MessageCombiner;
@@ -79,6 +80,7 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.OutputFormat;
 
 /**
  * Constants used all over Giraph for configuration.
@@ -1184,6 +1186,10 @@ public interface GiraphConstants {
       new IntConfOption("giraph.async.message.store.threads", 0,
           "Number of threads to be used in async message store.");
 
-
+  /** Output format class for hadoop to use (for committing) */
+  ClassConfOption<OutputFormat> HADOOP_OUTPUT_FORMAT_CLASS =
+      ClassConfOption.create("giraph.hadoopOutputFormatClass",
+          BspOutputFormat.class, OutputFormat.class,
+          "Output format class for hadoop to use (for committing)");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

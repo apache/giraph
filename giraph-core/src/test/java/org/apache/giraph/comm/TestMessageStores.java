@@ -224,7 +224,7 @@ public class TestMessageStores {
     }
     out.close();
 
-    messageStore = messageStoreFactory.newStore(
+    messageStore = (S) messageStoreFactory.newStore(
         new DefaultMessageClasses(
             IntWritable.class,
             DefaultMessageValueFactory.class,
@@ -249,7 +249,7 @@ public class TestMessageStores {
       TestData testData) throws IOException {
     SortedMap<IntWritable, Collection<IntWritable>> messages =
         new TreeMap<IntWritable, Collection<IntWritable>>();
-    S messageStore = messageStoreFactory.newStore(
+    S messageStore = (S) messageStoreFactory.newStore(
         new DefaultMessageClasses(
             IntWritable.class,
             DefaultMessageValueFactory.class,
