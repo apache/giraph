@@ -18,8 +18,14 @@
 
 package org.apache.giraph.mapping;
 
-import com.google.common.collect.MapMaker;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+
+import java.util.Arrays;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import javax.annotation.concurrent.ThreadSafe;
+
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.io.ByteWritable;
@@ -27,11 +33,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
-import java.util.Arrays;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
-
-import javax.annotation.concurrent.ThreadSafe;
+import com.google.common.collect.MapMaker;
 
 /**
  *
@@ -118,7 +120,7 @@ public class LongByteMappingStore
   @Override
   public ByteWritable getTarget(LongWritable vertexId,
     ByteWritable target) {
-    Byte bval = getByteTarget(vertexId);
+    byte bval = getByteTarget(vertexId);
     if (bval == -1) { // worker not assigned by mapping
       return null;
     }

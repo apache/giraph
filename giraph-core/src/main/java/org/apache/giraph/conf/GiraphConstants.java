@@ -91,12 +91,12 @@ public interface GiraphConstants {
   int ONE_KB = 1024;
 
   /** Mapping related information */
-  ClassConfOption<? extends MappingStore> MAPPING_STORE_CLASS =
+  ClassConfOption<MappingStore> MAPPING_STORE_CLASS =
       ClassConfOption.create("giraph.mappingStoreClass", null,
           MappingStore.class, "MappingStore Class");
 
   /** Class to use for performing read operations on mapping store */
-  ClassConfOption<? extends MappingStoreOps> MAPPING_STORE_OPS_CLASS =
+  ClassConfOption<MappingStoreOps> MAPPING_STORE_OPS_CLASS =
       ClassConfOption.create("giraph.mappingStoreOpsClass", null,
           MappingStoreOps.class, "MappingStoreOps class");
 

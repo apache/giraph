@@ -20,14 +20,15 @@ package org.apache.giraph.comm.messages;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongListIterator;
+
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.UnsafeReusableByteArrayInput;
 import org.apache.hadoop.io.Writable;
-
-import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Create an iterable for messages based on a pointer list
@@ -82,7 +83,7 @@ public class PointerListMessagesIterable<M extends Writable>
 
       @Override
       public M next() {
-        long pointer = iterator.next();
+        long pointer = iterator.nextLong();
         try {
           int index = (int) (pointer >>> 32);
           int offset = (int) pointer;

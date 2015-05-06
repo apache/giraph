@@ -64,13 +64,13 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat
 
     @Override
     public DoubleWritable decodeValue(String s) {
-      return new DoubleWritable(Double.valueOf(s));
+      return new DoubleWritable(Double.parseDouble(s));
     }
 
     @Override
     public Edge<Text, DoubleWritable> decodeEdge(String s1, String s2) {
       return EdgeFactory.create(new Text(s1),
-          new DoubleWritable(Double.valueOf(s2)));
+          new DoubleWritable(Double.parseDouble(s2)));
     }
   }
 
