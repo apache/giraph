@@ -90,7 +90,7 @@ public class TestComputationStateComputation extends BasicComputation<
     @Override
     public void postSuperstep() {
       assertEquals(totalCounter.get(),
-          NUM_PARTITIONS * superstepCounter + getTotalNumVertices());
+          NUM_COMPUTE_THREADS * superstepCounter + getTotalNumVertices());
     }
   }
 

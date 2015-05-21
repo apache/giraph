@@ -148,6 +148,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
     vertexWriter = serviceWorker.getSuperstepOutput().getVertexWriter();
 
+    Computation<I, V, E, M1, M2> computation =
+        (Computation<I, V, E, M1, M2>) configuration.createComputation();
+    computation.initialize(graphState, workerClientRequestProcessor,
+        serviceWorker.getGraphTaskManager(), aggregatorUsage, workerContext);
+    computation.preSuperstep();
+
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
     while (!partitionIdQueue.isEmpty()) {
       Integer partitionId = partitionIdQueue.poll();
@@ -158,12 +164,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       Partition<I, V, E> partition =
           serviceWorker.getPartitionStore().getOrCreatePartition(partitionId);
       long startTime = System.currentTimeMillis();
-
-      Computation<I, V, E, M1, M2> computation =
-          (Computation<I, V, E, M1, M2>) configuration.createComputation();
-      computation.initialize(graphState, workerClientRequestProcessor,
-          serviceWorker.getGraphTaskManager(), aggregatorUsage, workerContext);
-      computation.preSuperstep();
 
       try {
         PartitionStats partitionStats =
@@ -190,11 +190,11 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         serviceWorker.getPartitionStore().putPartition(partition);
       }
 
-      computation.postSuperstep();
-
       histogramComputePerPartition.update(
           System.currentTimeMillis() - startTime);
     }
+
+    computation.postSuperstep();
 
     // Return VertexWriter after the usage
     serviceWorker.getSuperstepOutput().returnVertexWriter(vertexWriter);

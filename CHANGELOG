@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-1008: Create Computation per thread instead of per partition (majakabiljo)
+
   GIRAPH-1004: Allow changing hadoop output format (majakabiljo)
 
   GIRAPH-1002: Improve message changing through iters (ikabiljo via edunov)
