@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-1009: Spammy 'lost reservation' messages from ZooKeeper in workers' log at the end of
+  the computation. (heslami via aching)
+
   GIRAPH-1008: Create Computation per thread instead of per partition (majakabiljo)
 
   GIRAPH-1004: Allow changing hadoop output format (majakabiljo)

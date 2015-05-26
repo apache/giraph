@@ -54,6 +54,9 @@ public class InputSplitsHandler implements Watcher  {
   private final String inputSplitReservedNode;
   /** ZooKeeper input split finished node. */
   private final String inputSplitFinishedNode;
+  /** Specifies if we finished execution of INPUT_SUPERSTEP. The variable may
+   * be accessed via different threads. */
+  private volatile boolean doneReadingGraph;
 
   /**
    * Constructor
@@ -73,10 +76,14 @@ public class InputSplitsHandler implements Watcher  {
     this.context = context;
     this.inputSplitReservedNode = inputSplitReservedNode;
     this.inputSplitFinishedNode = inputSplitFinishedNode;
+    this.doneReadingGraph = false;
   }
 
+  public void setDoneReadingGraph(boolean doneReadingGraph) {
+    this.doneReadingGraph = doneReadingGraph;
+  }
 
-  /**
+   /**
    * Try to reserve an InputSplit for loading.  While InputSplits exists that
    * are not finished, wait until they are.
    *
@@ -182,10 +189,12 @@ public class InputSplitsHandler implements Watcher  {
           "state " + event.getState() + ", event type " + event.getType());
       return;
     }
-    // Check if the reservation for the input split was lost
-    // (some worker died)
+    // Check if the reservation for the input split was lost in INPUT_SUPERSTEP
+    // (some worker died). If INPUT_SUPERSTEP has already completed, we ignore
+    // this event.
     if (event.getPath().endsWith(inputSplitReservedNode) &&
-        event.getType() == Watcher.Event.EventType.NodeDeleted) {
+        event.getType() == Watcher.Event.EventType.NodeDeleted &&
+        !doneReadingGraph) {
       synchronized (pathList) {
         String split = event.getPath();
         split = split.substring(0, split.indexOf(inputSplitReservedNode));

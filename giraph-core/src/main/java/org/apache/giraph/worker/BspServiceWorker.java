@@ -180,6 +180,11 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Time spent waiting on requests to finish */
   private GiraphTimer waitRequestsTimer;
 
+  /** InputSplit handlers used in INPUT_SUPERSTEP for vertex splits */
+  private InputSplitsHandler vertexSplitsHandler;
+  /** InputSplit handlers used in INPUT_SUPERSTEP for edge splits */
+  private InputSplitsHandler edgeSplitsHandler;
+
   /**
    * Constructor for setting up the worker.
    *
@@ -235,6 +240,8 @@ public class BspServiceWorker<I extends WritableComparable,
         null;
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
+    vertexSplitsHandler = null;
+    edgeSplitsHandler = null;
   }
 
   @Override
@@ -390,7 +397,7 @@ public class BspServiceWorker<I extends WritableComparable,
         new InputSplitPathOrganizer(getZkExt(),
             inputSplitPathList, getWorkerInfo().getHostname(),
             getConfiguration().useInputSplitLocality());
-    InputSplitsHandler splitsHandler = new InputSplitsHandler(
+    vertexSplitsHandler = new InputSplitsHandler(
         splitOrganizer,
         getZkExt(),
         getContext(),
@@ -403,7 +410,7 @@ public class BspServiceWorker<I extends WritableComparable,
             getContext(),
             getConfiguration(),
             this,
-            splitsHandler,
+            vertexSplitsHandler,
             getZkExt());
 
     return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory);
@@ -424,7 +431,7 @@ public class BspServiceWorker<I extends WritableComparable,
         new InputSplitPathOrganizer(getZkExt(),
             inputSplitPathList, getWorkerInfo().getHostname(),
             getConfiguration().useInputSplitLocality());
-    InputSplitsHandler splitsHandler = new InputSplitsHandler(
+    edgeSplitsHandler = new InputSplitsHandler(
         splitOrganizer,
         getZkExt(),
         getContext(),
@@ -437,7 +444,7 @@ public class BspServiceWorker<I extends WritableComparable,
             getContext(),
             getConfiguration(),
             this,
-            splitsHandler,
+            edgeSplitsHandler,
             getZkExt());
 
     return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory).
@@ -895,6 +902,13 @@ public class BspServiceWorker<I extends WritableComparable,
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
       postSuperstepCallbacks();
+    } else {
+      if (getConfiguration().hasVertexInputFormat()) {
+        vertexSplitsHandler.setDoneReadingGraph(true);
+      }
+      if (getConfiguration().hasEdgeInputFormat()) {
+        edgeSplitsHandler.setDoneReadingGraph(true);
+      }
     }
 
     globalCommHandler.finishSuperstep(workerAggregatorRequestProcessor);
