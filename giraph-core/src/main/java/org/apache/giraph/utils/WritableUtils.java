@@ -748,42 +748,6 @@ public class WritableUtils {
   }
 
   /**
-   * Create a copy of Writable object, by serializing and deserializing it.
-   *
-   * @param reusableOut Reusable output stream to serialize into
-   * @param reusableIn Reusable input stream to deserialize out of
-   * @param original Original value of which to make a copy
-   * @param conf Configuration
-   * @param <T> Type of the object
-   * @return Copy of the original value
-   */
-  public static <T extends Writable> T createCopy(
-      UnsafeByteArrayOutputStream reusableOut,
-      UnsafeReusableByteArrayInput reusableIn, T original,
-      ImmutableClassesGiraphConfiguration conf) {
-    T copy = (T) createWritable(original.getClass(), conf);
-
-    try {
-      reusableOut.reset();
-      original.write(reusableOut);
-      reusableIn.initialize(
-          reusableOut.getByteArray(), 0, reusableOut.getPos());
-      copy.readFields(reusableIn);
-
-      if (reusableIn.available() != 0) {
-        throw new RuntimeException("Serialization of " +
-            original.getClass() + " encountered issues, " +
-            reusableIn.available() + " bytes left to be read");
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "IOException occurred while trying to create a copy " +
-          original.getClass(), e);
-    }
-    return copy;
-  }
-
-  /**
    * Writes primitive int array of ints into output stream.
    * Array can be null or empty.
    * @param array array to be written
@@ -895,5 +859,95 @@ public class WritableUtils {
     } else {
       return null;
     }
+  }
+
+
+  /**
+   * Copy {@code from} into {@code to}, by serializing and deserializing it.
+   * Since it is creating streams inside, it's mostly useful for
+   * tests/non-performant code.
+   *
+   * @param from Object to copy from
+   * @param to Object to copy into
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> void copyInto(T from, T to) {
+    copyInto(from, to, false);
+  }
+
+  /**
+   * Copy {@code from} into {@code to}, by serializing and deserializing it.
+   * Since it is creating streams inside, it's mostly useful for
+   * tests/non-performant code.
+   *
+   * @param from Object to copy from
+   * @param to Object to copy into
+   * @param checkOverRead if true, will add one more byte at the end of writing,
+   *                      to make sure read is not touching it. Useful for tests
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> void copyInto(
+      T from, T to, boolean checkOverRead) {
+    try {
+      if (from.getClass() != to.getClass()) {
+        throw new RuntimeException(
+            "Trying to copy from " + from.getClass() +
+            " into " + to.getClass());
+      }
+
+      UnsafeByteArrayOutputStream out = new UnsafeByteArrayOutputStream();
+      from.write(out);
+      if (checkOverRead) {
+        out.writeByte(0);
+      }
+
+      UnsafeByteArrayInputStream in =
+          new UnsafeByteArrayInputStream(out.getByteArray(), 0, out.getPos());
+      to.readFields(in);
+
+      if (in.available() != (checkOverRead ? 1 : 0)) {
+        throw new RuntimeException(
+            "Serialization encountered issues with " + from.getClass() + ", " +
+            (in.available() - (checkOverRead ? 1 : 0)) + " fewer bytes read");
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Create a copy of Writable object, by serializing and deserializing it.
+   *
+   * @param reusableOut Reusable output stream to serialize into
+   * @param reusableIn Reusable input stream to deserialize out of
+   * @param original Original value of which to make a copy
+   * @param conf Configuration
+   * @param <T> Type of the object
+   * @return Copy of the original value
+   */
+  public static <T extends Writable> T createCopy(
+      UnsafeByteArrayOutputStream reusableOut,
+      UnsafeReusableByteArrayInput reusableIn, T original,
+      ImmutableClassesGiraphConfiguration conf) {
+    T copy = (T) createWritable(original.getClass(), conf);
+
+    try {
+      reusableOut.reset();
+      original.write(reusableOut);
+      reusableIn.initialize(
+          reusableOut.getByteArray(), 0, reusableOut.getPos());
+      copy.readFields(reusableIn);
+
+      if (reusableIn.available() != 0) {
+        throw new RuntimeException("Serialization of " +
+            original.getClass() + " encountered issues, " +
+            reusableIn.available() + " bytes left to be read");
+      }
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "IOException occurred while trying to create a copy " +
+          original.getClass(), e);
+    }
+    return copy;
   }
 }

@@ -306,12 +306,15 @@ under the License.
     <dep.json.version>20090211</dep.json.version>
     <dep.junit.version>4.11</dep.junit.version>
     <dep.jython.version>2.5.3</dep.jython.version>
+    <dep.kryo.version>3.0.1</dep.kryo.version>
+    <dep.kryo-serializers.version>0.29</dep.kryo-serializers.version>
     <dep.libthrift.version>0.9.0</dep.libthrift.version>
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
     <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
     <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
     <dep.netty.version>4.0.14.Final</dep.netty.version>
+    <dep.objenesis.version>2.1</dep.objenesis.version>
     <dep.paranamer.version>2.5.2</dep.paranamer.version>
     <dep.slf4j.version>1.7.5</dep.slf4j.version>
     <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
@@ -1402,6 +1405,11 @@ under the License.
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
           </exclusion>
+          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
+          <exclusion>
+            <groupId>com.esotericsoftware.reflectasm</groupId>
+            <artifactId>reflectasm</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1424,6 +1432,11 @@ under the License.
           <exclusion>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
+          </exclusion>
+          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
+          <exclusion>
+            <groupId>com.esotericsoftware.reflectasm</groupId>
+            <artifactId>reflectasm</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1948,6 +1961,21 @@ under the License.
         <version>${dep.jython.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.esotericsoftware</groupId>
+        <artifactId>kryo</artifactId>
+        <version>${dep.kryo.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>de.javakaffee</groupId>
+        <artifactId>kryo-serializers</artifactId>
+        <version>${dep.kryo-serializers.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.objenesis</groupId>
+        <artifactId>objenesis</artifactId>
+        <version>${dep.objenesis.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.thoughtworks.paranamer</groupId>
         <artifactId>paranamer</artifactId>
         <version>${dep.paranamer.version}</version>
@@ -2168,6 +2196,11 @@ under the License.
           <exclusion>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
+          </exclusion>
+          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
+          <exclusion>
+            <groupId>com.esotericsoftware.reflectasm</groupId>
+            <artifactId>reflectasm</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
