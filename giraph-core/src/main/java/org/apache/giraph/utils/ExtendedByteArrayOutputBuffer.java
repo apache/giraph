@@ -19,12 +19,13 @@
 package org.apache.giraph.utils;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Wraps a list of byte array outputs and provides convenient
@@ -65,12 +66,12 @@ public class ExtendedByteArrayOutputBuffer {
   private final AtomicInteger mapSize = new AtomicInteger(0);
   /** Thread local variable to get hold of a byte array output stream */
   private final ThreadLocal<IndexAndDataOut> threadLocal =
-      new ThreadLocal<IndexAndDataOut>() {
-        @Override
-        protected IndexAndDataOut initialValue() {
-          return newIndexAndDataOutput();
-        }
-      };
+    new ThreadLocal<IndexAndDataOut>() {
+      @Override
+      protected IndexAndDataOut initialValue() {
+        return newIndexAndDataOutput();
+      }
+    };
 
   /**
    * Constructor

@@ -150,7 +150,7 @@ public class WrappedEdgeOutputFormat<I extends WritableComparable,
             HadoopUtils.makeJobContext(getConf(), context));
       }
 
-      /*if_not[HADOOP_NON_COMMIT_JOB]*/
+/*if_not[HADOOP_NON_COMMIT_JOB]*/
       @Override
       public void commitJob(JobContext context) throws IOException {
         outputCommitter.commitJob(
@@ -163,7 +163,7 @@ public class WrappedEdgeOutputFormat<I extends WritableComparable,
         outputCommitter.abortJob(
             HadoopUtils.makeJobContext(getConf(), context), state);
       }
-      /*end[HADOOP_NON_COMMIT_JOB]*/
+/*end[HADOOP_NON_COMMIT_JOB]*/
     };
   }
 }

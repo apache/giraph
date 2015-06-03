@@ -52,7 +52,9 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.yammer.metrics.core.Counter;
 
+/*if_not[HADOOP_NON_SECURE]*/
 import java.io.IOException;
+/*end[HADOOP_NON_SECURE]*/
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
@@ -74,8 +76,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
+/*if_not[HADOOP_NON_SECURE]*/
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.AttributeKey;
+/*end[HADOOP_NON_SECURE]*/
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
@@ -286,7 +290,7 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
         .handler(new ChannelInitializer<SocketChannel>() {
           @Override
           protected void initChannel(SocketChannel ch) throws Exception {
-      /*if_not[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
             if (conf.authenticate()) {
               LOG.info("Using Netty with authentication.");
 

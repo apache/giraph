@@ -23,8 +23,8 @@ import org.apache.giraph.comm.netty.handler.AuthorizeServerHandler;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.RequestDecoder;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
-import org.apache.giraph.comm.netty.handler.ResponseEncoder;
 /*if_not[HADOOP_NON_SECURE]*/
+import org.apache.giraph.comm.netty.handler.ResponseEncoder;
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
@@ -49,7 +49,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+/*if_not[HADOOP_NON_SECURE]*/
 import io.netty.util.AttributeKey;
+/*end[HADOOP_NON_SECURE]*/
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -140,9 +142,9 @@ public class NettyServer {
     this.conf = conf;
     this.progressable = progressable;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
-    /*if_not[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
     this.saslServerHandlerFactory = new SaslServerHandler.Factory();
-    /*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP_NON_SECURE]*/
     this.myTaskInfo = myTaskInfo;
     this.exceptionHandler = exceptionHandler;
     sendBufferSize = GiraphConstants.SERVER_SEND_BUFFER_SIZE.get(conf);

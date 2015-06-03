@@ -79,12 +79,12 @@ public class GiraphRunner implements Tool {
     // set up job for various platforms
     final String vertexClassName = args[0];
     final String jobName = "Giraph: " + vertexClassName;
-    /*if[PURE_YARN]
+/*if[PURE_YARN]
     GiraphYarnClient job = new GiraphYarnClient(giraphConf, jobName);
-    else[PURE_YARN]*/
+else[PURE_YARN]*/
     GiraphJob job = new GiraphJob(giraphConf, jobName);
     prepareHadoopMRJob(job, cmd);
-    /*end[PURE_YARN]*/
+/*end[PURE_YARN]*/
 
     // run the job, collect results
     if (LOG.isDebugEnabled()) {

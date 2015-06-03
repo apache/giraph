@@ -585,11 +585,11 @@ public class BspServiceWorker<I extends WritableComparable,
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners);
 
-    /*if[HADOOP_NON_SECURE]
-      workerClient.setup();
-    else[HADOOP_NON_SECURE]*/
+/*if[HADOOP_NON_SECURE]
+    workerClient.setup();
+else[HADOOP_NON_SECURE]*/
     workerClient.setup(getConfiguration().authenticate());
-    /*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP_NON_SECURE]*/
 
     // Initialize aggregator at worker side during setup.
     // Do this just before vertex and edge loading.
@@ -1706,7 +1706,7 @@ public class BspServiceWorker<I extends WritableComparable,
       // Communication service needs to setup the connections prior to
       // processing vertices
 /*if[HADOOP_NON_SECURE]
-    workerClient.setup();
+      workerClient.setup();
 else[HADOOP_NON_SECURE]*/
       workerClient.setup(getConfiguration().authenticate());
 /*end[HADOOP_NON_SECURE]*/

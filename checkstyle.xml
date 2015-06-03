@@ -41,6 +41,7 @@
     <!-- Verify that EVERY source file has the appropriate license -->
   <module name="Header">
     <property name="headerFile" value="${checkstyle.header.file}"/>
+    <property name="fileExtensions" value="java"/>	  
   </module>
 
   <!-- Checks for Javadoc comments (checker).           -->
@@ -66,7 +67,6 @@
       <!-- No empty blocks (i.e. catch) -->
     <module name="EmptyBlock"/>
     <module name="AvoidNestedBlocks"/>
-    <module name="LeftCurly"/>
       <!-- No if/else/do/for/while without braces -->
     <module name="NeedBraces"/>
     <module name="RightCurly"/>
@@ -104,10 +104,6 @@
       <!-- Switch statements should be complete and with independent cases -->
     <module name="FallThrough" />
     <module name="MissingSwitchDefault" />
-    <!-- For hadoop_yarn profile, some YARN exceptions aren't loading in checkstyle -->
-    <module name="RedundantThrows">
-        <property name="suppressLoadErrors" value="true" />
-    </module>
     <module name="SimplifyBooleanExpression"/>
     <module name="SimplifyBooleanReturn"/>
       <!-- Only one statment per line allowed -->
@@ -167,9 +163,12 @@
     <module name="ArrayTypeStyle"/>
       <!-- Indentation -->
     <module name="Indentation">
-      <property name="caseIndent" value="0"/>
       <property name="basicOffset" value="2"/>
       <property name="braceAdjustment" value="0"/>
+      <property name="caseIndent" value="0"/>
+      <property name="throwsIndent" value="2"/>
+      <property name="lineWrappingIndentation" value="0"/>
+      <property name="arrayInitIndent" value="2"/>     
     </module>
       <!-- Turn this on to see what needs to be done
     <module name="TodoComment"/>

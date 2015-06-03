@@ -887,9 +887,9 @@ public class WritableUtils {
       try {
         T[] values = (T[]) clazz.getDeclaredMethod("values").invoke(null);
         return values[ordinal];
-      } catch (IllegalAccessException | IllegalArgumentException
-          | InvocationTargetException | NoSuchMethodException
-          | SecurityException e) {
+      } catch (IllegalAccessException | IllegalArgumentException |
+          InvocationTargetException | NoSuchMethodException |
+          SecurityException e) {
         throw new IOException("Cannot read enum", e);
       }
     } else {

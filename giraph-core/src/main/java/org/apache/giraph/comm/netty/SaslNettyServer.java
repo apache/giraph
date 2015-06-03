@@ -98,12 +98,12 @@ else[HADOOP_1_SECRET_MANAGER]*/
     try {
       SaslDigestCallbackHandler ch =
           new SaslNettyServer.SaslDigestCallbackHandler(secretManager);
-      /*if[STATIC_SASL_SYMBOL]
+/*if[STATIC_SASL_SYMBOL]
       saslServer =
           Sasl.createSaslServer(
               SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
               SaslRpcServer.SASL_DEFAULT_REALM, SaslRpcServer.SASL_PROPS, ch);
-      else[STATIC_SASL_SYMBOL]*/
+else[STATIC_SASL_SYMBOL]*/
       SaslPropertiesResolver saslPropsResolver =
           SaslPropertiesResolver.getInstance(new Configuration());
       saslServer =
@@ -111,7 +111,7 @@ else[HADOOP_1_SECRET_MANAGER]*/
               SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
               SaslRpcServer.SASL_DEFAULT_REALM,
               saslPropsResolver.getDefaultProperties(), ch);
-      /*end[STATIC_SASL_SYMBOL]*/
+/*end[STATIC_SASL_SYMBOL]*/
     } catch (SaslException e) {
       LOG.error("SaslNettyServer: Could not create SaslServer: " + e);
     }

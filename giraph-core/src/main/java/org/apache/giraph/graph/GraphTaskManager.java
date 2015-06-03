@@ -88,11 +88,11 @@ import org.apache.log4j.PatternLayout;
 public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   E extends Writable> implements
   ResetSuperstepMetricsObserver {
-  /*if_not[PURE_YARN]
+/*if_not[PURE_YARN]
   static { // Eliminate this? Even MRv1 tasks should not need it here.
     Configuration.addDefaultResource("giraph-site.xml");
   }
-  end[PURE_YARN]*/
+end[PURE_YARN]*/
   /**
    * Class which checks if an exception on some thread should cause worker
    * to fail
@@ -752,19 +752,19 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     timeToFirstMessageTimerContext = timeToFirstMessage.time();
 
     CallableFactory<Collection<PartitionStats>> callableFactory =
-        new CallableFactory<Collection<PartitionStats>>() {
-          @Override
-          public Callable<Collection<PartitionStats>> newCallable(
-              int callableId) {
-            return new ComputeCallable<I, V, E, Writable, Writable>(
-                context,
-                graphState,
-                messageStore,
-                computePartitionIdQueue,
-                conf,
-                serviceWorker);
-          }
-        };
+      new CallableFactory<Collection<PartitionStats>>() {
+        @Override
+        public Callable<Collection<PartitionStats>> newCallable(
+            int callableId) {
+          return new ComputeCallable<I, V, E, Writable, Writable>(
+              context,
+              graphState,
+              messageStore,
+              computePartitionIdQueue,
+              conf,
+              serviceWorker);
+        }
+      };
     List<Collection<PartitionStats>> results =
         ProgressableUtils.getResultsWithNCallables(callableFactory,
             numThreads, "compute-%d", context);

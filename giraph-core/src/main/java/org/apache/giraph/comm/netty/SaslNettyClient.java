@@ -77,13 +77,13 @@ public class SaslNettyClient {
             AuthMethod.DIGEST.getMechanismName() +
             " client to authenticate to service at " + token.getService());
       }
-      /*if[STATIC_SASL_SYMBOL]
+/*if[STATIC_SASL_SYMBOL]
       saslClient =
           Sasl.createSaslClient(
               new String[] { AuthMethod.DIGEST.getMechanismName() }, null,
               null, SaslRpcServer.SASL_DEFAULT_REALM, SaslRpcServer.SASL_PROPS,
               new SaslClientCallbackHandler(token));
-      else[STATIC_SASL_SYMBOL]*/
+else[STATIC_SASL_SYMBOL]*/
       SaslPropertiesResolver saslPropsResolver =
           SaslPropertiesResolver.getInstance(new Configuration());
       saslClient =
@@ -92,7 +92,7 @@ public class SaslNettyClient {
               null, SaslRpcServer.SASL_DEFAULT_REALM,
               saslPropsResolver.getDefaultProperties(),
               new SaslClientCallbackHandler(token));
-      /*end[STATIC_SASL_SYMBOL]*/
+/*end[STATIC_SASL_SYMBOL]*/
     } catch (IOException e) {
       LOG.error("SaslNettyClient: Could not obtain job token for Netty " +
           "Client to use to authenticate with a Netty Server.");

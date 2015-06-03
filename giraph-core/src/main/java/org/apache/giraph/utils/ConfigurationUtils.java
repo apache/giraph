@@ -72,7 +72,7 @@ public final class ConfigurationUtils {
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(ConfigurationUtils.class);
-  /*if[PURE_YARN]
+/*if[PURE_YARN]
   // The base path for output dirs as saved in GiraphConfiguration
   private static final Path BASE_OUTPUT_PATH;
   static {
@@ -83,7 +83,7 @@ public final class ConfigurationUtils {
       throw new IllegalStateException("Error locating default base path!", ioe);
     }
   }
-  end[PURE_YARN]*/
+end[PURE_YARN]*/
   /** Maintains our accepted options in case the caller wants to add some */
   private static Options OPTIONS;
 
@@ -450,7 +450,7 @@ public final class ConfigurationUtils {
       conf.setYarnTaskHeapMb(
           Integer.parseInt(cmd.getOptionValue("yh")));
     }
-    /*if[PURE_YARN]
+/*if[PURE_YARN]
     if (cmd.hasOption("vof") || cmd.hasOption("eof")) {
       if (cmd.hasOption("op")) {
         // For YARN conf to get the out dir we need w/o a Job obj
@@ -469,7 +469,7 @@ public final class ConfigurationUtils {
         }
       }
     }
-    end[PURE_YARN]*/
+end[PURE_YARN]*/
     // END YARN-ONLY OPTIONS
     handleComputationClass(conf, cmd, computationClassName);
   }

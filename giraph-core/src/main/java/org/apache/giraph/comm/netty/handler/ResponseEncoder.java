@@ -19,7 +19,10 @@
 package org.apache.giraph.comm.netty.handler;
 
 import io.netty.buffer.ByteBufOutputStream;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.RequestType;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.log4j.Logger;
 import io.netty.buffer.ByteBuf;

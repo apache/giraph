@@ -46,11 +46,11 @@ public class HadoopUtils {
   public static TaskAttemptContext makeTaskAttemptContext(Configuration conf,
       TaskAttemptID taskAttemptID) {
     TaskAttemptContext context;
-    /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
     context = new TaskAttemptContext(conf, taskAttemptID);
-    else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     context = new TaskAttemptContextImpl(conf, taskAttemptID);
-    /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     return context;
   }
 
@@ -94,11 +94,11 @@ public class HadoopUtils {
    */
   public static JobContext makeJobContext(Configuration conf, JobID jobID) {
     JobContext context;
-    /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
     context = new JobContext(conf, jobID);
-    else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     context = new JobContextImpl(conf, jobID);
-    /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     return context;
   }
 
@@ -109,11 +109,11 @@ public class HadoopUtils {
    * @return JobId for submitted job.
    */
   public static JobID getJobID(Job job) {
-    /*if[HADOOP_JOB_ID_AVAILABLE]
+/*if[HADOOP_JOB_ID_AVAILABLE]
     return job.getID();
-    else[HADOOP_JOB_ID_AVAILABLE]*/
+else[HADOOP_JOB_ID_AVAILABLE]*/
     return job.getJobID();
-    /*end[HADOOP_JOB_ID_AVAILABLE]*/
+/*end[HADOOP_JOB_ID_AVAILABLE]*/
   }
 
   /**
