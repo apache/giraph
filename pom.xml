@@ -275,6 +275,8 @@ under the License.
     <!-- This lets modules skip unit tests. More details: GIRAPH-957 --> 
     <surefire.skip>false</surefire.skip>
 
+    <checkstyle.config.path>${top.dir}/checkstyle.xml</checkstyle.config.path>
+
     <dep.avro.version>1.7.6</dep.avro.version>
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
     <dep.asm.version>3.2</dep.asm.version>
@@ -541,7 +543,7 @@ under the License.
           <artifactId>maven-checkstyle-plugin</artifactId>
           <version>2.15</version>
           <configuration>
-            <configLocation>${top.dir}/checkstyle.xml</configLocation>
+            <configLocation>${checkstyle.config.path}</configLocation>
             <consoleOutput>true</consoleOutput>
             <enableRulesSummary>false</enableRulesSummary>
             <headerLocation>${top.dir}/license-header.txt</headerLocation>
@@ -837,7 +839,7 @@ under the License.
               <artifactId>maven-checkstyle-plugin</artifactId>
               <version>2.10</version>
               <configuration>
-                <configLocation>${top.dir}/checkstyle.xml</configLocation>
+                <configLocation>${checkstyle.config.path}</configLocation>
                 <consoleOutput>true</consoleOutput>
                 <enableRulesSummary>false</enableRulesSummary>
                 <headerLocation>${top.dir}/license-header.txt</headerLocation>
@@ -1713,6 +1715,11 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-block-app</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-examples</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -2276,6 +2283,7 @@ under the License.
 
   <modules>
     <module>giraph-core</module>
+    <module>giraph-block-app</module>
     <module>giraph-examples</module>
   </modules>
 

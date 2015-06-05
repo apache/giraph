@@ -34,6 +34,7 @@ import java.util.List;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.ValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
@@ -950,4 +951,190 @@ public class WritableUtils {
     }
     return copy;
   }
+
+  /**
+   * Create a copy of Writable object, by serializing and deserializing it.
+   *
+   * @param original Original value of which to make a copy
+   * @return Copy of the original value
+   * @param <T> Type of the object
+   */
+  public static final <T extends Writable> T createCopy(T original) {
+    return (T) createCopy(original, original.getClass(), null);
+  }
+
+  /**
+   * Create a copy of Writable object, by serializing and deserializing it.
+   *
+   * @param original Original value of which to make a copy
+   * @param outputClass Expected copy class, needs to match original
+   * @param conf Configuration
+   * @return Copy of the original value
+   * @param <T> Type of the object
+   */
+  public static final <T extends Writable>
+  T createCopy(T original, Class<? extends T> outputClass,
+      ImmutableClassesGiraphConfiguration conf) {
+    T result = WritableUtils.createWritable(outputClass, conf);
+    copyInto(original, result);
+    return result;
+  }
+
+  /**
+   * Create a copy of Writable object, by serializing and deserializing it.
+   *
+   * @param original Original value of which to make a copy
+   * @param classFactory Factory to create new empty object from
+   * @param conf Configuration
+   * @return Copy of the original value
+   * @param <T> Type of the object
+   */
+  public static final <T extends Writable>
+  T createCopy(T original, ValueFactory<T> classFactory,
+      ImmutableClassesGiraphConfiguration conf) {
+    T result = classFactory.newInstance();
+    copyInto(original, result);
+    return result;
+  }
+
+  /**
+   * Serialize given writable object, and return it's size.
+   *
+   * @param w Writable object
+   * @return it's size after serialization
+   */
+  public static int size(Writable w) {
+    try {
+      ExtendedByteArrayDataOutput out = new ExtendedByteArrayDataOutput();
+      w.write(out);
+      return out.getPos();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Serialize given writable to byte array,
+   * using new instance of ExtendedByteArrayDataOutput.
+   *
+   * @param w Writable object
+   * @return array of bytes
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> byte[] toByteArray(T w) {
+    try {
+      ExtendedByteArrayDataOutput out = new ExtendedByteArrayDataOutput();
+      w.write(out);
+      return out.toByteArray();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Deserialize from given byte array into given writable,
+   * using new instance of ExtendedByteArrayDataInput.
+   *
+   * @param data Byte array representing writable
+   * @param to Object to fill
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> void fromByteArray(byte[] data, T to) {
+    try {
+      ExtendedByteArrayDataInput in =
+          new ExtendedByteArrayDataInput(data, 0, data.length);
+      to.readFields(in);
+
+      if (in.available() != 0) {
+        throw new RuntimeException(
+            "Serialization encountered issues, " + in.available() +
+            " bytes left to be read");
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Serialize given writable to byte array,
+   * using new instance of UnsafeByteArrayOutputStream.
+   *
+   * @param w Writable object
+   * @return array of bytes
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> byte[] toByteArrayUnsafe(T w) {
+    try {
+      UnsafeByteArrayOutputStream out = new UnsafeByteArrayOutputStream();
+      w.write(out);
+      return out.toByteArray();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Deserialize from given byte array into given writable,
+   * using given reusable UnsafeReusableByteArrayInput.
+   *
+   * @param data Byte array representing writable
+   * @param to Object to fill
+   * @param reusableInput Reusable input to use
+   * @param <T> Type of the object
+   */
+  public static <T extends Writable> void fromByteArrayUnsafe(
+      byte[] data, T to, UnsafeReusableByteArrayInput reusableInput) {
+    try {
+      reusableInput.initialize(data, 0, data.length);
+      to.readFields(reusableInput);
+
+      if (reusableInput.available() != 0) {
+        throw new RuntimeException(
+            "Serialization encountered issues, " + reusableInput.available() +
+            " bytes left to be read");
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * First write a boolean saying whether an object is not null,
+   * and if it's not write the object
+   *
+   * @param object Object to write
+   * @param out DataOutput to write to
+   * @param <T> Object type
+   */
+  public static <T extends Writable> void writeIfNotNullAndObject(T object,
+      DataOutput out) throws IOException {
+    out.writeBoolean(object != null);
+    if (object != null) {
+      object.write(out);
+    }
+  }
+
+  /**
+   * First read a boolean saying whether an object is not null,
+   * and if it's not read the object
+   *
+   * @param reusableObject Reuse this object instance
+   * @param objectClass Class of the object, to create if reusableObject is null
+   * @param in DataInput to read from
+   * @param <T> Object type
+   * @return Object, or null
+   */
+  public static <T extends Writable> T readIfNotNullAndObject(T reusableObject,
+      Class<T> objectClass, DataInput in) throws IOException {
+    if (in.readBoolean()) {
+      if (reusableObject == null) {
+        reusableObject = ReflectionUtils.newInstance(objectClass);
+      }
+      reusableObject.readFields(in);
+      return reusableObject;
+    } else {
+      return null;
+    }
+  }
+
 }
