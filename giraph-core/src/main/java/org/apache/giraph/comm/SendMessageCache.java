@@ -175,7 +175,8 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
    * An iterator wrapper on edges to return
    * target vertex ids.
    */
-  private class TargetVertexIdIterator implements Iterator<I> {
+  public static class TargetVertexIdIterator<I extends WritableComparable>
+      implements Iterator<I> {
     /** An edge iterator */
     private final Iterator<Edge<I, Writable>> edgesIterator;
 
@@ -184,7 +185,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
      *
      * @param vertex The source vertex of the out edges
      */
-    private TargetVertexIdIterator(Vertex<I, ?, ?> vertex) {
+    public TargetVertexIdIterator(Vertex<I, ?, ?> vertex) {
       edgesIterator =
         ((Vertex<I, Writable, Writable>) vertex).getEdges().iterator();
     }
@@ -201,7 +202,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
 
     @Override
     public void remove() {
-      // No operation.
+      throw new UnsupportedOperationException();
     }
   }
 

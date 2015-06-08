@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -106,5 +107,17 @@ public class KryoWritableWrapper<T> implements Writable {
     } else {
       return (T) value;
     }
+  }
+
+  /**
+   * Wrap object with KryoWritableWrapper, create a writable copy of it,
+   * and then unwrap it, allowing any object to be copied.
+   *
+   * @param object Object to copy
+   * @return copy of the object
+   * @param <T> Type of the object
+   */
+  public static <T> T wrapAndCopy(T object) {
+    return WritableUtils.createCopy(new KryoWritableWrapper<>(object)).get();
   }
 }
