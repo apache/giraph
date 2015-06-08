@@ -49,14 +49,26 @@ public class BlockMasterLogic<S> {
   private BlockWorkerPieces previousWorkerPieces;
   private boolean computationDone;
 
+  /**
+   * Initialize master logic to execute BlockFactory defined in
+   * the configuration.
+   */
   public void initialize(
-      GiraphConfiguration conf, final BlockMasterApi masterApi)
-    throws InstantiationException, IllegalAccessException {
+      GiraphConfiguration conf, final BlockMasterApi masterApi) {
+    BlockFactory<S> factory = BlockUtils.createBlockFactory(conf);
+    initialize(factory.createBlock(conf), factory.createExecutionStage(conf),
+        masterApi);
+  }
+
+  /**
+   * Initialize Master Logic to execute given block, starting
+   * with given executionStage.
+   */
+  public void initialize(
+      Block executionBlock, S executionStage, final BlockMasterApi masterApi) {
     this.masterApi = masterApi;
     this.computationDone = false;
 
-    BlockFactory<S> factory = BlockUtils.createBlockFactory(conf);
-    Block executionBlock = factory.createBlock(conf);
     LOG.info("Executing application - " + executionBlock);
 
     // We register all possible aggregators at the beginning
@@ -82,8 +94,7 @@ public class BlockMasterLogic<S> {
     // iterating. So passing piece as null, and initial state as current state,
     // so that nothing get's executed in first half, and calculateNextState
     // returns initial state.
-    previousPiece = new PairedPieceAndStage<>(
-        null, factory.createExecutionStage(conf));
+    previousPiece = new PairedPieceAndStage<>(null, executionStage);
   }
 
   /**

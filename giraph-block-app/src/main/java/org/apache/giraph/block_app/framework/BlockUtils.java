@@ -54,7 +54,8 @@ public class BlockUtils {
   /** Property describing BlockFactory to use for current application run */
   public static final ClassConfOption<Object> BLOCK_WORKER_CONTEXT_VALUE_CLASS =
       ClassConfOption.create(
-          "digraph.block_worker_context_value_class", null, Object.class,
+          "digraph.block_worker_context_value_class",
+          Object.class, Object.class,
           "block worker context value class");
 
   private static final Logger LOG = Logger.getLogger(BlockUtils.class);
@@ -136,6 +137,34 @@ public class BlockUtils {
     // Create blocks to detect issues before creating a Giraph job
     // They will not be used here
     Block executionBlock = blockFactory.createBlock(immConf);
+    checkBlockTypes(
+        executionBlock, blockFactory.createExecutionStage(immConf),
+        conf, immConf);
+
+    // check for non 'static final' fields in BlockFactories
+    Class<?> bfClass = blockFactory.getClass();
+    while (!bfClass.equals(Object.class)) {
+      for (Field field : bfClass.getDeclaredFields()) {
+        if (!Modifier.isStatic(field.getModifiers()) ||
+            !Modifier.isFinal(field.getModifiers())) {
+          throw new IllegalStateException("BlockFactory (" + bfClass +
+              ") cannot have any mutable (non 'static final') fields as a " +
+              "safety measure, as createBlock function is called from a " +
+              "different context then all other functions, use conf argument " +
+              "instead, or make it 'static final'. Field present: " + field);
+        }
+      }
+      bfClass = bfClass.getSuperclass();
+    }
+
+    // Register outputs
+    blockFactory.registerOutputs(conf);
+  }
+
+  public static void checkBlockTypes(
+      Block executionBlock, Object executionStage,
+      GiraphConfiguration conf,
+      final ImmutableClassesGiraphConfiguration immConf) {
     LOG.info("Executing application - " + executionBlock);
 
     final Class<?> vertexIdClass = GiraphConstants.VERTEX_ID_CLASS.get(conf);
@@ -146,7 +175,7 @@ public class BlockUtils {
     final Class<?> workerContextValueClass =
         BlockUtils.BLOCK_WORKER_CONTEXT_VALUE_CLASS.get(conf);
     final Class<?> executionStageClass =
-        blockFactory.createExecutionStage(conf).getClass();
+        executionStage.getClass();
 
     // Check for type inconsistencies
     executionBlock.forAllPossiblePieces(new Consumer<AbstractPiece>() {
@@ -183,24 +212,5 @@ public class BlockUtils {
         }
       }
     });
-
-    // check for non 'static final' fields in BlockFactories
-    Class<?> bfClass = blockFactory.getClass();
-    while (!bfClass.equals(Object.class)) {
-      for (Field field : bfClass.getDeclaredFields()) {
-        if (!Modifier.isStatic(field.getModifiers()) ||
-            !Modifier.isFinal(field.getModifiers())) {
-          throw new IllegalStateException("BlockFactory (" + bfClass +
-              ") cannot have any mutable (non 'static final') fields as a " +
-              "safety measure, as createBlock function is called from a " +
-              "different context then all other functions, use conf argument " +
-              "instead, or make it 'static final'. Field present: " + field);
-        }
-      }
-      bfClass = bfClass.getSuperclass();
-    }
-
-    // Register outputs
-    blockFactory.registerOutputs(conf);
   }
 }
