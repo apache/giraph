@@ -97,6 +97,10 @@
     <Bug pattern="UL_UNRELEASED_LOCK"/>
   </Match>
   <Match>
+    <Class name="~org.apache.giraph.function.primitive.PrimitiveRefs.*Ref"/>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
+  <Match>
     <!-- Java Serialization is not used, so this is never an actual issue.
       On the other hand, Kryo needs lambdas to be Serializable to work. -->
     <Bug pattern="SE_BAD_FIELD,SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
