@@ -138,8 +138,7 @@ public class BlockUtils {
     // They will not be used here
     Block executionBlock = blockFactory.createBlock(immConf);
     checkBlockTypes(
-        executionBlock, blockFactory.createExecutionStage(immConf),
-        conf, immConf);
+        executionBlock, blockFactory.createExecutionStage(immConf), immConf);
 
     // check for non 'static final' fields in BlockFactories
     Class<?> bfClass = blockFactory.getClass();
@@ -163,19 +162,15 @@ public class BlockUtils {
 
   public static void checkBlockTypes(
       Block executionBlock, Object executionStage,
-      GiraphConfiguration conf,
-      final ImmutableClassesGiraphConfiguration immConf) {
+      final ImmutableClassesGiraphConfiguration conf) {
     LOG.info("Executing application - " + executionBlock);
 
-    final Class<?> vertexIdClass = GiraphConstants.VERTEX_ID_CLASS.get(conf);
-    final Class<?> vertexValueClass =
-        GiraphConstants.VERTEX_VALUE_CLASS.get(conf);
-    final Class<?> edgeValueClass =
-        GiraphConstants.EDGE_VALUE_CLASS.get(conf);
+    final Class<?> vertexIdClass = conf.getVertexIdClass();
+    final Class<?> vertexValueClass = conf.getVertexValueClass();
+    final Class<?> edgeValueClass = conf.getEdgeValueClass();
     final Class<?> workerContextValueClass =
-        BlockUtils.BLOCK_WORKER_CONTEXT_VALUE_CLASS.get(conf);
-    final Class<?> executionStageClass =
-        executionStage.getClass();
+        BLOCK_WORKER_CONTEXT_VALUE_CLASS.get(conf);
+    final Class<?> executionStageClass = executionStage.getClass();
 
     // Check for type inconsistencies
     executionBlock.forAllPossiblePieces(new Consumer<AbstractPiece>() {
@@ -193,7 +188,7 @@ public class BlockUtils {
           ReflectionUtils.verifyTypes(
               edgeValueClass, classList[2], "edgeValue", piece.getClass());
 
-          MessageClasses classes = piece.getMessageClasses(immConf);
+          MessageClasses classes = piece.getMessageClasses(conf);
           Class<?> messageType = classes.getMessageClass();
           if (messageType == null) {
             messageType = NoMessage.class;

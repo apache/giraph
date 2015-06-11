@@ -64,6 +64,10 @@ public class TestGraph<I extends WritableComparable,
     return vertices;
   }
 
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
+    return conf;
+  }
+
   /**
    * Clear all data
    *

@@ -109,7 +109,7 @@ public class BlockExecutionTest {
       protected Class<BooleanWritable> getMessageClass() {
         return BooleanWritable.class;
       }
-    }, new Object(), conf);
+    }, new Object());
 
     Assert.assertEquals(1, graph.getVertex(new LongWritable(1)).getValue().get());
     Assert.assertEquals(2, graph.getVertex(new LongWritable(2)).getValue().get());
@@ -149,7 +149,7 @@ public class BlockExecutionTest {
       public void masterCompute(BlockMasterApi masterApi, Object executionStage) {
         value.set(numVertices.getReducedValue(masterApi).get());
       }
-    }, new Object(), conf);
+    }, new Object());
 
     Assert.assertEquals(4, value.get());
   }

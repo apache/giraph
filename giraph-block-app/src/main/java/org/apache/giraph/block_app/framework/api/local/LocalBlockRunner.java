@@ -37,7 +37,6 @@ import org.apache.giraph.block_app.framework.internal.BlockWorkerLogic;
 import org.apache.giraph.block_app.framework.internal.BlockWorkerPieces;
 import org.apache.giraph.block_app.framework.output.BlockOutputHandle;
 import org.apache.giraph.conf.BooleanConfOption;
-import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.graph.Vertex;
@@ -86,12 +85,11 @@ public class LocalBlockRunner {
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
   TestGraph<I, V, E> runApp(
-      TestGraph<I, V, E> graph, GiraphConfiguration conf,
-      boolean useFullDigraphTests) throws Exception {
+      TestGraph<I, V, E> graph, boolean useFullDigraphTests) throws Exception {
     if (useFullDigraphTests) {
-      return InternalVertexRunner.runWithInMemoryOutput(conf, graph);
+      return InternalVertexRunner.runWithInMemoryOutput(graph.getConf(), graph);
     } else {
-      runApp(graph, conf);
+      runApp(graph);
       return graph;
     }
   }
@@ -102,9 +100,9 @@ public class LocalBlockRunner {
    */
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
-  void runApp(TestGraph<I, V, E> graph, GiraphConfiguration conf) {
+  void runApp(TestGraph<I, V, E> graph) {
     VertexSaver<I, V, E> noOpVertexSaver = noOpVertexSaver();
-    runAppWithVertexOutput(graph, noOpVertexSaver, conf);
+    runAppWithVertexOutput(graph, noOpVertexSaver);
   }
 
   /**
@@ -114,11 +112,10 @@ public class LocalBlockRunner {
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runBlock(
-      TestGraph<I, V, E> graph, Block block, Object executionStage,
-      GiraphConfiguration conf) {
+      TestGraph<I, V, E> graph, Block block, Object executionStage) {
     VertexSaver<I, V, E> noOpVertexSaver = noOpVertexSaver();
     runBlockWithVertexOutput(
-        block, executionStage, graph, noOpVertexSaver, conf);
+        block, executionStage, graph, noOpVertexSaver);
   }
 
 
@@ -129,12 +126,12 @@ public class LocalBlockRunner {
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runAppWithVertexOutput(
-      TestGraph<I, V, E> graph, final VertexSaver<I, V, E> vertexSaver,
-      GiraphConfiguration conf) {
-    BlockFactory<?> factory = BlockUtils.createBlockFactory(conf);
+      TestGraph<I, V, E> graph, final VertexSaver<I, V, E> vertexSaver) {
+    BlockFactory<?> factory = BlockUtils.createBlockFactory(graph.getConf());
     runBlockWithVertexOutput(
-        factory.createBlock(conf), factory.createExecutionStage(conf),
-        graph, vertexSaver, conf);
+        factory.createBlock(graph.getConf()),
+        factory.createExecutionStage(graph.getConf()),
+        graph, vertexSaver);
   }
 
   /**
@@ -145,20 +142,19 @@ public class LocalBlockRunner {
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runBlockWithVertexOutput(
       Block block, Object executionStage, TestGraph<I, V, E> graph,
-      final VertexSaver<I, V, E> vertexSaver, GiraphConfiguration conf
+      final VertexSaver<I, V, E> vertexSaver
   ) {
+    ImmutableClassesGiraphConfiguration<I, V, E> conf = graph.getConf();
     int numWorkers = NUM_THREADS.get(conf);
     boolean runAllChecks = RUN_ALL_CHECKS.get(conf);
     boolean serializeMaster = SERIALIZE_MASTER.get(conf);
     final boolean doOutputDuringComputation = conf.doOutputDuringComputation();
 
-    ImmutableClassesGiraphConfiguration<I, V, E> immConf =
-        new ImmutableClassesGiraphConfiguration(conf);
     final InternalApi internalApi =
-        new InternalApi(graph, immConf, runAllChecks);
+        new InternalApi(graph, conf, runAllChecks);
     final InternalWorkerApi internalWorkerApi = internalApi.getWorkerApi();
 
-    BlockUtils.checkBlockTypes(block, executionStage, conf, immConf);
+    BlockUtils.checkBlockTypes(block, executionStage, conf);
 
     BlockMasterLogic<Object> blockMasterLogic = new BlockMasterLogic<>();
     blockMasterLogic.initialize(block, executionStage, internalApi);
@@ -177,12 +173,12 @@ public class LocalBlockRunner {
 
     if (runAllChecks) {
       for (Vertex<I, V, E> vertex : graph) {
-        V value = immConf.createVertexValue();
+        V value = conf.createVertexValue();
         WritableUtils.copyInto(vertex.getValue(), value);
         vertex.setValue(value);
 
         vertex.setEdges((Iterable) WritableUtils.createCopy(
-            (Writable) vertex.getEdges(), immConf.getOutEdgesClass(), immConf));
+            (Writable) vertex.getEdges(), conf.getOutEdgesClass(), conf));
       }
     }
 
@@ -194,7 +190,7 @@ public class LocalBlockRunner {
         blockMasterLogic = (BlockMasterLogic) WritableUtils.createCopy(
             new KryoWritableWrapper<>(blockMasterLogic),
             KryoWritableWrapper.class,
-            immConf).get();
+            conf).get();
         blockMasterLogic.initializeAfterRead(internalApi);
       }
 
