@@ -31,7 +31,6 @@ under the License.
       <p>This is a multi-module maven project where the parent is composed of several modules.</p>
       <ul> 
         <li><strong>giraph-core</strong> contains the core Giraph classes and its javadoc can be found <a href="giraph-core/apidocs/overview-summary.html">here</a>.</li>
-        <li><strong>giraph-hive</strong> contains the Giraph hive input/output classes and its javadoc can be found <a href="giraph-hive/apidocs/overview-summary.html">here</a>.</li>
         <li><strong>giraph-examples</strong> contains many toy examples and its javadoc can be found <a href="giraph-examples/apidocs/package-summary.html">here</a>.</li>
       </ul>
     </section>

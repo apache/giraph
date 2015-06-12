@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-1012: Remove giraph-hive (majakabiljo)
+
   GIRAPH-1009: Spammy 'lost reservation' messages from ZooKeeper in workers' log at the end of
   the computation. (heslami via aching)
 
