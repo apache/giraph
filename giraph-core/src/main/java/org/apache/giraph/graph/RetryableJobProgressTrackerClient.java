@@ -24,8 +24,14 @@ import org.apache.giraph.worker.WorkerProgress;
 import org.apache.log4j.Logger;
 
 import com.facebook.nifty.client.FramedClientConnector;
+import com.facebook.nifty.client.NettyClientConfigBuilder;
+import com.facebook.nifty.client.NiftyClient;
+import com.facebook.swift.codec.ThriftCodec;
+import com.facebook.swift.codec.ThriftCodecManager;
 import com.facebook.swift.service.RuntimeTTransportException;
+import com.facebook.swift.service.ThriftClientEventHandler;
 import com.facebook.swift.service.ThriftClientManager;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 
 import java.io.IOException;
@@ -65,7 +71,11 @@ public class RetryableJobProgressTrackerClient
    */
   private void resetConnection() throws ExecutionException,
       InterruptedException {
-    clientManager = new ThriftClientManager();
+    clientManager = new ThriftClientManager(
+        new ThriftCodecManager(new ThriftCodec[0]),
+        new NiftyClient(
+            new NettyClientConfigBuilder().setWorkerThreadCount(2).build()),
+        ImmutableSet.<ThriftClientEventHandler>of());
     FramedClientConnector connector =
         new FramedClientConnector(new InetSocketAddress(
             JOB_PROGRESS_SERVICE_HOST.get(conf),
