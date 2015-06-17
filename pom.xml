@@ -293,6 +293,7 @@ under the License.
     <dep.commons-logging.version>1.1.1</dep.commons-logging.version>
     <dep.commons-io.version>2.1</dep.commons-io.version>
     <dep.commons-net.version>3.1</dep.commons-net.version>
+    <dep.commons-lang3.version>3.4</dep.commons-lang3.version>
     <dep.facebook-swift.version>0.14.0</dep.facebook-swift.version>
     <dep.fasterxml-jackson.version>2.1.2</dep.fasterxml-jackson.version>
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
@@ -1616,6 +1617,11 @@ under the License.
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
         <version>${dep.commons-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${dep.commons-lang3.version}</version>
       </dependency>
       <dependency>
         <groupId>com.facebook.thirdparty.yourkit-api</groupId>
