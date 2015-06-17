@@ -28,6 +28,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -46,6 +47,8 @@ public class TestGraph<I extends WritableComparable,
                        V extends Writable,
                        E extends Writable>
                        implements Iterable<Vertex<I, V, E>> {
+  /** Vertex value combiner */
+  protected final VertexValueCombiner<V> vertexValueCombiner;
   /** The vertex values */
   protected HashMap<I, Vertex<I, V, E>> vertices = Maps.newHashMap();
   /** The configuration */
@@ -58,6 +61,7 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph(GiraphConfiguration conf) {
     this.conf = new ImmutableClassesGiraphConfiguration(conf);
+    vertexValueCombiner = this.conf.createVertexValueCombiner();
   }
 
   public HashMap<I, Vertex<I, V, E>> getVertices() {
@@ -83,7 +87,15 @@ public class TestGraph<I extends WritableComparable,
    * @return this
    */
   public TestGraph<I, V, E> addVertex(Vertex<I, V, E> vertex) {
-    vertices.put(vertex.getId(), vertex);
+    Vertex<I, V, E> previousVertex = vertices.get(vertex.getId());
+    if (previousVertex != null) {
+      vertexValueCombiner.combine(previousVertex.getValue(), vertex.getValue());
+      for (Edge<I, E> edge : vertex.getEdges()) {
+        previousVertex.addEdge(edge);
+      }
+    } else {
+      vertices.put(vertex.getId(), vertex);
+    }
     return this;
   }
 
@@ -97,8 +109,31 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph<I, V, E> addVertex(I id, V value,
                                          Entry<I, E>... edges) {
-    Vertex<I, V, E> v = makeVertex(id, value, edges);
-    vertices.put(id, v);
+    addVertex(makeVertex(id, value, edges));
+    return this;
+  }
+
+  /**
+   * Set vertex, replace if there was already a vertex with same id added
+   *
+   * @param vertex Vertex
+   * @return this
+   */
+  public TestGraph<I, V, E> setVertex(Vertex<I, V, E> vertex) {
+    vertices.put(vertex.getId(), vertex);
+    return this;
+  }
+
+  /**
+   * Set vertex, replace if there was already a vertex with same id added
+   *
+   * @param id the index
+   * @param value the value
+   * @param edges all edges
+   * @return this
+   */
+  public TestGraph<I, V, E> setVertex(I id, V value, Entry<I, E>... edges) {
+    setVertex(makeVertex(id, value, edges));
     return this;
   }
 
