@@ -66,7 +66,6 @@ public final class BlockMasterCompute<S> extends MasterCompute {
     object.readFields(in);
     blockMasterLogic = object.get();
     blockMasterLogic.initializeAfterRead(new BlockMasterApiWrapper(this,
-        new BlockOutputHandle(getContext().getJobID().toString(),
-        getConf(), getContext())));
+        new BlockOutputHandle()));
   }
 }

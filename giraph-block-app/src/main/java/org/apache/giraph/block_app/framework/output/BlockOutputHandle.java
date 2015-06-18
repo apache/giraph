@@ -38,15 +38,19 @@ public class BlockOutputHandle implements BlockOutputApi {
   private transient Configuration conf;
   private transient Progressable progressable;
   private final Map<String, BlockOutputDesc> outputDescMap;
-  private final Map<String, Queue<BlockOutputWriter>> freeWriters;
-  private final Map<String, Queue<BlockOutputWriter>> occupiedWriters;
+  private final Map<String, Queue<BlockOutputWriter>> freeWriters =
+      new HashMap<>();
+  private final Map<String, Queue<BlockOutputWriter>> occupiedWriters =
+      new HashMap<>();
+
+  public BlockOutputHandle() {
+    outputDescMap = null;
+  }
 
   public BlockOutputHandle(String jobIdentifier, Configuration conf,
       Progressable hadoopProgressable) {
     outputDescMap = BlockOutputFormat.createInitAndCheckOutputDescsMap(
         conf, jobIdentifier);
-    freeWriters = new HashMap<>();
-    occupiedWriters = new HashMap<>();
     for (String confOption : outputDescMap.keySet()) {
       freeWriters.put(confOption,
           new ConcurrentLinkedQueue<BlockOutputWriter>());
@@ -65,11 +69,19 @@ public class BlockOutputHandle implements BlockOutputApi {
   @Override
   public <OW extends BlockOutputWriter, OD extends BlockOutputDesc<OW>>
   OD getOutputDesc(String confOption) {
+    if (outputDescMap == null) {
+      throw new IllegalArgumentException(
+          "Output cannot be used with checkpointing");
+    }
     return (OD) outputDescMap.get(confOption);
   }
 
   @Override
   public <OW extends BlockOutputWriter> OW getWriter(String confOption) {
+    if (outputDescMap == null) {
+      throw new IllegalArgumentException(
+          "Output cannot be used with checkpointing");
+    }
     OW outputWriter = (OW) freeWriters.get(confOption).poll();
     if (outputWriter == null) {
       outputWriter = (OW) outputDescMap.get(confOption).createOutputWriter(
