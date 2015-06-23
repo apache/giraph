@@ -36,6 +36,7 @@ import org.apache.giraph.writable.kryo.serializers.ArraysAsListSerializer;
 import org.apache.giraph.writable.kryo.serializers.CollectionsNCopiesSerializer;
 import org.apache.giraph.writable.kryo.serializers.DirectWritableSerializer;
 import org.apache.giraph.writable.kryo.serializers.FastUtilSerializer;
+import org.apache.giraph.writable.kryo.serializers.ImmutableMapSerializer;
 import org.apache.giraph.writable.kryo.serializers.ReusableFieldSerializer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -229,15 +230,11 @@ public class HadoopKryo extends Kryo {
 
     ImmutableListSerializer.registerSerializers(kryo);
 
-    // TODO move guava version to 18.0, and remove this fix:
-    try {
-      kryo.register(
-          Class.forName("com.google.common.collect.RegularImmutableList"),
-          new ImmutableListSerializer());
-    } catch (ClassNotFoundException e) {
-      throw new IllegalStateException(
-          "Guava has RegularImmutableList missing", e);
-    }
+    registerSerializer(kryo, "com.google.common.collect.RegularImmutableMap",
+        new ImmutableMapSerializer());
+    registerSerializer(kryo,
+        "com.google.common.collect.SingletonImmutableBiMap",
+        new ImmutableMapSerializer());
 
     // There are many fastutil classes, register them at the end,
     // so they don't use up small registration numbers
@@ -295,6 +292,22 @@ public class HadoopKryo extends Kryo {
     });
 
     return kryo;
+  }
+
+  /**
+   * Register serializer for class with class name
+   *
+   * @param kryo HadoopKryo
+   * @param className Name of the class for which to register serializer
+   * @param serializer Serializer to use
+   */
+  private static void registerSerializer(HadoopKryo kryo, String className,
+      Serializer serializer) {
+    try {
+      kryo.register(Class.forName(className), serializer);
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException("Class " + className + " is missing", e);
+    }
   }
 
   /**

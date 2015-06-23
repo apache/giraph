@@ -297,7 +297,7 @@ under the License.
     <dep.fasterxml-jackson.version>2.1.2</dep.fasterxml-jackson.version>
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
-    <dep.guava.version>14.0.1</dep.guava.version>
+    <dep.guava.version>18.0</dep.guava.version>
     <dep.hbase.version>0.94.16</dep.hbase.version>
     <dep.hcatalog.version>0.5.0-incubating</dep.hcatalog.version>
     <dep.hive.version>0.11.0</dep.hive.version>

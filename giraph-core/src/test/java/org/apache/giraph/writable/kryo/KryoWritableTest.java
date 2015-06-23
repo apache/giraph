@@ -18,6 +18,8 @@
 package org.apache.giraph.writable.kryo;
 
 import static org.junit.Assert.assertEquals;
+
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 import java.util.Arrays;
@@ -29,6 +31,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
 
 
 /**
@@ -191,5 +194,18 @@ public class KryoWritableTest {
 
     assertEquals(5, res.value1.get());
     Assert.assertTrue(res == res.value2);
+  }
+
+  @Test
+  public void testKryoImmutableMap() throws Exception {
+    Long2IntOpenHashMap map = new Long2IntOpenHashMap();
+    map.put(1, 2);
+    map.put(10, 20);
+    ImmutableMap<Long, Integer> copy =
+        WritableUtils.createCopy(
+            new KryoWritableWrapper<>(ImmutableMap.copyOf(map))).get();
+    Assert.assertEquals(2, copy.size());
+    Assert.assertEquals(2, copy.get(1L).intValue());
+    Assert.assertEquals(20, copy.get(10L).intValue());
   }
 }
