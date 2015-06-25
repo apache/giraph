@@ -25,7 +25,7 @@ import org.apache.hadoop.io.WritableComparable;
  * {@link MessageCombiner} that finds the minimum {@link IntWritable}
  */
 public class MinimumIntMessageCombiner
-    extends MessageCombiner<WritableComparable, IntWritable> {
+    implements MessageCombiner<WritableComparable, IntWritable> {
   @Override
   public void combine(WritableComparable vertexIndex,
       IntWritable originalMessage, IntWritable messageToCombine) {

@@ -39,25 +39,30 @@ import org.apache.hadoop.io.WritableComparable;
 public class Small2GraphInit<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements TestGraphModifier<I, V, E> {
-
-  private final Supplier<V> valueSupplier;
   private final Supplier<E> edgeSupplier;
 
-  public Small2GraphInit(
-      Supplier<V> valueSupplier, Supplier<E> edgeSupplier) {
-    this.valueSupplier = valueSupplier;
+  public Small2GraphInit() {
+    this(null);
+  }
+
+  public Small2GraphInit(Supplier<E> edgeSupplier) {
     this.edgeSupplier = edgeSupplier;
   }
 
   @Override
   public void modifyGraph(NumericTestGraph<I, V, E> graph) {
-    graph.addVertex(0, valueSupplier.get(), edgeSupplier, 1, 2);
-    graph.addVertex(1, valueSupplier.get(), edgeSupplier, 0, 2);
-    graph.addVertex(2, valueSupplier.get(), edgeSupplier, 0, 1);
-    graph.addVertex(3, valueSupplier.get(), edgeSupplier, 4, 5);
-    graph.addVertex(4, valueSupplier.get(), edgeSupplier, 3, 5);
-    graph.addVertex(5, valueSupplier.get(), edgeSupplier, 3, 4);
-    graph.addVertex(6, valueSupplier.get(), edgeSupplier);
+    graph.addSymmetricEdge(0, 1, createEdgeValue());
+    graph.addSymmetricEdge(0, 2, createEdgeValue());
+    graph.addSymmetricEdge(1, 2, createEdgeValue());
+    graph.addSymmetricEdge(3, 4, createEdgeValue());
+    graph.addSymmetricEdge(3, 5, createEdgeValue());
+    graph.addSymmetricEdge(4, 5, createEdgeValue());
+
+    graph.addVertex(6);
+  }
+
+  private E createEdgeValue() {
+    return edgeSupplier != null ? edgeSupplier.get() : null;
   }
 }
 

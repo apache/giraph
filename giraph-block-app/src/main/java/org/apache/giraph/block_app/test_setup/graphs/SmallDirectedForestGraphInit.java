@@ -25,42 +25,49 @@ import org.apache.hadoop.io.WritableComparable;
 
 
 /**
- * Create a network that looks like:
- *   1      5
- *  / \    / \    6
- * 0---2--3---4
+ * Create a directed forest that looks like:
  *
- * where 6 is disconnected from the rest of the network.
+ *   0      4     6
+ *  / \     |    / \
+ * 1   2    5   7   8
+ *     |
+ *     3
+ *
+ * Edges are directed from top to bottom.
+ * Vertices with no edges are created.
  *
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public class Small1GraphInit<I extends WritableComparable,
+public class SmallDirectedForestGraphInit<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements TestGraphModifier<I, V, E> {
 
   private final Supplier<E> edgeSupplier;
 
-  public Small1GraphInit() {
+  public SmallDirectedForestGraphInit() {
     this(null);
   }
 
-  public Small1GraphInit(Supplier<E> edgeSupplier) {
+  public SmallDirectedForestGraphInit(Supplier<E> edgeSupplier) {
     this.edgeSupplier = edgeSupplier;
   }
 
   @Override
   public void modifyGraph(NumericTestGraph<I, V, E> graph) {
-    graph.addSymmetricEdge(0, 1, createEdgeValue());
-    graph.addSymmetricEdge(0, 2, createEdgeValue());
-    graph.addSymmetricEdge(1, 2, createEdgeValue());
-    graph.addSymmetricEdge(2, 3, createEdgeValue());
-    graph.addSymmetricEdge(3, 4, createEdgeValue());
-    graph.addSymmetricEdge(3, 5, createEdgeValue());
-    graph.addSymmetricEdge(4, 5, createEdgeValue());
+    graph.addEdge(0, 1, createEdgeValue());
+    graph.addEdge(0, 2, createEdgeValue());
+    graph.addEdge(2, 3, createEdgeValue());
+    graph.addEdge(4, 5, createEdgeValue());
+    graph.addEdge(6, 7, createEdgeValue());
+    graph.addEdge(6, 8, createEdgeValue());
 
-    graph.addVertex(6);
+    graph.addVertex(1);
+    graph.addVertex(3);
+    graph.addVertex(5);
+    graph.addVertex(7);
+    graph.addVertex(8);
   }
 
   private E createEdgeValue() {

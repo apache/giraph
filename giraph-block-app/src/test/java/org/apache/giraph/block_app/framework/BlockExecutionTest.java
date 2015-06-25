@@ -58,10 +58,9 @@ public class BlockExecutionTest {
     return conf;
   }
 
-  private static TestGraph<LongWritable, LongWritable, NullWritable> createTestGraph(
-      GiraphConfiguration conf) {
+  private static TestGraph<LongWritable, LongWritable, NullWritable> createTestGraph() {
     TestGraph<LongWritable, LongWritable, NullWritable> graph =
-        new TestGraph<LongWritable, LongWritable, NullWritable>(conf);
+        new TestGraph<LongWritable, LongWritable, NullWritable>(createConf());
     graph.addVertex(new LongWritable(1), new LongWritable());
     graph.addVertex(new LongWritable(2), new LongWritable());
     graph.addVertex(new LongWritable(3), new LongWritable());
@@ -76,8 +75,7 @@ public class BlockExecutionTest {
 
   @Test
   public void testMessageSending() {
-    GiraphConfiguration conf = createConf();
-    TestGraph<LongWritable, LongWritable, NullWritable> graph = createTestGraph(conf);
+    TestGraph<LongWritable, LongWritable, NullWritable> graph = createTestGraph();
 
     LocalBlockRunner.runBlock(graph, new Piece<WritableComparable, LongWritable, Writable, BooleanWritable, Object>() {
       @Override
@@ -119,8 +117,7 @@ public class BlockExecutionTest {
 
   @Test
   public void testReducing() {
-    GiraphConfiguration conf = createConf();
-    TestGraph<LongWritable, LongWritable, NullWritable> graph = createTestGraph(conf);
+    TestGraph<LongWritable, LongWritable, NullWritable> graph = createTestGraph();
 
     final LongWritable value = new LongWritable();
 
@@ -152,5 +149,30 @@ public class BlockExecutionTest {
     }, new Object());
 
     Assert.assertEquals(4, value.get());
+  }
+
+  public void testVertexRemoval() {
+    TestGraph<LongWritable, LongWritable, NullWritable> graph = createTestGraph();
+    LocalBlockRunner.runBlock(graph, new Piece<LongWritable, Writable, Writable, NoMessage, Object>() {
+      @Override
+      public VertexSender<LongWritable, Writable, Writable> getVertexSender(
+          final BlockWorkerSendApi<LongWritable, Writable, Writable, NoMessage> workerApi,
+          Object executionStage) {
+        return new InnerVertexSender() {
+          @Override
+          public void vertexSend(Vertex<LongWritable, Writable, Writable> vertex) {
+            long id = vertex.getId().get();
+            if (id == 1 || id == 3) {
+              workerApi.removeVertexRequest(vertex.getId());
+            }
+          }
+        };
+      }
+    }, new Object());
+
+    Assert.assertNull(graph.getVertex(new LongWritable(1)));
+    Assert.assertNotNull(graph.getVertex(new LongWritable(2)));
+    Assert.assertNull(graph.getVertex(new LongWritable(3)));
+    Assert.assertNotNull(graph.getVertex(new LongWritable(4)));
   }
 }

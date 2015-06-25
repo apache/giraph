@@ -144,7 +144,7 @@ public class TestComputationCombinerTypes {
           IntWritable> { }
 
   private static class NoOpMessageCombiner<I extends WritableComparable,
-      M extends Writable> extends MessageCombiner<I, M> {
+      M extends Writable> implements MessageCombiner<I, M> {
     @Override
     public void combine(I vertexIndex, M originalMessage, M messageToCombine) {
     }

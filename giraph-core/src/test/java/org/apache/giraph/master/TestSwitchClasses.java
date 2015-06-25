@@ -195,7 +195,7 @@ public class TestSwitchClasses {
   }
 
   public static class MinimumMessageCombiner
-      extends MessageCombiner<IntWritable,
+      implements MessageCombiner<IntWritable,
                   IntWritable> {
     @Override
     public void combine(IntWritable vertexIndex, IntWritable originalMessage,
@@ -211,7 +211,7 @@ public class TestSwitchClasses {
   }
 
   public static class SumMessageCombiner
-      extends MessageCombiner<IntWritable, IntWritable> {
+      implements MessageCombiner<IntWritable, IntWritable> {
     @Override
     public void combine(IntWritable vertexIndex, IntWritable originalMessage,
         IntWritable messageToCombine) {

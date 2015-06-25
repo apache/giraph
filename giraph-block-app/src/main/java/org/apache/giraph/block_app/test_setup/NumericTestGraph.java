@@ -180,7 +180,9 @@ public class NumericTestGraph<I extends WritableComparable,
    */
   public void addEdge(Number fromVertex, Number toVertex, E edgeValue) {
     testGraph.addEdge(
-        numberToVertexId(fromVertex), numberToVertexId(toVertex), edgeValue);
+        numberToVertexId(fromVertex),
+        numberToVertexId(toVertex),
+        edgeValueOrCreate(edgeValue));
   }
 
   /**
@@ -309,6 +311,11 @@ public class NumericTestGraph<I extends WritableComparable,
     return edgeValue != null ?
       numberToEdgeValue.apply(edgeValue) : getConf().createEdgeValue();
   }
+
+  public E edgeValueOrCreate(E edgeValue) {
+    return edgeValue != null ? edgeValue : getConf().createEdgeValue();
+  }
+
 
   public Vertex<I, V, E> createVertex() {
     return getConf().createVertex();

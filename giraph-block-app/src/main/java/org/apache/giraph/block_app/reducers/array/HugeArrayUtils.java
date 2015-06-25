@@ -48,24 +48,26 @@ import org.apache.hadoop.io.Writable;
  * In Giraph, for each reducer there is a worker machine which is it's owner,
  * which does partial aggregation for it. So if we have only single huge
  * reducer - other workers will have to wait, while that single worker is doing
- * huge reducing operation.
+ * huge reducing operation. Additionally single reducer should be smaller then
+ * max netty message, which is 1MB.
  * On the other hand, each reducer has a meaningful overhead, so we should try
- * to keep number of reducers as low as possible (in total less then 10k is a
- * good number).
- * What we want is to split such huge reducers into slightly more then number
- * of worker reducers, and NUM_REDUCERS = 50000 is used here as a good middle
- * ground.
+ * to keep number of reducers as low as possible.
+ *
+ * By default we are being conservative, to keep individual reducers small,
+ * with striping into 500k reducers by default. If you know exact sizes of
+ * your objects you can specify exact number you want.
  *
  * So when we have huge array, we don't want one reducer/broadcast for each
  * element, but we also don't want one reducer/broadcast for the whole array.
  *
  * This class allows transparent split into reasonable number of reducers
- * (~50000), which solves both of the above issues.
+ * (~500k), which solves both of the above issues.
  */
 public class HugeArrayUtils {
-  // Striping perfectly reducers of up to 25GB (i.e. 500KB * NUM_STRIPES).
+  // Even with 100GB object, average stripe will be 200KB on average,
+  // keeping outliers mostly under 1MB limit
   private static final IntConfOption NUM_STRIPES = new IntConfOption(
-      "giraph.reducers.HugeArrayUtils.num_stripes", 50000,
+      "giraph.reducers.HugeArrayUtils.num_stripes", 500000,
       "Number of distict reducers to create. If array is smaller then this" +
       "number, each element will be it's own reducer");
 

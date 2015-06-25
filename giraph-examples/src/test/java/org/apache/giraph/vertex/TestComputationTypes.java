@@ -64,7 +64,7 @@ public class TestComputationTypes {
      * Matches the {@link GeneratedComputationMatch}
      */
     public static class GeneratedVertexMatchMessageCombiner
-        extends
+        implements
         MessageCombiner<LongWritable, FloatWritable> {
       @Override
       public void combine(LongWritable vertexIndex,
@@ -82,7 +82,7 @@ public class TestComputationTypes {
      * Mismatches the {@link GeneratedComputationMatch}
      */
     public static class GeneratedVertexMismatchMessageCombiner
-        extends
+        implements
         MessageCombiner<LongWritable, DoubleWritable> {
       @Override
       public void combine(LongWritable vertexIndex,

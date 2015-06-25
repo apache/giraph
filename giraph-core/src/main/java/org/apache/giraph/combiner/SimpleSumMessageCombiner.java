@@ -23,9 +23,12 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * MessageCombiner which sums up {@link IntWritable} message values.
+ *
+ * Use SumMessageCombiner.INT instead.
  */
+@Deprecated
 public class SimpleSumMessageCombiner
-    extends MessageCombiner<WritableComparable, IntWritable> {
+    implements MessageCombiner<WritableComparable, IntWritable> {
 
   @Override
   public void combine(WritableComparable vertexIndex,

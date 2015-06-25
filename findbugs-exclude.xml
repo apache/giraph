@@ -103,6 +103,6 @@
   <Match>
     <!-- Java Serialization is not used, so this is never an actual issue.
       On the other hand, Kryo needs lambdas to be Serializable to work. -->
-    <Bug pattern="SE_BAD_FIELD,SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+    <Bug pattern="SE_BAD_FIELD,SE_COMPARATOR_SHOULD_BE_SERIALIZABLE,SE_NO_SERIALVERSIONID" />
   </Match>
 </FindBugsFilter>
