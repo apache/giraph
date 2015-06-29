@@ -96,6 +96,20 @@ public abstract class PartitionStore<I extends WritableComparable,
   public abstract int getNumPartitions();
 
   /**
+   * Return the number of vertices in a partition.
+   * @param partitionId Partition id
+   * @return The number of vertices in the specified partition
+   */
+  public abstract long getPartitionVertexCount(int partitionId);
+
+  /**
+   * Return the number of edges in a partition.
+   * @param partitionId Partition id
+   * @return The number of edges in the specified partition
+   */
+  public abstract long getPartitionEdgeCount(int partitionId);
+
+  /**
    * Whether the partition store is empty.
    *
    * @return True iff there are no partitions in the store

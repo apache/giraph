@@ -23,7 +23,6 @@ import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.VertexIdMessageBytesIterator;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -84,13 +83,11 @@ public class IntByteArrayMessageStore<M extends Writable>
     map =
         new Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<IntWritable, Writable, Writable> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
       Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
           new Int2ObjectOpenHashMap<DataInputOutput>(
-              (int) partition.getVertexCount());
+              (int) service.getPartitionStore()
+                  .getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
-      service.getPartitionStore().putPartition(partition);
     }
   }
 

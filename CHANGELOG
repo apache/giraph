@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-1018: Improving PartitionStore API to better match its expected behaviour
+  (heslami via aching)
+
   GIRAPH-1012: Remove giraph-hive (majakabiljo)
 
   GIRAPH-1009: Spammy 'lost reservation' messages from ZooKeeper in workers' log at the end of

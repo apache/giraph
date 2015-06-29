@@ -30,7 +30,6 @@ import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
 import org.apache.giraph.types.ops.collections.Basic2ObjectMap;
@@ -102,15 +101,14 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
 
     map = new Int2ObjectOpenHashMap<Basic2ObjectMap<I, DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<I, ?, ?> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
       Basic2ObjectMap<I, DataInputOutput> partitionMap =
           idTypeOps.create2ObjectOpenHashMap(
-              Math.max(10, (int) partition.getVertexCount()),
+              Math.max(10,
+                  (int) service.getPartitionStore()
+                      .getPartitionVertexCount(partitionId)),
               dataInputOutputWriter);
 
       map.put(partitionId, partitionMap);
-      service.getPartitionStore().putPartition((Partition) partition);
     }
   }
 

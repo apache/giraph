@@ -110,5 +110,25 @@ public class SimplePartitionStore<I extends WritableComparable,
   }
 
   @Override
+  public long getPartitionVertexCount(int partitionId) {
+    Partition partition = partitions.get(partitionId);
+    if (partition == null) {
+      return 0;
+    } else {
+      return partition.getVertexCount();
+    }
+  }
+
+  @Override
+  public long getPartitionEdgeCount(int partitionId) {
+    Partition partition = partitions.get(partitionId);
+    if (partition == null) {
+      return 0;
+    } else {
+      return partition.getEdgeCount();
+    }
+  }
+
+  @Override
   public void putPartition(Partition<I, V, E> partition) { }
 }

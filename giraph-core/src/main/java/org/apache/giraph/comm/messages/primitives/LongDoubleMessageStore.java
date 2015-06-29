@@ -33,7 +33,6 @@ import java.util.List;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -74,12 +73,10 @@ public class LongDoubleMessageStore
 
     map = new Int2ObjectOpenHashMap<Long2DoubleOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, Writable, Writable> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
-      Long2DoubleOpenHashMap partitionMap =
-          new Long2DoubleOpenHashMap((int) partition.getVertexCount());
+      Long2DoubleOpenHashMap partitionMap = new Long2DoubleOpenHashMap(
+          (int) service.getPartitionStore()
+              .getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
-      service.getPartitionStore().putPartition(partition);
     }
   }
 

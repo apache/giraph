@@ -26,7 +26,6 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.partition.Partition;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -73,13 +72,10 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
 
     map = new Int2ObjectOpenHashMap<>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, Writable, Writable> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
-      Long2ObjectOpenHashMap<T> partitionMap =
-          new Long2ObjectOpenHashMap<T>(
-              (int) partition.getVertexCount());
+      Long2ObjectOpenHashMap<T> partitionMap = new Long2ObjectOpenHashMap<T>(
+          (int) service.getPartitionStore()
+              .getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
-      service.getPartitionStore().putPartition(partition);
     }
   }
 

@@ -288,10 +288,8 @@ public class TestPartitionStores {
     int totalEdges = 0;
     Partition<IntWritable, IntWritable, NullWritable> partition;
     for (int i = 0; i < NUM_OF_PARTITIONS; ++i) {
-      partition = store.getOrCreatePartition(i);
-      totalVertexes += partition.getVertexCount();
-      totalEdges += partition.getEdgeCount();
-      store.putPartition(partition);
+      totalVertexes += store.getPartitionVertexCount(i);
+      totalEdges += store.getPartitionEdgeCount(i);
     }
     assert vertexCounter.get() == NUM_OF_THREADS * NUM_OF_VERTEXES_PER_THREAD;
     assert totalVertexes == NUM_OF_THREADS * NUM_OF_VERTEXES_PER_THREAD;
@@ -412,16 +410,10 @@ public class TestPartitionStores {
     assertTrue(partitionStore.hasPartition(2));
     assertFalse(partitionStore.hasPartition(3));
     assertTrue(partitionStore.hasPartition(4));
-    partition = partitionStore.getOrCreatePartition(1);
-    assertEquals(3, partition.getVertexCount());
-    partitionStore.putPartition(partition);
-    partition = partitionStore.getOrCreatePartition(2);
-    assertEquals(2, partition.getVertexCount());
-    partitionStore.putPartition(partition);
-    partition = partitionStore.getOrCreatePartition(4);
-    assertEquals(1, partition.getVertexCount());
-    assertEquals(2, partition.getEdgeCount());
-    partitionStore.putPartition(partition);
+    assertEquals(3, partitionStore.getPartitionVertexCount(1));
+    assertEquals(2, partitionStore.getPartitionVertexCount(2));
+    assertEquals(1, partitionStore.getPartitionVertexCount(4));
+    assertEquals(2, partitionStore.getPartitionEdgeCount(4));
     partitionStore.deletePartition(2);
     assertEquals(2, partitionStore.getNumPartitions());
   }

@@ -33,8 +33,6 @@ import java.util.List;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -74,14 +72,10 @@ public class IntFloatMessageStore
 
     map = new Int2ObjectOpenHashMap<Int2FloatOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      PartitionStore<IntWritable, Writable, Writable> partitionStore =
-        service.getPartitionStore();
-      Partition<IntWritable, Writable, Writable> partition =
-        partitionStore.getOrCreatePartition(partitionId);
-      Int2FloatOpenHashMap partitionMap =
-          new Int2FloatOpenHashMap((int) partition.getVertexCount());
+      Int2FloatOpenHashMap partitionMap = new Int2FloatOpenHashMap(
+          (int) service.getPartitionStore()
+              .getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
-      partitionStore.putPartition(partition);
     }
   }
 

@@ -48,7 +48,6 @@ import org.apache.giraph.metrics.GiraphTimer;
 import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
@@ -737,15 +736,10 @@ end[PURE_YARN]*/
     PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
     for (Integer partitionId : partitionStore.getPartitionIds()) {
       computePartitionIdQueue.add(partitionId);
-
-      Partition<I, V, E> partition =
-        partitionStore.getOrCreatePartition(partitionId);
-      verticesToCompute += partition.getVertexCount();
-      partitionStore.putPartition(partition);
+      verticesToCompute += partitionStore.getPartitionVertexCount(partitionId);
     }
     WorkerProgress.get().startSuperstep(
-        serviceWorker.getSuperstep(),
-        verticesToCompute,
+        serviceWorker.getSuperstep(), verticesToCompute,
         serviceWorker.getPartitionStore().getNumPartitions());
 
     GiraphTimerContext computeAllTimerContext = computeAll.time();

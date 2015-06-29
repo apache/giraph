@@ -704,17 +704,15 @@ else[HADOOP_NON_SECURE]*/
     // if necessary
     List<PartitionStats> partitionStatsList =
         new ArrayList<PartitionStats>();
-    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
-      Partition<I, V, E> partition =
-          getPartitionStore().getOrCreatePartition(partitionId);
+    PartitionStore<I, V, E> partitionStore = getPartitionStore();
+    for (Integer partitionId : partitionStore.getPartitionIds()) {
       PartitionStats partitionStats =
-          new PartitionStats(partition.getId(),
-              partition.getVertexCount(),
+          new PartitionStats(partitionId,
+              partitionStore.getPartitionVertexCount(partitionId),
               0,
-              partition.getEdgeCount(),
+              partitionStore.getPartitionEdgeCount(partitionId),
               0, 0);
       partitionStatsList.add(partitionStats);
-      getPartitionStore().putPartition(partition);
     }
     workerGraphPartitioner.finalizePartitionStats(
         partitionStatsList, getPartitionStore());
@@ -1121,10 +1119,7 @@ else[HADOOP_NON_SECURE]*/
     long verticesToStore = 0;
     PartitionStore<I, V, E> partitionStore = getPartitionStore();
     for (int partitionId : partitionStore.getPartitionIds()) {
-      Partition<I, V, E> partition =
-        partitionStore.getOrCreatePartition(partitionId);
-      verticesToStore += partition.getVertexCount();
-      partitionStore.putPartition(partition);
+      verticesToStore += partitionStore.getPartitionVertexCount(partitionId);
     }
     WorkerProgress.get().startStoring(
         verticesToStore, getPartitionStore().getNumPartitions());

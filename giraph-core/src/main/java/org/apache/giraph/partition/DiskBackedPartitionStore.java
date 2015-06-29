@@ -226,6 +226,26 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
+  public long getPartitionVertexCount(int partitionId) {
+    MetaPartition meta = partitions.get(partitionId);
+    if (meta.getState() == State.ONDISK) {
+      return meta.getVertexCount();
+    } else {
+      return meta.getPartition().getVertexCount();
+    }
+  }
+
+  @Override
+  public long getPartitionEdgeCount(int partitionId) {
+    MetaPartition meta = partitions.get(partitionId);
+    if (meta.getState() == State.ONDISK) {
+      return meta.getEdgeCount();
+    } else {
+      return meta.getPartition().getEdgeCount();
+    }
+  }
+
+  @Override
   public Partition<I, V, E> getOrCreatePartition(Integer id) {
     MetaPartition meta = new MetaPartition(id);
     MetaPartition temp;
@@ -1093,6 +1113,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     private long vertexCount;
     /** Previous number of vertices contained in the partition */
     private long prevVertexCount;
+    /** Number of edges contained in the partition */
+    private long edgeCount;
     /**
      * Sticky bit; if set, this partition is never supposed to be
      * written to disk
@@ -1115,6 +1137,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       this.references = 0;
       this.vertexCount = 0;
       this.prevVertexCount = 0;
+      this.edgeCount = 0;
       this.isSticky = false;
 
       this.partition = null;
@@ -1143,6 +1166,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       this.state = State.ONDISK;
       this.partition = null;
       this.vertexCount = partition.getVertexCount();
+      this.edgeCount = partition.getEdgeCount();
     }
 
     /**
@@ -1213,6 +1237,13 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
 
     /**
+     * @return the edgeCount
+     */
+    public long getEdgeCount() {
+      return edgeCount;
+    }
+
+    /**
      * @param inc amount to add to the vertex count
      */
     public void addToVertexCount(long inc) {
@@ -1259,6 +1290,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       sb.append("Number of References: " + references + "; ");
       sb.append("Number of Vertices: " + vertexCount + "; ");
       sb.append("Previous number of Vertices: " + prevVertexCount + "; ");
+      sb.append("Number of edges: " + edgeCount + "; ");
       sb.append("Is Sticky: " + isSticky + "; ");
       sb.append("Partition: " + partition + "; }");
 
