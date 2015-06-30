@@ -19,12 +19,14 @@ package org.apache.giraph.block_app.library;
 
 import java.util.Iterator;
 
+import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.block.SequenceBlock;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.function.Consumer;
 import org.apache.giraph.function.Function;
 import org.apache.giraph.function.ObjectTransfer;
+import org.apache.giraph.function.PairConsumer;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;
 import org.apache.giraph.function.vertex.FunctionWithVertex;
 import org.apache.giraph.function.vertex.SupplierFromVertex;
@@ -145,6 +147,18 @@ public class SendMessageChain<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * Start chain by providing a function that will produce Block representing
+   * beginning of the chain, given a consumer of messages send
+   * by the last link in the created block.
+   */
+  public static <I extends WritableComparable, V extends Writable,
+  E extends Writable, P extends Writable>
+  SendMessageChain<I, V, E, P> startCustom(
+      Function<ConsumerWithVertex<I, V, E, P>, Block> createStartingBlock) {
+    return new SendMessageChain<>(createStartingBlock);
+  }
+
+  /**
    * Give previously received message(s) to messageSupplier, and send message
    * it returns to all targets provided by targetsSupplier.
    */
@@ -245,23 +259,51 @@ public class SendMessageChain<I extends WritableComparable, V extends Writable,
    * by reducedValueConsumer.
    */
   public <S, R extends Writable>
-  Block endReduce(String name, ReduceOperation<S, R> reduceOp,
+  Block endReduce(final String name, final ReduceOperation<S, R> reduceOp,
       final FunctionWithVertex<I, V, E, P, S> valueSupplier,
-      Consumer<R> reducedValueConsumer) {
-    final ObjectTransfer<P> prevMessagesTransfer = new ObjectTransfer<>();
+      final Consumer<R> reducedValueConsumer) {
+    return endCustom(new Function<SupplierFromVertex<I, V, E, P>, Block>() {
+      @Override
+      public Block apply(final SupplierFromVertex<I, V, E, P> prevMessages) {
+        return Pieces.reduce(
+            name,
+            reduceOp,
+            new SupplierFromVertex<I, V, E, S>() {
+              @Override
+              public S get(Vertex<I, V, E> vertex) {
+                return valueSupplier.apply(vertex, prevMessages.get(vertex));
+              }
+            },
+            reducedValueConsumer);
+      }
+    });
+  }
 
-    return new SequenceBlock(
-      blockCreator.apply(prevMessagesTransfer.<I, V, E>castToConsumer()),
-      Pieces.reduce(
-        name,
-        reduceOp,
-        new SupplierFromVertex<I, V, E, S>() {
-          @Override
-          public S get(Vertex<I, V, E> vertex) {
-            return valueSupplier.apply(vertex, prevMessagesTransfer.get());
-          }
-        },
-        reducedValueConsumer));
+  /**
+   * End chain by giving received messages to valueSupplier,
+   * to produce value that should be reduced, and consumed on master
+   * by reducedValueConsumer.
+   */
+  public <S, R extends Writable>
+  Block endReduceWithMaster(
+      final String name, final ReduceOperation<S, R> reduceOp,
+      final FunctionWithVertex<I, V, E, P, S> valueSupplier,
+      final PairConsumer<R, BlockMasterApi> reducedValueConsumer) {
+    return endCustom(new Function<SupplierFromVertex<I, V, E, P>, Block>() {
+      @Override
+      public Block apply(final SupplierFromVertex<I, V, E, P> prevMessages) {
+        return Pieces.reduceWithMaster(
+            name,
+            reduceOp,
+            new SupplierFromVertex<I, V, E, S>() {
+              @Override
+              public S get(Vertex<I, V, E> vertex) {
+                return valueSupplier.apply(vertex, prevMessages.get(vertex));
+              }
+            },
+            reducedValueConsumer);
+      }
+    });
   }
 
   /**

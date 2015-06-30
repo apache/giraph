@@ -144,6 +144,8 @@ public class LocalBlockRunner {
       Block block, Object executionStage, TestGraph<I, V, E> graph,
       final VertexSaver<I, V, E> vertexSaver
   ) {
+    Preconditions.checkNotNull(block);
+    Preconditions.checkNotNull(graph);
     ImmutableClassesGiraphConfiguration<I, V, E> conf = graph.getConf();
     int numWorkers = NUM_THREADS.get(conf);
     boolean runAllChecks = RUN_ALL_CHECKS.get(conf);

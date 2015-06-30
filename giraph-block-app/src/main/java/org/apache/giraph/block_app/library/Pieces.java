@@ -32,6 +32,7 @@ import org.apache.giraph.block_app.library.internal.SendMessagePiece;
 import org.apache.giraph.block_app.library.internal.SendMessageWithCombinerPiece;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.function.Consumer;
+import org.apache.giraph.function.PairConsumer;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;
 import org.apache.giraph.function.vertex.SupplierFromVertex;
 import org.apache.giraph.graph.Vertex;
@@ -170,10 +171,38 @@ public class Pieces {
   <S, R extends Writable, I extends WritableComparable, V extends Writable,
   E extends Writable>
   Piece<I, V, E, NoMessage, Object> reduce(
+      String name,
+      ReduceOperation<S, R> reduceOp,
+      SupplierFromVertex<I, V, E, S> valueSupplier,
+      final Consumer<R> reducedValueConsumer) {
+    return reduceWithMaster(
+        name, reduceOp, valueSupplier,
+        new PairConsumer<R, BlockMasterApi>() {
+          @Override
+          public void apply(R input, BlockMasterApi master) {
+            reducedValueConsumer.apply(input);
+          }
+        });
+  }
+
+  /**
+   * Creates single reducer piece - given reduce class, supplier of values on
+   * worker, reduces and passes the result to given consumer on master.
+   *
+   * @param <S> Single value type, objects passed on workers
+   * @param <R> Reduced value type
+   * @param <I> Vertex id type
+   * @param <V> Vertex value type
+   * @param <E> Edge value type
+   */
+  public static
+  <S, R extends Writable, I extends WritableComparable, V extends Writable,
+  E extends Writable>
+  Piece<I, V, E, NoMessage, Object> reduceWithMaster(
       final String name,
       final ReduceOperation<S, R> reduceOp,
       final SupplierFromVertex<I, V, E, S> valueSupplier,
-      final Consumer<R> reducedValueConsumer) {
+      final PairConsumer<R, BlockMasterApi> reducedValueConsumer) {
     return new Piece<I, V, E, NoMessage, Object>() {
       private ReducerHandle<S, R> handle;
 
@@ -197,7 +226,7 @@ public class Pieces {
 
       @Override
       public void masterCompute(BlockMasterApi master, Object executionStage) {
-        reducedValueConsumer.apply(handle.getReducedValue(master));
+        reducedValueConsumer.apply(handle.getReducedValue(master), master);
       }
 
       @Override
