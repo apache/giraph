@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
@@ -34,13 +38,17 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeStore;
 import org.apache.giraph.edge.EdgeStoreFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.partition.DiskBackedPartitionStore;
+import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.SimplePartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 /**
  * Anything that the server stores
@@ -52,6 +60,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable> {
+  /** Class logger */
+  private static final Logger LOG =
+      Logger.getLogger(ServerData.class);
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition store for this worker. */
@@ -72,11 +83,23 @@ public class ServerData<I extends WritableComparable,
    */
   private volatile MessageStore<I, Writable> currentMessageStore;
   /**
-   * Map of partition ids to incoming vertex mutations from other workers.
-   * (Synchronized access to values)
+   * Map of partition ids to vertex mutations from other workers. These are
+   * mutations that should be applied before execution of *current* super step.
+   * (accesses to keys should be thread-safe as multiple threads may resolve
+   * mutations of different partitions at the same time)
    */
-  private final ConcurrentHashMap<I, VertexMutations<I, V, E>>
-  vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E>>();
+  private ConcurrentMap<Integer,
+      ConcurrentMap<I, VertexMutations<I, V, E>>>
+      oldPartitionMutations = Maps.newConcurrentMap();
+  /**
+   * Map of partition ids to vertex mutations from other workers. These are
+   * mutations that are coming from other workers as the execution goes one in a
+   * super step. These mutations should be applied in the *next* super step.
+   * (this should be thread-safe)
+   */
+  private ConcurrentMap<Integer,
+      ConcurrentMap<I, VertexMutations<I, V, E>>>
+      partitionMutations = Maps.newConcurrentMap();
   /**
    * Holds aggregtors which current worker owns from current superstep
    */
@@ -217,9 +240,9 @@ public class ServerData<I extends WritableComparable,
    *
    * @return Vertex mutations
    */
-  public ConcurrentHashMap<I, VertexMutations<I, V, E>>
-  getVertexMutations() {
-    return vertexMutations;
+  public ConcurrentMap<Integer, ConcurrentMap<I, VertexMutations<I, V, E>>>
+  getPartitionMutations() {
+    return partitionMutations;
   }
 
   /**
@@ -279,4 +302,83 @@ public class ServerData<I extends WritableComparable,
     return currentWorkerToWorkerMessages;
   }
 
+  /**
+   * Prepare resolving mutation.
+   */
+  public void prepareResolveMutations() {
+    oldPartitionMutations = partitionMutations;
+    partitionMutations = Maps.newConcurrentMap();
+  }
+
+  /**
+   * Resolve mutations specific for a partition. This method is called once
+   * per partition, before the computation for that partition starts.
+   * @param partition The partition to resolve mutations for
+   */
+  public void resolvePartitionMutation(Partition<I, V, E> partition) {
+    Integer partitionId = partition.getId();
+    VertexResolver<I, V, E> vertexResolver = conf.createVertexResolver();
+    ConcurrentMap<I, VertexMutations<I, V, E>> prevPartitionMutations =
+        oldPartitionMutations.get(partitionId);
+
+    // Resolve mutations that are explicitly sent for this partition
+    if (prevPartitionMutations != null) {
+      for (Map.Entry<I, VertexMutations<I, V, E>> entry : prevPartitionMutations
+          .entrySet()) {
+        I vertexId = entry.getKey();
+        Vertex<I, V, E> originalVertex = partition.getVertex(vertexId);
+        VertexMutations<I, V, E> vertexMutations = entry.getValue();
+        Vertex<I, V, E> vertex = vertexResolver.resolve(vertexId,
+            originalVertex, vertexMutations,
+            getCurrentMessageStore().hasMessagesForVertex(entry.getKey()));
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("resolvePartitionMutations: Resolved vertex index " +
+              vertexId + " in partition index " + partitionId +
+              " with original vertex " + originalVertex +
+              ", returned vertex " + vertex + " on superstep " +
+              serviceWorker.getSuperstep() + " with mutations " +
+              vertexMutations);
+        }
+
+        if (vertex != null) {
+          partition.putVertex(vertex);
+        } else if (originalVertex != null) {
+          partition.removeVertex(vertexId);
+          try {
+            getCurrentMessageStore().clearVertexMessages(vertexId);
+          } catch (IOException e) {
+            throw new IllegalStateException("resolvePartitionMutations: " +
+                "Caught IOException while clearing messages for a deleted " +
+                "vertex due to a mutation");
+          }
+        }
+      }
+    }
+
+    // Keep track of vertices which are not here in the partition, but have
+    // received messages
+    Iterable<I> destinations = getCurrentMessageStore().
+        getPartitionDestinationVertices(partitionId);
+    if (!Iterables.isEmpty(destinations)) {
+      for (I vertexId : destinations) {
+        if (partition.getVertex(vertexId) == null) {
+          Vertex<I, V, E> vertex =
+              vertexResolver.resolve(vertexId, null, null, true);
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("resolvePartitionMutations: A non-existing vertex has " +
+                "message(s). Added vertex index " + vertexId +
+                " in partition index " + partitionId +
+                ", vertex = " + vertex + ", on superstep " +
+                serviceWorker.getSuperstep());
+          }
+
+          if (vertex != null) {
+            partition.putVertex(vertex);
+          }
+        }
+      }
+    }
+  }
 }

@@ -238,8 +238,8 @@ end[PURE_YARN]*/
         LOG.info("setup: Chosen to run ZooKeeper...");
       }
     }
-    context.setStatus("setup: Connected to Zookeeper service " +
-      serverPortList);
+    context
+        .setStatus("setup: Connected to Zookeeper service " + serverPortList);
     this.graphFunctions = determineGraphFunctions(conf, zkManager);
     // Sometimes it takes a while to get multiple ZooKeeper servers up
     if (conf.getZooKeeperServerCount() > 1) {
@@ -329,6 +329,8 @@ end[PURE_YARN]*/
       } else if (storeCheckpoint(globalStats.getCheckpointStatus())) {
         break;
       }
+      serviceWorker.getServerData().prepareResolveMutations();
+      context.progress();
       prepareForSuperstep(graphState);
       context.progress();
       MessageStore<I, Writable> messageStore =
@@ -760,8 +762,9 @@ end[PURE_YARN]*/
         }
       };
     List<Collection<PartitionStats>> results =
-        ProgressableUtils.getResultsWithNCallables(callableFactory,
-            numThreads, "compute-%d", context);
+        ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+            "compute-%d", context);
+
     for (Collection<PartitionStats> result : results) {
       partitionStatsList.addAll(result);
     }

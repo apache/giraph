@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -190,6 +191,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Messages are stored separately
     if (serviceWorker.getSuperstep() != BspService.INPUT_SUPERSTEP) {
       sendPartitionMessages(workerInfo, partition);
+      ConcurrentMap<I, VertexMutations<I, V, E>> vertexMutationMap =
+          serverData.getPartitionMutations().remove(partition.getId());
+      WritableRequest partitionMutationsRequest =
+          new SendPartitionMutationsRequest<I, V, E>(partition.getId(),
+              vertexMutationMap);
+      doRequest(workerInfo, partitionMutationsRequest);
     }
   }
 
@@ -220,11 +227,11 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         }
       } catch (IOException e) {
         throw new IllegalStateException(
-            "sendVertexRequest: Got IOException ", e);
+            "sendPartitionMessages: Got IOException ", e);
       }
       if (vertexIdMessages.getSize() > maxMessagesSizePerWorker) {
-        WritableRequest messagesRequest = new
-            SendPartitionCurrentMessagesRequest<I, V, E, Writable>(
+        WritableRequest messagesRequest =
+            new SendPartitionCurrentMessagesRequest<I, V, E, Writable>(
             partitionId, vertexIdMessages);
         doRequest(workerInfo, messagesRequest);
         vertexIdMessages =
@@ -239,6 +246,13 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
           SendPartitionCurrentMessagesRequest<I, V, E, Writable>(
           partitionId, vertexIdMessages);
       doRequest(workerInfo, messagesRequest);
+    }
+    try {
+      messageStore.clearPartition(partitionId);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "sendPartitionMessages: Got IOException while removing messages " +
+              "for partition " + partitionId + " :" + e);
     }
   }
 

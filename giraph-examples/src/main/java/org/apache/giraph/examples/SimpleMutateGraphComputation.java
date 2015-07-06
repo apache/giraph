@@ -133,6 +133,30 @@ public class SimpleMutateGraphComputation extends BasicComputation<
             " vertices when should have " + vertexCount / 2 +
             " on superstep " + getSuperstep());
       }
+    } else if (getSuperstep() == 9) {
+      // Remove all the vertices created in superstep 1, and send a message to
+      // them at the same time
+      if (vertex.getId().compareTo(
+          new LongWritable(rangeVertexIdStart(1))) >= 0) {
+        // This is an added vertex, so remove it
+        removeVertexRequest(vertex.getId());
+      } else {
+        // This is a vertex since the start of the computation, so send a
+        // message to a vertex added in superstep 1
+        sendMessage(
+            new LongWritable(rangeVertexIdStart(1) + vertex.getId().get()),
+            new DoubleWritable(0.0));
+      }
+    } else if (getSuperstep() == 10) {
+      LOG.debug("Reached superstep " + getSuperstep());
+    } else if (getSuperstep() == 11) {
+      long vertexCount = workerContext.getVertexCount();
+      if (vertexCount / 2 != getTotalNumVertices()) {
+        throw new IllegalStateException(
+            "Impossible to have " + getTotalNumVertices() +
+                " vertices when should have " + vertexCount / 2 +
+                " on superstep " + getSuperstep());
+      }
     } else {
       vertex.voteToHalt();
     }

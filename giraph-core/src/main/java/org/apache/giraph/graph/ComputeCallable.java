@@ -161,11 +161,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         break;
       }
 
+      long startTime = System.currentTimeMillis();
       Partition<I, V, E> partition =
           serviceWorker.getPartitionStore().getOrCreatePartition(partitionId);
-      long startTime = System.currentTimeMillis();
 
       try {
+        serviceWorker.getServerData().resolvePartitionMutation(partition);
         PartitionStats partitionStats =
             computePartition(computation, partition);
         partitionStatsList.add(partitionStats);
