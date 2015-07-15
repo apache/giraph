@@ -110,7 +110,7 @@ public abstract class TaskInfo implements Writable {
   public boolean equals(Object other) {
     if (other instanceof TaskInfo) {
       TaskInfo taskInfo = (TaskInfo) other;
-      if (hostname.equals(taskInfo.getHostname()) &&
+      if (getHostname().equals(taskInfo.getHostname()) &&
           (getTaskId() == taskInfo.getTaskId()) &&
           (port == taskInfo.getPort() &&
           (taskId == taskInfo.getTaskId()))) {

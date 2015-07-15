@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 1.2.0 - unreleased
 =======
+  GIRAPH-1020: TaskInfo equality condition. (heslami via aching)
+
   GIRAPH-1019: Optimizing and debugging vertex mutation. (heslami via aching)
 
   GIRAPH-1018: Improving PartitionStore API to better match its expected behaviour
