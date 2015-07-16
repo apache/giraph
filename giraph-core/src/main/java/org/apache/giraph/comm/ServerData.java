@@ -118,6 +118,9 @@ public class ServerData<I extends WritableComparable,
   private volatile List<Writable> incomingWorkerToWorkerMessages =
       Collections.synchronizedList(new ArrayList<Writable>());
 
+  /** Job context (for progress) */
+  private final Mapper<?, ?, ?, ?>.Context context;
+
   /**
    * Constructor.
    *
@@ -148,6 +151,7 @@ public class ServerData<I extends WritableComparable,
     edgeStore = edgeStoreFactory.newStore();
     ownerAggregatorData = new OwnerAggregatorServerData(context);
     allAggregatorData = new AllAggregatorServerData(context, conf);
+    this.context = context;
   }
 
   public EdgeStore<I, V, E> getEdgeStore() {
@@ -353,6 +357,7 @@ public class ServerData<I extends WritableComparable,
                 "vertex due to a mutation");
           }
         }
+        context.progress();
       }
     }
 
@@ -377,6 +382,7 @@ public class ServerData<I extends WritableComparable,
           if (vertex != null) {
             partition.putVertex(vertex);
           }
+          context.progress();
         }
       }
     }

@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 1.2.0 - unreleased
 =======
+  GIRAPH-1021: Missing progress report for graph mutations. (heslami via aching)
+
   GIRAPH-1020: TaskInfo equality condition. (heslami via aching)
 
   GIRAPH-1019: Optimizing and debugging vertex mutation. (heslami via aching)
