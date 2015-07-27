@@ -245,4 +245,11 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * previous superstep.
    */
   GlobalStats getGlobalStats();
+
+  /**
+   * Get the number of partitions owned by this worker
+   *
+   * @return number of partitions owned
+   */
+  int getNumPartitionsOwned();
 }

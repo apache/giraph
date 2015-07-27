@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -346,7 +344,7 @@ end[PURE_YARN]*/
       // execute the current superstep
       if (numPartitions > 0) {
         processGraphPartitions(context, partitionStatsList, graphState,
-          messageStore, numPartitions, numThreads);
+          messageStore, numThreads);
       }
       finishedSuperstepStats = completeSuperstepAndCollectStats(
         partitionStatsList, superstepTimerContext);
@@ -723,26 +721,22 @@ end[PURE_YARN]*/
    * @param partitionStatsList to pick up this superstep's processing stats
    * @param graphState the BSP graph state
    * @param messageStore the messages to be processed in this superstep
-   * @param numPartitions the number of data partitions (vertices) to process
    * @param numThreads number of concurrent threads to do processing
    */
   private void processGraphPartitions(final Mapper<?, ?, ?, ?>.Context context,
       List<PartitionStats> partitionStatsList,
       final GraphState graphState,
       final MessageStore<I, Writable> messageStore,
-      int numPartitions,
       int numThreads) {
-    final BlockingQueue<Integer> computePartitionIdQueue =
-      new ArrayBlockingQueue<Integer>(numPartitions);
-    long verticesToCompute = 0;
     PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
+    long verticesToCompute = 0;
     for (Integer partitionId : partitionStore.getPartitionIds()) {
-      computePartitionIdQueue.add(partitionId);
       verticesToCompute += partitionStore.getPartitionVertexCount(partitionId);
     }
     WorkerProgress.get().startSuperstep(
         serviceWorker.getSuperstep(), verticesToCompute,
         serviceWorker.getPartitionStore().getNumPartitions());
+    partitionStore.startIteration();
 
     GiraphTimerContext computeAllTimerContext = computeAll.time();
     timeToFirstMessageTimerContext = timeToFirstMessage.time();
@@ -756,7 +750,6 @@ end[PURE_YARN]*/
               context,
               graphState,
               messageStore,
-              computePartitionIdQueue,
               conf,
               serviceWorker);
         }

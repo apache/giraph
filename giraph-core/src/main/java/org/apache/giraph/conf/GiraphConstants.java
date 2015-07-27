@@ -71,6 +71,8 @@ import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.ooc.JVMMemoryEstimator;
+import org.apache.giraph.ooc.MemoryEstimator;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
@@ -89,6 +91,8 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 public interface GiraphConstants {
   /** 1KB in bytes */
   int ONE_KB = 1024;
+  /** 1MB in bytes */
+  int ONE_MB = 1024 * 1024;
 
   /** Mapping related information */
   ClassConfOption<MappingStore> MAPPING_STORE_CLASS =
@@ -967,20 +971,32 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.useOutOfCoreGraph", false,
           "Enable out-of-core graph.");
 
+  /**
+   * Memory estimator class used in adaptive out-of-core mechanism for deciding
+   * when data should go to disk.
+   */
+  ClassConfOption<MemoryEstimator> OUT_OF_CORE_MEM_ESTIMATOR =
+      ClassConfOption.create("giraph.outOfCoreMemoryEstimator",
+          JVMMemoryEstimator.class, MemoryEstimator.class,
+          "Memory estimator class used for out-of-core decisions");
+
+  /** Number of threads participating in swapping graph/messages to disk. */
+  IntConfOption NUM_OOC_THREADS =
+      new IntConfOption("giraph.numOutOfCoreThreads", 1,
+          "Number of threads participating in swapping data to disk.");
+
+  /** Maximum number of partitions to hold in memory for each worker. */
+  IntConfOption MAX_PARTITIONS_IN_MEMORY =
+      new IntConfOption("giraph.maxPartitionsInMemory", 0,
+          "Maximum number of partitions to hold in memory for each worker. By" +
+              " default it is set to 0 (for adaptive out-of-core mechanism");
+
+
+
   /** Directory to write YourKit snapshots to */
   String YOURKIT_OUTPUT_DIR = "giraph.yourkit.outputDir";
   /** Default directory to write YourKit snapshots to */
   String YOURKIT_OUTPUT_DIR_DEFAULT = "/tmp/giraph/%JOB_ID%/%TASK_ID%";
-
-  /** Maximum number of partitions to hold in memory for each worker. */
-  IntConfOption MAX_PARTITIONS_IN_MEMORY =
-      new IntConfOption("giraph.maxPartitionsInMemory", 10,
-          "Maximum number of partitions to hold in memory for each worker.");
-
-  /** Set number of sticky partitions if sticky mode is enabled.  */
-  IntConfOption MAX_STICKY_PARTITIONS =
-      new IntConfOption("giraph.stickyPartitions", 0,
-          "Set number of sticky partitions if sticky mode is enabled.");
 
   /** Keep the zookeeper output for debugging? Default is to remove it. */
   BooleanConfOption KEEP_ZOOKEEPER_DATA =

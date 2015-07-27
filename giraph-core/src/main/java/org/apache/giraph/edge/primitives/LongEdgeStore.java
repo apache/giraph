@@ -31,6 +31,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -79,6 +82,17 @@ public class LongEdgeStore<V extends Writable, E extends Writable>
   protected OutEdges<LongWritable, E> getPartitionEdges(
     Long2ObjectMap.Entry<OutEdges<LongWritable, E>> entry) {
     return entry.getValue();
+  }
+
+  @Override
+  protected void writeVertexKey(Long key, DataOutput output)
+      throws IOException {
+    output.writeLong(key);
+  }
+
+  @Override
+  protected Long readVertexKey(DataInput input) throws IOException {
+    return input.readLong();
   }
 
   @Override

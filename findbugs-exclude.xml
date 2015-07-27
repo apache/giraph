@@ -89,14 +89,6 @@
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE"/>
   </Match>
   <Match>
-    <Class name="org.apache.giraph.partition.DiskBackedPartitionStore$AddPartition"/>
-    <Bug pattern="UL_UNRELEASED_LOCK"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.partition.DiskBackedPartitionStore$GetPartition"/>
-    <Bug pattern="UL_UNRELEASED_LOCK"/>
-  </Match>
-  <Match>
     <Class name="~org.apache.giraph.function.primitive.PrimitiveRefs.*Ref"/>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
   </Match>

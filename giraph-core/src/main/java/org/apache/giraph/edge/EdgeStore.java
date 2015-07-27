@@ -22,6 +22,10 @@ import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * Collects incoming edges for vertices owned by this worker.
  *
@@ -45,4 +49,39 @@ public interface EdgeStore<I extends WritableComparable,
    * Note: this method is not thread-safe.
    */
   void moveEdgesToVertices();
+
+  /**
+   * Whether the store contains edges for the given partition.
+   * Note: This method is thread-safe
+   *
+   * @param partitionId Partition id under query
+   * @return true if the store has any edge for the given partition, false
+   *         otherwise
+   */
+  boolean hasPartitionEdges(int partitionId);
+
+  /**
+   * Deserialize the edges of a given partition, and removes the associated data
+   * from the store.
+   * Note: This method is not thread-safe (i.e. should not be called for the
+   * same partition at the same time).
+   *
+   * @param partitionId Id of partition to deserialize
+   * @param output Output to write the edge store to
+   */
+  void writePartitionEdgeStore(int partitionId, DataOutput output)
+      throws IOException;
+
+  /**
+   * Serialize the edges of a given partition, and adds it to the partition
+   * store (assumes that the edge store does not have any edge from the
+   * partition already).
+   * Note: This method is not thread-safe (i.e. should not be called for the
+   * same partition at the same time).
+   *
+   * @param partitionId Id of partition to serialize
+   * @param input Input to read the partition from
+   */
+  void readPartitionEdgeStore(int partitionId, DataInput input)
+      throws IOException;
 }

@@ -18,23 +18,8 @@
 
 package org.apache.giraph.partition;
 
-import static org.apache.giraph.conf.GiraphConstants.MAX_PARTITIONS_IN_MEMORY;
-import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
-import static org.apache.giraph.conf.GiraphConstants.USER_PARTITION_COUNT;
-import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_GRAPH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.common.collect.Iterables;
+import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -46,6 +31,7 @@ import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
+import org.apache.giraph.ooc.DiskBackedPartitionStore;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
@@ -60,8 +46,20 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Iterables;
-import com.google.common.io.Files;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test case for partition stores.
@@ -73,10 +71,11 @@ public class TestPartitionStores {
   private Mapper<?, ?, ?, ?>.Context context;
 
   /* these static variables are used for the multithreaded tests */
-  private static final int NUM_OF_VERTEXES_PER_THREAD = 10;
+  private static final int NUM_OF_VERTEXES_PER_PARTITION = 20;
   private static final int NUM_OF_EDGES_PER_VERTEX = 5;
-  private static final int NUM_OF_THREADS = 10;
-  private static final int NUM_OF_PARTITIONS = 3;
+  private static final int NUM_OF_THREADS = 8;
+  private static final int NUM_OF_PARTITIONS = 30;
+  private static final int NUM_PARTITIONS_IN_MEMORY = 12;
 
   public static class MyComputation extends NoOpComputation<IntWritable,
       IntWritable, NullWritable, IntWritable> { }
@@ -105,9 +104,11 @@ public class TestPartitionStores {
 
   @Test
   public void testSimplePartitionStore() {
+    CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
+    serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     PartitionStore<IntWritable, IntWritable, NullWritable>
-        partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
-                NullWritable>(conf, context);
+    partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
+                NullWritable>(conf, context, serviceWorker);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
   }
@@ -149,11 +150,10 @@ public class TestPartitionStores {
     assertEquals(0, deserializatedPartition.getEdgeCount());
     assertEquals(7, deserializatedPartition.getVertexCount());
   }
-  
+
   @Test
   public void testDiskBackedPartitionStoreWithByteArrayPartition()
     throws IOException {
-
     File directory = Files.createTempDir();
     GiraphConstants.PARTITIONS_DIRECTORY.set(
         conf, new File(directory, "giraph_partitions").toString());
@@ -164,7 +164,7 @@ public class TestPartitionStores {
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
       serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
-      BspService.INPUT_SUPERSTEP);
+        BspService.INPUT_SUPERSTEP);
 
     PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
         new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
@@ -186,7 +186,7 @@ public class TestPartitionStores {
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
 
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
-      BspService.INPUT_SUPERSTEP);
+        BspService.INPUT_SUPERSTEP);
 
     PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
         new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
@@ -194,18 +194,43 @@ public class TestPartitionStores {
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
 
-    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 2);
-    partitionStore = new DiskBackedPartitionStore<IntWritable,
-            IntWritable, NullWritable>(conf, context, serviceWorker);
-    testReadWrite(partitionStore, conf);
-    partitionStore.shutdown();
+    FileUtils.deleteDirectory(directory);
+  }
+
+  @Test
+  public void testDiskBackedPartitionStoreComputation() throws Exception {
+    Iterable<String> results;
+    String[] graph =
+        {
+            "[1,0,[]]", "[2,0,[]]", "[3,0,[]]", "[4,0,[]]", "[5,0,[]]",
+            "[6,0,[]]", "[7,0,[]]", "[8,0,[]]", "[9,0,[]]", "[10,0,[]]"
+        };
+    String[] expected =
+        {
+            "1\t0", "2\t0", "3\t0", "4\t0", "5\t0",
+            "6\t0", "7\t0", "8\t0", "9\t0", "10\t0"
+        };
+
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
+    GiraphConstants.USER_PARTITION_COUNT.set(conf, 10);
+
+    File directory = Files.createTempDir();
+    GiraphConstants.PARTITIONS_DIRECTORY.set(conf,
+        new File(directory, "giraph_partitions").toString());
+
+    conf.setComputationClass(EmptyComputation.class);
+    conf.setVertexInputFormatClass(JsonLongDoubleFloatDoubleVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+    results = InternalVertexRunner.run(conf, graph);
+    checkResults(results, expected);
     FileUtils.deleteDirectory(directory);
   }
 
   @Test
   public void testDiskBackedPartitionStoreWithByteArrayComputation()
     throws Exception {
-
     Iterable<String> results;
     String[] graph =
     {
@@ -218,12 +243,12 @@ public class TestPartitionStores {
       "6\t0", "7\t0", "8\t0", "9\t0", "10\t0"
     };
 
-    USE_OUT_OF_CORE_GRAPH.set(conf, true);
-    MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
-    USER_PARTITION_COUNT.set(conf, 10);
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
+    GiraphConstants.USER_PARTITION_COUNT.set(conf, 10);
 
     File directory = Files.createTempDir();
-    PARTITIONS_DIRECTORY.set(conf,
+    GiraphConstants.PARTITIONS_DIRECTORY.set(conf,
       new File(directory, "giraph_partitions").toString());
 
     conf.setPartitionClass(ByteArrayPartition.class);
@@ -238,17 +263,24 @@ public class TestPartitionStores {
 
   @Test
   public void testDiskBackedPartitionStoreMT() throws Exception {
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
     GiraphConstants.STATIC_GRAPH.set(conf, false);
     testMultiThreaded();
   }
 
-  /*
+
   @Test
   public void testDiskBackedPartitionStoreMTStatic() throws Exception {
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
     GiraphConstants.STATIC_GRAPH.set(conf, true);
     testMultiThreaded();
   }
-  */
+
+  @Test
+  public void testDiskBackedPartitionStoreAdaptiveOOC() throws Exception {
+    GiraphConstants.STATIC_GRAPH.set(conf, true);
+    testMultiThreaded();
+  }
 
   private void testMultiThreaded() throws Exception {
     final AtomicInteger vertexCounter = new AtomicInteger(0);
@@ -260,23 +292,26 @@ public class TestPartitionStores {
     GiraphConstants.PARTITIONS_DIRECTORY.set(
         conf, new File(directory, "giraph_partitions").toString());
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
-    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
 
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
 
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
-      BspService.INPUT_SUPERSTEP);
+        BspService.INPUT_SUPERSTEP);
 
     PartitionStore<IntWritable, IntWritable, NullWritable> store =
         new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
             conf, context, serviceWorker);
+    store.initialize();
 
     // Create a new Graph in memory using multiple threads
     for (int i = 0; i < NUM_OF_THREADS; ++i) {
-      int partitionId = i % NUM_OF_PARTITIONS;
+      List<Integer> partitionIds = new ArrayList<Integer>();
+      for (int id = i; id < NUM_OF_PARTITIONS; id += NUM_OF_THREADS) {
+        partitionIds.add(id);
+      }
       Worker worker =
-        new Worker(vertexCounter, store, partitionId, conf);
+        new Worker(vertexCounter, store, partitionIds, conf);
       executor.submit(worker, new Boolean(true));
     }
     for (int i = 0; i < NUM_OF_THREADS; ++i)
@@ -291,19 +326,22 @@ public class TestPartitionStores {
       totalVertexes += store.getPartitionVertexCount(i);
       totalEdges += store.getPartitionEdgeCount(i);
     }
-    assert vertexCounter.get() == NUM_OF_THREADS * NUM_OF_VERTEXES_PER_THREAD;
-    assert totalVertexes == NUM_OF_THREADS * NUM_OF_VERTEXES_PER_THREAD;
+
+    assert vertexCounter.get() == NUM_OF_PARTITIONS * NUM_OF_VERTEXES_PER_PARTITION;
+    assert totalVertexes == NUM_OF_PARTITIONS * NUM_OF_VERTEXES_PER_PARTITION;
     assert totalEdges == totalVertexes * NUM_OF_EDGES_PER_VERTEX;
 
     // Check the content of the vertices
     int expected = 0;
-    for (int i = 0; i < NUM_OF_VERTEXES_PER_THREAD * NUM_OF_VERTEXES_PER_THREAD; ++i) {
+    for (int i = 0; i < NUM_OF_VERTEXES_PER_PARTITION * NUM_OF_PARTITIONS; ++i) {
       expected += i;
     }
     int totalValues = 0;
+    store.startIteration();
     for (int i = 0; i < NUM_OF_PARTITIONS; ++i) {
-      partition = store.getOrCreatePartition(i);
-      Iterator<Vertex<IntWritable, IntWritable, NullWritable>> vertexes = 
+      partition = store.getNextPartition();
+      assert partition != null;
+      Iterator<Vertex<IntWritable, IntWritable, NullWritable>> vertexes =
         partition.iterator();
 
       while (vertexes.hasNext()) {
@@ -313,39 +351,23 @@ public class TestPartitionStores {
       store.putPartition(partition);
     }
     assert totalValues == expected;
-    
+
     store.shutdown();
   }
 
-  @Test
-  public void testDiskBackedPartitionStoreComputation() throws Exception {
-    Iterable<String> results;
-    String[] graph =
-    {
-      "[1,0,[]]", "[2,0,[]]", "[3,0,[]]", "[4,0,[]]", "[5,0,[]]",
-      "[6,0,[]]", "[7,0,[]]", "[8,0,[]]", "[9,0,[]]", "[10,0,[]]"
-    };
-    String[] expected =
-    {
-      "1\t0", "2\t0", "3\t0", "4\t0", "5\t0",
-      "6\t0", "7\t0", "8\t0", "9\t0", "10\t0"
-    };
-
-    USE_OUT_OF_CORE_GRAPH.set(conf, true);
-    MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
-    USER_PARTITION_COUNT.set(conf, 10);
-
-    File directory = Files.createTempDir();
-    PARTITIONS_DIRECTORY.set(conf,
-      new File(directory, "giraph_partitions").toString());
-
-    conf.setComputationClass(EmptyComputation.class);
-    conf.setVertexInputFormatClass(JsonLongDoubleFloatDoubleVertexInputFormat.class);
-    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-
-    results = InternalVertexRunner.run(conf, graph);
-    checkResults(results, expected);
-    FileUtils.deleteDirectory(directory);
+  private Partition<IntWritable, IntWritable, NullWritable>
+  getPartition(PartitionStore<IntWritable, IntWritable,
+      NullWritable> partitionStore, int partitionId) {
+    partitionStore.startIteration();
+    Partition p;
+    Partition result = null;
+    while ((p = partitionStore.getNextPartition()) != null) {
+      if (p.getId() == partitionId) {
+        result = p;
+      }
+      partitionStore.putPartition(p);
+    }
+    return result;
   }
 
   /**
@@ -376,35 +398,26 @@ public class TestPartitionStores {
     v7.addEdge(EdgeFactory.create(new IntWritable(1)));
     v7.addEdge(EdgeFactory.create(new IntWritable(2)));
 
-    partitionStore.addPartition(createPartition(conf, 1, v1, v2));
-    partitionStore.addPartition(createPartition(conf, 2, v3));
-    partitionStore.addPartition(createPartition(conf, 2, v4));
+    partitionStore.addPartition(createPartition(conf, 1, v1, v2, v6));
+    partitionStore.addPartition(createPartition(conf, 2, v3, v4));
     partitionStore.addPartition(createPartition(conf, 3, v5));
-    partitionStore.addPartition(createPartition(conf, 1, v6));
     partitionStore.addPartition(createPartition(conf, 4, v7));
 
-    Partition<IntWritable, IntWritable, NullWritable> partition1 =
-        partitionStore.getOrCreatePartition(1);
-    partitionStore.putPartition(partition1);
-    Partition<IntWritable, IntWritable, NullWritable> partition2 =
-        partitionStore.getOrCreatePartition(2);
-    partitionStore.putPartition(partition2);
-    Partition<IntWritable, IntWritable, NullWritable> partition3 =
-        partitionStore.removePartition(3);
-    Partition<IntWritable, IntWritable, NullWritable> partition4 =
-        partitionStore.getOrCreatePartition(4);
-    partitionStore.putPartition(partition4);
+    getPartition(partitionStore, 1);
+    getPartition(partitionStore, 2);
+    partitionStore.removePartition(3);
+    getPartition(partitionStore, 4);
 
     assertEquals(3, partitionStore.getNumPartitions());
     assertEquals(3, Iterables.size(partitionStore.getPartitionIds()));
     int partitionsNumber = 0;
-    for (Integer partitionId : partitionStore.getPartitionIds()) {
-      Partition<IntWritable, IntWritable, NullWritable> p =
-          partitionStore.getOrCreatePartition(partitionId);
+
+    partitionStore.startIteration();
+    Partition<IntWritable, IntWritable, NullWritable> p;
+    while ((p = partitionStore.getNextPartition()) != null) {
       partitionStore.putPartition(p);
       partitionsNumber++;
     }
-    Partition<IntWritable, IntWritable, NullWritable> partition;
     assertEquals(3, partitionsNumber);
     assertTrue(partitionStore.hasPartition(1));
     assertTrue(partitionStore.hasPartition(2));
@@ -414,8 +427,6 @@ public class TestPartitionStores {
     assertEquals(2, partitionStore.getPartitionVertexCount(2));
     assertEquals(1, partitionStore.getPartitionVertexCount(4));
     assertEquals(2, partitionStore.getPartitionEdgeCount(4));
-    partitionStore.deletePartition(2);
-    assertEquals(2, partitionStore.getNumPartitions());
   }
 
   /**
@@ -463,12 +474,12 @@ public class TestPartitionStores {
   public void testEdgeCombineWithSimplePartition() throws IOException {
     testEdgeCombine(SimplePartition.class);
   }
- 
+
   @Test
   public void testEdgeCombineWithByteArrayPartition() throws IOException {
     testEdgeCombine(ByteArrayPartition.class);
   }
- 
+
   private void testEdgeCombine(Class<? extends Partition> partitionClass)
       throws IOException {
     Vertex<IntWritable, IntWritable, NullWritable> v1 = conf.createVertex();
@@ -512,39 +523,40 @@ public class TestPartitionStores {
     private final AtomicInteger vertexCounter;
     private final PartitionStore<IntWritable, IntWritable, NullWritable>
       partitionStore;
-    private final int partitionId;
+    private final List<Integer> partitionIds;
     private final ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
             NullWritable> conf;
 
     public Worker(AtomicInteger vertexCounter,
         PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore,
-        int partitionId,
+        List<Integer> partitionIds,
         ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
           NullWritable> conf) {
 
       this.vertexCounter = vertexCounter;
       this.partitionStore = partitionStore;
-      this.partitionId = partitionId;
+      this.partitionIds = partitionIds;
       this.conf = conf;
     }
 
     public void run() {
-      for (int i = 0; i < NUM_OF_VERTEXES_PER_THREAD; ++i) {
-        int id = vertexCounter.getAndIncrement();
-        Vertex<IntWritable, IntWritable, NullWritable> v = conf.createVertex();
-        v.initialize(new IntWritable(id), new IntWritable(id));
-
+      for (int partitionId : partitionIds) {
         Partition<IntWritable, IntWritable, NullWritable> partition =
-          partitionStore.getOrCreatePartition(partitionId);
+            conf.createPartition(partitionId, context);
+        for (int i = 0; i < NUM_OF_VERTEXES_PER_PARTITION; ++i) {
+          int id = vertexCounter.getAndIncrement();
+          Vertex<IntWritable, IntWritable, NullWritable> v = conf.createVertex();
+          v.initialize(new IntWritable(id), new IntWritable(id));
 
-        Random rand = new Random(id);
-        for (int j = 0; j < NUM_OF_EDGES_PER_VERTEX; ++j) {
-          int dest = rand.nextInt(id + 1);
-          v.addEdge(EdgeFactory.create(new IntWritable(dest)));
+          Random rand = new Random(id);
+          for (int j = 0; j < NUM_OF_EDGES_PER_VERTEX; ++j) {
+            int dest = rand.nextInt(id + 1);
+            v.addEdge(EdgeFactory.create(new IntWritable(dest)));
+          }
+
+          partition.putVertex(v);
         }
-
-        partition.putVertex(v);
-        partitionStore.putPartition(partition);
+        partitionStore.addPartition(partition);
       }
     }
   }

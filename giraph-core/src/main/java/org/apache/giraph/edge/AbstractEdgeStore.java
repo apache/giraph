@@ -34,10 +34,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 
@@ -130,6 +131,23 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   protected abstract OutEdges<I, E> getPartitionEdges(Et entry);
 
   /**
+   * Writes the given key to the output
+   *
+   * @param key input key to be written
+   * @param output output to write the key to
+   */
+  protected abstract void writeVertexKey(K key, DataOutput output)
+  throws IOException;
+
+  /**
+   * Reads the given key from the input
+   *
+   * @param input input to read the key from
+   * @return Key read from the input
+   */
+  protected abstract K readVertexKey(DataInput input) throws IOException;
+
+  /**
    * Get iterator for partition edges
    *
    * @param partitionEdges map of out-edges for vertices in a partition
@@ -137,6 +155,40 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
    */
   protected abstract Iterator<Et>
   getPartitionEdgesIterator(Map<K, OutEdges<I, E>> partitionEdges);
+
+  @Override
+  public boolean hasPartitionEdges(int partitionId) {
+    return transientEdges.containsKey(partitionId);
+  }
+
+  @Override
+  public void writePartitionEdgeStore(int partitionId, DataOutput output)
+      throws IOException {
+    Map<K, OutEdges<I, E>> edges = transientEdges.remove(partitionId);
+    output.writeInt(edges.size());
+    for (Map.Entry<K, OutEdges<I, E>> edge : edges.entrySet()) {
+      writeVertexKey(edge.getKey(), output);
+      edge.getValue().write(output);
+    }
+  }
+
+  @Override
+  public void readPartitionEdgeStore(int partitionId, DataInput input)
+      throws IOException {
+    if (transientEdges.containsKey(partitionId)) {
+      throw new IllegalStateException("readPartitionEdgeStore: reading a " +
+          "partition that is already there in the partition store " +
+          "(impossible)");
+    }
+    Map<K, OutEdges<I, E>> partitionEdges = getPartitionEdges(partitionId);
+    int numEntries = input.readInt();
+    for (int i = 0; i < numEntries; ++i) {
+      K vertexKey = readVertexKey(input);
+      OutEdges<I, E> edges = configuration.createAndInitializeInputOutEdges();
+      edges.readFields(input);
+      partitionEdges.put(vertexKey, edges);
+    }
+  }
 
   /**
    * Get out-edges for a given vertex
@@ -199,9 +251,7 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
       LOG.info("moveEdgesToVertices: Moving incoming edges to vertices.");
     }
 
-    final BlockingQueue<Integer> partitionIdQueue =
-        new ArrayBlockingQueue<>(transientEdges.size());
-    partitionIdQueue.addAll(transientEdges.keySet());
+    service.getPartitionStore().startIteration();
     int numThreads = configuration.getNumInputSplitsThreads();
 
     CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
@@ -212,11 +262,19 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
           public Void call() throws Exception {
             Integer partitionId;
             I representativeVertexId = configuration.createVertexId();
-            while ((partitionId = partitionIdQueue.poll()) != null) {
+            while (true) {
               Partition<I, V, E> partition =
-                  service.getPartitionStore().getOrCreatePartition(partitionId);
+                  service.getPartitionStore().getNextPartition();
+              if (partition == null) {
+                break;
+              }
               Map<K, OutEdges<I, E>> partitionEdges =
-                  transientEdges.remove(partitionId);
+                  transientEdges.remove(partition.getId());
+              if (partitionEdges == null) {
+                service.getPartitionStore().putPartition(partition);
+                continue;
+              }
+
               Iterator<Et> iterator =
                   getPartitionEdgesIterator(partitionEdges);
               // process all vertices in given partition

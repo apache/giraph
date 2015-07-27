@@ -72,8 +72,8 @@ public class TestLongDoublePrimitiveMessageStores {
         Lists.newArrayList(0, 1));
     Partition partition = Mockito.mock(Partition.class);
     Mockito.when(partition.getVertexCount()).thenReturn(Long.valueOf(1));
-    Mockito.when(partitionStore.getOrCreatePartition(0)).thenReturn(partition);
-    Mockito.when(partitionStore.getOrCreatePartition(1)).thenReturn(partition);
+    Mockito.when(partitionStore.getNextPartition()).thenReturn(partition);
+    Mockito.when(partitionStore.getNextPartition()).thenReturn(partition);
   }
 
   private static class LongDoubleNoOpComputation extends

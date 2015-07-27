@@ -20,7 +20,6 @@ package org.apache.giraph.graph;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -34,6 +33,7 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStats;
+import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -61,9 +61,9 @@ import com.yammer.metrics.core.Histogram;
  * when using the out-of-core graph partition store.  We should only load on
  * demand.
  *
- * @param <I> Vertex index value
- * @param <V> Vertex value
- * @param <E> Edge value
+ * @param <I>  Vertex index value
+ * @param <V>  Vertex value
+ * @param <E>  Edge value
  * @param <M1> Incoming message type
  * @param <M2> Outgoing message type
  */
@@ -80,8 +80,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state */
   private final GraphState graphState;
-  /** Thread-safe queue of all partition ids */
-  private final BlockingQueue<Integer> partitionIdQueue;
   /** Message store */
   private final MessageStore<I, M1> messageStore;
   /** Configuration */
@@ -105,23 +103,18 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
   /**
    * Constructor
-   *
    * @param context Context
    * @param graphState Current graph state (use to create own graph state)
    * @param messageStore Message store
-   * @param partitionIdQueue Queue of partition ids (thread-safe)
    * @param configuration Configuration
    * @param serviceWorker Service worker
    */
-  public ComputeCallable(
-      Mapper<?, ?, ?, ?>.Context context, GraphState graphState,
-      MessageStore<I, M1> messageStore,
-      BlockingQueue<Integer> partitionIdQueue,
+  public ComputeCallable(Mapper<?, ?, ?, ?>.Context context,
+      GraphState graphState, MessageStore<I, M1> messageStore,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       CentralizedServiceWorker<I, V, E> serviceWorker) {
     this.context = context;
     this.configuration = configuration;
-    this.partitionIdQueue = partitionIdQueue;
     this.messageStore = messageStore;
     this.serviceWorker = serviceWorker;
     this.graphState = graphState;
@@ -155,15 +148,13 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     computation.preSuperstep();
 
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
-    while (!partitionIdQueue.isEmpty()) {
-      Integer partitionId = partitionIdQueue.poll();
-      if (partitionId == null) {
+    PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
+    while (true) {
+      long startTime = System.currentTimeMillis();
+      Partition<I, V, E> partition = partitionStore.getNextPartition();
+      if (partition == null) {
         break;
       }
-
-      long startTime = System.currentTimeMillis();
-      Partition<I, V, E> partition =
-          serviceWorker.getPartitionStore().getOrCreatePartition(partitionId);
 
       try {
         serviceWorker.getServerData().resolvePartitionMutation(partition);
@@ -179,7 +170,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         messageBytesSentCounter.inc(partitionMsgBytes);
         timedLogger.info("call: Completed " +
             partitionStatsList.size() + " partitions, " +
-            partitionIdQueue.size() + " remaining " +
+            partitionStore.getNumPartitions() + " remaining " +
             MemoryUtils.getRuntimeMemoryStats());
       } catch (IOException e) {
         throw new IllegalStateException("call: Caught unexpected IOException," +
@@ -188,9 +179,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         throw new IllegalStateException("call: Caught unexpected " +
             "InterruptedException, failing.", e);
       } finally {
-        serviceWorker.getPartitionStore().putPartition(partition);
+        partitionStore.putPartition(partition);
       }
-
       histogramComputePerPartition.update(
           System.currentTimeMillis() - startTime);
     }

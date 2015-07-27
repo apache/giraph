@@ -78,13 +78,19 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
    */
   private void populateMap() { // TODO - can parallelize?
     // populate with vertex ids already known
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, ?, ?> partition = service.getPartitionStore()
-          .getOrCreatePartition(partitionId);
-      Long2ObjectOpenHashMap<L> partitionMap = map.get(partitionId);
-      for (Vertex<LongWritable, ?, ?> vertex : partition) {
-        partitionMap.put(vertex.getId().get(), createList());
+    service.getPartitionStore().startIteration();
+    while (true) {
+      Partition partition = service.getPartitionStore().getNextPartition();
+      if (partition == null) {
+        break;
       }
+      Long2ObjectOpenHashMap<L> partitionMap = map.get(partition.getId());
+      for (Object obj : partition) {
+        Vertex vertex = (Vertex) obj;
+        LongWritable vertexId = (LongWritable) vertex.getId();
+        partitionMap.put(vertexId.get(), createList());
+      }
+      service.getPartitionStore().putPartition(partition);
     }
   }
 

@@ -36,12 +36,10 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.EdgeStore;
-import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.partition.DiskBackedPartitionStore;
+import org.apache.giraph.ooc.DiskBackedPartitionStore;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.SimplePartitionStore;
@@ -67,8 +65,6 @@ public class ServerData<I extends WritableComparable,
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition store for this worker. */
   private volatile PartitionStore<I, V, E> partitionStore;
-  /** Edge store for this worker. */
-  private final EdgeStore<I, V, E> edgeStore;
   /** Message store factory */
   private final MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
   messageStoreFactory;
@@ -144,18 +140,11 @@ public class ServerData<I extends WritableComparable,
               getServiceWorker());
     } else {
       partitionStore =
-          new SimplePartitionStore<I, V, E>(conf, context);
+          new SimplePartitionStore<I, V, E>(conf, context, getServiceWorker());
     }
-    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
-    edgeStoreFactory.initialize(service, conf, context);
-    edgeStore = edgeStoreFactory.newStore();
     ownerAggregatorData = new OwnerAggregatorServerData(context);
     allAggregatorData = new AllAggregatorServerData(context, conf);
     this.context = context;
-  }
-
-  public EdgeStore<I, V, E> getEdgeStore() {
-    return edgeStore;
   }
 
   /**

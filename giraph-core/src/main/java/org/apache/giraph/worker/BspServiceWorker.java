@@ -26,13 +26,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -116,7 +114,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -584,6 +581,7 @@ public class BspServiceWorker<I extends WritableComparable,
         startSuperstep();
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners);
+    getPartitionStore().initialize();
 
 /*if[HADOOP_NON_SECURE]
     workerClient.setup();
@@ -697,7 +695,7 @@ else[HADOOP_NON_SECURE]*/
 
     if (getConfiguration().hasEdgeInputFormat()) {
       // Move edges from temporary storage to their source vertices.
-      getServerData().getEdgeStore().moveEdgesToVertices();
+      getServerData().getPartitionStore().moveEdgesToVertices();
     }
 
     // Generate the partition stats for the input superstep and process
@@ -1111,10 +1109,7 @@ else[HADOOP_NON_SECURE]*/
     final VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createWrappedVertexOutputFormat();
 
-    final Queue<Integer> partitionIdQueue =
-        (numPartitions == 0) ? new LinkedList<Integer>() :
-            new ArrayBlockingQueue<Integer>(numPartitions);
-    Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
+    getPartitionStore().startIteration();
 
     long verticesToStore = 0;
     PartitionStore<I, V, E> partitionStore = getPartitionStore();
@@ -1142,14 +1137,13 @@ else[HADOOP_NON_SECURE]*/
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
-            while (!partitionIdQueue.isEmpty()) {
-              Integer partitionId = partitionIdQueue.poll();
-              if (partitionId == null) {
+            while (true) {
+              Partition<I, V, E> partition =
+                  getPartitionStore().getNextPartition();
+              if (partition == null) {
                 break;
               }
 
-              Partition<I, V, E> partition =
-                  getPartitionStore().getOrCreatePartition(partitionId);
               long verticesWritten = 0;
               for (Vertex<I, V, E> vertex : partition) {
                 vertexWriter.writeVertex(vertex);
@@ -1239,10 +1233,7 @@ else[HADOOP_NON_SECURE]*/
     final EdgeOutputFormat<I, V, E> edgeOutputFormat =
         conf.createWrappedEdgeOutputFormat();
 
-    final Queue<Integer> partitionIdQueue =
-        (numPartitions == 0) ? new LinkedList<Integer>() :
-            new ArrayBlockingQueue<Integer>(numPartitions);
-    Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
+    getPartitionStore().startIteration();
 
     CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
       @Override
@@ -1259,14 +1250,13 @@ else[HADOOP_NON_SECURE]*/
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
-            while (!partitionIdQueue.isEmpty()) {
-              Integer partitionId = partitionIdQueue.poll();
-              if (partitionId == null) {
+            while (true) {
+              Partition<I, V, E> partition =
+                  getPartitionStore().getNextPartition();
+              if (partition == null) {
                 break;
               }
 
-              Partition<I, V, E> partition =
-                  getPartitionStore().getOrCreatePartition(partitionId);
               long vertices = 0;
               long edges = 0;
               long partitionEdgeCount = partition.getEdgeCount();
@@ -1505,10 +1495,7 @@ else[HADOOP_NON_SECURE]*/
         GiraphConstants.NUM_CHECKPOINT_IO_THREADS.get(getConfiguration()),
         numPartitions);
 
-    final Queue<Integer> partitionIdQueue =
-        (numPartitions == 0) ? new LinkedList<Integer>() :
-            new ArrayBlockingQueue<Integer>(numPartitions);
-    Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
+    getPartitionStore().startIteration();
 
     final CompressionCodec codec =
         new CompressionCodecFactory(getConfiguration())
@@ -1525,13 +1512,14 @@ else[HADOOP_NON_SECURE]*/
 
           @Override
           public Void call() throws Exception {
-            while (!partitionIdQueue.isEmpty()) {
-              Integer partitionId = partitionIdQueue.poll();
-              if (partitionId == null) {
+            while (true) {
+              Partition<I, V, E> partition =
+                  getPartitionStore().getNextPartition();
+              if (partition == null) {
                 break;
               }
               Path path =
-                  createCheckpointFilePathSafe("_" + partitionId +
+                  createCheckpointFilePathSafe("_" + partition.getId() +
                       CheckpointingUtils.CHECKPOINT_VERTICES_POSTFIX);
 
               FSDataOutputStream uncompressedStream =
@@ -1542,8 +1530,6 @@ else[HADOOP_NON_SECURE]*/
                   new DataOutputStream(
                       codec.createOutputStream(uncompressedStream));
 
-              Partition<I, V, E> partition =
-                  getPartitionStore().getOrCreatePartition(partitionId);
 
               partition.write(stream);
 
@@ -1965,5 +1951,16 @@ else[HADOOP_NON_SECURE]*/
           globalStats);
     }
     return globalStats;
+  }
+
+  @Override
+  public int getNumPartitionsOwned() {
+    int count = 0;
+    for (PartitionOwner partitionOwner : getPartitionOwners()) {
+      if (partitionOwner.getWorkerInfo().equals(getWorkerInfo())) {
+        count++;
+      }
+    }
+    return count;
   }
 }

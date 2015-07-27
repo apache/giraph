@@ -936,6 +936,10 @@ public class GiraphConfiguration extends Configuration
     return NUM_COMPUTE_THREADS.get(this);
   }
 
+  public int getNumOocThreads() {
+    return NUM_OOC_THREADS.get(this);
+  }
+
   /**
    * Set the number of input split threads
    *
