@@ -138,6 +138,11 @@ public class IntFloatMessageStore
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return !map.get(partitionId).isEmpty();
+  }
+
+  @Override
   public Iterable<FloatWritable> getVertexMessages(
       IntWritable vertexId) throws IOException {
     Int2FloatOpenHashMap partitionMap = getPartitionMap(vertexId);

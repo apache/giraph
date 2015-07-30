@@ -23,6 +23,7 @@ import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.graph.Computation;
@@ -190,10 +191,13 @@ public class MockUtils {
     ImmutableClassesGiraphConfiguration conf, Mapper.Context context) {
     CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> serviceWorker =
       MockUtils.mockServiceGetVertexPartitionOwner(1);
+    GiraphConstants.MESSAGE_STORE_FACTORY_CLASS.set(conf,
+        ByteArrayMessagesPerVertexStore.newFactory(serviceWorker, conf)
+            .getClass());
+
     ServerData<IntWritable, IntWritable, IntWritable> serverData =
       new ServerData<IntWritable, IntWritable, IntWritable>(
-      serviceWorker, conf, ByteArrayMessagesPerVertexStore.newFactory(
-          serviceWorker, conf), context);
+          serviceWorker, conf, context);
     // Here we add a partition to simulate the case that there is one partition.
     serverData.getPartitionStore().addPartition(new SimplePartition());
     return serverData;

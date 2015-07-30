@@ -19,9 +19,11 @@
 package org.apache.giraph;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
+import org.apache.giraph.examples.SimplePageRankComputation;
 import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.graph.BasicComputation;
@@ -37,6 +39,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -49,19 +52,6 @@ public class TestOutOfCore extends BspCase {
 
   public TestOutOfCore() {
       super(TestOutOfCore.class.getName());
-  }
-
-  public static class EmptyComputation extends BasicComputation<
-      LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
-
-    @Override
-    public void compute(
-        Vertex<LongWritable, DoubleWritable, FloatWritable> vertex,
-        Iterable<DoubleWritable> messages) throws IOException {
-      if (getSuperstep() > 5) {
-        vertex.voteToHalt();
-      }
-    }
   }
 
   public static class TestMemoryEstimator implements MemoryEstimator {
@@ -100,9 +90,13 @@ public class TestOutOfCore extends BspCase {
   public void testOutOfCore()
           throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setComputationClass(EmptyComputation.class);
+    conf.setComputationClass(SimplePageRankComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+    conf.setWorkerContextClass(
+        SimplePageRankComputation.SimplePageRankWorkerContext.class);
+    conf.setMasterComputeClass(
+        SimplePageRankComputation.SimplePageRankMasterCompute.class);
     GiraphConstants.USER_PARTITION_COUNT.set(conf, NUM_PARTITIONS);
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
     GiraphConstants.OUT_OF_CORE_MEM_ESTIMATOR
@@ -115,7 +109,21 @@ public class TestOutOfCore extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
     // Overwrite the number of vertices set in BspCase
-    GeneratedVertexReader.READER_VERTICES.set(conf, 400);
+    GeneratedVertexReader.READER_VERTICES.set(conf, 200);
     assertTrue(job.run(true));
+    if (!runningInDistributedMode()) {
+      double maxPageRank =
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMax();
+      double minPageRank =
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMin();
+      long numVertices =
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalSum();
+      System.out.println(getCallingMethodName() + ": maxPageRank=" +
+          maxPageRank + " minPageRank=" +
+          minPageRank + " numVertices=" + numVertices);
+      assertEquals(13591.5, maxPageRank, 0.01);
+      assertEquals(9.375e-5, minPageRank, 0.000000001);
+      assertEquals(8 * 200L, numVertices);
+    }
   }
 }

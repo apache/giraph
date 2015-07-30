@@ -21,19 +21,14 @@ package org.apache.giraph.comm.netty;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerServer;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
-
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
 
 /**
  * Netty worker server that implement {@link WorkerServer} and contains
@@ -78,31 +73,12 @@ public class NettyWorkerServer<I extends WritableComparable,
     this.context = context;
 
     serverData =
-        new ServerData<I, V, E>(service, conf, createMessageStoreFactory(),
-            context);
+        new ServerData<I, V, E>(service, conf, context);
 
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E>(serverData),
         service.getWorkerInfo(), context, exceptionHandler);
     nettyServer.start();
-  }
-
-  /**
-   * Decide which message store should be used for current application,
-   * and create the factory for that store
-   *
-   * @return Message store factory
-   */
-  private MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
-  createMessageStoreFactory() {
-    Class<? extends MessageStoreFactory> messageStoreFactoryClass =
-        MESSAGE_STORE_FACTORY_CLASS.get(conf);
-
-    MessageStoreFactory messageStoreFactoryInstance =
-        ReflectionUtils.newInstance(messageStoreFactoryClass);
-    messageStoreFactoryInstance.initialize(service, conf);
-
-    return messageStoreFactoryInstance;
   }
 
   @Override

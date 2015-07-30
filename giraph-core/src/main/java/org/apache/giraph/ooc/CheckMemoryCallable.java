@@ -232,7 +232,6 @@ public class CheckMemoryCallable<I extends WritableComparable,
                   freeMemory));
         }
       }
-
       // If we have enough memory, we roll back the latest shrink in number of
       // partition slots.
       // If we do not have enough memory, but we are not in a bad scenario
@@ -265,9 +264,10 @@ public class CheckMemoryCallable<I extends WritableComparable,
             oocEngine.getPartitionsWithInputVertices();
         BlockingQueue<Integer> partitionsWithInputEdges =
             oocEngine.getPartitionsWithInputEdges();
+        BlockingQueue<Integer> partitionsWithPendingMessages =
+            oocEngine.getPartitionsWithPendingMessages();
         AtomicInteger numPartitionsToSpill =
             oocEngine.getNumPartitionsToSpill();
-
         while (freeMemory < midFreeMemoryFraction * maxMemory) {
           // Offload input vertex buffer of OOC partitions if we are in
           // INPUT_SUPERSTEP
@@ -276,7 +276,7 @@ public class CheckMemoryCallable<I extends WritableComparable,
             // vertex buffers of that partition).
             PairList<Integer, Integer> pairs =
                 partitionStore.getOocPartitionIdsWithPendingInputVertices();
-            freeMemory -= createCommand(pairs, partitionsWithInputVertices);
+            freeMemory -= createCommands(pairs, partitionsWithInputVertices);
           }
 
           // Offload edge store of OOC partitions if we are in INPUT_SUPERSTEP
@@ -284,7 +284,15 @@ public class CheckMemoryCallable<I extends WritableComparable,
               serviceWorker.getSuperstep() == BspService.INPUT_SUPERSTEP) {
             PairList<Integer, Integer> pairs =
                 partitionStore.getOocPartitionIdsWithPendingInputEdges();
-            freeMemory -= createCommand(pairs, partitionsWithInputEdges);
+            freeMemory -= createCommands(pairs, partitionsWithInputEdges);
+          }
+
+          // Offload message buffers of OOC partitions if we are still low in
+          // free memory
+          if (freeMemory < midFreeMemoryFraction * maxMemory) {
+            PairList<Integer, Integer> pairs =
+                partitionStore.getOocPartitionIdsWithPendingMessages();
+            freeMemory -= createCommands(pairs, partitionsWithPendingMessages);
           }
 
           // Offload partitions if we are still low in free memory
@@ -295,14 +303,16 @@ public class CheckMemoryCallable<I extends WritableComparable,
 
           if (!partitionsWithInputVertices.isEmpty() ||
               !partitionsWithInputEdges.isEmpty() ||
+              !partitionsWithPendingMessages.isEmpty() ||
               numPartitionsToSpill.get() != 0) {
             if (LOG.isInfoEnabled()) {
               LOG.info("call: signal out-of-core processor threads to start " +
-                  "offloading. These threads will spill vertex buffer of " +
+                  "offloading. These threads will spill vertex buffers of " +
                   partitionsWithInputVertices.size() + " partitions, edge " +
                   "buffers of " + partitionsWithInputEdges.size() +
-                  " partitions, and " + numPartitionsToSpill.get() + " whole " +
-                  "partition");
+                  " partitions, pending message buffers of " +
+                  partitionsWithPendingMessages.size() + " partitions, and " +
+                  numPartitionsToSpill.get() + " whole partitions");
             }
             // Opening the gate for OOC processing threads to start spilling
             // data on disk
@@ -356,7 +366,7 @@ public class CheckMemoryCallable<I extends WritableComparable,
           if (LOG.isInfoEnabled()) {
             LOG.info("call: " +
                 (gcDone ?
-                    ("GC is done. " + String.format("GC time = %.2f sec.",
+                    ("GC is done. " + String.format("GC time = %.2f sec. ",
                         (System.currentTimeMillis() - gcStartTime) / 1000.0)) :
                     "") +
                 "Finished offloading data to disk. " +
@@ -432,18 +442,20 @@ public class CheckMemoryCallable<I extends WritableComparable,
   }
 
   /**
-   * Generates the command for a particular type of data we want to offload to
-   * disk.
+   * Generate commands for out-of-core processor threads based on the
+   * (partitionId, memory foot-print) pairs we have on a particular type of data
+   * (either vertex buffer, edge buffer, or message buffer).
    *
-   * @param pairs list of pair(partitionId, approximate foot-print that is going
-   *              of be reduced by offloading the particular data of a
+   * @param pairs list of pairs (partitionId, estimated memory foot-print that
+   *              is going to be reduced by offloading the particular data of a
    *              partition)
-   * @param commands list of partitionIds for which we want to execute the
-   *                 command
+   * @param commands commands to generate for out-of-core processor threads. a
+   *                 command is a partition id, for which the appropriate data
+   *                 should be flushed to disk.
    * @return approximate amount of memory (in MB) that is going to be freed up
    *         after executing the generated commands
    */
-  private double createCommand(PairList<Integer, Integer> pairs,
+  private double createCommands(PairList<Integer, Integer> pairs,
       BlockingQueue<Integer> commands) {
     double usedMemory = 0;
     if (pairs.getSize() != 0) {

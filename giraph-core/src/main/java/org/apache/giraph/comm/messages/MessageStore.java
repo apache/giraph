@@ -76,6 +76,14 @@ public interface MessageStore<I extends WritableComparable,
   boolean hasMessagesForVertex(I vertexId);
 
   /**
+   * Check if we have messages for some partition
+   *
+   * @param partitionId Id of partition which we want to check
+   * @return True iff we have messages for the given partition
+   */
+  boolean hasMessagesForPartition(int partitionId);
+
+  /**
    * Adds messages for partition
    *
    * @param partitionId Id of partition

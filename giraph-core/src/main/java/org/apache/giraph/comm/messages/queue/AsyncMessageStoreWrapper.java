@@ -142,6 +142,11 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return store.hasMessagesForPartition(partitionId);
+  }
+
+  @Override
   public void addPartitionMessages(
       int partitionId, VertexIdMessages<I, M> messages) throws IOException {
     int hash = partition2Queue.get(partitionId);

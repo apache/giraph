@@ -20,19 +20,22 @@ package org.apache.giraph.partition;
 
 import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.EdgeStore;
-import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.VertexIdEdges;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A simple in-memory partition store.
@@ -47,12 +50,6 @@ public class SimplePartitionStore<I extends WritableComparable,
   /** Map of stored partitions. */
   private final ConcurrentMap<Integer, Partition<I, V, E>> partitions =
       Maps.newConcurrentMap();
-  /** Edge store for this worker. */
-  private final EdgeStore<I, V, E> edgeStore;
-  /** Configuration. */
-  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
-  /** Context used to report progress */
-  private final Mapper<?, ?, ?, ?>.Context context;
   /** Queue of partitions to be precessed in a superstep */
   private BlockingQueue<Partition<I, V, E>> partitionQueue;
 
@@ -65,11 +62,7 @@ public class SimplePartitionStore<I extends WritableComparable,
   public SimplePartitionStore(ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context,
       CentralizedServiceWorker<I, V, E> serviceWorker) {
-    this.conf = conf;
-    this.context = context;
-    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
-    edgeStoreFactory.initialize(serviceWorker, conf, context);
-    edgeStore = edgeStoreFactory.newStore();
+    super(conf, context, serviceWorker);
   }
 
   @Override
@@ -119,11 +112,11 @@ public class SimplePartitionStore<I extends WritableComparable,
 
   @Override
   public void startIteration() {
-    if (partitionQueue != null && !partitionQueue.isEmpty()) {
-      throw new IllegalStateException("startIteration: It seems that some of " +
+    checkState(partitionQueue == null || partitionQueue.isEmpty(),
+        "startIteration: It seems that some of " +
           "of the partitions from previous iteration over partition store are" +
           " not yet processed.");
-    }
+
     partitionQueue =
         new ArrayBlockingQueue<Partition<I, V, E>>(getNumPartitions());
     for (Partition<I, V, E> partition : partitions.values()) {
@@ -177,5 +170,19 @@ public class SimplePartitionStore<I extends WritableComparable,
   @Override
   public void moveEdgesToVertices() {
     edgeStore.moveEdgesToVertices();
+  }
+
+  @Override
+  public <M extends Writable> void addPartitionCurrentMessages(
+      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+    ((MessageStore<I, M>) currentMessageStore)
+        .addPartitionMessages(partitionId, messages);
+  }
+
+  @Override
+  public <M extends Writable> void addPartitionIncomingMessages(
+      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+    ((MessageStore<I, M>) incomingMessageStore)
+        .addPartitionMessages(partitionId, messages);
   }
 }

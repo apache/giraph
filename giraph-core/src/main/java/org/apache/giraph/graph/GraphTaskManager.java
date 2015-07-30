@@ -332,7 +332,8 @@ end[PURE_YARN]*/
       prepareForSuperstep(graphState);
       context.progress();
       MessageStore<I, Writable> messageStore =
-        serviceWorker.getServerData().getCurrentMessageStore();
+          serviceWorker.getServerData().getPartitionStore()
+              .getCurrentMessageStore();
       int numPartitions = serviceWorker.getPartitionStore().getNumPartitions();
       int numThreads = Math.min(numComputeThreads, numPartitions);
       if (LOG.isInfoEnabled()) {

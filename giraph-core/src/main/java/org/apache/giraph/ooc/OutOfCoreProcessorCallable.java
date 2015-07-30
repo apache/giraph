@@ -92,6 +92,8 @@ public class OutOfCoreProcessorCallable<I extends WritableComparable,
           oocEngine.getPartitionsWithInputVertices();
       BlockingQueue<Integer> partitionsWithInputEdges =
           oocEngine.getPartitionsWithInputEdges();
+      BlockingQueue<Integer> partitionsWithPendingMessages =
+          oocEngine.getPartitionsWithPendingMessages();
       AtomicInteger numPartitionsToSpill =
           oocEngine.getNumPartitionsToSpill();
 
@@ -100,7 +102,9 @@ public class OutOfCoreProcessorCallable<I extends WritableComparable,
         if (partitionId == null) {
           break;
         }
-        LOG.info("call: spilling vertex buffer of partition " + partitionId);
+        if (LOG.isInfoEnabled()) {
+          LOG.info("call: spilling vertex buffer of partition " + partitionId);
+        }
         try {
           partitionStore.spillPartitionInputVertexBuffer(partitionId);
         } catch (IOException e) {
@@ -114,7 +118,9 @@ public class OutOfCoreProcessorCallable<I extends WritableComparable,
         if (partitionId == null) {
           break;
         }
-        LOG.info("call: spilling edge buffer of partition " + partitionId);
+        if (LOG.isInfoEnabled()) {
+          LOG.info("call: spilling edge buffer of partition " + partitionId);
+        }
         try {
           partitionStore.spillPartitionInputEdgeStore(partitionId);
         } catch (IOException e) {
@@ -123,9 +129,28 @@ public class OutOfCoreProcessorCallable<I extends WritableComparable,
         }
       }
 
+      while (!partitionsWithPendingMessages.isEmpty()) {
+        Integer partitionId = partitionsWithPendingMessages.poll();
+        if (partitionId == null) {
+          break;
+        }
+        if (LOG.isInfoEnabled()) {
+          LOG.info(
+              "call: spilling message buffers of partition " + partitionId);
+        }
+        try {
+          partitionStore.spillPartitionMessages(partitionId);
+        } catch (IOException e) {
+          throw new IllegalStateException("call: caught IOException while " +
+              "spilling edge buffers/store to disk");
+        }
+      }
+
       // Put partitions on disk
       while (numPartitionsToSpill.getAndDecrement() > 0) {
-        LOG.info("call: start offloading a partition");
+        if (LOG.isInfoEnabled()) {
+          LOG.info("call: start offloading a partition");
+        }
         partitionStore.spillOnePartition();
       }
 

@@ -79,15 +79,21 @@ public class AdaptiveOutOfCoreEngine<I extends WritableComparable,
   // ---- OOC Commands ----
   /**
    * List of partitions that are on disk, and their loaded *vertices* during
-   * INPUT_SUPERSTEP are ready to flush to disk
+   * INPUT_SUPERSTEP are ready to be flushed to disk
    */
   private final BlockingQueue<Integer> partitionsWithInputVertices;
   /**
    * List of partitions that are on disk, and their loaded *edges* during
-   * INPUT_SUPERSTEP are ready to flush to disk
+   * INPUT_SUPERSTEP are ready to be flushed to disk
    */
   private final BlockingQueue<Integer> partitionsWithInputEdges;
-  /** Number of partitions to be written to the disk */
+  /**
+   * List of partitions that are on disk, and their message buffers (either
+   * messages for current superstep, or incoming messages for next superstep)
+   * are ready to be flushed to disk
+   */
+  private final BlockingQueue<Integer> partitionsWithPendingMessages;
+  /** Number of partitions to be written to disk */
   private final AtomicInteger numPartitionsToSpill;
 
   /** Executor service for check memory thread */
@@ -128,6 +134,7 @@ public class AdaptiveOutOfCoreEngine<I extends WritableComparable,
     this.done = false;
     this.partitionsWithInputVertices = new ArrayBlockingQueue<Integer>(100);
     this.partitionsWithInputEdges = new ArrayBlockingQueue<Integer>(100);
+    this.partitionsWithPendingMessages = new ArrayBlockingQueue<Integer>(100);
     this.numPartitionsToSpill = new AtomicInteger(0);
   }
 
@@ -214,6 +221,13 @@ public class AdaptiveOutOfCoreEngine<I extends WritableComparable,
    */
   public BlockingQueue<Integer> getPartitionsWithInputEdges() {
     return partitionsWithInputEdges;
+  }
+
+  /**
+   * @return list of partitions that have large enough message buffers.
+   */
+  public BlockingQueue<Integer> getPartitionsWithPendingMessages() {
+    return partitionsWithPendingMessages;
   }
 
   /**

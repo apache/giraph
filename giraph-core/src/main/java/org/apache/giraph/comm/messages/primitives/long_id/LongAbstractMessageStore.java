@@ -101,6 +101,11 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return !map.get(partitionId).isEmpty();
+  }
+
+  @Override
   public void clearVertexMessages(LongWritable vertexId) throws IOException {
     getPartitionMap(vertexId).remove(vertexId.get());
   }
@@ -124,5 +129,4 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
     }
     return vertices;
   }
-
 }

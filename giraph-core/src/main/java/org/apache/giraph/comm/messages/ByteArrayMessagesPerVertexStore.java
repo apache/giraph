@@ -191,12 +191,15 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @param <I> Vertex id
    * @param <M> Message data
    */
-  private static class Factory<I extends WritableComparable, M extends Writable>
+  public static class Factory<I extends WritableComparable, M extends Writable>
     implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
     private CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
     private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
+
+    /** Constructor for reflection */
+    public Factory() { }
 
     /**
      * @param service Worker service

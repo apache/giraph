@@ -186,6 +186,11 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return map.get(partitionId).size() != 0;
+  }
+
+  @Override
   public Iterable<M> getVertexMessages(I vertexId) throws IOException {
     DataInputOutput dataInputOutput = getPartitionMap(vertexId).get(vertexId);
     if (dataInputOutput == null) {

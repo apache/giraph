@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 1.2.0 - unreleased
 =======
+  GIRAPH-1023: Adding out-of-core messages to previously implemented adaptive out-of-core 
+  mechanism (heslami via aching)
+
   GIRAPH-1022: Out-of-core mechanism for input superstep and graph data (heslami via aching)
 
   GIRAPH-1021: Missing progress report for graph mutations. (heslami via aching)

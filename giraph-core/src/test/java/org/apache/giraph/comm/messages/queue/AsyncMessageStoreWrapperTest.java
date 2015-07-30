@@ -96,6 +96,11 @@ public class AsyncMessageStoreWrapperTest {
     }
 
     @Override
+    public boolean hasMessagesForPartition(int partitionId) {
+      return false;
+    }
+
+    @Override
     public void finalizeStore() {
 
     }

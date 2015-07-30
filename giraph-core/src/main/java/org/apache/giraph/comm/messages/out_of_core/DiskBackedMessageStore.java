@@ -34,6 +34,7 @@ import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 /**
@@ -127,6 +128,12 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   @Override
   public boolean hasMessagesForVertex(I vertexId) {
     return getMessageStore(vertexId).hasMessagesForVertex(vertexId);
+  }
+
+  @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return !Iterables
+        .isEmpty(getMessageStore(partitionId).getDestinationVertices());
   }
 
   @Override

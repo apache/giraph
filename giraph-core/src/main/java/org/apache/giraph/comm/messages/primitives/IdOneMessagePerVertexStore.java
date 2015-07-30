@@ -162,6 +162,11 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return map.get(partitionId).size() != 0;
+  }
+
+  @Override
   public Iterable<M> getVertexMessages(
       I vertexId) throws IOException {
     Basic2ObjectMap<I, M> partitionMap = getPartitionMap(vertexId);

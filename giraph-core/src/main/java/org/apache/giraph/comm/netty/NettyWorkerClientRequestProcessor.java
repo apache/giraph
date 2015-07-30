@@ -210,7 +210,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
                                      Partition<I, V, E> partition) {
     final int partitionId = partition.getId();
     MessageStore<I, Writable> messageStore =
-        serverData.getCurrentMessageStore();
+        serverData.getPartitionStore().getCurrentMessageStore();
     ByteArrayVertexIdMessages<I, Writable> vertexIdMessages =
         new ByteArrayVertexIdMessages<I, Writable>(
             configuration.createOutgoingMessageValueFactory());

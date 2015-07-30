@@ -103,6 +103,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
   /**
    * Constructor
+   *
    * @param context Context
    * @param graphState Current graph state (use to create own graph state)
    * @param messageStore Message store

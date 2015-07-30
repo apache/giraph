@@ -31,9 +31,6 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
@@ -65,19 +62,6 @@ public class ServerData<I extends WritableComparable,
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition store for this worker. */
   private volatile PartitionStore<I, V, E> partitionStore;
-  /** Message store factory */
-  private final MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
-  messageStoreFactory;
-  /**
-   * Message store for incoming messages (messages which will be consumed
-   * in the next super step)
-   */
-  private volatile MessageStore<I, Writable> incomingMessageStore;
-  /**
-   * Message store for current messages (messages which we received in
-   * previous super step and which will be consumed in current super step)
-   */
-  private volatile MessageStore<I, Writable> currentMessageStore;
   /**
    * Map of partition ids to vertex mutations from other workers. These are
    * mutations that should be applied before execution of *current* super step.
@@ -122,18 +106,14 @@ public class ServerData<I extends WritableComparable,
    *
    * @param service Service worker
    * @param conf Configuration
-   * @param messageStoreFactory Factory for message stores
    * @param context Mapper context
    */
   public ServerData(
       CentralizedServiceWorker<I, V, E> service,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
-          messageStoreFactory,
       Mapper<?, ?, ?, ?>.Context context) {
     this.serviceWorker = service;
     this.conf = conf;
-    this.messageStoreFactory = messageStoreFactory;
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
       partitionStore =
           new DiskBackedPartitionStore<I, V, E>(conf, context,
@@ -157,75 +137,24 @@ public class ServerData<I extends WritableComparable,
   }
 
   /**
-   * Get message store for incoming messages (messages which will be consumed
-   * in the next super step)
-   *
-   * @param <M> Message data
-   * @return Incoming message store
-   */
-  public <M extends Writable> MessageStore<I, M> getIncomingMessageStore() {
-    return (MessageStore<I, M>) incomingMessageStore;
-  }
-
-  /**
-   * Get message store for current messages (messages which we received in
-   * previous super step and which will be consumed in current super step)
-   *
-   * @param <M> Message data
-   * @return Current message store
-   */
-  public <M extends Writable> MessageStore<I, M> getCurrentMessageStore() {
-    return (MessageStore<I, M>) currentMessageStore;
-  }
-
-  /**
    * Re-initialize message stores.
    * Discards old values if any.
    * @throws IOException
    */
   public void resetMessageStores() throws IOException {
-    if (currentMessageStore != null) {
-      currentMessageStore.clearAll();
-      currentMessageStore = null;
-    }
-    if (incomingMessageStore != null) {
-      incomingMessageStore.clearAll();
-      incomingMessageStore = null;
-    }
-    prepareSuperstep();
-  }
-
-  /** Prepare for next super step */
-  public void prepareSuperstep() {
-    if (currentMessageStore != null) {
-      try {
-        currentMessageStore.clearAll();
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to clear previous message store");
-      }
-    }
-    currentMessageStore =
-        incomingMessageStore != null ? incomingMessageStore :
-            messageStoreFactory.newStore(conf.getIncomingMessageClasses());
-    incomingMessageStore =
-        messageStoreFactory.newStore(conf.getOutgoingMessageClasses());
-    // finalize current message-store before resolving mutations
-    currentMessageStore.finalizeStore();
-
-    currentWorkerToWorkerMessages = incomingWorkerToWorkerMessages;
+    getPartitionStore().resetMessageStores();
+    currentWorkerToWorkerMessages =
+        Collections.synchronizedList(new ArrayList<Writable>());
     incomingWorkerToWorkerMessages =
         Collections.synchronizedList(new ArrayList<Writable>());
   }
 
-  /**
-   * In case of async message store we have to wait for all messages
-   * to be processed before going into next superstep.
-   */
-  public void waitForComplete() {
-    if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
-      ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
-    }
+  /** Prepare for next super step */
+  public void prepareSuperstep() {
+    partitionStore.prepareSuperstep();
+    currentWorkerToWorkerMessages = incomingWorkerToWorkerMessages;
+    incomingWorkerToWorkerMessages =
+        Collections.synchronizedList(new ArrayList<Writable>());
   }
 
   /**
@@ -323,7 +252,8 @@ public class ServerData<I extends WritableComparable,
         VertexMutations<I, V, E> vertexMutations = entry.getValue();
         Vertex<I, V, E> vertex = vertexResolver.resolve(vertexId,
             originalVertex, vertexMutations,
-            getCurrentMessageStore().hasMessagesForVertex(entry.getKey()));
+            getPartitionStore().getCurrentMessageStore()
+                .hasMessagesForVertex(entry.getKey()));
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("resolvePartitionMutations: Resolved vertex index " +
@@ -339,7 +269,8 @@ public class ServerData<I extends WritableComparable,
         } else if (originalVertex != null) {
           partition.removeVertex(vertexId);
           try {
-            getCurrentMessageStore().clearVertexMessages(vertexId);
+            getPartitionStore().getCurrentMessageStore()
+                .clearVertexMessages(vertexId);
           } catch (IOException e) {
             throw new IllegalStateException("resolvePartitionMutations: " +
                 "Caught IOException while clearing messages for a deleted " +
@@ -352,7 +283,7 @@ public class ServerData<I extends WritableComparable,
 
     // Keep track of vertices which are not here in the partition, but have
     // received messages
-    Iterable<I> destinations = getCurrentMessageStore().
+    Iterable<I> destinations = getPartitionStore().getCurrentMessageStore().
         getPartitionDestinationVertices(partitionId);
     if (!Iterables.isEmpty(destinations)) {
       for (I vertexId : destinations) {

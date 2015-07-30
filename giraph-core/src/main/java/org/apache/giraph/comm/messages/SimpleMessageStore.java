@@ -211,6 +211,11 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return !map.get(partitionId).isEmpty();
+  }
+
+  @Override
   public void clearAll() throws IOException {
     map.clear();
   }

@@ -910,7 +910,7 @@ else[HADOOP_NON_SECURE]*/
     globalCommHandler.finishSuperstep(workerAggregatorRequestProcessor);
 
     MessageStore<I, Writable> incomingMessageStore =
-        getServerData().getIncomingMessageStore();
+        getServerData().getPartitionStore().getIncomingMessageStore();
     if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
       ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
     }
@@ -1418,8 +1418,8 @@ else[HADOOP_NON_SECURE]*/
     for (Integer partitionId : getPartitionStore().getPartitionIds()) {
       // write messages
       checkpointOutputStream.writeInt(partitionId);
-      getServerData().getCurrentMessageStore().writePartition(
-          checkpointOutputStream, partitionId);
+      getServerData().getPartitionStore().getCurrentMessageStore()
+          .writePartition(checkpointOutputStream, partitionId);
       getContext().progress();
 
     }
@@ -1668,8 +1668,8 @@ else[HADOOP_NON_SECURE]*/
 
       for (int i = 0; i < partitions; i++) {
         int partitionId = checkpointStream.readInt();
-        getServerData().getCurrentMessageStore().readFieldsForPartition(
-            checkpointStream, partitionId);
+        getServerData().getPartitionStore().getCurrentMessageStore()
+            .readFieldsForPartition(checkpointStream, partitionId);
       }
 
       List<Writable> w2wMessages = (List<Writable>) WritableUtils.readList(

@@ -26,25 +26,26 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
-import org.apache.giraph.edge.EdgeStore;
-import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.utils.VertexIdEdges;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.VertexIterator;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedInputStream;
@@ -53,6 +54,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -72,6 +74,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.giraph.conf.GiraphConstants.MAX_PARTITIONS_IN_MEMORY;
 import static org.apache.giraph.conf.GiraphConstants.ONE_MB;
 import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Disk-backed PartitionStore. An instance of this class can be coupled with an
@@ -142,13 +148,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * time (a read lock used for spilling), and cannot be overlapped with
    * change of data structure holding the data.
    */
-  private ReadWriteLock rwLock = new ReentrantReadWriteLock();
+  private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-  /** Giraph configuration */
-  private final
-  ImmutableClassesGiraphConfiguration<I, V, E> conf;
-  /** Mapper context */
-  private final Context context;
   /** Base path where the partition files are written to */
   private final String[] basePaths;
   /** Used to hash partition Ids */
@@ -157,13 +158,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private final AtomicInteger maxPartitionsInMem = new AtomicInteger(-1);
   /** Number of slots used */
   private final AtomicInteger numPartitionsInMem = new AtomicInteger(0);
-  /** service worker reference */
-  private CentralizedServiceWorker<I, V, E> serviceWorker;
 
   /** Out-of-core engine */
   private final OutOfCoreEngine oocEngine;
-  /** Edge store for this worker */
-  private final EdgeStore<I, V, E> edgeStore;
   /** If moving of edges to vertices in INPUT_SUPERSTEP has been started */
   private volatile boolean movingEdges;
   /** Whether the partition store is initialized */
@@ -187,7 +184,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private final ConcurrentMap<Integer, Integer> numPendingInputVerticesOnDisk =
       Maps.newConcurrentMap();
   /** Lock to avoid overlap of addition and removal on pendingInputVertices */
-  private ReadWriteLock vertexBufferRWLock = new ReentrantReadWriteLock();
+  private final ReadWriteLock vertexBufferRWLock = new ReentrantReadWriteLock();
 
   /**
    * Similar to vertex buffer, but used for input edges (see comments for
@@ -199,7 +196,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private final ConcurrentMap<Integer, Integer> numPendingInputEdgesOnDisk =
       Maps.newConcurrentMap();
   /** Lock to avoid overlap of addition and removal on pendingInputEdges */
-  private ReadWriteLock edgeBufferRWLock = new ReentrantReadWriteLock();
+  private final ReadWriteLock edgeBufferRWLock = new ReentrantReadWriteLock();
 
   /**
    * For each out-of-core partitions, whether its edge store is also
@@ -207,6 +204,48 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   private final ConcurrentMap<Integer, Boolean> hasEdgeStoreOnDisk =
       Maps.newConcurrentMap();
+
+  /**
+   * Type of VertexIdMessage class (container for serialized messages) received
+   * for a particular message. If we write the received messages to disk before
+   * adding them to message store, we need this type when we want to read the
+   * messages back from disk (so that we know how to read the messages from
+   * disk).
+   */
+  private enum SerializedMessageClass {
+    /** ByteArrayVertexIdMessages */
+    BYTE_ARRAY_VERTEX_ID_MESSAGES,
+    /** ByteArrayOneMEssageToManyIds */
+    BYTE_ARRAY_ONE_MESSAGE_TO_MANY_IDS
+  }
+
+  /**
+   * Similar to vertex buffer and edge buffer, but used for messages (see
+   * comments for pendingInputVertices).
+   */
+  private volatile ConcurrentMap<Integer,
+      Pair<Integer, List<VertexIdMessages<I, Writable>>>>
+      pendingIncomingMessages = Maps.newConcurrentMap();
+  /** Whether a partition has any incoming message buffer on disk */
+  private volatile ConcurrentMap<Integer, Boolean> incomingMessagesOnDisk =
+      Maps.newConcurrentMap();
+
+  /**
+   * Similar to pendingIncomingMessages, but is used for messages for current
+   * superstep instead.
+   */
+  private volatile ConcurrentMap<Integer,
+      Pair<Integer, List<VertexIdMessages<I, Writable>>>>
+      pendingCurrentMessages = Maps.newConcurrentMap();
+  /** Similar to incomingMessagesOnDisk for messages for current superstep */
+  private volatile ConcurrentMap<Integer, Boolean> currentMessagesOnDisk =
+      Maps.newConcurrentMap();
+
+  /**
+   * Lock to avoid overlap of addition and removal of pending message buffers
+   */
+  private final ReadWriteLock messageBufferRWLock =
+      new ReentrantReadWriteLock();
 
   /**
    * Constructor
@@ -219,9 +258,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context,
       CentralizedServiceWorker<I, V, E> serviceWorker) {
-    this.conf = conf;
-    this.context = context;
-    this.serviceWorker = serviceWorker;
+    super(conf, context, serviceWorker);
     this.minBuffSize = MINIMUM_BUFFER_SIZE_TO_FLUSH.get(conf);
     int userMaxNumPartitions = MAX_PARTITIONS_IN_MEMORY.get(conf);
     if (userMaxNumPartitions > 0) {
@@ -233,9 +270,6 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       this.oocEngine =
           new AdaptiveOutOfCoreEngine<I, V, E>(conf, serviceWorker);
     }
-    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
-    edgeStoreFactory.initialize(serviceWorker, conf, context);
-    this.edgeStore = edgeStoreFactory.newStore();
     this.movingEdges = false;
     this.isInitialized = new AtomicBoolean(false);
 
@@ -425,10 +459,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
           partitionId + " to disk");
     }
     MetaPartition swapOutPartition = partitions.get(partitionId);
-    if (swapOutPartition == null) {
-      throw new IllegalStateException("swapOnePartitionToDisk: the partition " +
-          "is not found to spill to disk (impossible)");
-    }
+    checkNotNull(swapOutPartition,
+        "swapOnePartitionToDisk: the partition is not found to spill to disk " +
+            "(impossible)");
 
     // Since the partition is popped from the maps, it is not going to be
     // processed (or change its process state) until spilling of the partition
@@ -523,10 +556,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
 
     MetaPartition meta = partitions.get(partitionId);
-    if (meta == null) {
-      throw new IllegalStateException("getNextPartition: partition " +
-          partitionId + " does not exist (impossible)");
-    }
+    checkNotNull(meta, "getNextPartition: partition " + partitionId +
+        " does not exist (impossible)");
 
     // The only time we iterate through all partitions in INPUT_SUPERSTEP is
     // when we want to move
@@ -582,6 +613,18 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       while (!partitionInMemory) {
         switch (meta.getState()) {
         case INACTIVE:
+          // Check if the message store for the current superstep is in memory,
+          // and if not, load it from the disk.
+          Boolean messagesOnDisk = currentMessagesOnDisk.get(partitionId);
+          if (messagesOnDisk != null && messagesOnDisk) {
+            try {
+              loadMessages(partitionId);
+            } catch (IOException e) {
+              throw new IllegalStateException("getPartition: failed while " +
+                  "loading messages of current superstep for partition " +
+                  partitionId);
+            }
+          }
           meta.setState(State.ACTIVE);
           partitionInMemory = true;
           break;
@@ -617,7 +660,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
                 LOG.info("getPartition: start reading partition " +
                     partitionId + " from disk");
               }
-              partition = loadPartition(partitionId, meta.getVertexCount());
+              partition = loadPartition(meta);
               if (LOG.isInfoEnabled()) {
                 LOG.info("getPartition: done reading partition " +
                     partitionId + " from disk");
@@ -634,6 +677,221 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
         default:
           throw new IllegalStateException("illegal state " + meta.getState() +
               " for partition " + meta.getId());
+        }
+      }
+    }
+  }
+
+  @Override
+  public void prepareSuperstep() {
+    rwLock.writeLock().lock();
+    super.prepareSuperstep();
+    pendingCurrentMessages = pendingIncomingMessages;
+    currentMessagesOnDisk = incomingMessagesOnDisk;
+    pendingIncomingMessages = Maps.newConcurrentMap();
+    incomingMessagesOnDisk = Maps.newConcurrentMap();
+    rwLock.writeLock().unlock();
+  }
+
+  /**
+   * Spill message buffers (either buffers for messages for current superstep,
+   * or buffers for incoming messages) of a given partition to disk. Note that
+   * the partition should be ON_DISK or IN_TRANSIT.
+   *
+   * @param partitionId Id of the partition to spill its message buffers
+   * @throws IOException
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      "UL_UNRELEASED_LOCK_EXCEPTION_PATH")
+  public void spillPartitionMessages(Integer partitionId) throws IOException {
+    rwLock.readLock().lock();
+    spillMessages(partitionId, pendingCurrentMessages,
+        serviceWorker.getSuperstep());
+    spillMessages(partitionId, pendingIncomingMessages,
+        serviceWorker.getSuperstep() + 1);
+    rwLock.readLock().unlock();
+  }
+
+  /**
+   * Spill message buffers of a particular type of message (current or incoming
+   * buffer) for a partition to disk.
+   *
+   * @param partitionId Id of the partition to spill the messages for
+   * @param pendingMessages The map to get the message buffers from
+   * @param superstep Superstep of which we want to offload messages. This is
+   *                  equal to current superstep number if we want to offload
+   *                  buffers for currentMessageStore, and is equal to next
+   *                  superstep number if we want to offload buffer for
+   *                  incomingMessageStore
+   * @throws IOException
+   */
+  private void spillMessages(Integer partitionId,
+      ConcurrentMap<Integer, Pair<Integer, List<VertexIdMessages<I, Writable>>>>
+          pendingMessages, long superstep) throws IOException {
+    Pair<Integer, List<VertexIdMessages<I, Writable>>> entry;
+    messageBufferRWLock.writeLock().lock();
+    entry = pendingMessages.remove(partitionId);
+    if (entry != null && entry.getLeft() < minBuffSize) {
+      pendingMessages.put(partitionId, entry);
+      entry = null;
+    }
+    messageBufferRWLock.writeLock().unlock();
+
+    if (entry == null) {
+      return;
+    }
+
+    // Sanity check
+    checkState(!entry.getRight().isEmpty(),
+        "spillMessages: the message buffer that is supposed to be flushed to " +
+            "disk does not exist.");
+
+    File file = new File(getPendingMessagesBufferPath(partitionId, superstep));
+
+    FileOutputStream fos = new FileOutputStream(file, true);
+    BufferedOutputStream bos = new BufferedOutputStream(fos);
+    DataOutputStream dos = new DataOutputStream(bos);
+    for (VertexIdMessages<I, Writable> messages : entry.getRight()) {
+      SerializedMessageClass messageClass;
+      if (messages instanceof ByteArrayVertexIdMessages) {
+        messageClass = SerializedMessageClass.BYTE_ARRAY_VERTEX_ID_MESSAGES;
+      } else if (messages instanceof ByteArrayOneMessageToManyIds) {
+        messageClass =
+            SerializedMessageClass.BYTE_ARRAY_ONE_MESSAGE_TO_MANY_IDS;
+      } else {
+        throw new IllegalStateException("spillMessages: serialized message " +
+            "type is not supported");
+      }
+      dos.writeInt(messageClass.ordinal());
+      messages.write(dos);
+    }
+    dos.close();
+  }
+
+  /**
+   * Looks through all partitions already on disk, and see if any of them has
+   * enough pending message in its buffer in memory. This can be message buffer
+   * of current superstep, or incoming superstep. If so, put that partition
+   * along with an approximate amount of memory it took (in bytes) in a list to
+   * return.
+
+   * @return List of pairs (partitionId, sizeInByte) of the partitions where
+   *         their pending messages are worth flushing to disk
+   */
+  public PairList<Integer, Integer> getOocPartitionIdsWithPendingMessages() {
+    PairList<Integer, Integer> pairList = new PairList<>();
+    pairList.initialize();
+    Set<Integer> partitionIds = Sets.newHashSet();
+    // First, iterating over pending incoming messages
+    if (pendingIncomingMessages != null) {
+      for (Entry<Integer, Pair<Integer, List<VertexIdMessages<I, Writable>>>>
+           entry : pendingIncomingMessages.entrySet()) {
+        if (entry.getValue().getLeft() > minBuffSize) {
+          pairList.add(entry.getKey(), entry.getValue().getLeft());
+          partitionIds.add(entry.getKey());
+        }
+      }
+    }
+    // Second, iterating over pending current messages (i.e. pending incoming
+    // messages of previous superstep)
+    if (pendingCurrentMessages != null) {
+      for (Entry<Integer, Pair<Integer, List<VertexIdMessages<I, Writable>>>>
+           entry : pendingCurrentMessages.entrySet()) {
+        if (entry.getValue().getLeft() > minBuffSize &&
+            !partitionIds.contains(entry.getKey())) {
+          pairList.add(entry.getKey(), entry.getValue().getLeft());
+        }
+      }
+    }
+    return pairList;
+  }
+
+  @Override
+  public <M extends Writable> void addPartitionCurrentMessages(
+      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+    // Current messages are only added to the store in the event of partition
+    // migration. Presumably the partition has just migrated and its data is
+    // still available in memory. Note that partition migration only happens at
+    // the beginning of a superstep.
+    ((MessageStore<I, M>) currentMessageStore)
+        .addPartitionMessages(partitionId, messages);
+  }
+
+  @Override
+  public <M extends Writable> void addPartitionIncomingMessages(
+      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+    if (conf.getIncomingMessageClasses().useMessageCombiner()) {
+      ((MessageStore<I, M>) incomingMessageStore)
+          .addPartitionMessages(partitionId, messages);
+    } else {
+      MetaPartition meta = partitions.get(partitionId);
+      checkNotNull(meta, "addPartitionIncomingMessages: trying to add " +
+          "messages to partition " + partitionId + " which does not exist " +
+          "in the partition set of this worker!");
+
+      synchronized (meta) {
+        switch (meta.getState()) {
+        case INACTIVE:
+        case ACTIVE:
+          // A partition might be in memory, but its message store might still
+          // be on disk. This happens because while we are loading the partition
+          // to memory, we only load its current messages, not the incoming
+          // messages. If a new superstep has been started, while the partition
+          // is still in memory, the incoming message store in the previous
+          // superstep (which is the current messages in the current superstep)
+          // is on disk.
+          // This may also happen when a partition is offloaded to disk while
+          // it was unprocessed, and then again loaded in the same superstep for
+          // processing.
+          Boolean isMsgOnDisk = incomingMessagesOnDisk.get(partitionId);
+          if (isMsgOnDisk == null || !isMsgOnDisk) {
+            ((MessageStore<I, M>) incomingMessageStore)
+                .addPartitionMessages(partitionId, messages);
+            break;
+          }
+          // Continue to IN_TRANSIT and ON_DISK cases as the partition is in
+          // memory, but it's messages are not yet loaded
+          // CHECKSTYLE: stop FallThrough
+        case IN_TRANSIT:
+        case ON_DISK:
+          // CHECKSTYLE: resume FallThrough
+          List<VertexIdMessages<I, Writable>> newMessages =
+              new ArrayList<VertexIdMessages<I, Writable>>();
+          newMessages.add((VertexIdMessages<I, Writable>) messages);
+          int length = messages.getSerializedSize();
+          Pair<Integer, List<VertexIdMessages<I, Writable>>> newPair =
+              new MutablePair<>(length, newMessages);
+          messageBufferRWLock.readLock().lock();
+          Pair<Integer, List<VertexIdMessages<I, Writable>>> oldPair =
+              pendingIncomingMessages.putIfAbsent(partitionId, newPair);
+          if (oldPair != null) {
+            synchronized (oldPair) {
+              MutablePair<Integer, List<VertexIdMessages<I, Writable>>> pair =
+                  (MutablePair<Integer, List<VertexIdMessages<I, Writable>>>)
+                      oldPair;
+              pair.setLeft(pair.getLeft() + length);
+              pair.getRight().add((VertexIdMessages<I, Writable>) messages);
+            }
+          }
+          messageBufferRWLock.readLock().unlock();
+          // In the case that the number of partitions is asked to be fixed by
+          // the user, we should offload the message buffers as necessary.
+          if (isNumPartitionsFixed &&
+              pendingIncomingMessages.get(partitionId).getLeft() >
+                  minBuffSize) {
+            try {
+              spillPartitionMessages(partitionId);
+            } catch (IOException e) {
+              throw new IllegalStateException("addPartitionIncomingMessages: " +
+                  "spilling message buffers for partition " + partitionId +
+                  " failed!");
+            }
+          }
+          break;
+        default:
+          throw new IllegalStateException("addPartitionIncomingMessages: " +
+              "illegal state " + meta.getState() + " for partition " +
+              meta.getId());
         }
       }
     }
@@ -667,18 +925,16 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
 
     // Sanity check
-    if (entry.getRight().isEmpty()) {
-      throw new IllegalStateException("spillPartitionInputEdgeStore: " +
-          "the edge buffer that is supposed to be flushed to disk does not" +
-          "exist.");
-    }
+    checkState(!entry.getRight().isEmpty(),
+        "spillPartitionInputEdgeStore: the edge buffer that is supposed to " +
+            "be flushed to disk does not exist.");
 
     List<VertexIdEdges<I, E>> bufferList = entry.getRight();
     Integer numBuffers = numPendingInputEdgesOnDisk.putIfAbsent(partitionId,
         bufferList.size());
     if (numBuffers != null) {
-      numPendingInputEdgesOnDisk.replace(
-          partitionId, numBuffers + bufferList.size());
+      numPendingInputEdgesOnDisk.replace(partitionId,
+          numBuffers + bufferList.size());
     }
 
     File file = new File(getPendingEdgesBufferPath(partitionId));
@@ -833,11 +1089,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       return;
     }
     // Sanity check
-    if (entry.getRight().isEmpty()) {
-      throw new IllegalStateException("spillPartitionInputVertexBuffer: " +
-          "the vertex buffer that is supposed to be flushed to disk does not" +
-          "exist.");
-    }
+    checkState(!entry.getRight().isEmpty(),
+        "spillPartitionInputVertexBuffer: the vertex buffer that is " +
+            "supposed to be flushed to disk does not exist.");
 
     List<ExtendedDataOutput> bufferList = entry.getRight();
     Integer numBuffers = numPendingInputVerticesOnDisk.putIfAbsent(partitionId,
@@ -968,23 +1222,16 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
 
   @Override
   public void putPartition(Partition<I, V, E> partition) {
-    if (partition == null) {
-      throw new IllegalStateException("putPartition: partition to put is null" +
-          " (impossible)");
-    }
+    checkArgument(partition != null);
+
     Integer id = partition.getId();
     MetaPartition meta = partitions.get(id);
-    if (meta == null) {
-      throw new IllegalStateException("putPartition: partition to put does" +
-          "not exist in the store (impossible)");
-    }
+    checkNotNull(meta, "putPartition: partition to put does " +
+        "not exist in the store (impossible)");
     synchronized (meta) {
-      if (meta.getState() != State.ACTIVE) {
-        String msg = "It is not possible to put back a partition which is " +
-            "not ACTIVE.\n" + meta.toString();
-        LOG.error(msg);
-        throw new IllegalStateException(msg);
-      }
+      checkState(meta.getState() == State.ACTIVE,
+          "It is not possible to put back a partition which is not ACTIVE. " +
+              "meta = " + meta.toString());
 
       meta.setState(State.INACTIVE);
       meta.setProcessed(true);
@@ -1003,10 +1250,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       MetaPartition meta = partitions.remove(partitionId);
       // Since this method is called outside of the iteration cycle, all
       // partitions in the store should be in the processed state.
-      if (!processedPartitions.get(meta.getState()).remove(partitionId)) {
-        throw new IllegalStateException("removePartition: partition that is" +
-            "about to remove is not in processed list (impossible)");
-      }
+      checkState(processedPartitions.get(meta.getState()).remove(partitionId),
+          "removePartition: partition that is about to remove is not in " +
+              "processed list (impossible)");
+
       getPartition(meta);
       numPartitionsInMem.getAndDecrement();
       return meta.getPartition();
@@ -1028,7 +1275,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("addPartition: partition " + id + "is  added to the store.");
+      LOG.info("addPartition: partition " + id + " is  added to the store.");
     }
 
     meta.setPartition(partition);
@@ -1050,13 +1297,11 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   @Override
   public void shutdown() {
     // Sanity check to check there is nothing left from previous superstep
-    if (!unProcessedPartitions.get(State.INACTIVE).isEmpty() ||
-        !unProcessedPartitions.get(State.IN_TRANSIT).isEmpty() ||
-        !unProcessedPartitions.get(State.ON_DISK).isEmpty()) {
-      throw new IllegalStateException("shutdown: There are some " +
-          "unprocessed partitions left from the " +
-          "previous superstep. This should not be possible");
-    }
+    checkState(unProcessedPartitions.get(State.INACTIVE).isEmpty() &&
+            unProcessedPartitions.get(State.IN_TRANSIT).isEmpty() &&
+            unProcessedPartitions.get(State.ON_DISK).isEmpty(),
+        "shutdown: There are some unprocessed partitions left from the " +
+            "previous superstep. This should not be possible.");
 
     for (MetaPartition meta : partitions.values()) {
       synchronized (meta) {
@@ -1092,30 +1337,28 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
     // Sanity check to make sure nothing left unprocessed from previous
     // superstep
-    if (!unProcessedPartitions.get(State.INACTIVE).isEmpty() ||
-        !unProcessedPartitions.get(State.IN_TRANSIT).isEmpty() ||
-        !unProcessedPartitions.get(State.ON_DISK).isEmpty()) {
-      throw new IllegalStateException("startIteration: There are some " +
-          "unprocessed and/or in-transition partitions left from the " +
-          "previous superstep. This should not be possible");
-    }
+    checkState(unProcessedPartitions.get(State.INACTIVE).isEmpty() &&
+            unProcessedPartitions.get(State.IN_TRANSIT).isEmpty() &&
+            unProcessedPartitions.get(State.ON_DISK).isEmpty(),
+        "startIteration: There are some unprocessed and/or " +
+            "in-transition partitions left from the previous superstep. " +
+            "This should not be possible.");
 
     rwLock.writeLock().lock();
     for (MetaPartition meta : partitions.values()) {
       // Sanity check
-      if (!meta.isProcessed()) {
-        throw new IllegalStateException("startIteration: meta-partition " +
-            meta + " has not been processed in the previous superstep.");
-      }
+      checkState(meta.isProcessed(), "startIteration: " +
+          "meta-partition " + meta + " has not been processed in the " +
+          "previous superstep.");
+
       // The only case where a partition can be IN_TRANSIT is where it is still
       // being offloaded to disk, and it happens only in swapOnePartitionToDisk,
       // where we at least hold a read lock while transfer is in progress. Since
       // the write lock is held in this section, no partition should be
       // IN_TRANSIT.
-      if (meta.getState() == State.IN_TRANSIT) {
-        throw new IllegalStateException("startIteration: meta-partition " +
-            meta + " is still IN_TRANSIT (impossible)");
-      }
+      checkState(meta.getState() != State.IN_TRANSIT,
+          "startIteration: meta-partition " + meta + " is still IN_TRANSIT " +
+              "(impossible)");
 
       meta.setProcessed(false);
     }
@@ -1255,21 +1498,109 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
+   * Load messages for a given partition for the current superstep to memory.
+   *
+   * @param partitionId Id of the partition to load the messages for
+   * @throws IOException
+   */
+  private void loadMessages(int partitionId) throws IOException {
+    // Messages for current superstep
+    if (currentMessageStore != null &&
+        !conf.getOutgoingMessageClasses().useMessageCombiner()) {
+      checkState(!currentMessageStore.hasMessagesForPartition(partitionId),
+          "loadMessages: partition " + partitionId + " is on disk, " +
+              "but its message store is in memory (impossible)");
+      // First, reading the message store for the partition if there is any
+      File file = new File(
+          getMessagesPath(partitionId, serviceWorker.getSuperstep()));
+      if (file.exists()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("loadMessages: loading message store of partition " +
+              partitionId);
+        }
+        FileInputStream filein = new FileInputStream(file);
+        BufferedInputStream bufferin = new BufferedInputStream(filein);
+        DataInputStream inputStream = new DataInputStream(bufferin);
+        currentMessageStore.readFieldsForPartition(inputStream, partitionId);
+        inputStream.close();
+        checkState(file.delete(), "loadMessages: failed to delete %s.",
+            file.getAbsolutePath());
+      }
+
+      messageBufferRWLock.writeLock().lock();
+      Pair<Integer, List<VertexIdMessages<I, Writable>>> pendingMessages =
+          pendingCurrentMessages.remove(partitionId);
+      messageBufferRWLock.writeLock().unlock();
+
+      // Second, reading message buffers (incoming messages in previous
+      // superstep)
+      file = new File(getPendingMessagesBufferPath(partitionId,
+          serviceWorker.getSuperstep()));
+      if (file.exists()) {
+        FileInputStream filein = new FileInputStream(file);
+        BufferedInputStream bufferin = new BufferedInputStream(filein);
+        DataInputStream inputStream = new DataInputStream(bufferin);
+        while (true) {
+          int type;
+          try {
+            type = inputStream.readInt();
+          } catch (EOFException e) {
+            // Reached end of file, so all the records are read.
+            break;
+          }
+          SerializedMessageClass messageClass =
+              SerializedMessageClass.values()[type];
+          VertexIdMessages<I, Writable> vim;
+          switch (messageClass) {
+          case BYTE_ARRAY_VERTEX_ID_MESSAGES:
+            vim = new ByteArrayVertexIdMessages<>(
+                conf.createOutgoingMessageValueFactory());
+            vim.setConf(conf);
+            break;
+          case BYTE_ARRAY_ONE_MESSAGE_TO_MANY_IDS:
+            vim = new ByteArrayOneMessageToManyIds<>(
+                conf.createOutgoingMessageValueFactory());
+            vim.setConf(conf);
+            break;
+          default:
+            throw new IllegalStateException("loadMessages: unsupported " +
+                "serialized message type!");
+          }
+          vim.readFields(inputStream);
+          currentMessageStore.addPartitionMessages(partitionId, vim);
+        }
+        inputStream.close();
+        checkState(!file.delete(), "loadMessages: failed to delete %s",
+            file.getAbsolutePath());
+      }
+
+      // Third, applying message buffers already in memory
+      if (pendingMessages != null) {
+        for (VertexIdMessages<I, Writable> vim : pendingMessages.getRight()) {
+          currentMessageStore.addPartitionMessages(partitionId, vim);
+        }
+      }
+      currentMessagesOnDisk.put(partitionId, false);
+    }
+  }
+
+  /**
    * Load a partition from disk. It deletes the files after the load,
    * except for the edges, if the graph is static.
    *
-   * @param id The id of the partition to load
-   * @param numVertices The number of vertices contained on disk
+   * @param meta meta partition to load the partition of
    * @return The partition
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  private Partition<I, V, E> loadPartition(int id, long numVertices)
-    throws IOException {
-    Partition<I, V, E> partition = conf.createPartition(id, context);
+  private Partition<I, V, E> loadPartition(MetaPartition meta)
+      throws IOException {
+    Integer partitionId = meta.getId();
+    long numVertices = meta.getVertexCount();
+    Partition<I, V, E> partition = conf.createPartition(partitionId, context);
 
     // Vertices
-    File file = new File(getVerticesPath(id));
+    File file = new File(getVerticesPath(partitionId));
     if (LOG.isDebugEnabled()) {
       LOG.debug("loadPartition: loading partition vertices " +
         partition.getId() + " from " + file.getAbsolutePath());
@@ -1284,14 +1615,11 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       partition.putVertex(vertex);
     }
     inputStream.close();
-    if (!file.delete()) {
-      String msg = "loadPartition: failed to delete " + file.getAbsolutePath();
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
-    }
+    checkState(file.delete(), "loadPartition: failed to delete %s",
+        file.getAbsolutePath());
 
     // Edges
-    file = new File(getEdgesPath(id));
+    file = new File(getEdgesPath(partitionId));
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("loadPartition: loading partition edges " +
@@ -1309,86 +1637,79 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     // around.
     if (!conf.isStaticGraph() ||
         serviceWorker.getSuperstep() == BspServiceWorker.INPUT_SUPERSTEP) {
-      if (!file.delete()) {
-        String msg =
-            "loadPartition: failed to delete " + file.getAbsolutePath();
-        LOG.error(msg);
-        throw new IllegalStateException(msg);
+      checkState(file.delete(), "loadPartition: failed to delete %s",
+          file.getAbsolutePath());
+    }
+
+    // Load message for the current superstep
+    loadMessages(partitionId);
+
+    // Input vertex buffers
+    // First, applying vertex buffers on disk (since they came earlier)
+    Integer numBuffers = numPendingInputVerticesOnDisk.remove(partitionId);
+    if (numBuffers != null) {
+      file = new File(getPendingVerticesBufferPath(partitionId));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("loadPartition: loading " + numBuffers + " input vertex " +
+            "buffers of partition " + partitionId + " from " +
+            file.getAbsolutePath());
+      }
+      filein = new FileInputStream(file);
+      bufferin = new BufferedInputStream(filein);
+      inputStream = new DataInputStream(bufferin);
+      for (int i = 0; i < numBuffers; ++i) {
+        ExtendedDataOutput extendedDataOutput =
+            WritableUtils.readExtendedDataOutput(inputStream, conf);
+        partition.addPartitionVertices(
+            new VertexIterator<I, V, E>(extendedDataOutput, conf));
+      }
+      inputStream.close();
+      checkState(file.delete(), "loadPartition: failed to delete %s",
+          file.getAbsolutePath());
+    }
+    // Second, applying vertex buffers already in memory
+    Pair<Integer, List<ExtendedDataOutput>> vertexPair;
+    vertexBufferRWLock.writeLock().lock();
+    vertexPair = pendingInputVertices.remove(partitionId);
+    vertexBufferRWLock.writeLock().unlock();
+    if (vertexPair != null) {
+      for (ExtendedDataOutput extendedDataOutput : vertexPair.getRight()) {
+        partition.addPartitionVertices(
+            new VertexIterator<I, V, E>(extendedDataOutput, conf));
       }
     }
 
+    // Edge store
     if (serviceWorker.getSuperstep() == BspServiceWorker.INPUT_SUPERSTEP) {
-      // Input vertex buffers
-      // First, applying vertex buffers on disk (since they came earlier)
-      Integer numBuffers = numPendingInputVerticesOnDisk.remove(id);
-      if (numBuffers != null) {
-        file = new File(getPendingVerticesBufferPath(id));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("loadPartition: loading " + numBuffers + " input vertex " +
-              "buffers of partition " + id + " from " + file.getAbsolutePath());
-        }
-        filein = new FileInputStream(file);
-        bufferin = new BufferedInputStream(filein);
-        inputStream = new DataInputStream(bufferin);
-        for (int i = 0; i < numBuffers; ++i) {
-          ExtendedDataOutput extendedDataOutput =
-              WritableUtils.readExtendedDataOutput(inputStream, conf);
-          partition.addPartitionVertices(
-              new VertexIterator<I, V, E>(extendedDataOutput, conf));
-        }
-        inputStream.close();
-        if (!file.delete()) {
-          String msg =
-              "loadPartition: failed to delete " + file.getAbsolutePath();
-          LOG.error(msg);
-          throw new IllegalStateException(msg);
-        }
-      }
-      // Second, applying vertex buffers already in memory
-      Pair<Integer, List<ExtendedDataOutput>> vertexPair;
-      vertexBufferRWLock.writeLock().lock();
-      vertexPair = pendingInputVertices.remove(id);
-      vertexBufferRWLock.writeLock().unlock();
-      if (vertexPair != null) {
-        for (ExtendedDataOutput extendedDataOutput : vertexPair.getRight()) {
-          partition.addPartitionVertices(
-              new VertexIterator<I, V, E>(extendedDataOutput, conf));
-        }
-      }
+      checkState(hasEdgeStoreOnDisk.containsKey(partitionId),
+          "loadPartition: partition is written to disk in INPUT_SUPERSTEP, " +
+              "but it is not clear whether its edge store is on disk or not " +
+              "(impossible)");
 
-      // Edge store
-      if (!hasEdgeStoreOnDisk.containsKey(id)) {
-        throw new IllegalStateException("loadPartition: partition is written" +
-            " to disk in INPUT_SUPERSTEP, but it is not clear whether its " +
-            "edge store is on disk or not (impossible)");
-      }
-      if (hasEdgeStoreOnDisk.remove(id)) {
-        file = new File(getEdgeStorePath(id));
+      if (hasEdgeStoreOnDisk.remove(partitionId)) {
+        file = new File(getEdgeStorePath(partitionId));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("loadPartition: loading edge store of partition " + id +
-              " from " + file.getAbsolutePath());
+          LOG.debug("loadPartition: loading edge store of partition " +
+              partitionId + " from " + file.getAbsolutePath());
         }
         filein = new FileInputStream(file);
         bufferin = new BufferedInputStream(filein);
         inputStream = new DataInputStream(bufferin);
-        edgeStore.readPartitionEdgeStore(id, inputStream);
+        edgeStore.readPartitionEdgeStore(partitionId, inputStream);
         inputStream.close();
-        if (!file.delete()) {
-          String msg =
-              "loadPartition: failed to delete " + file.getAbsolutePath();
-          LOG.error(msg);
-          throw new IllegalStateException(msg);
-        }
+        checkState(file.delete(), "loadPartition: failed to delete %s",
+            file.getAbsolutePath());
       }
 
       // Input edge buffers
       // First, applying edge buffers on disk (since they came earlier)
-      numBuffers = numPendingInputEdgesOnDisk.remove(id);
+      numBuffers = numPendingInputEdgesOnDisk.remove(partitionId);
       if (numBuffers != null) {
-        file = new File(getPendingEdgesBufferPath(id));
+        file = new File(getPendingEdgesBufferPath(partitionId));
         if (LOG.isDebugEnabled()) {
           LOG.debug("loadPartition: loading " + numBuffers + " input edge " +
-              "buffers of partition " + id + " from " + file.getAbsolutePath());
+              "buffers of partition " + partitionId + " from " +
+              file.getAbsolutePath());
         }
         filein = new FileInputStream(file);
         bufferin = new BufferedInputStream(filein);
@@ -1398,24 +1719,20 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
               new ByteArrayVertexIdEdges<I, E>();
           vertexIdEdges.setConf(conf);
           vertexIdEdges.readFields(inputStream);
-          edgeStore.addPartitionEdges(id, vertexIdEdges);
+          edgeStore.addPartitionEdges(partitionId, vertexIdEdges);
         }
         inputStream.close();
-        if (!file.delete()) {
-          String msg =
-              "loadPartition: failed to delete " + file.getAbsolutePath();
-          LOG.error(msg);
-          throw new IllegalStateException(msg);
-        }
+        checkState(file.delete(), "loadPartition: failed to delete %s",
+            file.getAbsolutePath());
       }
       // Second, applying edge buffers already in memory
       Pair<Integer, List<VertexIdEdges<I, E>>> edgePair = null;
       edgeBufferRWLock.writeLock().lock();
-      edgePair = pendingInputEdges.remove(id);
+      edgePair = pendingInputEdges.remove(partitionId);
       edgeBufferRWLock.writeLock().unlock();
       if (edgePair != null) {
         for (VertexIdEdges<I, E> vertexIdEdges : edgePair.getRight()) {
-          edgeStore.addPartitionEdges(id, vertexIdEdges);
+          edgeStore.addPartitionEdges(partitionId, vertexIdEdges);
         }
       }
     }
@@ -1438,12 +1755,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
         " already exists.");
     }
 
-    if (!file.createNewFile()) {
-      String msg = "offloadPartition: file " + parent.getAbsolutePath() +
-        " already exists.";
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
-    }
+    checkState(file.createNewFile(),
+        "offloadPartition: file %s already exists.", parent.getAbsolutePath());
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("offloadPartition: writing partition vertices " +
@@ -1488,6 +1801,19 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       outputStream.close();
     }
 
+    if (currentMessageStore != null &&
+        !conf.getOutgoingMessageClasses().useMessageCombiner() &&
+        currentMessageStore.hasMessagesForPartition(partitionId)) {
+      writeMessageData(currentMessageStore, currentMessagesOnDisk, partitionId,
+          serviceWorker.getSuperstep());
+    }
+    if (incomingMessageStore != null &&
+        !conf.getIncomingMessageClasses().useMessageCombiner() &&
+        incomingMessageStore.hasMessagesForPartition(partitionId)) {
+      writeMessageData(incomingMessageStore, incomingMessagesOnDisk,
+          partitionId, serviceWorker.getSuperstep() + 1);
+    }
+
     // Writing edge store to disk in the input superstep
     if (serviceWorker.getSuperstep() == BspServiceWorker.INPUT_SUPERSTEP) {
       if (edgeStore.hasPartitionEdges(partitionId)) {
@@ -1515,28 +1841,59 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
+   * Offload message data of a particular type of store (current or incoming) to
+   * disk.
+   *
+   * @param messageStore The message store to write to disk
+   * @param messagesOnDisk Map to update and let others know that this message
+   *                       store is on disk
+   * @param partitionId Id of the partition we want to offload the message store
+   *                    of
+   * @param superstep Superstep for which we want to offload message data for.
+   *                  It is equal the current superstep number for offloading
+   *                  currentMessageStore, and is equal to next superstep
+   *                  number for offloading incomingMessageStore
+   * @throws IOException
+   */
+  private void writeMessageData(MessageStore<I, Writable> messageStore,
+      ConcurrentMap<Integer, Boolean> messagesOnDisk, int partitionId,
+      long superstep) throws IOException {
+    File file = new File(getMessagesPath(partitionId, superstep));
+    checkState(!file.exists(),
+        "writeMessageData: message store file for partition " +
+            partitionId + " for messages in superstep " +
+            superstep + " already exist (impossible).");
+
+    checkState(file.createNewFile(),
+        "offloadPartition: cannot create message store file for " +
+            "partition " + partitionId);
+
+    FileOutputStream fileout = new FileOutputStream(file);
+    BufferedOutputStream bufferout = new BufferedOutputStream(fileout);
+    DataOutputStream outputStream = new DataOutputStream(bufferout);
+    messageStore.writePartition(outputStream, partitionId);
+    messageStore.clearPartition(partitionId);
+    outputStream.close();
+    messagesOnDisk.put(partitionId, true);
+  }
+
+  /**
    * Delete a partition's files.
    *
    * @param id The id of the partition owning the file.
    */
-  public void deletePartitionFiles(Integer id) {
+  private void deletePartitionFiles(Integer id) {
     // File containing vertices
     File file = new File(getVerticesPath(id));
-    if (file.exists() && !file.delete()) {
-      String msg = "deletePartitionFiles: Failed to delete file " +
-        file.getAbsolutePath();
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
-    }
+    checkState(!file.exists() || file.delete(),
+        "deletePartitionFiles: Failed to delete file " +
+            file.getAbsolutePath());
 
     // File containing edges
     file = new File(getEdgesPath(id));
-    if (file.exists() && !file.delete()) {
-      String msg = "deletePartitionFiles: Failed to delete file " +
-        file.getAbsolutePath();
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
-    }
+    checkState(!file.exists() || file.delete(),
+        "deletePartitionFiles: Failed to delete file " +
+            file.getAbsolutePath());
   }
 
   /**
@@ -1602,6 +1959,29 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   private String getEdgesPath(Integer partitionId) {
     return getPartitionPath(partitionId) + "_edges";
+  }
+
+  /**
+   * Get the path to the file where pending incoming messages are stored.
+   *
+   * @param partitionId The partition
+   * @param superstep superstep number
+   * @return The path to the file
+   */
+  private String getPendingMessagesBufferPath(Integer partitionId,
+      long superstep) {
+    return getPartitionPath(partitionId) + "_pending_messages_" + superstep;
+  }
+
+  /**
+   * Get the path to the file where messages are stored.
+   *
+   * @param partitionId The partition
+   * @param superstep superstep number
+   * @return The path to the file
+   */
+  private String getMessagesPath(Integer partitionId, long superstep) {
+    return getPartitionPath(partitionId) + "_messages_" + superstep;
   }
 
   /**

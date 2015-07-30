@@ -177,6 +177,11 @@ public class IntByteArrayMessageStore<M extends Writable>
   }
 
   @Override
+  public boolean hasMessagesForPartition(int partitionId) {
+    return !map.get(partitionId).isEmpty();
+  }
+
+  @Override
   public Iterable<M> getVertexMessages(
       IntWritable vertexId) throws IOException {
     DataInputOutput dataInputOutput =

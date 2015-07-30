@@ -30,6 +30,7 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.formats.IntIntNullTextVertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.ooc.DiskBackedPartitionStore;
 import org.apache.giraph.utils.InternalVertexRunner;
@@ -268,7 +269,6 @@ public class TestPartitionStores {
     testMultiThreaded();
   }
 
-
   @Test
   public void testDiskBackedPartitionStoreMTStatic() throws Exception {
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
@@ -431,7 +431,7 @@ public class TestPartitionStores {
 
   /**
    * Internal checker to verify the correctness of the tests.
-   * @param results   the actual results obtaind
+   * @param results   the actual results obtained
    * @param expected  expected results
    */
   private void checkResults(Iterable<String> results, String[] expected) {
@@ -557,6 +557,61 @@ public class TestPartitionStores {
           partition.putVertex(v);
         }
         partitionStore.addPartition(partition);
+      }
+    }
+  }
+
+  @Test
+  public void testOutOfCoreMessages() throws Exception {
+    Iterable<String> results;
+    String[] graph =
+        { "1 0 2 3", "2 0 3 5", "3 0 1 2 4", "4 0 3", "5 0 6 7 1 2",
+            "6 0 10 8 7", "7 0 1 3", "8 0 1 10 9 4 6", "9 0 8 1 5 7",
+            "10 0 9" };
+
+    String[] expected =
+        {
+            "1\t32", "2\t9", "3\t14", "4\t11", "5\t11",
+            "6\t13", "7\t20", "8\t15", "9\t18", "10\t14"
+        };
+
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
+    GiraphConstants.USER_PARTITION_COUNT.set(conf, 10);
+
+    File directory = Files.createTempDir();
+    GiraphConstants.PARTITIONS_DIRECTORY.set(conf,
+        new File(directory, "giraph_partitions").toString());
+
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
+    conf.setComputationClass(TestOutOfCoreMessagesComputation.class);
+    conf.setVertexInputFormatClass(IntIntNullTextVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+    results = InternalVertexRunner.run(conf, graph);
+    checkResults(results, expected);
+    FileUtils.deleteDirectory(directory);
+  }
+
+  public static class TestOutOfCoreMessagesComputation extends
+      BasicComputation<IntWritable, IntWritable, NullWritable, IntWritable> {
+
+    @Override
+    public void compute(
+        Vertex<IntWritable, IntWritable, NullWritable> vertex,
+        Iterable<IntWritable> messages) throws IOException {
+      if (getSuperstep() == 0) {
+        // Send id to all neighbors
+        sendMessageToAllEdges(vertex, vertex.getId());
+      } else {
+        // Add received messages and halt
+        int sum = 0;
+        for (IntWritable message : messages) {
+          sum += message.get();
+        }
+        vertex.setValue(new IntWritable(sum));
+        vertex.voteToHalt();
       }
     }
   }
