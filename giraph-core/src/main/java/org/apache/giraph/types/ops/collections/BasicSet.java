@@ -18,9 +18,13 @@
 package org.apache.giraph.types.ops.collections;
 
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntOpenHashBigSet;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashBigSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,19 +45,27 @@ import org.apache.hadoop.io.Writable;
  * @param <T> Element type
  */
 public interface BasicSet<T> extends Writable {
+  /** Threshold for using OpenHashSet and OpenHashBigSet implementations. */
+  long MAX_OPEN_HASHSET_CAPACITY = 800000000;
+
   /** Removes all of the elements from this list. */
   void clear();
+
   /**
    * Number of elements in this list
+   *
    * @return size
    */
-  int size();
+  long size();
+
   /**
    * Makes sure set is not using space with capacity more than
    * max(n,size()) entries.
+   *
    * @param n the threshold for the trimming.
    */
-  void trim(int n);
+  void trim(long n);
+
   /**
    * Adds value to the set.
    * Returns <tt>true</tt> if set changed as a
@@ -63,8 +75,10 @@ public interface BasicSet<T> extends Writable {
    * @return true if set was changed.
    */
   boolean add(T value);
+
   /**
    * Checks whether set contains given value
+   *
    * @param value Value to check
    * @return true if value is present in the set
    */
@@ -72,15 +86,16 @@ public interface BasicSet<T> extends Writable {
 
   /**
    * TypeOps for type of elements this object holds
+   *
    * @return TypeOps
    */
   PrimitiveIdTypeOps<T> getElementTypeOps();
 
   /** IntWritable implementation of BasicSet */
   public static final class BasicIntOpenHashSet
-      implements BasicSet<IntWritable> {
+    implements BasicSet<IntWritable> {
     /** Set */
-    private final IntOpenHashSet set;
+    private final IntSet set;
 
     /** Constructor */
     public BasicIntOpenHashSet() {
@@ -89,10 +104,15 @@ public interface BasicSet<T> extends Writable {
 
     /**
      * Constructor
+     *
      * @param capacity Capacity
      */
-    public BasicIntOpenHashSet(int capacity) {
-      set = new IntOpenHashSet(capacity);
+    public BasicIntOpenHashSet(long capacity) {
+      if (capacity <= MAX_OPEN_HASHSET_CAPACITY) {
+        set = new IntOpenHashSet((int) capacity);
+      } else {
+        set = new IntOpenHashBigSet(capacity);
+      }
     }
 
     @Override
@@ -101,13 +121,20 @@ public interface BasicSet<T> extends Writable {
     }
 
     @Override
-    public int size() {
+    public long size() {
+      if (set instanceof IntOpenHashBigSet) {
+        return ((IntOpenHashBigSet) set).size64();
+      }
       return set.size();
     }
 
     @Override
-    public void trim(int n) {
-      set.trim(Math.max(set.size(), n));
+    public void trim(long n) {
+      if (set instanceof IntOpenHashSet) {
+        ((IntOpenHashSet) set).trim((int) Math.max(set.size(), n));
+      } else {
+        ((IntOpenHashBigSet) set).trim(Math.max(set.size(), n));
+      }
     }
 
     @Override
@@ -136,10 +163,10 @@ public interface BasicSet<T> extends Writable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int size = in.readInt();
+      long size = in.readLong();
       set.clear();
-      set.trim(size);
-      for (int i = 0; i < size; ++i) {
+      trim(size);
+      for (long i = 0; i < size; ++i) {
         set.add(in.readInt());
       }
     }
@@ -147,9 +174,9 @@ public interface BasicSet<T> extends Writable {
 
   /** LongWritable implementation of BasicSet */
   public static final class BasicLongOpenHashSet
-      implements BasicSet<LongWritable> {
+    implements BasicSet<LongWritable> {
     /** Set */
-    private final LongOpenHashSet set;
+    private final LongSet set;
 
     /** Constructor */
     public BasicLongOpenHashSet() {
@@ -158,10 +185,15 @@ public interface BasicSet<T> extends Writable {
 
     /**
      * Constructor
+     *
      * @param capacity Capacity
      */
-    public BasicLongOpenHashSet(int capacity) {
-      set = new LongOpenHashSet(capacity);
+    public BasicLongOpenHashSet(long capacity) {
+      if (capacity <= MAX_OPEN_HASHSET_CAPACITY) {
+        set = new LongOpenHashSet((int) capacity);
+      } else {
+        set = new LongOpenHashBigSet(capacity);
+      }
     }
 
     @Override
@@ -170,13 +202,20 @@ public interface BasicSet<T> extends Writable {
     }
 
     @Override
-    public int size() {
+    public long size() {
+      if (set instanceof LongOpenHashBigSet) {
+        return ((LongOpenHashBigSet) set).size64();
+      }
       return set.size();
     }
 
     @Override
-    public void trim(int n) {
-      set.trim(Math.max(set.size(), n));
+    public void trim(long n) {
+      if (set instanceof LongOpenHashSet) {
+        ((LongOpenHashSet) set).trim((int) Math.max(set.size(), n));
+      } else {
+        ((LongOpenHashBigSet) set).trim(Math.max(set.size(), n));
+      }
     }
 
     @Override
@@ -196,7 +235,7 @@ public interface BasicSet<T> extends Writable {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(set.size());
+      out.writeLong(set.size());
       LongIterator iter = set.iterator();
       while (iter.hasNext()) {
         out.writeLong(iter.nextLong());
@@ -205,10 +244,10 @@ public interface BasicSet<T> extends Writable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int size = in.readInt();
+      long size = in.readLong();
       set.clear();
       trim(size);
-      for (int i = 0; i < size; ++i) {
+      for (long i = 0; i < size; ++i) {
         set.add(in.readLong());
       }
     }

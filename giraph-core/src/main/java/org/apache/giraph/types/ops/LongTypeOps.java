@@ -68,7 +68,7 @@ public enum LongTypeOps
   }
 
   @Override
-  public BasicSet<LongWritable> createOpenHashSet(int capacity) {
+  public BasicSet<LongWritable> createOpenHashSet(long capacity) {
     return new BasicLongOpenHashSet(capacity);
   }
 

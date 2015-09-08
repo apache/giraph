@@ -48,7 +48,7 @@ public interface PrimitiveIdTypeOps<T> extends PrimitiveTypeOps<T> {
    * @param capacity Capacity
    * @return BasicSet
    */
-  BasicSet<T> createOpenHashSet(int capacity);
+  BasicSet<T> createOpenHashSet(long capacity);
 
   /**
    * Create Basic2ObjectMap with key type T.
