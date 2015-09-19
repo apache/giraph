@@ -43,4 +43,13 @@ public interface GiraphJobObserver {
    * @param passed true if job succeeded.
    */
   void jobFinished(Job submittedJob, boolean passed);
+
+  /**
+   * Called when job gets all mappers and
+   * really starts computations.
+   * May not get called if the job progress tracker
+   * fails.
+   * @param job job that runs
+   */
+  void jobGotAllMappers(Job job);
 }

@@ -48,6 +48,8 @@ public class JobProgressTrackerService implements JobProgressTracker {
 
   /** Configuration */
   private final GiraphConfiguration conf;
+  /** Giraph job callback */
+  private final GiraphJobObserver jobObserver;
   /** Thread which periodically writes job's progress */
   private Thread writerThread;
   /** Whether application is finished */
@@ -68,9 +70,13 @@ public class JobProgressTrackerService implements JobProgressTracker {
    * Constructor
    *
    * @param conf Configuration
+   * @param jobObserver Giraph job callbacks
    */
-  public JobProgressTrackerService(GiraphConfiguration conf) {
+  public JobProgressTrackerService(GiraphConfiguration conf,
+                                   GiraphJobObserver jobObserver) {
     this.conf = conf;
+    this.jobObserver = jobObserver;
+
     if (LOG.isInfoEnabled()) {
       LOG.info("Waiting for job to start... (this may take a minute)");
     }
@@ -121,6 +127,7 @@ public class JobProgressTrackerService implements JobProgressTracker {
    * and potentially start a thread which will kill the job after this time
    */
   private void jobGotAllMappers() {
+    jobObserver.jobGotAllMappers(job);
     final long maxAllowedJobTimeMs =
         GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf);
     if (maxAllowedJobTimeMs > 0) {
@@ -206,15 +213,17 @@ public class JobProgressTrackerService implements JobProgressTracker {
    * null if progress shouldn't be tracked
    *
    * @param conf Configuration
+   * @param jobObserver Giraph job callbacks
    * @return JobProgressTrackerService
    */
   public static JobProgressTrackerService createJobProgressServer(
-      GiraphConfiguration conf) {
+      GiraphConfiguration conf, GiraphJobObserver jobObserver) {
     if (!conf.trackJobProgressOnClient()) {
       return null;
     }
     try {
-      JobProgressTrackerService service = new JobProgressTrackerService(conf);
+      JobProgressTrackerService service =
+          new JobProgressTrackerService(conf, jobObserver);
       ThriftServiceProcessor processor =
           new ThriftServiceProcessor(new ThriftCodecManager(),
               new ArrayList<ThriftEventHandler>(), service);

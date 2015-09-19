@@ -237,8 +237,10 @@ public class GiraphJob {
     int tryCount = 0;
     GiraphJobRetryChecker retryChecker = conf.getJobRetryChecker();
     while (true) {
+      GiraphJobObserver jobObserver = conf.getJobObserver();
+
       JobProgressTrackerService jobProgressTrackerService =
-          JobProgressTrackerService.createJobProgressServer(conf);
+          JobProgressTrackerService.createJobProgressServer(conf, jobObserver);
 
       tryCount++;
       Job submittedJob = new Job(conf, jobName);
@@ -254,7 +256,6 @@ public class GiraphJob {
         jobProgressTrackerService.setJob(submittedJob);
       }
 
-      GiraphJobObserver jobObserver = conf.getJobObserver();
       jobObserver.launchingJob(submittedJob);
       submittedJob.submit();
       if (LOG.isInfoEnabled()) {
