@@ -51,7 +51,7 @@ public class FinishedSuperstepStats extends VertexEdgeCount {
                                 long numEdges,
                                 boolean mustLoadCheckpoint,
                                 CheckpointStatus checkpointStatus) {
-    super(numVertices, numEdges);
+    super(numVertices, numEdges, 0);
     this.localVertexCount = numLocalVertices;
     this.allVerticesHalted = allVerticesHalted;
     this.mustLoadCheckpoint = mustLoadCheckpoint;

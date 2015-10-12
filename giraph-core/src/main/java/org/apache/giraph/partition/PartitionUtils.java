@@ -115,7 +115,7 @@ public class PartitionUtils {
         workerStatsMap.put(
             workerInfo,
             new VertexEdgeCount(partitionStats.getVertexCount(),
-                partitionStats.getEdgeCount()));
+                partitionStats.getEdgeCount(), 0));
       } else {
         workerStatsMap.put(
             workerInfo,

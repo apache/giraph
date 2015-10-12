@@ -19,15 +19,15 @@
 package org.apache.giraph.worker;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.MappingReader;
 import org.apache.giraph.mapping.MappingEntry;
 import org.apache.giraph.mapping.MappingStore;
-import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.giraph.io.InputType;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("unchecked")
 public class MappingInputSplitsCallable<I extends WritableComparable,
   V extends Writable, E extends Writable, B extends Writable>
-  extends FullInputSplitCallable<I, V, E> {
+  extends InputSplitsCallable<I, V, E> {
   /** User supplied mappingInputFormat */
   private final MappingInputFormat<I, V, E, B> mappingInputFormat;
   /** Link to bspServiceWorker */
@@ -56,23 +56,18 @@ public class MappingInputSplitsCallable<I extends WritableComparable,
    * Constructor
    *
    * @param mappingInputFormat mappingInputFormat
-   * @param splitOrganizer Input splits organizer
    * @param context Context
    * @param configuration Configuration
-   * @param zooKeeperExt Handle to ZooKeeperExt
-   * @param currentIndex Atomic Integer to get splitPath from list
    * @param bspServiceWorker bsp service worker
+   * @param splitsHandler Splits handler
    */
   public MappingInputSplitsCallable(
       MappingInputFormat<I, V, E, B> mappingInputFormat,
-      InputSplitPathOrganizer splitOrganizer,
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
-      ZooKeeperExt zooKeeperExt,
-      AtomicInteger currentIndex,
-      BspServiceWorker<I, V, E> bspServiceWorker) {
-    super(splitOrganizer, context,
-      configuration, zooKeeperExt, currentIndex);
+      BspServiceWorker<I, V, E> bspServiceWorker,
+      WorkerInputSplitsHandler splitsHandler) {
+    super(context, configuration, bspServiceWorker, splitsHandler);
     this.mappingInputFormat = mappingInputFormat;
     this.bspServiceWorker = bspServiceWorker;
   }
@@ -83,7 +78,12 @@ public class MappingInputSplitsCallable<I extends WritableComparable,
   }
 
   @Override
-  protected Integer readInputSplit(InputSplit inputSplit)
+  public InputType getInputType() {
+    return InputType.MAPPING;
+  }
+
+  @Override
+  protected VertexEdgeCount readInputSplit(InputSplit inputSplit)
     throws IOException, InterruptedException {
     MappingReader<I, V, E, B> mappingReader =
         mappingInputFormat.createMappingReader(inputSplit, context);
@@ -104,6 +104,6 @@ public class MappingInputSplitsCallable<I extends WritableComparable,
       entriesLoaded += 1;
       mappingStore.addEntry(entry.getVertexId(), entry.getMappingTarget());
     }
-    return entriesLoaded;
+    return new VertexEdgeCount(0, 0, entriesLoaded);
   }
 }

@@ -20,6 +20,7 @@ package org.apache.giraph.comm;
 
 import java.io.IOException;
 
+import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -52,6 +53,14 @@ public interface MasterClient {
    * messages have been send and delivered prior to returning.
    */
   void flush();
+
+  /**
+   * Send a request to a remote server (should be already connected)
+   *
+   * @param destTaskId Destination worker id
+   * @param request Request to send
+   */
+  void sendWritableRequest(int destTaskId, WritableRequest request);
 
   /**
    * Closes all connections.

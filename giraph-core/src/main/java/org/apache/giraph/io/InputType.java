@@ -16,18 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.requests;
-
-import org.apache.giraph.master.MasterGlobalCommHandler;
+package org.apache.giraph.io;
 
 /**
- * Interface for requests sent to master to extend
+ * Type of input
  */
-public interface MasterRequest {
-  /**
-   * Execute the request
-   *
-   * @param commHandler Master communication handler
-   */
-  void doRequest(MasterGlobalCommHandler commHandler);
+public enum InputType {
+  /** Vertex input */
+  VERTEX,
+  /** Edge input */
+  EDGE,
+  /** Mapping input */
+  MAPPING
 }

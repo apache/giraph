@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.requests;
-
-import org.apache.giraph.master.MasterGlobalCommHandler;
+package org.apache.giraph.master.input;
 
 /**
- * Interface for requests sent to master to extend
+ * Interface for different input split organizers on master
  */
-public interface MasterRequest {
+public interface InputSplitsMasterOrganizer {
   /**
-   * Execute the request
+   * @param workerTaskId Id of worker requesting split
    *
-   * @param commHandler Master communication handler
+   * @return Get next split for the worker, or null if all splits were taken
+   * already
    */
-  void doRequest(MasterGlobalCommHandler commHandler);
+  byte[] getSerializedSplitFor(int workerTaskId);
 }

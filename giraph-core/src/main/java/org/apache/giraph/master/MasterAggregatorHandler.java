@@ -42,7 +42,7 @@ import com.google.common.collect.Maps;
 
 /** Handler for reduce/broadcast on the master */
 public class MasterAggregatorHandler
-    implements MasterGlobalCommUsage, Writable {
+    implements MasterGlobalCommUsageAggregators, Writable {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(MasterAggregatorHandler.class);

@@ -16,18 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.requests;
+package org.apache.giraph.master.input;
 
-import org.apache.giraph.master.MasterGlobalCommHandler;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Interface for requests sent to master to extend
+ * Input splits organizer for vertex and edge input splits on master, which
+ * doesn't use locality information
  */
-public interface MasterRequest {
+public class BasicInputSplitsMasterOrganizer
+    implements InputSplitsMasterOrganizer {
+  /** Available splits queue */
+  private final ConcurrentLinkedQueue<byte[]> splits;
+
   /**
-   * Execute the request
+   * Constructor
    *
-   * @param commHandler Master communication handler
+   * @param serializedSplits Splits
    */
-  void doRequest(MasterGlobalCommHandler commHandler);
+  public BasicInputSplitsMasterOrganizer(List<byte[]> serializedSplits) {
+    splits = new ConcurrentLinkedQueue<>(serializedSplits);
+  }
+
+  @Override
+  public byte[] getSerializedSplitFor(int workerTaskId) {
+    return splits.poll();
+  }
 }

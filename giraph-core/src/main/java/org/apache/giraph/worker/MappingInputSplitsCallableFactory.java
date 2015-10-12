@@ -19,14 +19,12 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Factory for {@link org.apache.giraph.worker.MappingInputSplitsCallable}s.
@@ -38,59 +36,47 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MappingInputSplitsCallableFactory<I extends WritableComparable,
   V extends Writable, E extends Writable, B extends Writable>
-  implements CallableFactory<Integer> {
+  implements CallableFactory<VertexEdgeCount> {
   /** Mapping input format */
   private final MappingInputFormat<I, V, E, B> mappingInputFormat;
-  /** Input split organizer */
-  private final InputSplitPathOrganizer splitOrganizer;
   /** Mapper context. */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Configuration. */
   private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** {@link BspServiceWorker} we're running on. */
   private final BspServiceWorker<I, V, E> bspServiceWorker;
-  /** {@link ZooKeeperExt} for this worker. */
-  private final ZooKeeperExt zooKeeperExt;
-  /** Current position in the path list */
-  private final AtomicInteger currentIndex;
-
+  /** Handler for input splits */
+  private final WorkerInputSplitsHandler splitsHandler;
 
   /**
    * Constructor.
    *
    * @param mappingInputFormat Mapping input format
-   * @param splitOrganizer Input split organizer
    * @param context Mapper context
    * @param configuration Configuration
    * @param bspServiceWorker Calling {@link BspServiceWorker}
-   * @param zooKeeperExt {@link org.apache.giraph.zk.ZooKeeperExt}
-   *                     for this worker
+   * @param splitsHandler Splits handler
    */
   public MappingInputSplitsCallableFactory(
       MappingInputFormat<I, V, E, B> mappingInputFormat,
-      InputSplitPathOrganizer splitOrganizer,
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       BspServiceWorker<I, V, E> bspServiceWorker,
-      ZooKeeperExt zooKeeperExt) {
+      WorkerInputSplitsHandler splitsHandler) {
     this.mappingInputFormat = mappingInputFormat;
-    this.splitOrganizer = splitOrganizer;
     this.context = context;
     this.configuration = configuration;
     this.bspServiceWorker = bspServiceWorker;
-    this.zooKeeperExt = zooKeeperExt;
-    this.currentIndex = new AtomicInteger(0);
+    this.splitsHandler = splitsHandler;
   }
 
   @Override
-  public FullInputSplitCallable<I, V, E> newCallable(int threadId) {
+  public InputSplitsCallable<I, V, E> newCallable(int threadId) {
     return new MappingInputSplitsCallable<>(
         mappingInputFormat,
-        splitOrganizer,
         context,
         configuration,
-        zooKeeperExt,
-        currentIndex,
-        bspServiceWorker);
+        bspServiceWorker,
+        splitsHandler);
   }
 }

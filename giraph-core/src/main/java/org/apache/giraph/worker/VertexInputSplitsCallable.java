@@ -30,10 +30,10 @@ import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.mapping.translate.TranslateEdge;
+import org.apache.giraph.io.InputType;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -99,17 +99,14 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
-   * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public VertexInputSplitsCallable(
       VertexInputFormat<I, V, E> vertexInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       BspServiceWorker<I, V, E> bspServiceWorker,
-      InputSplitsHandler splitsHandler,
-      ZooKeeperExt zooKeeperExt)  {
-    super(context, configuration, bspServiceWorker, splitsHandler,
-        zooKeeperExt);
+      WorkerInputSplitsHandler splitsHandler)  {
+    super(context, configuration, bspServiceWorker, splitsHandler);
     this.vertexInputFormat = vertexInputFormat;
 
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
@@ -134,6 +131,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   @Override
   public GiraphInputFormat getInputFormat() {
     return vertexInputFormat;
+  }
+
+  @Override
+  public InputType getInputType() {
+    return InputType.VERTEX;
   }
 
   /**
@@ -274,7 +276,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     WorkerProgress.get().incrementVertexInputSplitsLoaded();
 
     return new VertexEdgeCount(inputSplitVerticesLoaded,
-        inputSplitEdgesLoaded + edgesSinceLastUpdate);
+        inputSplitEdgesLoaded + edgesSinceLastUpdate, 0);
   }
 }
 

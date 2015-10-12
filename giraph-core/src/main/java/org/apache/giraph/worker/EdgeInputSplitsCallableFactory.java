@@ -22,7 +22,6 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -46,9 +45,7 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
   /** {@link BspServiceWorker} we're running on. */
   private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Handler for input splits */
-  private final InputSplitsHandler splitsHandler;
-  /** {@link ZooKeeperExt} for this worker. */
-  private final ZooKeeperExt zooKeeperExt;
+  private final WorkerInputSplitsHandler splitsHandler;
 
   /**
    * Constructor.
@@ -58,20 +55,17 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
    * @param configuration Configuration
    * @param bspServiceWorker Calling {@link BspServiceWorker}
    * @param splitsHandler Handler for input splits
-   * @param zooKeeperExt {@link ZooKeeperExt} for this worker
    */
   public EdgeInputSplitsCallableFactory(
       EdgeInputFormat<I, E> edgeInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       BspServiceWorker<I, V, E> bspServiceWorker,
-      InputSplitsHandler splitsHandler,
-      ZooKeeperExt zooKeeperExt) {
+      WorkerInputSplitsHandler splitsHandler) {
     this.edgeInputFormat = edgeInputFormat;
     this.context = context;
     this.configuration = configuration;
     this.bspServiceWorker = bspServiceWorker;
-    this.zooKeeperExt = zooKeeperExt;
     this.splitsHandler = splitsHandler;
   }
 
@@ -82,7 +76,6 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
         context,
         configuration,
         bspServiceWorker,
-        splitsHandler,
-        zooKeeperExt);
+        splitsHandler);
   }
 }

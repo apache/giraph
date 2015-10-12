@@ -60,7 +60,11 @@ else[HADOOP_NON_SECURE]*/
   /** Send aggregators from worker owner to other workers */
   SEND_AGGREGATORS_TO_WORKER_REQUEST(SendAggregatorsToWorkerRequest.class),
   /** Send message from worker to worker */
-  SEND_WORKER_TO_WORKER_MESSAGE_REQUEST(SendWorkerToWorkerMessageRequest.class);
+  SEND_WORKER_TO_WORKER_MESSAGE_REQUEST(SendWorkerToWorkerMessageRequest.class),
+  /** Send request for input split from worker to master */
+  ASK_FOR_INPUT_SPLIT_REQUEST(AskForInputSplitRequest.class),
+  /** Send request with granted input split from master to workers */
+  REPLY_WITH_INPUT_SPLIT_REQUEST(ReplyWithInputSplitRequest.class);
 
   /** Class of request which this type corresponds to */
   private final Class<? extends WritableRequest> requestClass;

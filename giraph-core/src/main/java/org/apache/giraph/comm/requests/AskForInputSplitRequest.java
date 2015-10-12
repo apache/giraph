@@ -18,44 +18,59 @@
 
 package org.apache.giraph.comm.requests;
 
+import org.apache.giraph.master.MasterGlobalCommHandler;
+import org.apache.giraph.io.InputType;
+
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.master.MasterGlobalCommHandler;
-
 /**
- * Request to send final aggregated values from worker which owns
- * aggregators to the master
+ * A request which workers will send to master to ask it to give them splits
  */
-public class SendReducedToMasterRequest extends ByteArrayRequest
+public class AskForInputSplitRequest extends WritableRequest
     implements MasterRequest {
+  /** Type of split we are requesting */
+  private InputType splitType;
+  /** Task id of worker which requested the split */
+  private int workerTaskId;
 
   /**
    * Constructor
    *
-   * @param data Serialized aggregator data
+   * @param splitType Type of split we are requesting
+   * @param workerTaskId Task id of worker which requested the split
    */
-  public SendReducedToMasterRequest(byte[] data) {
-    super(data);
+  public AskForInputSplitRequest(InputType splitType, int workerTaskId) {
+    this.splitType = splitType;
+    this.workerTaskId = workerTaskId;
   }
 
   /**
    * Constructor used for reflection only
    */
-  public SendReducedToMasterRequest() {
+  public AskForInputSplitRequest() {
   }
 
   @Override
   public void doRequest(MasterGlobalCommHandler commHandler) {
-    try {
-      commHandler.getAggregatorHandler().acceptReducedValues(getDataInput());
-    } catch (IOException e) {
-      throw new IllegalStateException("doRequest: " +
-          "IOException occurred while processing request", e);
-    }
+    commHandler.getInputSplitsHandler().sendSplitTo(splitType, workerTaskId);
+  }
+
+  @Override
+  void readFieldsRequest(DataInput in) throws IOException {
+    splitType = InputType.values()[in.readInt()];
+    workerTaskId = in.readInt();
+  }
+
+  @Override
+  void writeRequest(DataOutput out) throws IOException {
+    out.writeInt(splitType.ordinal());
+    out.writeInt(workerTaskId);
   }
 
   @Override
   public RequestType getType() {
-    return RequestType.SEND_AGGREGATORS_TO_MASTER_REQUEST;
+    return RequestType.ASK_FOR_INPUT_SPLIT_REQUEST;
   }
 }
