@@ -61,7 +61,7 @@ public abstract class SimpleMasterPartitioner<I extends WritableComparable,
   public Collection<PartitionOwner> createInitialPartitionOwners(
       Collection<WorkerInfo> availableWorkerInfos, int maxWorkers) {
     int partitionCount = PartitionUtils.computePartitionCount(
-        availableWorkerInfos, maxWorkers, conf);
+        availableWorkerInfos.size(), conf);
     ArrayList<WorkerInfo> workerList =
         new ArrayList<WorkerInfo>(availableWorkerInfos);
 

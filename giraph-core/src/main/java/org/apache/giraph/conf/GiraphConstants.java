@@ -862,6 +862,11 @@ public interface GiraphConstants {
       new FloatConfOption("giraph.masterPartitionCountMultiplier", 1.0f,
           "Multiplier for the current workers squared");
 
+  /** Minimum number of partitions to have per compute thread */
+  IntConfOption MIN_PARTITIONS_PER_COMPUTE_THREAD =
+      new IntConfOption("giraph.minPartitionsPerComputeThread", 1,
+          "Minimum number of partitions to have per compute thread");
+
   /** Overrides default partition count calculation if not -1 */
   IntConfOption USER_PARTITION_COUNT =
       new IntConfOption("giraph.userPartitionCount", -1,

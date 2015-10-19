@@ -56,8 +56,8 @@ public class PseudoRandomIntNullLocalEdgesHelper {
     int numWorkers = conf.getMaxWorkers();
     List<WorkerInfo> workerInfos = Collections.nCopies(numWorkers,
         new WorkerInfo());
-    numPartitions = PartitionUtils.computePartitionCount(workerInfos,
-        numWorkers, conf);
+    numPartitions = PartitionUtils.computePartitionCount(
+        workerInfos.size(), conf);
     partitionSize = numVertices / numPartitions;
   }
 
