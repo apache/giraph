@@ -434,7 +434,7 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
           !address.getHostName().equals(taskInfo.getHostname()) ||
           address.getPort() != taskInfo.getPort()) {
         address = resolveAddress(maxResolveAddressAttempts,
-            taskInfo.getInetSocketAddress());
+            taskInfo.getHostOrIp(), taskInfo.getPort());
         taskIdAddressMap.put(taskInfo.getTaskId(), address);
       }
       if (address == null || address.getHostName() == null ||
@@ -930,14 +930,16 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
    *
    * @param maxResolveAddressAttempts Maximum number of attempts to resolve the
    *        address
-   * @param address The address we are attempting to resolve
+   * @param hostOrIp Known IP or host name
+   * @param port Target port number
    * @return The successfully resolved address.
    * @throws IllegalStateException if the address is not resolved
    *         in <code>maxResolveAddressAttempts</code> tries.
    */
   private static InetSocketAddress resolveAddress(
-      int maxResolveAddressAttempts, InetSocketAddress address) {
+      int maxResolveAddressAttempts, String hostOrIp, int port) {
     int resolveAttempts = 0;
+    InetSocketAddress address = new InetSocketAddress(hostOrIp, port);
     while (address.isUnresolved() &&
         resolveAttempts < maxResolveAddressAttempts) {
       ++resolveAttempts;
@@ -949,7 +951,7 @@ public class NettyClient implements ResetSuperstepMetricsObserver {
       } catch (InterruptedException e) {
         LOG.warn("resolveAddress: Interrupted.", e);
       }
-      address = new InetSocketAddress(address.getHostName(),
+      address = new InetSocketAddress(hostOrIp,
           address.getPort());
     }
     if (resolveAttempts >= maxResolveAddressAttempts) {

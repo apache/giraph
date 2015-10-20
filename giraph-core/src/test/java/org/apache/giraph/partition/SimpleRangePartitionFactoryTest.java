@@ -48,7 +48,7 @@ public class SimpleRangePartitionFactoryTest {
     ArrayList<WorkerInfo> infos = new ArrayList<WorkerInfo>();
     for (int i = 0; i < numWorkers; i++) {
       WorkerInfo info = new WorkerInfo();
-      info.setInetSocketAddress(new InetSocketAddress(8080));
+      info.setInetSocketAddress(new InetSocketAddress(8080), "127.0.0.1");
       info.setTaskId(i);
       infos.add(info);
     }

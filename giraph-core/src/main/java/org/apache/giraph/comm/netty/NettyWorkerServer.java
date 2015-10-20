@@ -87,6 +87,11 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
+  public String getLocalHostOrIp() {
+    return nettyServer.getLocalHostOrIp();
+  }
+
+  @Override
   public void prepareSuperstep() {
     serverData.prepareSuperstep(); // updates the current message-store
   }

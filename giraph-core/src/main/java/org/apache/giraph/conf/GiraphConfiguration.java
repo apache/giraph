@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
@@ -1111,6 +1112,19 @@ public class GiraphConfiguration extends Configuration
     return DNS.getDefaultHost(
         GiraphConstants.DNS_INTERFACE.get(this),
         GiraphConstants.DNS_NAMESERVER.get(this)).toLowerCase();
+  }
+
+  /**
+   * Return local host name by default. Or local host IP if preferIP
+   * option is set.
+   * @return local host name or IP
+   * @throws UnknownHostException
+   */
+  public String getLocalHostOrIp() throws UnknownHostException {
+    if (GiraphConstants.PREFER_IP_ADDRESSES.get(this)) {
+      return InetAddress.getLocalHost().getHostAddress();
+    }
+    return getLocalHostname();
   }
 
   /**

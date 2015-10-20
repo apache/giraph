@@ -35,6 +35,8 @@ public abstract class TaskInfo implements Writable {
   private int port;
   /** Task partition id */
   private int taskId = -1;
+  /** Task host IP */
+  private String hostOrIp;
 
   /**
    * Constructor
@@ -52,6 +54,15 @@ public abstract class TaskInfo implements Writable {
   }
 
   /**
+   * Get this task's host address. Could be IP.
+   *
+   * @return host address
+   */
+  public String getHostOrIp() {
+    return hostOrIp;
+  }
+
+  /**
    * Get port that the IPC server of this task is using
    *
    * @return Port
@@ -64,10 +75,12 @@ public abstract class TaskInfo implements Writable {
    * Set address that the IPC server of this task is using
    *
    * @param address Address
+   * @param host host name or IP
    */
-  public void setInetSocketAddress(InetSocketAddress address) {
+  public void setInetSocketAddress(InetSocketAddress address, String host) {
     this.port = address.getPort();
     this.hostname = address.getHostName();
+    this.hostOrIp = host;
   }
 
   /**
@@ -76,7 +89,7 @@ public abstract class TaskInfo implements Writable {
    * @return InetSocketAddress of the hostname and port.
    */
   public InetSocketAddress getInetSocketAddress() {
-    return new InetSocketAddress(hostname, port);
+    return new InetSocketAddress(hostOrIp, port);
   }
 
   /**
@@ -111,6 +124,7 @@ public abstract class TaskInfo implements Writable {
     if (other instanceof TaskInfo) {
       TaskInfo taskInfo = (TaskInfo) other;
       if (getHostname().equals(taskInfo.getHostname()) &&
+          getHostOrIp().equals(taskInfo.getHostOrIp()) &&
           (getTaskId() == taskInfo.getTaskId()) &&
           (port == taskInfo.getPort() &&
           (taskId == taskInfo.getTaskId()))) {
@@ -123,6 +137,7 @@ public abstract class TaskInfo implements Writable {
   @Override
   public String toString() {
     return "hostname=" + getHostname() +
+        " hostOrIp=" + getHostOrIp() +
         ", MRtaskID=" + getTaskId() +
         ", port=" + getPort();
   }
@@ -130,6 +145,7 @@ public abstract class TaskInfo implements Writable {
   @Override
   public void readFields(DataInput input) throws IOException {
     hostname = input.readUTF();
+    hostOrIp = input.readUTF();
     port = input.readInt();
     taskId = input.readInt();
   }
@@ -137,6 +153,7 @@ public abstract class TaskInfo implements Writable {
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeUTF(hostname);
+    output.writeUTF(hostOrIp);
     output.writeInt(port);
     output.writeInt(taskId);
   }
@@ -146,7 +163,9 @@ public abstract class TaskInfo implements Writable {
     int result = 17;
     result = 37 * result + getPort();
     result = 37 * result + hostname.hashCode();
+    result = 37 * result + hostOrIp.hashCode();
     result = 37 * result + getTaskId();
     return result;
   }
+
 }

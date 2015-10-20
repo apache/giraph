@@ -1212,5 +1212,13 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.hadoopOutputFormatClass",
           BspOutputFormat.class, OutputFormat.class,
           "Output format class for hadoop to use (for committing)");
+
+  /**
+   * For worker to worker communication we can use IPs or host names, by
+   * default prefer IPs.
+   */
+  BooleanConfOption PREFER_IP_ADDRESSES =
+      new BooleanConfOption("giraph.preferIP", false,
+      "Prefer IP addresses instead of host names");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

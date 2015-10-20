@@ -204,7 +204,8 @@ public class BspServiceWorker<I extends WritableComparable,
     workerInfo = new WorkerInfo();
     workerServer = new NettyWorkerServer<I, V, E>(conf, this, context,
         graphTaskManager.createUncaughtExceptionHandler());
-    workerInfo.setInetSocketAddress(workerServer.getMyAddress());
+    workerInfo.setInetSocketAddress(workerServer.getMyAddress(),
+        workerServer.getLocalHostOrIp());
     workerInfo.setTaskId(getTaskPartition());
     workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
         graphTaskManager.createUncaughtExceptionHandler());

@@ -72,7 +72,7 @@ public class ConnectionTest {
             new WorkerRequestServerHandler.Factory(serverData), workerInfo,
             context, new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
 
     NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
@@ -105,7 +105,7 @@ public class ConnectionTest {
         new NettyServer(conf, requestServerHandlerFactory, workerInfo1,
             context, new MockExceptionHandler());
     server1.start();
-    workerInfo1.setInetSocketAddress(server1.getMyAddress());
+    workerInfo1.setInetSocketAddress(server1.getMyAddress(), server1.getLocalHostOrIp());
 
     WorkerInfo workerInfo2 = new WorkerInfo();
     workerInfo1.setTaskId(2);
@@ -113,7 +113,7 @@ public class ConnectionTest {
         new NettyServer(conf, requestServerHandlerFactory, workerInfo2,
             context, new MockExceptionHandler());
     server2.start();
-    workerInfo2.setInetSocketAddress(server2.getMyAddress());
+    workerInfo2.setInetSocketAddress(server2.getMyAddress(), server1.getLocalHostOrIp());
 
     WorkerInfo workerInfo3 = new WorkerInfo();
     workerInfo1.setTaskId(3);
@@ -121,7 +121,7 @@ public class ConnectionTest {
         new NettyServer(conf, requestServerHandlerFactory, workerInfo3,
             context, new MockExceptionHandler());
     server3.start();
-    workerInfo3.setInetSocketAddress(server3.getMyAddress());
+    workerInfo3.setInetSocketAddress(server3.getMyAddress(), server1.getLocalHostOrIp());
 
     NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
@@ -153,7 +153,7 @@ public class ConnectionTest {
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
             context, new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
 
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo);
     NettyClient client1 = new NettyClient(context, conf, new WorkerInfo(),

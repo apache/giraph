@@ -98,7 +98,7 @@ public class RequestTest {
             context, new MockExceptionHandler());
     server.start();
 
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
     client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
     client.connectAllAddresses(

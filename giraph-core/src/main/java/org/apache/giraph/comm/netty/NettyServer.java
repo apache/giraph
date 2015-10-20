@@ -86,7 +86,7 @@ public class NettyServer {
   private final ChannelGroup accepted = new DefaultChannelGroup(
       ImmediateEventExecutor.INSTANCE);
   /** Local hostname */
-  private final String localHostname;
+  private final String localHostOrIp;
   /** Address of the server */
   private InetSocketAddress myAddress;
   /** Current task info */
@@ -163,7 +163,7 @@ public class NettyServer {
             "netty-server-worker-%d", exceptionHandler));
 
     try {
-      this.localHostname = conf.getLocalHostname();
+      this.localHostOrIp = conf.getLocalHostOrIp();
     } catch (UnknownHostException e) {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
@@ -344,7 +344,7 @@ public class NettyServer {
     // Round up the max number of workers to the next power of 10 and use
     // it as a constant to increase the port number with.
     while (bindAttempts < maxIpcPortBindAttempts) {
-      this.myAddress = new InetSocketAddress(localHostname, bindPort);
+      this.myAddress = new InetSocketAddress(localHostOrIp, bindPort);
       if (failFirstPortBindingAttempt && bindAttempts == 0) {
         if (LOG.isInfoEnabled()) {
           LOG.info("start: Intentionally fail first " +
@@ -412,6 +412,10 @@ public class NettyServer {
 
   public InetSocketAddress getMyAddress() {
     return myAddress;
+  }
+
+  public String getLocalHostOrIp() {
+    return localHostOrIp;
   }
 
 }

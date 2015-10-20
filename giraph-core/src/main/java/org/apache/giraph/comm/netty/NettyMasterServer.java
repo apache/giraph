@@ -57,6 +57,11 @@ public class NettyMasterServer implements MasterServer {
   }
 
   @Override
+  public String getLocalHostOrIp() {
+    return nettyServer.getLocalHostOrIp();
+  }
+
+  @Override
   public void close() {
     nettyServer.stop();
   }

@@ -32,6 +32,13 @@ public interface MasterServer {
   InetSocketAddress getMyAddress();
 
   /**
+   * Get server host or IP
+   *
+   * @return Server host or IP
+   */
+  String getLocalHostOrIp();
+
+  /**
    * Shuts down.
    */
   void close();
