@@ -107,6 +107,7 @@ public class ReactiveJMapHistoDumper extends
       }
     });
     thread.setName("ReactiveJMapHistoDumperSupervisorThread");
+    thread.setDaemon(true);
     thread.start();
   }
 

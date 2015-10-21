@@ -17,10 +17,10 @@
  */
 package org.apache.giraph.comm.messages.queue;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -60,8 +60,7 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
   /** Executor that processes messages in background */
   private static final ExecutorService EXECUTOR_SERVICE =
       Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setDaemon(true)
-              .setNameFormat("AsyncMessageStoreWrapper-%d").build());
+          ThreadUtils.createThreadFactory("AsyncMessageStoreWrapper-%d"));
 
   /** Number of threads that will process messages in background */
   private final int threadsCount;

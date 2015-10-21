@@ -62,7 +62,8 @@ public class WorkerProgressWriter {
           }
         }
       }
-    });
+    }, "workerProgressThread");
+    writerThread.setDaemon(true);
     writerThread.start();
   }
 

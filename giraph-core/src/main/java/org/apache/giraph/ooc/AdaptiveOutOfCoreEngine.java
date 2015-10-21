@@ -19,11 +19,11 @@
 package org.apache.giraph.ooc;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.LogStacktraceCallable;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -152,7 +152,7 @@ public class AdaptiveOutOfCoreEngine<I extends WritableComparable,
         }
       };
     checkMemoryExecutor = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setNameFormat("check-memory").build());
+        ThreadUtils.createThreadFactory("check-memory"));
     checkMemoryResult = checkMemoryExecutor.submit(new LogStacktraceCallable<>(
         checkMemoryCallableFactory.newCallable(0)));
 
@@ -164,9 +164,9 @@ public class AdaptiveOutOfCoreEngine<I extends WritableComparable,
               AdaptiveOutOfCoreEngine.this, serviceWorker);
         }
       };
-    outOfCoreProcessorExecutor = Executors
-        .newFixedThreadPool(numOocThreads,
-            new ThreadFactoryBuilder().setNameFormat("ooc-%d").build());
+    outOfCoreProcessorExecutor =
+        Executors.newFixedThreadPool(numOocThreads,
+            ThreadUtils.createThreadFactory("ooc-%d"));
     oocProcessorResults = Lists.newArrayListWithCapacity(numOocThreads);
     for (int i = 0; i < numOocThreads; ++i) {
       Future<Void> future = outOfCoreProcessorExecutor.submit(

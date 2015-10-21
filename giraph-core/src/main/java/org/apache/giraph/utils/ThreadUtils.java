@@ -45,10 +45,21 @@ public class ThreadUtils {
       String nameFormat,
       Thread.UncaughtExceptionHandler exceptionHandler) {
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder().
-        setNameFormat(nameFormat);
+        setNameFormat(nameFormat).setDaemon(true);
     if (exceptionHandler != null) {
       builder.setUncaughtExceptionHandler(exceptionHandler);
     }
     return builder.build();
+  }
+
+  /**
+   * Creates new thread factory with specified thread name format.
+   *
+   * @param nameFormat defines naming format for threads created by
+   *                   thread factory
+   * @return new thread factory with specified thread name format
+   */
+  public static ThreadFactory createThreadFactory(String nameFormat) {
+    return createThreadFactory(nameFormat, null);
   }
 }

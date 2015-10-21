@@ -20,14 +20,17 @@ package org.apache.giraph.utils;
 
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
+
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.util.concurrent.EventExecutorGroup;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +46,11 @@ public class ProgressableUtils {
       Logger.getLogger(ProgressableUtils.class);
   /** Msecs to refresh the progress meter (one minute) */
   private static final int DEFUALT_MSEC_PERIOD = 60 * 1000;
+  /**
+   * When getting results with many threads, how many milliseconds to wait
+   * on each when looping through them
+   */
+  private static final int MSEC_TO_WAIT_ON_EACH_FUTURE = 10;
 
   /** Do not instantiate. */
   private ProgressableUtils() {
@@ -217,21 +225,42 @@ public class ProgressableUtils {
   public static <R> List<R> getResultsWithNCallables(
       CallableFactory<R> callableFactory, int numThreads,
       String threadNameFormat, Progressable progressable) {
-    ExecutorService executorService =
-        Executors.newFixedThreadPool(numThreads,
-            new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
-    List<Future<R>> futures = Lists.newArrayListWithCapacity(numThreads);
+    ExecutorService executorService = Executors.newFixedThreadPool(numThreads,
+        ThreadUtils.createThreadFactory(threadNameFormat));
+    HashMap<Integer, Future<R>> futures = new HashMap<>(numThreads);
     for (int i = 0; i < numThreads; i++) {
       Callable<R> callable = callableFactory.newCallable(i);
       Future<R> future = executorService.submit(
           new LogStacktraceCallable<R>(callable));
-      futures.add(future);
+      futures.put(i, future);
     }
     executorService.shutdown();
-    List<R> futureResults = Lists.newArrayListWithCapacity(numThreads);
-    for (Future<R> future : futures) {
-      R result = ProgressableUtils.getFutureResult(future, progressable);
-      futureResults.add(result);
+    List<R> futureResults =
+        new ArrayList<>(Collections.<R>nCopies(numThreads, null));
+    // Loop through the futures until all are finished
+    // We do this in order to get any exceptions from the futures early
+    while (!futures.isEmpty()) {
+      Iterator<Map.Entry<Integer, Future<R>>> iterator =
+          futures.entrySet().iterator();
+      while (iterator.hasNext()) {
+        Map.Entry<Integer, Future<R>> entry = iterator.next();
+        R result;
+        try {
+          // Try to get result from the future
+          result = entry.getValue().get(
+              MSEC_TO_WAIT_ON_EACH_FUTURE, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException e) {
+          throw new IllegalStateException("Exception occurred", e);
+        } catch (TimeoutException e) {
+          // If result is not ready yet just keep waiting
+          continue;
+        }
+        // Result is ready, put it to final results
+        futureResults.set(entry.getKey(), result);
+        // Remove current future since we are done with it
+        iterator.remove();
+      }
+      progressable.progress();
     }
     return futureResults;
   }

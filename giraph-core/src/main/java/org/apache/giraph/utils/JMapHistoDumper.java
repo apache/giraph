@@ -94,6 +94,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
         }
       }
     });
+    thread.setDaemon(true);
     thread.start();
   }
 
