@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.TypesHolder;
@@ -28,6 +29,7 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerGlobalCommUsage;
+import org.apache.giraph.worker.WorkerIndexUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -56,7 +58,7 @@ public interface Computation<I extends WritableComparable,
     M2 extends Writable>
     extends TypesHolder<I, V, E, M1, M2>,
     ImmutableClassesGiraphConfigurable<I, V, E>,
-    WorkerGlobalCommUsage, WorkerAggregatorUsage {
+    WorkerGlobalCommUsage, WorkerAggregatorUsage, WorkerIndexUsage<I> {
   /**
    * Must be defined by user to do computation on a single Vertex.
    *
@@ -87,14 +89,13 @@ public interface Computation<I extends WritableComparable,
    *
    * @param graphState Graph state
    * @param workerClientRequestProcessor Processor for handling requests
-   * @param graphTaskManager Graph-wide BSP Mapper for this Vertex
+   * @param serviceWorker Centralized service worker
    * @param workerGlobalCommUsage Worker global communication usage
-   * @param workerContext Worker context
    */
   void initialize(GraphState graphState,
       WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor,
-      GraphTaskManager<I, V, E> graphTaskManager,
-      WorkerGlobalCommUsage workerGlobalCommUsage, WorkerContext workerContext);
+      CentralizedServiceWorker<I, V, E> serviceWorker,
+      WorkerGlobalCommUsage workerGlobalCommUsage);
 
   /**
    * Retrieves the current superstep.

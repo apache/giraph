@@ -40,7 +40,6 @@ import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.utils.Trimmable;
-import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.worker.WorkerThreadGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
@@ -138,14 +137,13 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
               useOneMessageToManyIdsEncoding());
     WorkerThreadGlobalCommUsage aggregatorUsage =
         serviceWorker.getAggregatorHandler().newThreadAggregatorUsage();
-    WorkerContext workerContext = serviceWorker.getWorkerContext();
 
     vertexWriter = serviceWorker.getSuperstepOutput().getVertexWriter();
 
     Computation<I, V, E, M1, M2> computation =
         (Computation<I, V, E, M1, M2>) configuration.createComputation();
     computation.initialize(graphState, workerClientRequestProcessor,
-        serviceWorker.getGraphTaskManager(), aggregatorUsage, workerContext);
+        serviceWorker, aggregatorUsage);
     computation.preSuperstep();
 
     List<PartitionStats> partitionStatsList = Lists.newArrayList();

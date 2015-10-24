@@ -17,12 +17,18 @@
  */
 package org.apache.giraph.block_app.framework.api;
 
-
 /**
  * Basic block computation API for accessing items
  * present on both workers and master.
  */
 public interface BlockApi extends BlockConfApi {
+ /**
+   * Get number of workers
+   *
+   * @return Number of workers
+   */
+  int getWorkerCount();
+
   /**
    * Get the total (all workers) number of vertices that
    * existed at the start of the current piece.

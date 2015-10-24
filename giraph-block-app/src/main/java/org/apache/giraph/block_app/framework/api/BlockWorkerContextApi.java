@@ -18,28 +18,16 @@
 package org.apache.giraph.block_app.framework.api;
 
 import org.apache.giraph.aggregators.AggregatorUsage;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.worker.WorkerIndexUsage;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Block computation API available for worker context methods.
  *
  * Interface to the WorkerContext methods.
+ * @param <I> vertex Id type.
  */
-public interface BlockWorkerContextApi extends AggregatorUsage, BlockApi {
-  @Override
-  ImmutableClassesGiraphConfiguration<?, ?, ?> getConf();
-
-  /**
-   * Get number of workers
-   *
-   * @return Number of workers
-   */
-  int getWorkerCount();
-
-  /**
-   * Get index for this worker
-   *
-   * @return Index of this worker
-   */
-  int getMyWorkerIndex();
+@SuppressWarnings("rawtypes")
+public interface BlockWorkerContextApi<I extends WritableComparable>
+    extends AggregatorUsage, BlockApi, WorkerIndexUsage<I> {
 }

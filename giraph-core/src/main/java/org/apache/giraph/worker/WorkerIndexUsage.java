@@ -15,29 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.block_app.framework.api;
-
-import org.apache.giraph.worker.WorkerAggregatorUsage;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+package org.apache.giraph.worker;
 
 /**
- * Block computation API available for worker send methods.
+ * Interface providing utilities for using worker index.
  *
- * Interface to the WorkerContext methods.
- *
- * @param <I> vertex Id type.
- * @param <WM> Worker message type
+ * @param <I> Vertex id type
  */
-@SuppressWarnings("rawtypes")
-public interface BlockWorkerContextSendApi
-    <I extends WritableComparable, WM extends Writable>
-    extends BlockWorkerContextApi<I>, WorkerAggregatorUsage {
+public interface WorkerIndexUsage<I> {
   /**
-   * Send message to another worker
+   * Get number of workers
    *
-   * @param message Message to send
-   * @param workerIndex Index of the worker to send the message to
+   * @return Number of workers
    */
-  void sendMessageToWorker(WM message, int workerIndex);
+  int getWorkerCount();
+
+  /**
+   * Get index for this worker
+   *
+   * @return Index of this worker
+   */
+  int getMyWorkerIndex();
+
+  /**
+   * Get worker index which will contain vertex with given id,
+   * if such vertex exists.
+   *
+   * @param vertexId vertex id
+   * @return worker index
+   */
+  int getWorkerForVertex(I vertexId);
 }

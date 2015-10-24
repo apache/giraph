@@ -18,6 +18,8 @@
 
 package org.apache.giraph.master;
 
+import java.util.List;
+
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.combiner.MessageCombiner;
@@ -26,6 +28,7 @@ import org.apache.giraph.conf.MessageClasses;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -123,6 +126,15 @@ public abstract class MasterCompute
    */
   public final Mapper.Context getContext() {
     return graphState.getContext();
+  }
+
+  /**
+   * Get list of workers
+   *
+   * @return List of workers
+   */
+  public final List<WorkerInfo> getWorkerInfoList() {
+    return serviceMaster.getWorkerInfoList();
   }
 
   /**

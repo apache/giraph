@@ -29,6 +29,7 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.writable.kryo.HadoopKryo;
 import org.apache.giraph.writable.kryo.markers.KryoIgnoreWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 /**
@@ -53,7 +54,7 @@ public final class BlockWorkerContext extends WorkerContext
   @Override
   public void preSuperstep() {
     List<Writable> messages = getAndClearMessagesFromOtherWorkers();
-    BlockWorkerContextApiWrapper<Writable> workerApi =
+    BlockWorkerContextApiWrapper<WritableComparable, Writable> workerApi =
         new BlockWorkerContextApiWrapper<>(this);
     BlockWorkerPieces<Object> workerPieces =
         BlockWorkerPieces.getNextWorkerPieces(this);

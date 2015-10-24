@@ -26,6 +26,7 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerContextApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Replacement for WorkerContext when migrating to Blocks Framework,
@@ -84,8 +85,8 @@ public class MigrationWorkerContext
   }
 
   public final void sendMessageToWorker(Writable message, int workerIndex) {
-    ((BlockWorkerContextSendApi<Writable>) api).sendMessageToWorker(
-        message, workerIndex);
+    ((BlockWorkerContextSendApi<WritableComparable, Writable>) api)
+      .sendMessageToWorker(message, workerIndex);
   }
 
   /**

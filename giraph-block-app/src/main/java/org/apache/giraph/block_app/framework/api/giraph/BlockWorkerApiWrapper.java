@@ -177,4 +177,19 @@ final class BlockWorkerApiWrapper<I extends WritableComparable,
   public <OW extends BlockOutputWriter> OW getWriter(String confOption) {
     return getBlockWorkerContext().getOutputHandle().getWriter(confOption);
   }
+
+  @Override
+  public int getMyWorkerIndex() {
+    return worker.getMyWorkerIndex();
+  }
+
+  @Override
+  public int getWorkerCount() {
+    return worker.getWorkerCount();
+  }
+
+  @Override
+  public int getWorkerForVertex(I vertexId) {
+    return worker.getWorkerForVertex(vertexId);
+  }
 }

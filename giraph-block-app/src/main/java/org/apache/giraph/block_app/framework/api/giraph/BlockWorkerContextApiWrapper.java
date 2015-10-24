@@ -22,15 +22,18 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Giraph implementation of BlockWorkerContextReceiveApi and
  * BlockWorkerContextSendApi, passing all calls to WorkerContext.
  *
+ * @param <I> vertex Id type.
  * @param <WM> Worker message type
  */
-final class BlockWorkerContextApiWrapper<WM extends Writable>
-    implements BlockWorkerContextReceiveApi, BlockWorkerContextSendApi<WM> {
+final class BlockWorkerContextApiWrapper
+    <I extends WritableComparable, WM extends Writable> implements
+    BlockWorkerContextReceiveApi<I>, BlockWorkerContextSendApi<I, WM> {
   private final WorkerContext workerContext;
 
   public BlockWorkerContextApiWrapper(WorkerContext workerContext) {
@@ -50,6 +53,11 @@ final class BlockWorkerContextApiWrapper<WM extends Writable>
   @Override
   public int getMyWorkerIndex() {
     return workerContext.getMyWorkerIndex();
+  }
+
+  @Override
+  public int getWorkerForVertex(I vertexId) {
+    return workerContext.getWorkerForVertex(vertexId);
   }
 
   @Override

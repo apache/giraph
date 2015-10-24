@@ -159,7 +159,7 @@ public abstract class AbstractPiece<I extends WritableComparable,
    * getVertexSender.
    */
   public void workerContextSend(
-      BlockWorkerContextSendApi<WM> workerContextApi, S executionStage,
+      BlockWorkerContextSendApi<I, WM> workerContextApi, S executionStage,
       WV workerValue) {
   }
 

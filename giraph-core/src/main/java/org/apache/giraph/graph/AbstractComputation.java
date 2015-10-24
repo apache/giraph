@@ -21,16 +21,17 @@ package org.apache.giraph.graph;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.worker.AllWorkersInfo;
 import org.apache.giraph.worker.WorkerAggregatorDelegator;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.log4j.Logger;
 
 /**
  * See {@link Computation} for explanation of the interface.
@@ -54,17 +55,16 @@ public abstract class AbstractComputation<I extends WritableComparable,
     M2 extends Writable>
     extends WorkerAggregatorDelegator<I, V, E>
     implements Computation<I, V, E, M1, M2> {
-  /** Logger */
-  private static final Logger LOG = Logger.getLogger(AbstractComputation.class);
-
   /** Global graph state **/
   private GraphState graphState;
   /** Handles requests */
   private WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor;
-  /** Graph-wide BSP Mapper for this Computation */
-  private GraphTaskManager<I, V, E> graphTaskManager;
+  /** Service worker */
+  private CentralizedServiceWorker<I, V, E> serviceWorker;
   /** Worker context */
   private WorkerContext workerContext;
+  /** All workers info */
+  private AllWorkersInfo allWorkersInfo;
 
   /**
    * Must be defined by user to do computation on a single Vertex.
@@ -109,14 +109,20 @@ public abstract class AbstractComputation<I extends WritableComparable,
   public void initialize(
       GraphState graphState,
       WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor,
-      GraphTaskManager<I, V, E> graphTaskManager,
-      WorkerGlobalCommUsage workerGlobalCommUsage,
-      WorkerContext workerContext) {
+      CentralizedServiceWorker<I, V, E> serviceWorker,
+      WorkerGlobalCommUsage workerGlobalCommUsage) {
     this.graphState = graphState;
     this.workerClientRequestProcessor = workerClientRequestProcessor;
-    this.graphTaskManager = graphTaskManager;
     this.setWorkerGlobalCommUsage(workerGlobalCommUsage);
-    this.workerContext = workerContext;
+    this.serviceWorker = serviceWorker;
+    if (serviceWorker != null) {
+      this.workerContext = serviceWorker.getWorkerContext();
+      this.allWorkersInfo = new AllWorkersInfo(
+          serviceWorker.getWorkerInfoList(), serviceWorker.getWorkerInfo());
+    } else {
+      this.workerContext = null;
+      this.allWorkersInfo = null;
+    }
   }
 
   /**
@@ -272,5 +278,21 @@ public abstract class AbstractComputation<I extends WritableComparable,
   @Override
   public <W extends WorkerContext> W getWorkerContext() {
     return (W) workerContext;
+  }
+
+  @Override
+  public final int getWorkerCount() {
+    return allWorkersInfo.getWorkerCount();
+  }
+
+  @Override
+  public final int getMyWorkerIndex() {
+    return allWorkersInfo.getMyWorkerIndex();
+  }
+
+  @Override
+  public final int getWorkerForVertex(I vertexId) {
+    return allWorkersInfo.getWorkerIndex(
+        serviceWorker.getVertexPartitionOwner(vertexId).getWorkerInfo());
   }
 }

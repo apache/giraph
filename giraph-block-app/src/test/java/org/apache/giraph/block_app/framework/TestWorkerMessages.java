@@ -91,7 +91,8 @@ public class TestWorkerMessages {
     }
 
     @Override
-    public void workerContextSend(BlockWorkerContextSendApi<LongWritable> workerContextApi,
+    public void workerContextSend(
+        BlockWorkerContextSendApi<LongWritable, LongWritable> workerContextApi,
         Object executionStage, Object workerValue) {
       for (long value : values) {
         workerContextApi.sendMessageToWorker(new LongWritable(value),

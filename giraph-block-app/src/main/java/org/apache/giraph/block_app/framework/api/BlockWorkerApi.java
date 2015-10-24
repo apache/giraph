@@ -19,6 +19,7 @@ package org.apache.giraph.block_app.framework.api;
 
 import org.apache.giraph.aggregators.AggregatorUsage;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.worker.WorkerIndexUsage;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -29,7 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public interface BlockWorkerApi<I extends WritableComparable>
-    extends AggregatorUsage, BlockApi {
+    extends BlockApi, AggregatorUsage, WorkerIndexUsage<I> {
   @Override
   ImmutableClassesGiraphConfiguration<I, ?, ?> getConf();
 }

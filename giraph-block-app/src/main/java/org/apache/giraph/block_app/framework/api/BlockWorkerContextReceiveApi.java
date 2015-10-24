@@ -18,12 +18,16 @@
 package org.apache.giraph.block_app.framework.api;
 
 import org.apache.giraph.worker.WorkerBroadcastUsage;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Block computation API available for worker context receive methods.
  *
  * Interface to the WorkerContext methods.
+ *
+ * @param <I> vertex Id type.
  */
-public interface BlockWorkerContextReceiveApi
-    extends BlockWorkerContextApi, WorkerBroadcastUsage {
+@SuppressWarnings("rawtypes")
+public interface BlockWorkerContextReceiveApi<I extends WritableComparable>
+    extends BlockWorkerContextApi<I>, WorkerBroadcastUsage {
 }

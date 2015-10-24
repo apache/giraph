@@ -194,7 +194,7 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
 
   @Override
   public void workerContextSend(
-      BlockWorkerContextSendApi<WM> workerContextApi, S executionStage,
+      BlockWorkerContextSendApi<I, WM> workerContextApi, S executionStage,
       WV workerValue) {
     for (AbstractPiece<I, V, E, M, WV, WM, S> piece : innerPieces) {
       piece.workerContextSend(workerContextApi, executionStage, workerValue);

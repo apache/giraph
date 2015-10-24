@@ -167,4 +167,9 @@ final class BlockMasterApiWrapper implements BlockMasterApi,
   public BlockOutputHandle getBlockOutputHandle() {
     return outputHandle;
   }
+
+  @Override
+  public int getWorkerCount() {
+    return master.getWorkerInfoList().size();
+  }
 }

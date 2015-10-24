@@ -258,7 +258,7 @@ public final class MigrationPiece<I extends WritableComparable,
 
   @Override
   public void workerContextSend(
-      BlockWorkerContextSendApi<Writable> workerContextApi,
+      BlockWorkerContextSendApi<I, Writable> workerContextApi,
       MigrationSuperstepStage executionStage,
       MigrationWorkerContext workerValue) {
     if (workerValue != null && !isFirstStep) {

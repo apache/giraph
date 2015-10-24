@@ -47,7 +47,7 @@ public class Piece<I extends WritableComparable, V extends Writable,
   // Disallowing use of Worker Context functions:
   @Override
   public final void workerContextSend(
-      BlockWorkerContextSendApi<NoMessage> workerContextApi,
+      BlockWorkerContextSendApi<I, NoMessage> workerContextApi,
       S executionStage, Object workerValue) {
   }
 

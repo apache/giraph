@@ -96,7 +96,7 @@ public class MockUtils {
             Mockito.verify(workerClientRequestProcessor).sendMessageRequest
                 (targetVertexId, message);
         }
-        
+
         public void verifyMessageSentToAllEdges(Vertex<I, V, E> vertex, M message) {
           Mockito.verify(workerClientRequestProcessor).sendMessageToAllRequest(vertex, message);
       }
@@ -137,7 +137,7 @@ public class MockUtils {
     Mockito.when(env.getContext().getConfiguration())
         .thenReturn(env.getConfiguration());
     computation.initialize(env.getGraphState(),
-        env.getWorkerClientRequestProcessor(), null, null, null);
+        env.getWorkerClientRequestProcessor(), null, null);
 
     GiraphConfiguration giraphConf = new GiraphConfiguration();
     giraphConf.setComputationClass(computation.getClass());

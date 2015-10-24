@@ -34,7 +34,7 @@ public class WorkerGCPiece extends PieceWithWorkerContext<WritableComparable,
   @Override
   @SuppressFBWarnings(value = "DM_GC")
   public void workerContextSend(
-      BlockWorkerContextSendApi<NoMessage> workerContextApi,
+      BlockWorkerContextSendApi<WritableComparable, NoMessage> workerContextApi,
       Object executionStage,
       Object workerValue) {
     System.gc();

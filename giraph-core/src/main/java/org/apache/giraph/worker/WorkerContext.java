@@ -37,23 +37,21 @@ import org.apache.hadoop.mapreduce.Mapper;
 @SuppressWarnings("rawtypes")
 public abstract class WorkerContext
   extends WorkerAggregatorDelegator<WritableComparable, Writable, Writable>
-  implements Writable {
+  implements Writable, WorkerIndexUsage<WritableComparable> {
   /** Global graph state */
   private GraphState graphState;
 
   /** Service worker */
   private CentralizedServiceWorker serviceWorker;
-  /** Sorted list of other participating workers */
-  private List<WorkerInfo> workerList;
-  /** Index of this worker within workerList */
-  private int myWorkerIndex;
+  /** All workers info */
+  private AllWorkersInfo allWorkersInfo;
 
   /**
    * Set the graph state.
    *
    * @param graphState Used to set the graph state.
    */
-  public void setGraphState(GraphState graphState) {
+  public final void setGraphState(GraphState graphState) {
     this.graphState = graphState;
   }
 
@@ -62,10 +60,11 @@ public abstract class WorkerContext
    *
    * @param serviceWorker Service worker containing all the information
    */
-  public void setupSuperstep(CentralizedServiceWorker<?, ?, ?> serviceWorker) {
+  public final void setupSuperstep(
+      CentralizedServiceWorker<?, ?, ?> serviceWorker) {
     this.serviceWorker = serviceWorker;
-    workerList = serviceWorker.getWorkerInfoList();
-    myWorkerIndex = workerList.indexOf(serviceWorker.getWorkerInfo());
+    allWorkersInfo = new AllWorkersInfo(
+        serviceWorker.getWorkerInfoList(), serviceWorker.getWorkerInfo());
   }
 
   /**
@@ -98,8 +97,9 @@ public abstract class WorkerContext
    *
    * @return Number of workers
    */
-  public int getWorkerCount() {
-    return workerList.size();
+  @Override
+  public final int getWorkerCount() {
+    return allWorkersInfo.getWorkerCount();
   }
 
   /**
@@ -107,8 +107,15 @@ public abstract class WorkerContext
    *
    * @return Index of this worker
    */
-  public int getMyWorkerIndex() {
-    return myWorkerIndex;
+  @Override
+  public final int getMyWorkerIndex() {
+    return allWorkersInfo.getMyWorkerIndex();
+  }
+
+  @Override
+  public final int getWorkerForVertex(WritableComparable vertexId) {
+    return allWorkersInfo.getWorkerIndex(
+        serviceWorker.getVertexPartitionOwner(vertexId).getWorkerInfo());
   }
 
   /**
@@ -117,7 +124,7 @@ public abstract class WorkerContext
    *
    * @return Messages received
    */
-  public List<Writable> getAndClearMessagesFromOtherWorkers() {
+  public final List<Writable> getAndClearMessagesFromOtherWorkers() {
     return serviceWorker.getServerData().
         getAndClearCurrentWorkerToWorkerMessages();
   }
@@ -128,14 +135,14 @@ public abstract class WorkerContext
    * @param message Message to send
    * @param workerIndex Index of the worker to send the message to
    */
-  public void sendMessageToWorker(Writable message, int workerIndex) {
+  public final void sendMessageToWorker(Writable message, int workerIndex) {
     SendWorkerToWorkerMessageRequest request =
         new SendWorkerToWorkerMessageRequest(message);
-    if (workerIndex == myWorkerIndex) {
+    if (workerIndex == getMyWorkerIndex()) {
       request.doRequest(serviceWorker.getServerData());
     } else {
       serviceWorker.getWorkerClient().sendWritableRequest(
-          workerList.get(workerIndex).getTaskId(), request);
+          allWorkersInfo.getWorkerList().get(workerIndex).getTaskId(), request);
     }
   }
 
@@ -151,7 +158,7 @@ public abstract class WorkerContext
    *
    * @return Current superstep
    */
-  public long getSuperstep() {
+  public final long getSuperstep() {
     return graphState.getSuperstep();
   }
 
@@ -161,7 +168,7 @@ public abstract class WorkerContext
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getTotalNumVertices() {
+  public final long getTotalNumVertices() {
     return graphState.getTotalNumVertices();
   }
 
@@ -171,7 +178,7 @@ public abstract class WorkerContext
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getTotalNumEdges() {
+  public final long getTotalNumEdges() {
     return graphState.getTotalNumEdges();
   }
 
@@ -180,7 +187,7 @@ public abstract class WorkerContext
    *
    * @return Mapper context
    */
-  public Mapper.Context getContext() {
+  public final Mapper.Context getContext() {
     return graphState.getContext();
   }
 
@@ -190,7 +197,7 @@ public abstract class WorkerContext
    *
    * @param line Line to print
    */
-  public void logToCommandLine(String line) {
+  public final void logToCommandLine(String line) {
     serviceWorker.getJobProgressTracker().logInfo(line);
   }
 

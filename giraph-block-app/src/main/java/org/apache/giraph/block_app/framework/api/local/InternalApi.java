@@ -117,8 +117,8 @@ class InternalApi<I extends WritableComparable, V extends Writable,
    */
   class InternalWorkerApi extends WorkerAggregatorDelegator<I, V, E>
       implements BlockWorkerSendApi<I, V, E, Writable>,
-      BlockWorkerReceiveApi<I>, BlockWorkerContextSendApi<Writable>,
-      BlockWorkerContextReceiveApi, BlockWorkerValueAccessor,
+      BlockWorkerReceiveApi<I>, BlockWorkerContextSendApi<I, Writable>,
+      BlockWorkerContextReceiveApi<I>, BlockWorkerValueAccessor,
       WorkerGlobalCommUsage {
 
     @Override
@@ -175,6 +175,11 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     @Override
     public int getWorkerCount() {
       return 1;
+    }
+
+    @Override
+    public int getWorkerForVertex(I vertexId) {
+      return 0;
     }
 
     @Override
@@ -425,8 +430,12 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     return workerContextLogic.getOutputHandle().getWriter(confOption);
   }
 
-
   public BlockWorkerContextLogic getWorkerContextLogic() {
     return workerContextLogic;
+  }
+
+  @Override
+  public int getWorkerCount() {
+    return 1;
   }
 }
