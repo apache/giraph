@@ -42,7 +42,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   /** The jmap printing thread */
   private Thread thread;
   /** Halt jmap thread */
-  private boolean stop = false;
+  private volatile boolean stop = false;
 
   @Override
   public void preLoad() {
@@ -70,6 +70,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private void joinJMapThread() {
     stop = true;
     try {
+      thread.interrupt();
       thread.join(sleepMillis + 5000);
     } catch (InterruptedException e) {
       LOG.error("Failed to join jmap thread");
@@ -89,7 +90,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
           try {
             Thread.sleep(sleepMillis);
           } catch (InterruptedException e) {
-            LOG.warn("JMap histogram sleep interrupted", e);
+            LOG.info("JMap histogram sleep interrupted", e);
           }
         }
       }
