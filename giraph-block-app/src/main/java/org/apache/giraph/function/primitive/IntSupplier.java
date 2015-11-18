@@ -17,11 +17,13 @@
  */
 package org.apache.giraph.function.primitive;
 
+import java.io.Serializable;
+
 /**
  * Primitive specialization of Function:
  * () -> int
  */
-public interface IntSupplier {
+public interface IntSupplier extends Serializable {
   /** Retrieves an int value. */
   int get();
 }
