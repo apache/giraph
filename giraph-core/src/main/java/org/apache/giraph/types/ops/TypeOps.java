@@ -46,9 +46,9 @@ public interface TypeOps<T> {
    */
   T createCopy(T from);
   /**
-   * Copies value from first argument into the second.
-   * @param to Value of object to be copied
-   * @param from Object into which value should be copied
+   * Copies the value from the second argument into the first.
+   * @param to Object into which the value should be copied
+   * @param from Value of object to be copied
    */
   void set(T to, T from);
 }
