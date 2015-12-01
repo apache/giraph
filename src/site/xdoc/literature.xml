@@ -43,7 +43,12 @@ under the License.
     </section>
  
     <section name="Research Articles">
-			
+         <p>Avery Ching, Sergey Edunov, Maja Kabiljo, Dionysios Logothetis, Sambavi Muthukrishnan, <i>One Trillion Edges: Graph Processing at Facebook-Scale</i>. 
+         Proceedings of the VLDB Endowment, Vol. 8, No. 12, (2015)
+         <br/>
+         <a href="http://www.vldb.org/pvldb/vol8/p1804-ching.pdf">http://www.vldb.org/pvldb/vol8/p1804-ching.pdf</a>
+         </p>
+		
 	   	<p>Xin, R. S., Crankshaw, D., Dave, A., Gonzalez, J. E., Franklin, M. J., &amp; Stoica, I. <i>GraphX: Unifying Data-Parallel and Graph-Parallel Analytics</i>. 
 		arXiv preprint arXiv:1402.2394. (2014)<br/>
          <a href="http://arxiv.org/pdf/1402.2394">http://arxiv.org/pdf/1402.2394</a>
