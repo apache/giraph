@@ -18,13 +18,17 @@
 
 package org.apache.giraph;
 
+import static org.apache.giraph.examples.GeneratedVertexReader.READER_VERTICES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCheckpoint;
 import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.integration.SuperstepHashPartitionerFactory;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.partition.HashRangePartitionerFactory;
 import org.apache.giraph.partition.PartitionBalancer;
@@ -33,12 +37,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.apache.giraph.examples.GeneratedVertexReader.READER_VERTICES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for manual checkpoint restarting
@@ -108,24 +106,6 @@ public class TestGraphPartitioner extends BspCase {
     assertTrue(job.run(true));
     verifyOutput(hdfs, outputPath);
 
-    outputPath = getTempPath("testSuperstepHashPartitioner");
-    conf = new GiraphConfiguration();
-    conf.setComputationClass(
-        SimpleCheckpoint.SimpleCheckpointComputation.class);
-    conf.setWorkerContextClass(
-        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
-    conf.setMasterComputeClass(
-        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
-    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    job = prepareJob("testSuperstepHashPartitioner", conf, outputPath);
-
-    job.getConfiguration().setGraphPartitionerFactoryClass(
-        SuperstepHashPartitionerFactory.class);
-
-    assertTrue(job.run(true));
-    verifyOutput(hdfs, outputPath);
-
     job = new GiraphJob("testHashRangePartitioner");
     setupConfiguration(job);
     job.getConfiguration().setComputationClass(
@@ -142,24 +122,6 @@ public class TestGraphPartitioner extends BspCase {
         HashRangePartitionerFactory.class);
     outputPath = getTempPath("testHashRangePartitioner");
     removeAndSetOutput(job, outputPath);
-    assertTrue(job.run(true));
-    verifyOutput(hdfs, outputPath);
-
-    outputPath = getTempPath("testReverseIdSuperstepHashPartitioner");
-    conf = new GiraphConfiguration();
-    conf.setComputationClass(
-        SimpleCheckpoint.SimpleCheckpointComputation.class);
-    conf.setWorkerContextClass(
-        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
-    conf.setMasterComputeClass(
-        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
-    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    job = prepareJob("testReverseIdSuperstepHashPartitioner", conf,
-        outputPath);
-    job.getConfiguration().setGraphPartitionerFactoryClass(
-        SuperstepHashPartitionerFactory.class);
-    GeneratedVertexReader.REVERSE_ID_ORDER.set(job.getConfiguration(), true);
     assertTrue(job.run(true));
     verifyOutput(hdfs, outputPath);
 

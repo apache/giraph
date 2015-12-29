@@ -41,6 +41,7 @@ import org.apache.giraph.writable.kryo.serializers.ReusableFieldSerializer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.log4j.Logger;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -106,6 +107,9 @@ public class HadoopKryo extends Kryo {
         Random.class,
         "it should be rarely serialized, since it would create same stream " +
         "of numbers everywhere, use TransientRandom instead");
+    NON_SERIALIZABLE.put(
+        Logger.class,
+        "Logger must be a static field");
   }
 
   // Use chunked streams, so within same stream we can use both kryo and

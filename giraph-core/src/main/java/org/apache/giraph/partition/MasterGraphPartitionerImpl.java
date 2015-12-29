@@ -22,12 +22,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 /**
  * Abstracts and implements all MasterGraphPartitioner logic on top of a single
@@ -37,13 +37,11 @@ import org.apache.log4j.Logger;
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public abstract class SimpleMasterPartitioner<I extends WritableComparable,
+public abstract class MasterGraphPartitionerImpl<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements MasterGraphPartitioner<I, V, E> {
-  /** Class logger */
-  private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
   /** Provided configuration */
-  private ImmutableClassesGiraphConfiguration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Save the last generated partition owner list */
   private List<PartitionOwner> partitionOwnerList;
 
@@ -53,7 +51,8 @@ public abstract class SimpleMasterPartitioner<I extends WritableComparable,
    * @param conf
    *          Configuration used.
    */
-  public SimpleMasterPartitioner(ImmutableClassesGiraphConfiguration conf) {
+  public MasterGraphPartitionerImpl(
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     this.conf = conf;
   }
 

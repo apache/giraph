@@ -17,10 +17,8 @@
  */
 package org.apache.giraph.block_app.framework.api.local;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,8 +38,11 @@ import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.SimpleVertexWriter;
+import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.TestGraph;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 import org.apache.hadoop.io.Writable;
@@ -101,7 +102,7 @@ public class LocalBlockRunner {
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runApp(TestGraph<I, V, E> graph) {
-    VertexSaver<I, V, E> noOpVertexSaver = noOpVertexSaver();
+    SimpleVertexWriter<I, V, E> noOpVertexSaver = noOpVertexSaver();
     runAppWithVertexOutput(graph, noOpVertexSaver);
   }
 
@@ -113,7 +114,7 @@ public class LocalBlockRunner {
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runBlock(
       TestGraph<I, V, E> graph, Block block, Object executionStage) {
-    VertexSaver<I, V, E> noOpVertexSaver = noOpVertexSaver();
+    SimpleVertexWriter<I, V, E> noOpVertexSaver = noOpVertexSaver();
     runBlockWithVertexOutput(
         block, executionStage, graph, noOpVertexSaver);
   }
@@ -126,7 +127,7 @@ public class LocalBlockRunner {
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runAppWithVertexOutput(
-      TestGraph<I, V, E> graph, final VertexSaver<I, V, E> vertexSaver) {
+      TestGraph<I, V, E> graph, final SimpleVertexWriter<I, V, E> vertexSaver) {
     BlockFactory<?> factory = BlockUtils.createBlockFactory(graph.getConf());
     runBlockWithVertexOutput(
         factory.createBlock(graph.getConf()),
@@ -142,18 +143,18 @@ public class LocalBlockRunner {
   <I extends WritableComparable, V extends Writable, E extends Writable>
   void runBlockWithVertexOutput(
       Block block, Object executionStage, TestGraph<I, V, E> graph,
-      final VertexSaver<I, V, E> vertexSaver
+      final SimpleVertexWriter<I, V, E> vertexSaver
   ) {
     Preconditions.checkNotNull(block);
     Preconditions.checkNotNull(graph);
     ImmutableClassesGiraphConfiguration<I, V, E> conf = graph.getConf();
-    int numWorkers = NUM_THREADS.get(conf);
+    int numPartitions = NUM_THREADS.get(conf);
     boolean runAllChecks = RUN_ALL_CHECKS.get(conf);
     boolean serializeMaster = SERIALIZE_MASTER.get(conf);
     final boolean doOutputDuringComputation = conf.doOutputDuringComputation();
 
     final InternalApi internalApi =
-        new InternalApi(graph, conf, runAllChecks);
+        new InternalApi(graph, conf, numPartitions, runAllChecks);
     final InternalWorkerApi internalWorkerApi = internalApi.getWorkerApi();
 
     BlockUtils.checkBlockTypes(block, executionStage, conf);
@@ -170,8 +171,7 @@ public class LocalBlockRunner {
           }
         }));
 
-    ExecutorService executor = Executors.newFixedThreadPool(numWorkers);
-    Random rand = new Random();
+    ExecutorService executor = Executors.newFixedThreadPool(numPartitions);
 
     if (runAllChecks) {
       for (Vertex<I, V, E> vertex : graph) {
@@ -204,9 +204,15 @@ public class LocalBlockRunner {
           blockMasterLogic.computeNext(superstep);
       if (workerPieces == null) {
         if (!conf.doOutputDuringComputation()) {
-          Collection<Vertex<I, V, E>> vertices = internalApi.getAllVertices();
-          for (Vertex<I, V, E> vertex : vertices) {
-            vertexSaver.saveVertex(vertex);
+          List<Partition<I, V, E>> partitions = internalApi.getPartitions();
+          for (Partition<I, V, E> partition : partitions) {
+            for (Vertex<I, V, E> vertex : partition) {
+              try {
+                vertexSaver.writeVertex(vertex);
+              } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            }
           }
         }
         int left = executor.shutdownNow().size();
@@ -214,14 +220,7 @@ public class LocalBlockRunner {
         break;
       } else {
         internalApi.afterMasterBeforeWorker(workerPieces);
-        List<List<Vertex<I, V, E>>> verticesPerWorker = new ArrayList<>();
-        for (int i = 0; i < numWorkers; i++) {
-          verticesPerWorker.add(new ArrayList<Vertex<I, V, E>>());
-        }
-        Collection<Vertex<I, V, E>> allVertices = internalApi.getAllVertices();
-        for (Vertex<I, V, E> vertex : allVertices) {
-          verticesPerWorker.get(rand.nextInt(numWorkers)).add(vertex);
-        }
+        List<Partition<I, V, E>> partitions = internalApi.getPartitions();
 
         workerContextLogic.preSuperstep(
             internalWorkerApi,
@@ -229,10 +228,10 @@ public class LocalBlockRunner {
             KryoWritableWrapper.wrapAndCopy(workerPieces), superstep,
             internalApi.takeWorkerMessages());
 
-        final CountDownLatch latch = new CountDownLatch(numWorkers);
+        final CountDownLatch latch = new CountDownLatch(numPartitions);
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         anyVertexAlive.set(false);
-        for (final List<Vertex<I, V, E>> curVertices : verticesPerWorker) {
+        for (final Partition<I, V, E> partition : partitions) {
           executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -244,16 +243,28 @@ public class LocalBlockRunner {
                 BlockWorkerLogic localLogic = new BlockWorkerLogic(localPieces);
                 localLogic.preSuperstep(internalWorkerApi, internalWorkerApi);
 
-                for (Vertex<I, V, E> vertex : curVertices) {
+                for (Vertex<I, V, E> vertex : partition) {
                   Iterable messages = internalApi.takeMessages(vertex.getId());
                   if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
                     vertex.wakeUp();
                   }
+                  // Equivalent of ComputeCallable.computePartition
                   if (!vertex.isHalted()) {
                     localLogic.compute(vertex, messages);
-                    if (doOutputDuringComputation) {
-                      vertexSaver.saveVertex(vertex);
+
+                    // Need to unwrap the mutated edges (possibly)
+                    vertex.unwrapMutableEdges();
+                    //Compact edges representation if possible
+                    if (vertex instanceof Trimmable) {
+                      ((Trimmable) vertex).trim();
                     }
+                    // Write vertex to superstep output
+                    // (no-op if it is not used)
+                    if (doOutputDuringComputation) {
+                      vertexSaver.writeVertex(vertex);
+                    }
+                    // Need to save the vertex changes (possibly)
+                    partition.saveVertex(vertex);
                   }
 
                   if (!vertex.isHalted()) {
@@ -295,14 +306,16 @@ public class LocalBlockRunner {
     }
 
     workerContextLogic.postApplication();
+    internalApi.postApplication();
   }
 
   private static
   <I extends WritableComparable, E extends Writable, V extends Writable>
-  VertexSaver<I, V, E> noOpVertexSaver() {
-    return new VertexSaver<I, V, E>() {
+  SimpleVertexWriter<I, V, E> noOpVertexSaver() {
+    return new SimpleVertexWriter<I, V, E>() {
       @Override
-      public void saveVertex(Vertex<I, V, E> vertex) {
+      public void writeVertex(Vertex<I, V, E> vertex)
+          throws IOException, InterruptedException {
         // No-op
       }
     };

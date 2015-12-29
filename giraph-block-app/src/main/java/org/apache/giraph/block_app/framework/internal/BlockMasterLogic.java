@@ -126,8 +126,12 @@ public class BlockMasterLogic<S> {
       postApplication();
       return null;
     } else {
-      LOG.info(
-          "Master executing " + previousPiece + ", in superstep " + superstep);
+      boolean logExecutionStatus =
+          BlockUtils.LOG_EXECUTION_STATUS.get(masterApi.getConf());
+      if (logExecutionStatus) {
+        LOG.info("Master executing " + previousPiece +
+            ", in superstep " + superstep);
+      }
       previousPiece.masterCompute(masterApi);
       ((BlockOutputHandleAccessor) masterApi).getBlockOutputHandle().
           returnAllWriters();
@@ -149,8 +153,10 @@ public class BlockMasterLogic<S> {
       BlockCounters.setStageCounters(
           "Master finished stage: ", previousPiece.getExecutionStage(),
           masterApi);
-      LOG.info(
-          "Master passing next " + nextPiece + ", in superstep " + superstep);
+      if (logExecutionStatus) {
+        LOG.info(
+            "Master passing next " + nextPiece + ", in superstep " + superstep);
+      }
 
       // if there is nothing more to compute, no need for additional superstep
       // this can only happen if application uses no pieces.
@@ -160,8 +166,10 @@ public class BlockMasterLogic<S> {
         result = null;
       } else {
         result = new BlockWorkerPieces<>(previousPiece, nextPiece);
-        LOG.info("Master in " + superstep + " superstep passing " +
-            result + " to be executed");
+        if (logExecutionStatus) {
+          LOG.info("Master in " + superstep + " superstep passing " +
+              result + " to be executed");
+        }
       }
 
       previousPiece = nextPiece;

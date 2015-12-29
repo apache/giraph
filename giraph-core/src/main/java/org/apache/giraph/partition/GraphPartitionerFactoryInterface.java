@@ -18,32 +18,42 @@
 
 package org.apache.giraph.partition;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.worker.LocalData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.google.common.primitives.UnsignedInts;
-
 /**
- * Implements range-based partitioning from the id hash code.
+ * Defines the partitioning framework for this application.
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public class HashRangeWorkerPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    extends HashWorkerPartitioner<I, V, E> {
-  /** A transformed hashCode() must be strictly smaller than this. */
-  private static final long HASH_LIMIT = 2L * Integer.MAX_VALUE + 2L;
+public interface GraphPartitionerFactoryInterface<I extends WritableComparable,
+    V extends Writable, E extends Writable> extends
+    ImmutableClassesGiraphConfigurable<I, V, E> {
 
-  @Override
-  public PartitionOwner getPartitionOwner(I vertexId) {
-    long unsignedHashCode = UnsignedInts.toLong(vertexId.hashCode());
-    // The reader can verify that unsignedHashCode of HASH_LIMIT - 1 yields
-    // index of size - 1, and unsignedHashCode of 0 yields index of 0.
-    int index = (int)
-        ((unsignedHashCode * getPartitionOwners().size()) / HASH_LIMIT);
-    return partitionOwnerList.get(index);
-  }
+  /**
+   * Use some local data present in the worker
+   *
+   * @param localData localData present in the worker
+   */
+  void initialize(LocalData<I, V, E, ? extends Writable> localData);
+  /**
+   * Create the {@link MasterGraphPartitioner} used by the master.
+   * Instantiated once by the master and reused.
+   *
+   * @return Instantiated master graph partitioner
+   */
+  MasterGraphPartitioner<I, V, E> createMasterGraphPartitioner();
+
+  /**
+   * Create the {@link WorkerGraphPartitioner} used by the worker.
+   * Instantiated once by every worker and reused.
+   *
+   * @return Instantiated worker graph partitioner
+   */
+  WorkerGraphPartitioner<I, V, E> createWorkerGraphPartitioner();
 }

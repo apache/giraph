@@ -65,8 +65,10 @@ public class BlockWorkerContextLogic {
       BlockWorkerContextSendApi sendApi,
       BlockWorkerPieces workerPieces, long superstep,
       List<Writable> messages) {
-    LOG.info("Worker executing " + workerPieces + " in " + superstep +
-        " superstep");
+    if (BlockUtils.LOG_EXECUTION_STATUS.get(receiveApi.getConf())) {
+      LOG.info("Worker executing " + workerPieces + " in " + superstep +
+          " superstep");
+    }
     this.sendApi = sendApi;
     this.workerPieces = workerPieces;
     if (workerPieces.getReceiver() != null) {

@@ -18,7 +18,6 @@
 package org.apache.giraph.block_app.framework.api.local;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -53,6 +52,8 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.master.AggregatorToGlobalCommTranslation;
+import org.apache.giraph.partition.GraphPartitionerFactory;
+import org.apache.giraph.partition.Partition;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.utils.TestGraph;
 import org.apache.giraph.utils.WritableUtils;
@@ -74,7 +75,10 @@ import com.google.common.base.Preconditions;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 class InternalApi<I extends WritableComparable, V extends Writable,
     E extends Writable> implements BlockMasterApi, BlockOutputHandleAccessor {
-  private final TestGraph<I, V, E> graph;
+  private final TestGraph<I, V, E> inputGraph;
+  private final List<Partition<I, V, E>> partitions;
+  private final GraphPartitionerFactory<I, V, E> partitionerFactory;
+
   private final ImmutableClassesGiraphConfiguration conf;
   private final boolean runAllChecks;
   private final InternalAggregators globalComm;
@@ -94,8 +98,22 @@ class InternalApi<I extends WritableComparable, V extends Writable,
   public InternalApi(
       TestGraph<I, V, E> graph,
       ImmutableClassesGiraphConfiguration conf,
+      int numPartitions,
       boolean runAllChecks) {
-    this.graph = graph;
+    this.inputGraph = graph;
+    this.partitions = new ArrayList<>(numPartitions);
+    for (int i = 0; i < numPartitions; i++) {
+      this.partitions.add(conf.createPartition(i, null));
+    }
+    this.partitionerFactory = conf.createGraphPartitioner();
+    Preconditions.checkNotNull(this.partitionerFactory);
+    Preconditions.checkState(this.partitions.size() == numPartitions);
+
+    for (Vertex<I, V, E> vertex : graph) {
+      getPartition(vertex.getId()).putVertex(vertex);
+    }
+    graph.clear();
+
     this.conf = conf;
     this.runAllChecks = runAllChecks;
     this.globalComm = new InternalAggregators(runAllChecks);
@@ -362,8 +380,8 @@ class InternalApi<I extends WritableComparable, V extends Writable,
       Collections.EMPTY_SET : previousMessages.targetsSet();
     if (createVertexOnMsgs) {
       for (I target : targets) {
-        if (!graph.getVertices().containsKey(target)) {
-          mutations.put(target, new VertexMutations<I, V, E>());
+        if (getPartition(target).getVertex(target) == null) {
+          mutations.putIfAbsent(target, new VertexMutations<I, V, E>());
         }
       }
     }
@@ -371,23 +389,25 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     VertexResolver<I, V, E> vertexResolver = conf.createVertexResolver();
     for (Map.Entry<I, VertexMutations<I, V, E>> entry : mutations.entrySet()) {
       I vertexIndex = entry.getKey();
-      Vertex<I, V, E> originalVertex = graph.getVertex(vertexIndex);
+      Vertex<I, V, E> originalVertex =
+          getPartition(vertexIndex).getVertex(vertexIndex);
       VertexMutations<I, V, E> curMutations = entry.getValue();
       Vertex<I, V, E> vertex = vertexResolver.resolve(
           vertexIndex, originalVertex, curMutations,
           targets.contains(vertexIndex));
 
       if (vertex != null) {
-        graph.addVertex(vertex);
+        getPartition(vertex.getId()).putVertex(vertex);
       } else if (originalVertex != null) {
-        graph.getVertices().remove(originalVertex.getId());
+        getPartition(originalVertex.getId()).removeVertex(
+            originalVertex.getId());
       }
     }
     mutations.clear();
   }
 
-  public Collection<Vertex<I, V, E>> getAllVertices() {
-    return graph.getVertices().values();
+  public List<Partition<I, V, E>> getPartitions() {
+    return partitions;
   }
 
   public InternalWorkerApi getWorkerApi() {
@@ -397,15 +417,19 @@ class InternalApi<I extends WritableComparable, V extends Writable,
   @Override
   public long getTotalNumEdges() {
     int numEdges = 0;
-    for (Vertex<I, V, E> vertex : graph.getVertices().values()) {
-      numEdges += vertex.getNumEdges();
+    for (Partition<I, V, E> partition : partitions) {
+      numEdges += partition.getEdgeCount();
     }
     return numEdges;
   }
 
   @Override
   public long getTotalNumVertices() {
-    return graph.getVertices().size();
+    int numVertices = 0;
+    for (Partition<I, V, E> partition : partitions) {
+      numVertices += partition.getVertexCount();
+    }
+    return numVertices;
   }
 
   @Override
@@ -437,5 +461,22 @@ class InternalApi<I extends WritableComparable, V extends Writable,
   @Override
   public int getWorkerCount() {
     return 1;
+  }
+
+  private int getPartitionId(I id) {
+    Preconditions.checkNotNull(id);
+    return partitionerFactory.getPartition(id, partitions.size(), 1);
+  }
+
+  private Partition<I, V, E> getPartition(I id) {
+    return partitions.get(getPartitionId(id));
+  }
+
+  public void postApplication() {
+    for (Partition<I, V, E> partition : partitions) {
+      for (Vertex<I, V, E> vertex : partition) {
+        inputGraph.setVertex(vertex);
+      }
+    }
   }
 }

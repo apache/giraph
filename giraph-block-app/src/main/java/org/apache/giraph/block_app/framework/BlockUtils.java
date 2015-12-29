@@ -28,6 +28,7 @@ import org.apache.giraph.block_app.framework.api.giraph.BlockWorkerContext;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
+import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.ClassConfOption;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
@@ -57,6 +58,12 @@ public class BlockUtils {
           "digraph.block_worker_context_value_class",
           Object.class, Object.class,
           "block worker context value class");
+
+  /** Property describing whether to log execution status as application runs */
+  public static final
+  BooleanConfOption LOG_EXECUTION_STATUS = new BooleanConfOption(
+      "giraph.block_utils.log_execution_status", true,
+      "Log execution status (of which pieces are being executed, etc)");
 
   private static final Logger LOG = Logger.getLogger(BlockUtils.class);
 

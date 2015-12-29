@@ -32,13 +32,13 @@ import org.apache.hadoop.io.Writable;
  * @param <E> Edge value type
  */
 public class SimpleLongRangePartitionerFactory<V extends Writable,
-  E extends Writable> extends SimplePartitionerFactory<LongWritable, V, E> {
+  E extends Writable> extends GraphPartitionerFactory<LongWritable, V, E> {
 
   /** Vertex key space size. */
   private long keySpaceSize;
 
   @Override
-  protected int getPartition(LongWritable id, int partitionCount,
+  public int getPartition(LongWritable id, int partitionCount,
     int workerCount) {
     return getPartition(id, partitionCount);
   }
@@ -56,7 +56,7 @@ public class SimpleLongRangePartitionerFactory<V extends Writable,
   }
 
   @Override
-  protected int getWorker(int partition, int partitionCount, int workerCount) {
+  public int getWorker(int partition, int partitionCount, int workerCount) {
     return getPartitionInRange(partition, partitionCount, workerCount);
   }
 

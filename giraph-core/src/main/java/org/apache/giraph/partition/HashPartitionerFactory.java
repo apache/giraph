@@ -15,11 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.worker.LocalData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -27,27 +24,21 @@ import org.apache.hadoop.io.WritableComparable;
  * Divides the vertices into partitions by their hash code using a simple
  * round-robin hash for great balancing if given a random hash code.
  *
- * @param <I> Vertex index value
+ * @param <I> Vertex id value
  * @param <V> Vertex value
  * @param <E> Edge value
  */
-@SuppressWarnings("rawtypes")
 public class HashPartitionerFactory<I extends WritableComparable,
-  V extends Writable, E extends Writable>
-  extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
-  implements GraphPartitionerFactory<I, V, E>  {
+    V extends Writable, E extends Writable>
+    extends GraphPartitionerFactory<I, V, E> {
 
   @Override
-  public void initialize(LocalData<I, V, E, ? extends Writable> localData) {
+  public int getPartition(I id, int partitionCount, int workerCount) {
+    return Math.abs(id.hashCode() % partitionCount);
   }
 
   @Override
-  public MasterGraphPartitioner<I, V, E> createMasterGraphPartitioner() {
-    return new HashMasterPartitioner<I, V, E>(getConf());
-  }
-
-  @Override
-  public WorkerGraphPartitioner<I, V, E> createWorkerGraphPartitioner() {
-    return new HashWorkerPartitioner<I, V, E>();
+  public int getWorker(int partition, int partitionCount, int workerCount) {
+    return partition % workerCount;
   }
 }

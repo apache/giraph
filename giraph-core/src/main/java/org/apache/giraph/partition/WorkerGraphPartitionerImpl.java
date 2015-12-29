@@ -38,12 +38,12 @@ import org.apache.log4j.Logger;
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
+public abstract class WorkerGraphPartitionerImpl<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements WorkerGraphPartitioner<I, V, E> {
   /** Logger instance */
   private static final Logger LOG = Logger.getLogger(
-      SimpleWorkerPartitioner.class);
+      WorkerGraphPartitionerImpl.class);
   /** List of {@link PartitionOwner}s for this worker. */
   private List<PartitionOwner> partitionOwnerList = Lists.newArrayList();
   /** List of available workers */

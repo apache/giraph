@@ -58,7 +58,6 @@ public class SyntheticGraphInit<I extends WritableComparable,
     this.edgeSupplier = null;
   }
 
-
   @Override
   public void modifyGraph(NumericTestGraph<I, V, E> graph) {
     GiraphConfiguration conf = graph.getConf();
@@ -84,11 +83,5 @@ public class SyntheticGraphInit<I extends WritableComparable,
             i, j, edgeSupplier != null ? edgeSupplier.get() : null);
       }
     }
-
-//    if (vertexModifier != null) {
-//      for (int i = 0; i < numVertices; i++) {
-//        vertexModifier.modifyVertexValue(i, graph.getVertex(i).getValue());
-//      }
-//    }
   }
 }
