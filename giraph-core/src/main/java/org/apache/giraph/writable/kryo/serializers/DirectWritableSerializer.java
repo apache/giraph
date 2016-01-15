@@ -22,6 +22,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -64,6 +65,11 @@ public class DirectWritableSerializer<T extends Writable>
           "DirectWritableSerializer.read calling Writable method of class: " +
           type.getName() + " encountered issues", e);
     }
+  }
+
+  @Override
+  public T copy(Kryo kryo, T original) {
+    return WritableUtils.createCopy(original);
   }
 
   /**
