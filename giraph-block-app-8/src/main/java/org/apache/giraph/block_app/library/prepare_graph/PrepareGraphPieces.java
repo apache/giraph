@@ -17,8 +17,11 @@
  */
 package org.apache.giraph.block_app.library.prepare_graph;
 
+import com.google.common.hash.Funnel;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import java.util.Iterator;
-
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
@@ -42,8 +45,11 @@ import org.apache.giraph.function.ObjectTransfer;
 import org.apache.giraph.function.primitive.Int2ObjFunction;
 import org.apache.giraph.function.primitive.Obj2DoubleFunction;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;
+import org.apache.giraph.function.vertex.SupplierFromVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.object.MultiSizedReusable;
 import org.apache.giraph.reducers.impl.SumReduce;
+import org.apache.giraph.reducers.impl.LongXorReduce;
 import org.apache.giraph.types.NoMessage;
 import org.apache.giraph.types.ops.NumericTypeOps;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
@@ -396,5 +402,85 @@ public class PrepareGraphPieces {
         return sum;
       }),
       sumEdgeWeights);
+  }
+
+  /**
+   * isSymmetricBlock using a sensible default HashFunction
+   *
+   * @see Hashing#murmur3_128()
+   * @see #isSymmetricBlock(Funnel, Consumer, HashFunction)
+   */
+  public static <I extends WritableComparable> Block isSymmetricBlock(
+      Funnel<I> idHasher,
+      Consumer<Boolean> consumer) {
+    return isSymmetricBlock(idHasher, consumer, Hashing.murmur3_128());
+  }
+
+  /**
+   * Checks whether a graph is symmetric and returns the result to a consumer.
+   *
+   * @param idHasher Allows Vertex ids to submit themselves to hashing
+   *                 without artificially converting to an intermediate
+   *                 type e.g. Long or String.
+   * @param consumer the return store for whether the graph is symmetric
+   * @param <I> the type of Vertex id
+   * @return block that checks for symmetric graphs
+   */
+  public static <I extends WritableComparable> Block isSymmetricBlock(
+      Funnel<I> idHasher,
+      Consumer<Boolean> consumer,
+      HashFunction hashFunction) {
+
+    SupplierFromVertex<I, Writable, Writable, LongWritable>
+        s = (vertex) -> new LongWritable(
+          xorEdges(vertex, idHasher, hashFunction));
+
+    Consumer<LongWritable> longConsumer =
+        (xorValue) -> consumer.apply(xorValue.get() == 0L);
+
+    return Pieces.reduce(
+        "HashEdges",
+        LongXorReduce.INSTANCE,
+        s,
+        longConsumer
+    );
+  }
+
+  /**
+   * Predictably XOR all edges for a single vertex. The value to be
+   * XORed is (smaller(v1|v2), larger(v1|v2)) and skipping self-loops
+   * since we want to detect asymmetric graphs.
+   *
+   * Uses a HashFunction to get high collision prevention and bit dispersion.
+   *
+   * @see HashFunction
+   */
+  private static <I extends WritableComparable> long xorEdges(
+      Vertex<I, Writable, Writable> vertex,
+      Funnel<I> idHasher, HashFunction hashFunction) {
+    long result = 0L;
+
+    for (Edge<I, Writable> e : vertex.getEdges()) {
+      Hasher h = hashFunction.newHasher();
+
+      I thisVertexId = vertex.getId();
+      I thatVertexId = e.getTargetVertexId();
+
+      int comparison = thisVertexId.compareTo(thatVertexId);
+
+      if (comparison != 0) {
+        if (comparison < 0) {
+          idHasher.funnel(thisVertexId, h);
+          idHasher.funnel(thatVertexId, h);
+        } else {
+          idHasher.funnel(thatVertexId, h);
+          idHasher.funnel(thisVertexId, h);
+        }
+
+        result ^= h.hash().asLong();
+      }
+    }
+
+    return result;
   }
 }
