@@ -115,6 +115,7 @@ public class JobProgressTrackerService implements JobProgressTracker {
         }
       }
     });
+    writerThread.setDaemon(true);
     writerThread.start();
   }
 
@@ -132,7 +133,7 @@ public class JobProgressTrackerService implements JobProgressTracker {
         GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf);
     if (maxAllowedJobTimeMs > 0) {
       // Start a thread which will kill the job if running for too long
-      new Thread(new Runnable() {
+      Thread killThread = new Thread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -151,7 +152,9 @@ public class JobProgressTrackerService implements JobProgressTracker {
             }
           }
         }
-      }).start();
+      });
+      killThread.setDaemon(true);
+      killThread.start();
     }
   }
 
