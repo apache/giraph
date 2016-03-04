@@ -19,7 +19,11 @@ package org.apache.giraph.block_app.framework.internal;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.giraph.block_app.framework.BlockFactory;
 import org.apache.giraph.block_app.framework.BlockUtils;
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
@@ -28,6 +32,7 @@ import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.function.Consumer;
+import org.apache.giraph.writable.tuple.IntLongWritable;
 import org.apache.log4j.Logger;
 import org.python.google.common.base.Preconditions;
 
@@ -48,6 +53,13 @@ public class BlockMasterLogic<S> {
   private long lastTimestamp = -1;
   private BlockWorkerPieces previousWorkerPieces;
   private boolean computationDone;
+
+  /** Tracks elapsed time on master for each distinct Piece */
+  private final TimeStatsPerEvent masterPerPieceTimeStats =
+      new TimeStatsPerEvent("master");
+  /** Tracks elapsed time on workers for each pair of recieve/send pieces. */
+  private final TimeStatsPerEvent workerPerPieceTimeStats =
+      new TimeStatsPerEvent("worker");
 
   /**
    * Initialize master logic to execute BlockFactory defined in
@@ -119,7 +131,7 @@ public class BlockMasterLogic<S> {
     if (lastTimestamp != -1) {
       BlockCounters.setWorkerTimeCounter(
           previousWorkerPieces, superstep - 1,
-          beforeMaster - lastTimestamp, masterApi);
+          beforeMaster - lastTimestamp, masterApi, workerPerPieceTimeStats);
     }
 
     if (previousPiece == null) {
@@ -139,7 +151,8 @@ public class BlockMasterLogic<S> {
 
       if (previousPiece.getPiece() != null) {
         BlockCounters.setMasterTimeCounter(
-            previousPiece, superstep, afterMaster - beforeMaster, masterApi);
+            previousPiece, superstep, afterMaster - beforeMaster, masterApi,
+            masterPerPieceTimeStats);
       }
 
       PairedPieceAndStage<S> nextPiece;
@@ -187,6 +200,82 @@ public class BlockMasterLogic<S> {
         closeAllWriters();
     Preconditions.checkState(!computationDone);
     computationDone = true;
+    IntLongWritable masterTimes = masterPerPieceTimeStats.logTimeSums();
+    IntLongWritable workerTimes = workerPerPieceTimeStats.logTimeSums();
+    LOG.info("Time split:\n" +
+        TimeStatsPerEvent.header() +
+        TimeStatsPerEvent.line(
+            masterTimes.getLeft().get(),
+            100.0 * masterTimes.getRight().get() /
+              (masterTimes.getRight().get() + workerTimes.getRight().get()),
+            masterTimes.getRight().get(),
+            "master") +
+        TimeStatsPerEvent.line(
+            workerTimes.getLeft().get(),
+            100.0 * workerTimes.getRight().get() /
+              (masterTimes.getRight().get() + workerTimes.getRight().get()),
+            workerTimes.getRight().get(),
+            "worker"));
   }
 
+  /**
+   * Class tracking invocation count and elapsed time for a set of events,
+   * each event being having a String name.
+   */
+  public static class TimeStatsPerEvent {
+    private final String groupName;
+    private final Map<String, IntLongWritable> keyToCountAndTime =
+        new TreeMap<>();
+
+    public TimeStatsPerEvent(String groupName) {
+      this.groupName = groupName;
+    }
+
+    public void inc(String name, long millis) {
+      IntLongWritable val = keyToCountAndTime.get(name);
+      if (val == null) {
+        val = new IntLongWritable();
+        keyToCountAndTime.put(name, val);
+      }
+      val.getLeft().set(val.getLeft().get() + 1);
+      val.getRight().set(val.getRight().get() + millis);
+    }
+
+    public IntLongWritable logTimeSums() {
+      StringBuilder sb = new StringBuilder("Time sums " + groupName + ":\n");
+      sb.append(header());
+      long total = 0;
+      int count = 0;
+      for (Entry<String, IntLongWritable> entry :
+            keyToCountAndTime.entrySet()) {
+        total += entry.getValue().getRight().get();
+        count += entry.getValue().getLeft().get();
+      }
+
+      for (Entry<String, IntLongWritable> entry :
+            keyToCountAndTime.entrySet()) {
+        sb.append(line(
+            entry.getValue().getLeft().get(),
+            (100.0 * entry.getValue().getRight().get()) / total,
+            entry.getValue().getRight().get(),
+            entry.getKey()));
+      }
+      LOG.info(sb);
+      return new IntLongWritable(count, total);
+    }
+
+    public static String header() {
+      return String.format(
+          "%10s%10s%11s   %s%n", "count", "time %", "time", "name");
+    }
+
+    public static String line(
+        int count, double percTime, long time, String name) {
+      return String.format("%10d%9.2f%%%11s   %s%n",
+          count,
+          percTime,
+          DurationFormatUtils.formatDuration(time, "HH:mm:ss"),
+          name);
+    }
+  }
 }

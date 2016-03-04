@@ -20,6 +20,7 @@ package org.apache.giraph.block_app.framework.internal;
 import java.lang.reflect.Field;
 
 import org.apache.giraph.block_app.framework.api.StatusReporter;
+import org.apache.giraph.block_app.framework.internal.BlockMasterLogic.TimeStatsPerEvent;
 
 /** Utility class for Blocks Framework related counters */
 public class BlockCounters {
@@ -60,20 +61,26 @@ public class BlockCounters {
 
   public static void setMasterTimeCounter(
       PairedPieceAndStage<?> masterPiece, long superstep,
-      long millis, StatusReporter reporter) {
+      long millis, StatusReporter reporter,
+      TimeStatsPerEvent timeStats) {
+    String name = masterPiece.getPiece().toString();
     reporter.getCounter(
         GROUP + " Master Timers",
         String.format(
-            "In %6.1f %s (s)", superstep - 0.5, masterPiece.getPiece())
+            "In %6.1f %s (s)", superstep - 0.5, name)
     ).setValue(millis / 1000);
+    timeStats.inc(name, millis);
   }
 
   public static void setWorkerTimeCounter(
       BlockWorkerPieces<?> workerPieces, long superstep,
-      long millis, StatusReporter reporter) {
+      long millis, StatusReporter reporter,
+      TimeStatsPerEvent timeStats) {
+    String name = workerPieces.toStringShort();
     reporter.getCounter(
         GROUP + " Worker Timers",
-        String.format("In %6d %s (s)", superstep, workerPieces.toStringShort())
+        String.format("In %6d %s (s)", superstep, name)
     ).setValue(millis / 1000);
+    timeStats.inc(name, millis);
   }
 }
