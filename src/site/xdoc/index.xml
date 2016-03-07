@@ -37,6 +37,7 @@ under the License.
 
       <subsection name="News">
         <ul>
+          <li><strong>Oct 28, 2015: Practical Graph Analytics with Apache Giraph is now available from Apress.</strong> More details in our books section <a href="literature.html">here</a>.</li>
           <li><strong>Nov 19, 2014: Giraph 1.1.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.1.0">here</a>.</li>
           <li><strong>May 6, 2013: Giraph 1.0.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
           <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the archived release <a href="http://archive.apache.org/dist/incubator/giraph">here</a>.</li>

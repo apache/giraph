@@ -31,14 +31,12 @@ under the License.
     <section name="Books">
 		<table>
 	        <tr>
-				<td>		<b>Giraph in Action</b> (<a href="http://www.manning.com/martella">MANNING</a>)<br/> 
-		Giraph in Action teaches you how to apply the Apache Giraph programming model to real-world graph data examples. The book starts by showing you how to mine graph data 
-		using the most straightforward algorithms. Then, you'll dive into the Giraph architecture and the main APIs as you discover how to model and process more complex scenarios. 
-		Along the way, you'll pick up techniques for handling data from disparate sources, swapping data in and out of memory, and running Giraph in the cloud.
-                </td>
-                <td><img src="http://www.manning.com/martella/martella_cover150.jpg"/><br/>
-                <i>You can use coupon "<b>giraph38</b>" to get <b>38%</b> off Giraph in Action (all formats)".</i></td>
-			</tr>
+		   <td><b>Practical Graph Analytics with Apache Giraph</b>(<a href="http://www.apress.com/9781484212523">Published by Apress</a>)<br/> 
+                       Practical Graph Analytics with Apache Giraph helps you build data mining and machine learning applications using the Apache Foundation’s Giraph framework for graph processing. This is the same framework as used by Facebook, Google, and other social media analytics operations to derive business value from vast amounts of interconnected data points.
+                   </td>
+                   <td><img src="http://www.apress.com/media/catalog/product/cache/9/image/9df78eab33525d08d6e5fb8d27136e95/A/9/A9781484212523-3d.png"/><br/>
+                   </td>
+		</tr>
 		</table>
     </section>
  
