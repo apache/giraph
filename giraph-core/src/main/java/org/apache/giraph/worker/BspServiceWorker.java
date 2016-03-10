@@ -178,6 +178,9 @@ public class BspServiceWorker<I extends WritableComparable,
   /** InputSplit handlers used in INPUT_SUPERSTEP */
   private WorkerInputSplitsHandler inputSplitsHandler;
 
+  /** Memory observer */
+  private final MemoryObserver memoryObserver;
+
   /**
    * Constructor for setting up the worker.
    *
@@ -237,6 +240,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
     inputSplitsHandler = new WorkerInputSplitsHandler(
         workerInfo, masterInfo.getTaskId(), workerClient);
+
+    memoryObserver = new MemoryObserver(getZkExt(), memoryObserverPath, conf);
   }
 
   @Override
@@ -1010,16 +1015,13 @@ else[HADOOP_NON_SECURE]*/
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
-            LOG.info("Write thread started!");
             while (true) {
               Partition<I, V, E> partition =
                   getPartitionStore().getNextPartition();
-              LOG.info("partition is : " + partition);
               if (partition == null) {
                 break;
               }
 
-              LOG.info("start to write a partition");
               long verticesWritten = 0;
               for (Vertex<I, V, E> vertex : partition) {
                 vertexWriter.writeVertex(vertex);
@@ -1036,7 +1038,6 @@ else[HADOOP_NON_SECURE]*/
                   nextPrintMsecs = System.currentTimeMillis() + 15000;
                   nextPrintVertices = verticesWritten + 250000;
                 }
-                LOG.info("done writing vertices");
 
                 if (verticesWritten >= nextUpdateProgressVertices) {
                   WorkerProgress.get().addVerticesStored(
@@ -1760,6 +1761,10 @@ else[HADOOP_NON_SECURE]*/
             "(at least one worker is done sending partitions)");
       }
       partitionExchangeChildrenChanged.signal();
+      foundEvent = true;
+    } else if (event.getPath().contains(MEMORY_OBSERVER_DIR) &&
+        event.getType() == EventType.NodeChildrenChanged) {
+      memoryObserver.callGc();
       foundEvent = true;
     }
 

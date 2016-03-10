@@ -111,6 +111,8 @@ public abstract class BspService<I extends WritableComparable,
   public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
   /** Denotes that computation should be halted */
   public static final String HALT_COMPUTATION_NODE = "/_haltComputation";
+  /** Memory observer dir */
+  public static final String MEMORY_OBSERVER_DIR = "/_memoryObserver";
   /** User sets this flag to checkpoint and stop the job */
   public static final String FORCE_CHECKPOINT_USER_FLAG = "/_checkpointAndStop";
   /** Denotes which workers have been cleaned up */
@@ -160,6 +162,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String masterElectionPath;
   /** If this path exists computation will be halted */
   protected final String haltComputationPath;
+  /** Path where memory observer stores data */
+  protected final String memoryObserverPath;
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
@@ -273,6 +277,7 @@ public abstract class BspService<I extends WritableComparable,
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
     String serverPortList = conf.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
+    memoryObserverPath = basePath + MEMORY_OBSERVER_DIR;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
         haltComputationPath);
     if (LOG.isInfoEnabled()) {
