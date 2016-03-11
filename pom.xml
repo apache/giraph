@@ -576,6 +576,8 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-gora</module>
+        <module>giraph-rexster</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
