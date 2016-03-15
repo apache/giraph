@@ -15,22 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+${generated_message}
+
 /**
- * Function:
- * (T) -> boolean
- * <br>
- * Specialization of com.google.common.base.Predicate, that is also
- * Serializable.
- *
- * @param <T> Argument type
+ * Primitive specialization of Function:
+ * (${type.lower}) -> void
  */
-public interface Predicate<T> extends Serializable {
+public interface ${type.camel}Consumer extends Serializable {
   /**
-   * Returns the result of applying this predicate to {@code input}.
+   * Applies this function to {@code input}
+   *
+   * @param input input
    */
-  boolean apply(T input);
+  void apply(${type.lower} input);
 }

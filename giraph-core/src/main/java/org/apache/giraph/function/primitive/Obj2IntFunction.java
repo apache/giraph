@@ -19,15 +19,21 @@ package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /**
  * Primitive specialization of Function:
- * (F) -> float
+ * (T) -> int
  *
  * @param <T> Argument type
  */
-public interface Obj2FloatFunction<T> extends Serializable {
+public interface Obj2IntFunction<T> extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
+   *
+   * @param input input
+   * @return result
    */
-  float apply(T input);
+  int apply(T input);
 }

@@ -15,27 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
-/**
- * Function:
- * (F1, F2, F3) -> T
- *
- * @param <F1> First argument type
- * @param <F2> Second argument type
- * @param <F3> Third argument type
- * @param <T> Result type
- */
-public interface TripleFunction<F1, F2, F3, T> extends Serializable {
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
 
+/**
+ * Primitive specialization of Function:
+ * (long) -> void
+ */
+public interface LongConsumer extends Serializable {
   /**
-   * Returns the result of applying this function to given
-   * {@code input1}, {@code input2} and {@code input3}.
+   * Applies this function to {@code input}
    *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
+   * @param input input
    */
-  T apply(F1 input1, F2 input2, F3 input3);
+  void apply(long input);
 }

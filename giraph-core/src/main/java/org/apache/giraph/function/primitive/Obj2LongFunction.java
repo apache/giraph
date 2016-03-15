@@ -15,34 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.vertex;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
-import org.apache.giraph.function.PairConsumer;
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
 
 /**
- * Function:
- * (vertex, T) -> void
+ * Primitive specialization of Function:
+ * (T) -> long
  *
- * A class that can consume objects of a single type, when given a vertex.
- *
- * @param <I> Vertex id type
- * @param <V> Vertex value type
- * @param <E> Edge value type
  * @param <T> Argument type
  */
-@SuppressWarnings("rawtypes")
-public interface ConsumerWithVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, T>
-    extends PairConsumer<Vertex<I, V, E>, T>, Serializable  {
+public interface Obj2LongFunction<T> extends Serializable {
   /**
-   * Applies this function to {@code vertex} and {@code input}
+   * Returns the result of applying this function to given {@code input}.
+   *
+   * @param input input
+   * @return result
    */
-  @Override
-  void apply(Vertex<I, V, E> vertex, T value);
+  long apply(T input);
 }

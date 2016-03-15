@@ -33,8 +33,13 @@ public interface PrimitiveRefs {
    * for use when lambdas need to mutate capturing int local variable.
    */
   public class IntRef {
+    /** value */
     public int value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public IntRef(int value) {
       this.value = value;
     }
@@ -45,8 +50,13 @@ public interface PrimitiveRefs {
    * for use when lambdas need to mutate capturing long local variable.
    */
   public class LongRef {
+    /** value */
     public long value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public LongRef(long value) {
       this.value = value;
     }
@@ -57,8 +67,13 @@ public interface PrimitiveRefs {
    * for use when lambdas need to mutate capturing int local variable.
    */
   public class ShortRef {
+    /** value */
     public short value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public ShortRef(short value) {
       this.value = value;
     }
@@ -70,8 +85,13 @@ public interface PrimitiveRefs {
    * for use when lambdas need to mutate capturing float local variable.
    */
   public class FloatRef {
+    /** value */
     public float value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public FloatRef(float value) {
       this.value = value;
     }
@@ -82,8 +102,13 @@ public interface PrimitiveRefs {
    * for use when lambdas need to mutate capturing double local variable.
    */
   public class DoubleRef {
+    /** value */
     public double value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public DoubleRef(double value) {
       this.value = value;
     }
@@ -96,8 +121,13 @@ public interface PrimitiveRefs {
    * <O> object
    */
   public class ObjRef<O> {
+    /** value */
     public O value;
 
+    /**
+     * Constructor
+     * @param value initial value
+     */
     public ObjRef(O value) {
       this.value = value;
     }

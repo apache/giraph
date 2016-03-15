@@ -21,17 +21,25 @@ import java.io.Serializable;
 
 /**
  * Function:
- * () -> T
- * <br>
- * Specialization of com.google.common.base.Supplier, that is also
- * Serializable.
+ * (F1, F2, F3) -> T
  *
+ * @param <F1> First argument type
+ * @param <F2> Second argument type
+ * @param <F3> Third argument type
  * @param <T> Result type
  */
-public interface Supplier<T> extends Serializable {
+public interface TripleFunction<F1, F2, F3, T> extends Serializable {
   /**
-   * Retrieves an instance of the appropriate type. The returned object may or
-   * may not be a new instance, depending on the implementation.
+   * Returns the result of applying this function to given
+   * {@code input1}, {@code input2} and {@code input3}.
+   *
+   * The returned object may or may not be a new instance,
+   * depending on the implementation.
+   *
+   * @param input1 first input
+   * @param input2 second input
+   * @param input3 third input
+   * @return result
    */
-  T get();
+  T apply(F1 input1, F2 input2, F3 input3);
 }

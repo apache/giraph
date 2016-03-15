@@ -15,21 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
 /**
- * Function:
- * (T) -> boolean
+ * Primitive specialization of Function:
+ * (double) -> T
  *
- * @param <T1> First argument type
- * @param <T2> Second argument type
+ * @param <T> Result type
  */
-public interface PairPredicate<T1, T2> extends Serializable {
+public interface Double2ObjFunction<T> extends Serializable {
   /**
-   * Returns the result of applying this predicate to
-   * {@code input1} and {@code input2}.
+   * Returns the result of applying this function to given {@code input}.
+   *
+   * The returned object may or may not be a new instance,
+   * depending on the implementation.
+   *
+   * @param input input
+   * @return result
    */
-  boolean apply(T1 input1, T2 input2);
+  T apply(double input);
 }

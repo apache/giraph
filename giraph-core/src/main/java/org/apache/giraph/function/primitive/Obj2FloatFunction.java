@@ -15,20 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /**
- * Function:
- * (T1, T2) -> void
+ * Primitive specialization of Function:
+ * (T) -> float
  *
- * @param <T1> First argument type
- * @param <T2> Second argument type
+ * @param <T> Argument type
  */
-public interface PairConsumer<T1, T2> extends Serializable {
+public interface Obj2FloatFunction<T> extends Serializable {
   /**
-   * Applies this function to {@code input1} and {@code input2}
+   * Returns the result of applying this function to given {@code input}.
+   *
+   * @param input input
+   * @return result
    */
-  void apply(T1 input1, T2 input2);
+  float apply(T input);
 }

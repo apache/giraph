@@ -17,40 +17,21 @@
  */
 package org.apache.giraph.function;
 
+import java.io.Serializable;
+
 /**
- * Default object holder, intermediary between producers and consumers.
+ * Function:
+ * (T1, T2) -> void
  *
- * Holds value in memory, so can be used only when producer and consumer
- * are in the same context.
- *
- * Useful when value is set on the master, and later read in block logic
- * (RepeatUntilBlock), or in a different Piece, either on worker or master.
- * If it is read within the same piece - just use local field.
- *
- * @param <T> Type of object to hold.
+ * @param <T1> First argument type
+ * @param <T2> Second argument type
  */
-public class ObjectHolder<T> implements Supplier<T>, Consumer<T> {
-  private T value;
-
-  public ObjectHolder(T value) {
-    this.value = value;
-  }
-
-  public ObjectHolder() {
-  }
-
-  @Override
-  public T get() {
-    return value;
-  }
-
-  @Override
-  public void apply(T value) {
-    this.value = value;
-  }
-
-  @Override
-  public String toString() {
-    return getClass() + " [value=" + value + "]";
-  }
+public interface PairConsumer<T1, T2> extends Serializable {
+  /**
+   * Applies this function to {@code input1} and {@code input2}
+   *
+   * @param input1 first input
+   * @param input2 second input
+   */
+  void apply(T1 input1, T2 input2);
 }

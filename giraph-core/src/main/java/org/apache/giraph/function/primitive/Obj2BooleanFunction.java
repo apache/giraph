@@ -15,20 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
 
 /**
- * Function:
- * (T) -> void
+ * Primitive specialization of Function:
+ * (T) -> boolean
  *
  * @param <T> Argument type
  */
-public interface Consumer<T> extends Serializable {
+public interface Obj2BooleanFunction<T> extends Serializable {
   /**
-   * Applies this function to {@code input}
+   * Returns the result of applying this function to given {@code input}.
+   *
+   * @param input input
+   * @return result
    */
-  void apply(T input);
+  boolean apply(T input);
 }

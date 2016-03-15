@@ -15,35 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.vertex;
+package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
 
 /**
- * Function:
- * (vertex) -> T
+ * Primitive specialization of Function:
+ * (T) -> byte
  *
- * A class that can supply objects of a single type, when given a vertex.
- *
- * (doesn't extend Function<Vertex<I, V, E>, T>, because of different
- * method names)
- *
- * @param <I> Vertex id type
- * @param <V> Vertex value type
- * @param <E> Edge value type
- * @param <T> Result type
+ * @param <T> Argument type
  */
-@SuppressWarnings("rawtypes")
-public interface SupplierFromVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, T> extends Serializable {
+public interface Obj2ByteFunction<T> extends Serializable {
   /**
-   * Retrieves an instance of the appropriate type, given a vertex.
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
+   * Returns the result of applying this function to given {@code input}.
+   *
+   * @param input input
+   * @return result
    */
-  T get(Vertex<I, V, E> vertex);
+  byte apply(T input);
 }

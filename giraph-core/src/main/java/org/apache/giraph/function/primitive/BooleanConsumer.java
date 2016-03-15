@@ -19,18 +19,18 @@ package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /**
  * Primitive specialization of Function:
- * (int) -> T
- *
- * @param <T> Result type
+ * (boolean) -> void
  */
-public interface Int2ObjFunction<T> extends Serializable {
+public interface BooleanConsumer extends Serializable {
   /**
-   * Returns the result of applying this function to given {@code input}.
+   * Applies this function to {@code input}
    *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
+   * @param input input
    */
-  T apply(int input);
+  void apply(boolean input);
 }

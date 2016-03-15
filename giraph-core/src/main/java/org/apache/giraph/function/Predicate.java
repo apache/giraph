@@ -19,20 +19,21 @@ package org.apache.giraph.function;
 
 import java.io.Serializable;
 
-
 /**
  * Function:
- * (F) -> T
+ * (T) -> boolean
+ * <br>
+ * Specialization of com.google.common.base.Predicate, that is also
+ * Serializable.
  *
- * @param <F> Argument type
- * @param <T> Result type
+ * @param <T> Argument type
  */
-public interface Function<F, T> extends Serializable {
+public interface Predicate<T> extends Serializable {
   /**
-   * Returns the result of applying this function to given {@code input}.
+   * Returns the result of applying this predicate to {@code input}.
    *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
+   * @param input input
+   * @return result
    */
-  T apply(F input);
+  boolean apply(T input);
 }

@@ -15,19 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function;
 
 import java.io.Serializable;
 
+
 /**
- * Primitive specialization of Function:
- * (F) -> long
+ * Function:
+ * (F) -> T
  *
- * @param <T> Argument type
+ * @param <F> Argument type
+ * @param <T> Result type
  */
-public interface Obj2LongFunction<T> extends Serializable {
+public interface Function<F, T> extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
+   *
+   * The returned object may or may not be a new instance,
+   * depending on the implementation.
+   *
+   * @param input Input
+   * @return result
    */
-  long apply(T input);
+  T apply(F input);
 }

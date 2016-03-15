@@ -19,34 +19,34 @@ package org.apache.giraph.function.vertex;
 
 import java.io.Serializable;
 
-import org.apache.giraph.function.PairFunction;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Function:
- * (vertex, F) -> T
+ * (vertex) -> T
  *
- * Determines an output value based on a vertex and an input value.
+ * A class that can supply objects of a single type, when given a vertex.
+ *
+ * (doesn't extend Function<Vertex<I, V, E>, T>, because of different
+ * method names)
  *
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
- * @param <F> Argument type
  * @param <T> Result type
  */
 @SuppressWarnings("rawtypes")
-public interface FunctionWithVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, F, T>
-    extends PairFunction<Vertex<I, V, E>, F, T>, Serializable {
+public interface SupplierFromVertex<I extends WritableComparable,
+    V extends Writable, E extends Writable, T> extends Serializable {
   /**
-   * Returns the result of applying this function to given
-   * {@code vertex} and {@code input}.
-   *
+   * Retrieves an instance of the appropriate type, given a vertex.
    * The returned object may or may not be a new instance,
    * depending on the implementation.
+   *
+   * @param vertex Vertex
+   * @return result
    */
-  @Override
-  T apply(Vertex<I, V, E> vertex, F input);
+  T get(Vertex<I, V, E> vertex);
 }

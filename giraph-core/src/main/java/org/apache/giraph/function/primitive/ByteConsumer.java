@@ -19,11 +19,18 @@ package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /**
  * Primitive specialization of Function:
- * () -> int
+ * (byte) -> void
  */
-public interface IntSupplier extends Serializable {
-  /** Retrieves an int value. */
-  int get();
+public interface ByteConsumer extends Serializable {
+  /**
+   * Applies this function to {@code input}
+   *
+   * @param input input
+   */
+  void apply(byte input);
 }

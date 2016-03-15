@@ -43,12 +43,18 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <T> Type of object to transfer.
  */
 public class ObjectTransfer<T> implements Supplier<T>, Consumer<T> {
+  /** value */
   private T value;
 
+  /**
+   * Constructor
+   * @param value initial value
+   */
   public ObjectTransfer(T value) {
     this.value = value;
   }
 
+  /** Constructor */
   public ObjectTransfer() {
   }
 
@@ -77,6 +83,11 @@ public class ObjectTransfer<T> implements Supplier<T>, Consumer<T> {
    * In Java7, some callsites might need explicit types:
    * object.<LongWritable, DoubleWritable, Writable>castToSupplier()
    * In Java8, object.castToSupplier() is always going to be enough.
+   *
+   * @param <I> Vertex id type
+   * @param <V> Vertex value type
+   * @param <E> Edge value type
+   * @return supplier from vertex
    */
   // TODO Java8: cleanup callers
   @SuppressWarnings("rawtypes")
@@ -98,6 +109,11 @@ public class ObjectTransfer<T> implements Supplier<T>, Consumer<T> {
    * In Java7, some callsites might need explicit types:
    * object.<LongWritable, DoubleWritable, Writable>castToConsumer()
    * In Java8, object.castToConsumer() is always going to be enough.
+   *
+   * @param <I> Vertex id type
+   * @param <V> Vertex value type
+   * @param <E> Edge value type
+   * @return consumer with vertex
    */
   // TODO Java8: cleanup callers
   @SuppressWarnings("rawtypes")
