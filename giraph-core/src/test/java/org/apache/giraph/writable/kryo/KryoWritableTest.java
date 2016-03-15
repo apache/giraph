@@ -19,19 +19,19 @@ package org.apache.giraph.writable.kryo;
 
 import static org.junit.Assert.assertEquals;
 
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicLongArrayList;
+import org.apache.giraph.types.ops.collections.array.WLongArrayList;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 
 /**
@@ -90,7 +90,7 @@ public class KryoWritableTest {
   }
 
 
-  int multiplier = 5000; // use 5000 for profiling
+  int multiplier = 10; // use 5000 for profiling
   int longTestTimes = 1000 * multiplier;
 
   @Test
@@ -146,18 +146,18 @@ public class KryoWritableTest {
 
   @Test
   public void testLongListWritable() throws Exception {
-    BasicLongArrayList from = new BasicLongArrayList(longListTestSize);
+    WLongArrayList from = new WLongArrayList(longListTestSize);
     LongWritable value = new LongWritable();
     for (int i = 0; i < longListTestSize; i++) {
       value.set(i);
-      from.add(value);
+      from.addW(value);
     }
 
-    BasicLongArrayList to = new BasicLongArrayList(longListTestSize);
+    WLongArrayList to = new WLongArrayList(longListTestSize);
     value.set(0);
 
     for (int i = 0; i < longListTestTimes; i++) {
-      from.set((2 * i) % longListTestSize, value);
+      from.setW((2 * i) % longListTestSize, value);
       WritableUtils.copyInto(from, to, true);
     }
   }

@@ -26,7 +26,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -47,7 +47,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
   ImmutableClassesGiraphConfigurable<I, Writable, NullWritable> {
 
   /** Array of target vertex ids. */
-  private BasicArrayList<I> neighbors;
+  private WArrayList<I> neighbors;
 
   @Override
   public
@@ -85,7 +85,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
   @Override
   public void add(Edge<I, NullWritable> edge) {
-    neighbors.add(edge.getTargetVertexId());
+    neighbors.addW(edge.getTargetVertexId());
   }
 
   /**
@@ -108,9 +108,9 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
     // the deleted edge with the rightmost element, thus achieving constant
     // time.
     I tmpValue = neighbors.getElementTypeOps().create();
-    neighbors.popInto(tmpValue);
+    neighbors.popIntoW(tmpValue);
     if (i != neighbors.size()) {
-      neighbors.set(i, tmpValue);
+      neighbors.setW(i, tmpValue);
     }
     // If needed after the removal, trim the array.
     trim();
@@ -122,7 +122,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
     // we can remove all matching edges in linear time.
     I tmpValue = neighbors.getElementTypeOps().create();
     for (int i = neighbors.size() - 1; i >= 0; --i) {
-      neighbors.getInto(i, tmpValue);
+      neighbors.getIntoW(i, tmpValue);
       if (tmpValue.equals(targetVertexId)) {
         removeAt(i);
       }
@@ -158,7 +158,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
       @Override
       public MutableEdge<I, NullWritable> next() {
-        neighbors.getInto(offset++, representativeEdge.getTargetVertexId());
+        neighbors.getIntoW(offset++, representativeEdge.getTargetVertexId());
         return representativeEdge;
       }
 

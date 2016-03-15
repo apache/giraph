@@ -35,7 +35,7 @@ import org.apache.giraph.master.MasterGlobalCommUsage;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.worker.WorkerBroadcastUsage;
 import org.apache.hadoop.io.Writable;
@@ -50,7 +50,7 @@ import org.apache.hadoop.io.Writable;
  * @param <R> Reduced value type
  */
 public class BasicArrayReduce<S, R extends Writable>
-    implements ReduceOperation<Pair<IntRef, S>, BasicArrayList<R>> {
+    implements ReduceOperation<Pair<IntRef, S>, WArrayList<R>> {
   private int fixedSize;
   private PrimitiveTypeOps<R> typeOps;
   private ReduceOperation<S, R> elementReduceOp;
@@ -182,7 +182,7 @@ public class BasicArrayReduce<S, R extends Writable>
       final int fixedSize, final PrimitiveTypeOps<R> typeOps,
       ReduceOperation<S, R> elementReduceOp,
       CreateReducerFunctionApi createFunction) {
-    final ReducerHandle<Pair<IntRef, S>, BasicArrayList<R>> reduceHandle =
+    final ReducerHandle<Pair<IntRef, S>, WArrayList<R>> reduceHandle =
         createFunction.createReducer(
             new BasicArrayReduce<>(fixedSize, typeOps, elementReduceOp));
     final IntRef curIndex = new IntRef(0);
@@ -193,11 +193,11 @@ public class BasicArrayReduce<S, R extends Writable>
     final ReducerHandle<S, R> elementReduceHandle = new ReducerHandle<S, R>() {
       @Override
       public R getReducedValue(MasterGlobalCommUsage master) {
-        BasicArrayList<R> result = reduceHandle.getReducedValue(master);
+        WArrayList<R> result = reduceHandle.getReducedValue(master);
         if (fixedSize == -1 && curIndex.value >= result.size()) {
           typeOps.set(reusableValue, initialValue);
         } else {
-          result.getInto(curIndex.value, reusableValue);
+          result.getIntoW(curIndex.value, reusableValue);
         }
         return reusableValue;
       }
@@ -238,7 +238,7 @@ public class BasicArrayReduce<S, R extends Writable>
 
       @Override
       public BroadcastArrayHandle<R> broadcastValue(BlockMasterApi master) {
-        final BroadcastHandle<BasicArrayList<R>> broadcastHandle =
+        final BroadcastHandle<WArrayList<R>> broadcastHandle =
             reduceHandle.broadcastValue(master);
         final IntRef curIndex = new IntRef(0);
         final R reusableValue = typeOps.create();
@@ -246,11 +246,11 @@ public class BasicArrayReduce<S, R extends Writable>
         elementBroadcastHandle = new BroadcastHandle<R>() {
           @Override
           public R getBroadcast(WorkerBroadcastUsage worker) {
-            BasicArrayList<R> result = broadcastHandle.getBroadcast(worker);
+            WArrayList<R> result = broadcastHandle.getBroadcast(worker);
             if (fixedSize == -1 && curIndex.value >= result.size()) {
               typeOps.set(reusableValue, initialValue);
             } else {
-              result.getInto(curIndex.value, reusableValue);
+              result.getIntoW(curIndex.value, reusableValue);
             }
             return reusableValue;
           }
@@ -288,9 +288,9 @@ public class BasicArrayReduce<S, R extends Writable>
   }
 
   @Override
-  public BasicArrayList<R> createInitialValue() {
+  public WArrayList<R> createInitialValue() {
     if (fixedSize != -1) {
-      BasicArrayList<R> list = typeOps.createArrayList(fixedSize);
+      WArrayList<R> list = typeOps.createArrayList(fixedSize);
       fill(list, fixedSize);
       return list;
     } else {
@@ -298,7 +298,7 @@ public class BasicArrayReduce<S, R extends Writable>
     }
   }
 
-  private void fill(BasicArrayList<R> list, int newSize) {
+  private void fill(WArrayList<R> list, int newSize) {
     if (fixedSize != -1 && newSize > fixedSize) {
       throw new IllegalArgumentException(newSize + " larger then " + fixedSize);
     }
@@ -307,30 +307,30 @@ public class BasicArrayReduce<S, R extends Writable>
       list.setCapacity(newSize);
     }
     while (list.size() < newSize) {
-      list.add(initialElement);
+      list.addW(initialElement);
     }
   }
 
   @Override
-  public BasicArrayList<R> reduce(
-      BasicArrayList<R> curValue, Pair<IntRef, S> valueToReduce) {
+  public WArrayList<R> reduce(
+      WArrayList<R> curValue, Pair<IntRef, S> valueToReduce) {
     int index = valueToReduce.getLeft().value;
     fill(curValue, index + 1);
-    curValue.getInto(index, reusable);
+    curValue.getIntoW(index, reusable);
     R result = elementReduceOp.reduce(reusable, valueToReduce.getRight());
-    curValue.set(index, result);
+    curValue.setW(index, result);
     return curValue;
   }
 
   @Override
-  public BasicArrayList<R> reduceMerge(
-      BasicArrayList<R> curValue, BasicArrayList<R> valueToReduce) {
+  public WArrayList<R> reduceMerge(
+      WArrayList<R> curValue, WArrayList<R> valueToReduce) {
     fill(curValue, valueToReduce.size());
     for (int i = 0; i < valueToReduce.size(); i++) {
-      valueToReduce.getInto(i, reusable2);
-      curValue.getInto(i, reusable);
+      valueToReduce.getIntoW(i, reusable2);
+      curValue.getIntoW(i, reusable);
       R result = elementReduceOp.reduceMerge(reusable, reusable2);
-      curValue.set(i, result);
+      curValue.setW(i, result);
     }
 
     return curValue;

@@ -17,12 +17,13 @@
  */
 package org.apache.giraph.writable.kryo;
 
-import com.esotericsoftware.kryo.Kryo;
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicDoubleArrayList;
-import org.junit.Assert;
+import org.apache.giraph.types.ops.collections.array.WDoubleArrayList;
 import org.apache.giraph.writable.kryo.serializers.DirectWritableSerializer;
 import org.apache.hadoop.io.DoubleWritable;
+import org.junit.Assert;
 import org.junit.Test;
+
+import com.esotericsoftware.kryo.Kryo;
 
 public class DirectWritableSerializerCopyTest {
   @Test
@@ -36,20 +37,20 @@ public class DirectWritableSerializerCopyTest {
 
   @Test
   public void test2() {
-    BasicDoubleArrayList list = new BasicDoubleArrayList();
-    list.add(new DoubleWritable(0.11111111));
-    list.add(new DoubleWritable(1000.9));
-    list.add(new DoubleWritable(99999999.99999999));
-    DirectWritableSerializer<BasicDoubleArrayList> serializer =
+    WDoubleArrayList list = new WDoubleArrayList();
+    list.addW(new DoubleWritable(0.11111111));
+    list.addW(new DoubleWritable(1000.9));
+    list.addW(new DoubleWritable(99999999.99999999));
+    DirectWritableSerializer<WDoubleArrayList> serializer =
       new DirectWritableSerializer<>();
     Kryo kryo = new Kryo();
-    BasicDoubleArrayList copy = serializer.copy(kryo, list);
+    WDoubleArrayList copy = serializer.copy(kryo, list);
     DoubleWritable reusable = new DoubleWritable();
-    copy.getInto(0, reusable);
+    copy.getIntoW(0, reusable);
     Assert.assertEquals(0.11111111, reusable.get(), 0);
-    copy.getInto(1, reusable);
+    copy.getIntoW(1, reusable);
     Assert.assertEquals(1000.9, reusable.get(), 0);
-    copy.getInto(2, reusable);
+    copy.getIntoW(2, reusable);
     Assert.assertEquals(99999999.99999999, reusable.get(), 0);
   }
 }

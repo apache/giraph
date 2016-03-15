@@ -26,15 +26,15 @@ import java.util.List;
 import org.apache.giraph.reducers.impl.KryoWrappedReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.ResettableIterator;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.WritableUtils;
 
 /**
  * Collect tuples of primitive values reduce operation
  */
 public class CollectTuplesOfPrimitivesReduceOperation
-    extends KryoWrappedReduceOperation<List<Object>, List<BasicArrayList>> {
+    extends KryoWrappedReduceOperation<List<Object>, List<WArrayList>> {
   /**
    * Type ops if available, or null
    */
@@ -50,8 +50,8 @@ public class CollectTuplesOfPrimitivesReduceOperation
   }
 
   @Override
-  public List<BasicArrayList> createValue() {
-    List<BasicArrayList> ret = new ArrayList<>(typeOpsList.size());
+  public List<WArrayList> createValue() {
+    List<WArrayList> ret = new ArrayList<>(typeOpsList.size());
     for (PrimitiveTypeOps typeOps : typeOpsList) {
       ret.add(typeOps.createArrayList());
     }
@@ -59,19 +59,19 @@ public class CollectTuplesOfPrimitivesReduceOperation
   }
 
   @Override
-  public void reduce(List<BasicArrayList> reduceInto, List<Object> value) {
+  public void reduce(List<WArrayList> reduceInto, List<Object> value) {
     for (int i = 0; i < reduceInto.size(); i++) {
-      reduceInto.get(i).add(value.get(i));
+      reduceInto.get(i).addW(value.get(i));
     }
   }
 
   @Override
-  public void reduceMerge(List<BasicArrayList> reduceInto,
-      List<BasicArrayList> toReduce) {
+  public void reduceMerge(final List<WArrayList> reduceInto,
+      List<WArrayList> toReduce) {
     for (int i = 0; i < reduceInto.size(); i++) {
-      ResettableIterator iterator = toReduce.get(i).fastIterator();
+      ResettableIterator iterator = toReduce.get(i).fastIteratorW();
       while (iterator.hasNext()) {
-        reduceInto.get(i).add(iterator.next());
+        reduceInto.get(i).addW(iterator.next());
       }
     }
   }

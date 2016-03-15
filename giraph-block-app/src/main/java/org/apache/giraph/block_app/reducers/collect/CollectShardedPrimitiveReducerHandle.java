@@ -24,7 +24,7 @@ import org.apache.giraph.master.MasterGlobalCommUsage;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.worker.WorkerBroadcastUsage;
 import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 
@@ -35,7 +35,7 @@ import org.apache.giraph.writable.kryo.KryoWritableWrapper;
  * @param <S> Single value type
  */
 public class CollectShardedPrimitiveReducerHandle<S>
-    extends ShardedReducerHandle<S, BasicArrayList<S>> {
+    extends ShardedReducerHandle<S, WArrayList<S>> {
   /**
    * Type ops if available, or null
    */
@@ -48,13 +48,13 @@ public class CollectShardedPrimitiveReducerHandle<S>
   }
 
   @Override
-  public ReduceOperation<S, KryoWritableWrapper<BasicArrayList<S>>>
+  public ReduceOperation<S, KryoWritableWrapper<WArrayList<S>>>
   createReduceOperation() {
     return new CollectPrimitiveReduceOperation<>(typeOps);
   }
 
   @Override
-  public BasicArrayList<S> createReduceResult(MasterGlobalCommUsage master) {
+  public WArrayList<S> createReduceResult(MasterGlobalCommUsage master) {
     int size = 0;
     for (int i = 0; i < REDUCER_COUNT; i++) {
       size += reducers.get(i).getReducedValue(master).get().size();
@@ -62,13 +62,13 @@ public class CollectShardedPrimitiveReducerHandle<S>
     return createList(size);
   }
 
-  public BasicArrayList<S> createList(int size) {
+  public WArrayList<S> createList(int size) {
     return typeOps.createArrayList(size);
   }
 
   @Override
-  public BroadcastHandle<BasicArrayList<S>> createBroadcastHandle(
-      BroadcastArrayHandle<KryoWritableWrapper<BasicArrayList<S>>> broadcasts) {
+  public BroadcastHandle<WArrayList<S>> createBroadcastHandle(
+      BroadcastArrayHandle<KryoWritableWrapper<WArrayList<S>>> broadcasts) {
     return new CollectShardedPrimitiveBroadcastHandle(broadcasts);
   }
 
@@ -78,13 +78,13 @@ public class CollectShardedPrimitiveReducerHandle<S>
   public class CollectShardedPrimitiveBroadcastHandle
       extends ShardedBroadcastHandle {
     public CollectShardedPrimitiveBroadcastHandle(
-        BroadcastArrayHandle<KryoWritableWrapper<BasicArrayList<S>>>
+        BroadcastArrayHandle<KryoWritableWrapper<WArrayList<S>>>
             broadcasts) {
       super(broadcasts);
     }
 
     @Override
-    public BasicArrayList<S> createBroadcastResult(
+    public WArrayList<S> createBroadcastResult(
         WorkerBroadcastUsage worker) {
       int size = 0;
       for (int i = 0; i < REDUCER_COUNT; i++) {

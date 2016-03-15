@@ -17,14 +17,20 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicFloatArrayList;
+import org.apache.giraph.types.ops.collections.array.WFloatArrayList;
 import org.apache.hadoop.io.FloatWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /** TypeOps implementation for working with FloatWritable type */
-public enum FloatTypeOps
-    implements PrimitiveTypeOps<FloatWritable>, NumericTypeOps<FloatWritable> {
+public enum FloatTypeOps implements
+    PrimitiveTypeOps<FloatWritable>, NumericTypeOps<FloatWritable> {
   /** Singleton instance */
-  INSTANCE();
+  INSTANCE;
 
   @Override
   public Class<FloatWritable> getTypeClass() {
@@ -47,13 +53,18 @@ public enum FloatTypeOps
   }
 
   @Override
-  public BasicFloatArrayList createArrayList() {
-    return new BasicFloatArrayList();
+  public WFloatArrayList createArrayList() {
+    return new WFloatArrayList();
   }
 
   @Override
-  public BasicFloatArrayList createArrayList(int capacity) {
-    return new BasicFloatArrayList(capacity);
+  public WFloatArrayList createArrayList(int capacity) {
+    return new WFloatArrayList(capacity);
+  }
+
+  @Override
+  public WFloatArrayList readNewArrayList(DataInput in) throws IOException {
+    return WFloatArrayList.readNew(in);
   }
 
   @Override

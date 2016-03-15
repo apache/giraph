@@ -17,15 +17,20 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicDoubleArrayList;
+import org.apache.giraph.types.ops.collections.array.WDoubleArrayList;
 import org.apache.hadoop.io.DoubleWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /** TypeOps implementation for working with DoubleWritable type */
-public enum DoubleTypeOps
-    implements PrimitiveTypeOps<DoubleWritable>,
-    NumericTypeOps<DoubleWritable> {
+public enum DoubleTypeOps implements
+    PrimitiveTypeOps<DoubleWritable>, NumericTypeOps<DoubleWritable> {
   /** Singleton instance */
-  INSTANCE();
+  INSTANCE;
 
   @Override
   public Class<DoubleWritable> getTypeClass() {
@@ -48,13 +53,18 @@ public enum DoubleTypeOps
   }
 
   @Override
-  public BasicDoubleArrayList createArrayList() {
-    return new BasicDoubleArrayList();
+  public WDoubleArrayList createArrayList() {
+    return new WDoubleArrayList();
   }
 
   @Override
-  public BasicDoubleArrayList createArrayList(int capacity) {
-    return new BasicDoubleArrayList(capacity);
+  public WDoubleArrayList createArrayList(int capacity) {
+    return new WDoubleArrayList(capacity);
+  }
+
+  @Override
+  public WDoubleArrayList readNewArrayList(DataInput in) throws IOException {
+    return WDoubleArrayList.readNew(in);
   }
 
   @Override

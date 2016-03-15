@@ -17,18 +17,21 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.Basic2ObjectMap;
 import org.apache.giraph.types.ops.collections.Basic2ObjectMap.BasicLong2ObjectOpenHashMap;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicLongArrayList;
-import org.apache.giraph.types.ops.collections.BasicSet;
 import org.apache.giraph.types.ops.collections.BasicSet.BasicLongOpenHashSet;
+import org.apache.giraph.types.ops.collections.array.WLongArrayList;
 import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.LongWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /** TypeOps implementation for working with LongWritable type */
-public enum LongTypeOps
-    implements PrimitiveIdTypeOps<LongWritable>, NumericTypeOps<LongWritable> {
+public enum LongTypeOps implements
+    PrimitiveIdTypeOps<LongWritable>, NumericTypeOps<LongWritable> {
   /** Singleton instance */
   INSTANCE;
 
@@ -53,33 +56,38 @@ public enum LongTypeOps
   }
 
   @Override
-  public BasicArrayList<LongWritable> createArrayList() {
-    return new BasicLongArrayList();
+  public WLongArrayList createArrayList() {
+    return new WLongArrayList();
   }
 
   @Override
-  public BasicArrayList<LongWritable> createArrayList(int capacity) {
-    return new BasicLongArrayList(capacity);
+  public WLongArrayList createArrayList(int capacity) {
+    return new WLongArrayList(capacity);
   }
 
   @Override
-  public BasicSet<LongWritable> createOpenHashSet() {
+  public WLongArrayList readNewArrayList(DataInput in) throws IOException {
+    return WLongArrayList.readNew(in);
+  }
+
+  @Override
+  public BasicLongOpenHashSet createOpenHashSet() {
     return new BasicLongOpenHashSet();
   }
 
   @Override
-  public BasicSet<LongWritable> createOpenHashSet(long capacity) {
+  public BasicLongOpenHashSet createOpenHashSet(long capacity) {
     return new BasicLongOpenHashSet(capacity);
   }
 
   @Override
-  public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
+  public <V> BasicLong2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
       WritableWriter<V> valueWriter) {
     return new BasicLong2ObjectOpenHashMap<>(valueWriter);
   }
 
   @Override
-  public <V> Basic2ObjectMap<LongWritable, V> create2ObjectOpenHashMap(
+  public <V> BasicLong2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
       int capacity, WritableWriter<V> valueWriter) {
     return new BasicLong2ObjectOpenHashMap<>(capacity, valueWriter);
   }

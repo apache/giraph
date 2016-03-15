@@ -17,14 +17,20 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicBooleanArrayList;
+import org.apache.giraph.types.ops.collections.array.WBooleanArrayList;
 import org.apache.hadoop.io.BooleanWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
 
 /** TypeOps implementation for working with BooleanWritable type */
-public enum BooleanTypeOps implements PrimitiveTypeOps<BooleanWritable> {
+public enum BooleanTypeOps implements
+    PrimitiveTypeOps<BooleanWritable> {
   /** Singleton instance */
-  INSTANCE();
+  INSTANCE;
 
   @Override
   public Class<BooleanWritable> getTypeClass() {
@@ -47,12 +53,17 @@ public enum BooleanTypeOps implements PrimitiveTypeOps<BooleanWritable> {
   }
 
   @Override
-  public BasicBooleanArrayList createArrayList() {
-    return new BasicBooleanArrayList();
+  public WBooleanArrayList createArrayList() {
+    return new WBooleanArrayList();
   }
 
   @Override
-  public BasicBooleanArrayList createArrayList(int capacity) {
-    return new BasicBooleanArrayList(capacity);
+  public WBooleanArrayList createArrayList(int capacity) {
+    return new WBooleanArrayList(capacity);
+  }
+
+  @Override
+  public WBooleanArrayList readNewArrayList(DataInput in) throws IOException {
+    return WBooleanArrayList.readNew(in);
   }
 }

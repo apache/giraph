@@ -19,13 +19,6 @@ package org.apache.giraph.writable.kryo;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import it.unimi.dsi.fastutil.chars.Char2ObjectMap;
-import it.unimi.dsi.fastutil.chars.Char2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2BooleanMap;
-import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -37,6 +30,7 @@ import java.util.Random;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.types.ops.collections.array.WLongArrayList;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.writable.kryo.markers.NonKryoWritable;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +42,14 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+
+import it.unimi.dsi.fastutil.chars.Char2ObjectMap;
+import it.unimi.dsi.fastutil.chars.Char2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2BooleanMap;
+import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 
 
@@ -187,6 +189,17 @@ public class KryoWritableWrapperTest {
     list.add(5);
     Assert.assertEquals(list, deser);
   }
+
+  @Test
+  public void testWFastutilLongList() throws ClassNotFoundException, IOException {
+    WLongArrayList list = new WLongArrayList();
+    list.add(6);
+    WLongArrayList deser = kryoSerDeser(list);
+    deser.add(5);
+    list.add(5);
+    Assert.assertEquals(list, deser);
+  }
+
 
   @Test
   public void testFastutilFloatList() throws ClassNotFoundException, IOException {

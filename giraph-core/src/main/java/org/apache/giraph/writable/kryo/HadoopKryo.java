@@ -28,7 +28,6 @@ import java.util.Random;
 
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.types.ops.collections.Basic2ObjectMap;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.BasicSet;
 import org.apache.giraph.writable.kryo.markers.KryoIgnoreWritable;
 import org.apache.giraph.writable.kryo.markers.NonKryoWritable;
@@ -247,7 +246,7 @@ public class HadoopKryo extends Kryo {
     kryo.setInstantiatorStrategy(new DefaultInstantiatorStrategy(
         new StdInstantiatorStrategy()));
 
-    kryo.setDefaultSerializer(new SerializerFactory() {
+    SerializerFactory customSerializerFactory = new SerializerFactory() {
       @SuppressWarnings("rawtypes")
       @Override
       public Serializer makeSerializer(Kryo kryo, final Class<?> type) {
@@ -282,7 +281,6 @@ public class HadoopKryo extends Kryo {
             // remove BasicSet, BasicArrayList and Basic2ObjectMap temporarily,
             // for lack of constructors
             !BasicSet.class.isAssignableFrom(type) &&
-            !BasicArrayList.class.isAssignableFrom(type) &&
             !Basic2ObjectMap.class.isAssignableFrom(type)) {
           // use the Writable method defined by the type
           DirectWritableSerializer serializer = new DirectWritableSerializer();
@@ -293,7 +291,10 @@ public class HadoopKryo extends Kryo {
           return serializer;
         }
       }
-    });
+    };
+
+    kryo.addDefaultSerializer(Writable.class, customSerializerFactory);
+    kryo.setDefaultSerializer(customSerializerFactory);
 
     return kryo;
   }

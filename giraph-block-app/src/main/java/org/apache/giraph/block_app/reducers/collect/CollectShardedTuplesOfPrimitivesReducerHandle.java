@@ -28,7 +28,7 @@ import org.apache.giraph.master.MasterGlobalCommUsage;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.worker.WorkerBroadcastUsage;
 import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 
@@ -39,7 +39,7 @@ import org.apache.giraph.writable.kryo.KryoWritableWrapper;
  */
 @SuppressWarnings("unchecked")
 public class CollectShardedTuplesOfPrimitivesReducerHandle
-extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
+extends ShardedReducerHandle<List<Object>, List<WArrayList>> {
   /**
    * Type ops if available, or null
    */
@@ -64,12 +64,12 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
 
   @Override
   public ReduceOperation<List<Object>,
-      KryoWritableWrapper<List<BasicArrayList>>> createReduceOperation() {
+      KryoWritableWrapper<List<WArrayList>>> createReduceOperation() {
     return new CollectTuplesOfPrimitivesReduceOperation(typeOpsList);
   }
 
   @Override
-  public List<BasicArrayList> createReduceResult(
+  public List<WArrayList> createReduceResult(
       MasterGlobalCommUsage master) {
     int size = 0;
     for (int i = 0; i < REDUCER_COUNT; i++) {
@@ -78,8 +78,8 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
     return createLists(size);
   }
 
-  public List<BasicArrayList> createLists(int size) {
-    List<BasicArrayList> ret = new ArrayList<>();
+  public List<WArrayList> createLists(int size) {
+    List<WArrayList> ret = new ArrayList<>();
     for (PrimitiveTypeOps typeOps : typeOpsList) {
       ret.add(typeOps.createArrayList(size));
     }
@@ -87,8 +87,8 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
   }
 
   @Override
-  public BroadcastHandle<List<BasicArrayList>> createBroadcastHandle(
-      BroadcastArrayHandle<KryoWritableWrapper<List<BasicArrayList>>>
+  public BroadcastHandle<List<WArrayList>> createBroadcastHandle(
+      BroadcastArrayHandle<KryoWritableWrapper<List<WArrayList>>>
           broadcasts) {
     return new CollectShardedTuplesOfPrimitivesBroadcastHandle(broadcasts);
   }
@@ -99,13 +99,13 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
   public class CollectShardedTuplesOfPrimitivesBroadcastHandle
       extends ShardedBroadcastHandle {
     public CollectShardedTuplesOfPrimitivesBroadcastHandle(
-        BroadcastArrayHandle<KryoWritableWrapper<List<BasicArrayList>>>
+        BroadcastArrayHandle<KryoWritableWrapper<List<WArrayList>>>
             broadcasts) {
       super(broadcasts);
     }
 
     @Override
-    public List<BasicArrayList> createBroadcastResult(
+    public List<WArrayList> createBroadcastResult(
         WorkerBroadcastUsage worker) {
       int size = 0;
       for (int i = 0; i < REDUCER_COUNT; i++) {
@@ -120,7 +120,7 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
    */
   public static class CollectShardedTuplesOfPrimitivesReduceBroadcast {
     private CollectShardedTuplesOfPrimitivesReducerHandle reducerHandle;
-    private BroadcastHandle<List<BasicArrayList>> broadcastHandle;
+    private BroadcastHandle<List<WArrayList>> broadcastHandle;
 
     /** Set reducer handle to just registered handle */
     public void registeredReducer(CreateReducersApi reduceApi,
@@ -139,7 +139,7 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
     }
 
     /** Get reduced value */
-    public List<BasicArrayList> getReducedValue(MasterGlobalCommUsage master) {
+    public List<WArrayList> getReducedValue(MasterGlobalCommUsage master) {
       return reducerHandle.getReducedValue(master);
     }
 
@@ -151,7 +151,7 @@ extends ShardedReducerHandle<List<Object>, List<BasicArrayList>> {
     }
 
     /** Get broadcasted value */
-    public List<BasicArrayList> getBroadcast(WorkerBroadcastUsage worker) {
+    public List<WArrayList> getBroadcast(WorkerBroadcastUsage worker) {
       return broadcastHandle.getBroadcast(worker);
     }
   }

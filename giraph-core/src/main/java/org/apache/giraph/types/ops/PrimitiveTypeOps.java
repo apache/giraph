@@ -17,7 +17,10 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import java.io.DataInput;
+import java.io.IOException;
+
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 
 
 /**
@@ -34,15 +37,22 @@ import org.apache.giraph.types.ops.collections.BasicArrayList;
 public interface PrimitiveTypeOps<T> extends TypeOps<T> {
   // primitive collections
   /**
-   * Create BasicArrayList of type T.
-   * @return BasicArrayList
+   * Create WArrayList of type T.
+   * @return WArrayList
    */
-  BasicArrayList<T> createArrayList();
+  WArrayList<T> createArrayList();
 
   /**
-   * Create BasicArrayList of type T, given capacity.
+   * Create WArrayList of type T, given capacity.
    * @param capacity Capacity
-   * @return BasicArrayList
+   * @return WArrayList
    */
-  BasicArrayList<T> createArrayList(int capacity);
+  WArrayList<T> createArrayList(int capacity);
+
+  /**
+   * Create WArrayList of type T by reading it from given input.
+   * @param in Input
+   * @return WArrayList
+   */
+  WArrayList<T> readNewArrayList(DataInput in) throws IOException;
 }

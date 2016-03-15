@@ -18,8 +18,8 @@
 package org.apache.giraph.types;
 
 import org.apache.giraph.types.ops.LongTypeOps;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.BasicSet;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -55,9 +55,9 @@ public class TestCollections {
   @Test
   public void testLargeBasicList() {
     int capacity = 123456789;
-    BasicArrayList<LongWritable> longSet = LongTypeOps.INSTANCE.createArrayList(capacity);
-    longSet.add(new LongWritable(capacity));
-    longSet.add(new LongWritable(capacity));
+    WArrayList<LongWritable> longSet = LongTypeOps.INSTANCE.createArrayList(capacity);
+    longSet.addW(new LongWritable(capacity));
+    longSet.addW(new LongWritable(capacity));
     Assert.assertEquals(2, longSet.size());
   }
 }

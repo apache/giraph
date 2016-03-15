@@ -24,8 +24,8 @@ import java.io.IOException;
 import org.apache.giraph.reducers.impl.KryoWrappedReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
 import org.apache.giraph.types.ops.collections.ResettableIterator;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.WritableUtils;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.giraph.utils.WritableUtils;
  * @param <S> Primitive Writable type, which has its type ops
  */
 public class CollectPrimitiveReduceOperation<S>
-    extends KryoWrappedReduceOperation<S, BasicArrayList<S>> {
+    extends KryoWrappedReduceOperation<S, WArrayList<S>> {
   /**
    * Type ops if available, or null
    */
@@ -49,25 +49,25 @@ public class CollectPrimitiveReduceOperation<S>
   }
 
   @Override
-  public BasicArrayList<S> createValue() {
+  public WArrayList<S> createValue() {
     return createList();
   }
 
   @Override
-  public void reduce(BasicArrayList<S> reduceInto, S value) {
-    reduceInto.add(value);
+  public void reduce(WArrayList<S> reduceInto, S value) {
+    reduceInto.addW(value);
   }
 
   @Override
-  public void reduceMerge(BasicArrayList<S> reduceInto,
-      BasicArrayList<S> toReduce) {
-    ResettableIterator<S> iterator = toReduce.fastIterator();
+  public void reduceMerge(final WArrayList<S> reduceInto,
+      WArrayList<S> toReduce) {
+    ResettableIterator<S> iterator = toReduce.fastIteratorW();
     while (iterator.hasNext()) {
-      reduceInto.add(iterator.next());
+      reduceInto.addW(iterator.next());
     }
   }
 
-  public BasicArrayList<S> createList() {
+  public WArrayList<S> createList() {
     return typeOps.createArrayList();
   }
 

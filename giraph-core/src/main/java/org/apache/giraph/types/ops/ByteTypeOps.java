@@ -17,15 +17,20 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicByteArrayList;
+import org.apache.giraph.types.ops.collections.array.WByteArrayList;
 import org.apache.hadoop.io.ByteWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /** TypeOps implementation for working with ByteWritable type */
-public enum ByteTypeOps
-    implements PrimitiveTypeOps<ByteWritable>,
-    NumericTypeOps<ByteWritable> {
+public enum ByteTypeOps implements
+    PrimitiveTypeOps<ByteWritable>, NumericTypeOps<ByteWritable> {
   /** Singleton instance */
-  INSTANCE();
+  INSTANCE;
 
   @Override
   public Class<ByteWritable> getTypeClass() {
@@ -48,13 +53,18 @@ public enum ByteTypeOps
   }
 
   @Override
-  public BasicByteArrayList createArrayList() {
-    return new BasicByteArrayList();
+  public WByteArrayList createArrayList() {
+    return new WByteArrayList();
   }
 
   @Override
-  public BasicByteArrayList createArrayList(int capacity) {
-    return new BasicByteArrayList(capacity);
+  public WByteArrayList createArrayList(int capacity) {
+    return new WByteArrayList(capacity);
+  }
+
+  @Override
+  public WByteArrayList readNewArrayList(DataInput in) throws IOException {
+    return WByteArrayList.readNew(in);
   }
 
   @Override
@@ -89,6 +99,6 @@ public enum ByteTypeOps
 
   @Override
   public void negate(ByteWritable value) {
-    value.set((byte) -value.get());
+    value.set((byte) (-value.get()));
   }
 }

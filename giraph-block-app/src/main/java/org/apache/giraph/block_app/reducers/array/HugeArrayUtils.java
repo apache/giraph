@@ -36,7 +36,7 @@ import org.apache.giraph.function.primitive.PrimitiveRefs.IntRef;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.ArrayWritable;
 import org.apache.giraph.worker.WorkerBroadcastUsage;
 import org.apache.hadoop.io.Writable;
@@ -300,30 +300,30 @@ public class HugeArrayUtils {
   Int2ObjFunction<BroadcastHandle<V>> getPrimitiveBroadcastHandleSupplier(
       final Int2ObjFunction<V> valueSupplier, final PrimitiveTypeOps<V> typeOps,
       final BlockMasterApi master, final ObjectStriping striping) {
-    final ArrayOfHandles<BroadcastHandle<BasicArrayList<V>>> arrayOfBroadcasts =
+    final ArrayOfHandles<BroadcastHandle<WArrayList<V>>> arrayOfBroadcasts =
       new ArrayOfHandles<>(
         striping.getSplits(),
-        new Int2ObjFunction<BroadcastHandle<BasicArrayList<V>>>() {
+        new Int2ObjFunction<BroadcastHandle<WArrayList<V>>>() {
           @Override
-          public BroadcastHandle<BasicArrayList<V>> apply(int value) {
+          public BroadcastHandle<WArrayList<V>> apply(int value) {
             int size = striping.getSplitSize(value);
             int start = striping.getSplitStart(value);
-            BasicArrayList<V> array = typeOps.createArrayList(size);
+            WArrayList<V> array = typeOps.createArrayList(size);
             for (int i = 0; i < size; i++) {
-              array.add(valueSupplier.apply(start + i));
+              array.addW(valueSupplier.apply(start + i));
             }
             return master.broadcast(array);
           }
         });
 
     final IntRef insideIndex = new IntRef(-1);
-    final ObjectHolder<BroadcastHandle<BasicArrayList<V>>> handleHolder =
+    final ObjectHolder<BroadcastHandle<WArrayList<V>>> handleHolder =
             new ObjectHolder<>();
     final BroadcastHandle<V> reusableHandle = new BroadcastHandle<V>() {
       private final V reusable = typeOps.create();
       @Override
       public V getBroadcast(WorkerBroadcastUsage worker) {
-        handleHolder.get().getBroadcast(worker).getInto(
+        handleHolder.get().getBroadcast(worker).getIntoW(
             insideIndex.value, reusable);
         return reusable;
       }

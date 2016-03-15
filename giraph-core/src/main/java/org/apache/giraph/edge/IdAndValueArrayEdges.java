@@ -27,7 +27,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
 import org.apache.giraph.types.ops.PrimitiveTypeOps;
 import org.apache.giraph.types.ops.TypeOpsUtils;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
+import org.apache.giraph.types.ops.collections.array.WArrayList;
 import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -50,9 +50,9 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
     ImmutableClassesGiraphConfigurable<I, Writable, E> {
 
   /** Array of target vertex ids. */
-  private BasicArrayList<I> neighborIds;
+  private WArrayList<I> neighborIds;
   /** Array of edge values. */
-  private BasicArrayList<E> neighborEdgeValues;
+  private WArrayList<E> neighborEdgeValues;
 
   @Override
   public ImmutableClassesGiraphConfiguration<I, Writable, E> getConf() {
@@ -89,8 +89,8 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
   @Override
   public void add(Edge<I, E> edge) {
-    neighborIds.add(edge.getTargetVertexId());
-    neighborEdgeValues.add(edge.getValue());
+    neighborIds.addW(edge.getTargetVertexId());
+    neighborEdgeValues.addW(edge.getValue());
   }
 
   /**
@@ -116,11 +116,11 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
     I tmpId = neighborIds.getElementTypeOps().create();
     E tmpValue = neighborEdgeValues.getElementTypeOps().create();
 
-    neighborIds.popInto(tmpId);
-    neighborEdgeValues.popInto(tmpValue);
+    neighborIds.popIntoW(tmpId);
+    neighborEdgeValues.popIntoW(tmpValue);
     if (i != neighborIds.size()) {
-      neighborIds.set(i, tmpId);
-      neighborEdgeValues.set(i, tmpValue);
+      neighborIds.setW(i, tmpId);
+      neighborEdgeValues.setW(i, tmpValue);
     }
     // If needed after the removal, trim the array.
     trim();
@@ -132,7 +132,7 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
     // we can remove all matching edges in linear time.
     I tmpId = neighborIds.getElementTypeOps().create();
     for (int i = neighborIds.size() - 1; i >= 0; --i) {
-      neighborIds.getInto(i, tmpId);
+      neighborIds.getIntoW(i, tmpId);
       if (tmpId.equals(targetVertexId)) {
         removeAt(i);
       }
@@ -162,8 +162,8 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
       @Override
       public Edge<I, E> next() {
-        neighborIds.getInto(index, representativeEdge.getTargetVertexId());
-        neighborEdgeValues.getInto(index, representativeEdge.getValue());
+        neighborIds.getIntoW(index, representativeEdge.getTargetVertexId());
+        neighborEdgeValues.getIntoW(index, representativeEdge.getValue());
         index++;
         return representativeEdge;
       }
@@ -189,8 +189,8 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
      */
     public void setIndex(int index) {
       // Update the id and value objects from the superclass.
-      neighborIds.getInto(index, getTargetVertexId());
-      neighborEdgeValues.getInto(index, getValue());
+      neighborIds.getIntoW(index, getTargetVertexId());
+      neighborEdgeValues.getIntoW(index, getValue());
       // Update the index.
       this.index = index;
     }
@@ -200,7 +200,7 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
       // Update the value object from the superclass.
       neighborEdgeValues.getElementTypeOps().set(getValue(), value);
       // Update the value stored in the backing array.
-      neighborEdgeValues.set(index, value);
+      neighborEdgeValues.setW(index, value);
     }
   }
 

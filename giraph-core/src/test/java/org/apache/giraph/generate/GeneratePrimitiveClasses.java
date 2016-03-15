@@ -53,31 +53,32 @@ import freemarker.template.TemplateNotFoundException;
  * <a href="http://freemarker.org/docs/dgui_quickstart_template.html">tutorial</a>
  */
 public class GeneratePrimitiveClasses {
-  // No Short since there is no ShortWritable for some reason
   public static enum PrimitiveType {
-    BOOLEAN("Boolean", false, false, false),
-    BYTE("Byte", true, false, false),
-    INT("Int", "Integer", true, true, false),
-    LONG("Long", true, true, false),
-    FLOAT("Float", true, false, true),
-    DOUBLE("Double", true, false, true);
+    BOOLEAN("Boolean"),
+    BYTE("Byte"),
+    SHORT("Short"),
+    INT("Int"),
+    LONG("Long"),
+    FLOAT("Float"),
+    DOUBLE("Double");
 
     private final String name;
+    private final String nameLower;
     private final String boxed;
     private final boolean numeric;
     private final boolean id;
     private final boolean floating;
+    private final boolean hasWritable;
 
-    private PrimitiveType(String name, String boxed, boolean numeric, boolean id, boolean floating) {
+    private PrimitiveType(String name) {
       this.name = name;
-      this.boxed = boxed;
-      this.numeric = numeric;
-      this.id = id;
-      this.floating = floating;
-    }
-
-    private PrimitiveType(String name, boolean numeric, boolean id, boolean floating) {
-      this(name, name, numeric, id, floating);
+      this.nameLower = name.toLowerCase();
+      this.boxed = "Int".equals(name) ? "Integer" : name;
+      this.numeric = !"Boolean".equals(name);
+      this.id = "Int".equals(name) || "Long".equals(name);
+      this.floating = "Float".equals(name) || "Double".equals(name);
+      // For some reason there is no ShortWritable in current Hadoop version
+      this.hasWritable = !"Short".equals(name);
     }
 
     public String getName() {
@@ -89,7 +90,7 @@ public class GeneratePrimitiveClasses {
     }
 
     public String getLower() {
-      return name.toLowerCase();
+      return nameLower;
     }
 
     public String getBoxed() {
@@ -107,6 +108,10 @@ public class GeneratePrimitiveClasses {
     public boolean isFloating() {
       return floating;
     }
+
+    public boolean hasWritable() {
+      return hasWritable;
+    }
   }
 
   public static void main(String[] args) throws Exception {
@@ -116,36 +121,46 @@ public class GeneratePrimitiveClasses {
     cfg.setDefaultEncoding("UTF-8");
     cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 
-    generateForAll(
-        cfg,
-        EnumSet.allOf(PrimitiveType.class),
-        "TypeConsumer.java",
-        "src/main/java/org/apache/giraph/function/primitive/%sConsumer.java");
+    String[] primitiveFunctions = { "%sConsumer", "%sPredicate", "Obj2%sFunction" };
 
-    generateForAll(
-        cfg,
-        EnumSet.allOf(PrimitiveType.class),
-        "Obj2TypeFunction.java",
-        "src/main/java/org/apache/giraph/function/primitive/Obj2%sFunction.java");
+    for (String function: primitiveFunctions) {
+      generateForAll(
+          cfg,
+          EnumSet.allOf(PrimitiveType.class),
+          String.format(function, "Type") + ".java",
+          "src/main/java/org/apache/giraph/function/primitive/" + function + ".java");
+    }
 
-//    generateForAll(
-//        cfg,
-//        EnumSet.allOf(PrimitiveType.class),
-//        "TypeTypeOps.java",
-//        "src/main/java/org/apache/giraph/types/ops/%sTypeOps.java");
-//
-//    generateForAll(
-//        cfg,
-//        EnumSet.allOf(PrimitiveType.class),
-//        "WTypeArrayList.java",
-//        "src/main/java/org/apache/giraph/types/ops/collections/array/W%sArrayList.java");
-
+    EnumSet<PrimitiveType> writableSet = EnumSet.noneOf(PrimitiveType.class);
     EnumSet<PrimitiveType> ids = EnumSet.noneOf(PrimitiveType.class);
-    for (PrimitiveType type : PrimitiveType.values()) {
-      if (type.isId()) {
-        ids.add(type);
+    for (PrimitiveType type : EnumSet.allOf(PrimitiveType.class)) {
+      if (type.hasWritable()) {
+        writableSet.add(type);
+        if (type.isId()) {
+          ids.add(type);
+        }
       }
     }
+
+    generateForAll(
+        cfg,
+        writableSet,
+        "TypeTypeOps.java",
+        "src/main/java/org/apache/giraph/types/ops/%sTypeOps.java");
+
+    generateForAll(
+        cfg,
+        writableSet,
+        "WTypeCollection.java",
+        "src/main/java/org/apache/giraph/types/ops/collections/W%sCollection.java");
+
+    generateForAll(
+        cfg,
+        writableSet,
+        "WTypeArrayList.java",
+        "src/main/java/org/apache/giraph/types/ops/collections/array/W%sArrayList.java");
+
+    System.out.println("Successfully generated classes");
   }
 
   /**

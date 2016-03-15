@@ -17,18 +17,21 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.Basic2ObjectMap;
 import org.apache.giraph.types.ops.collections.Basic2ObjectMap.BasicInt2ObjectOpenHashMap;
-import org.apache.giraph.types.ops.collections.BasicArrayList;
-import org.apache.giraph.types.ops.collections.BasicArrayList.BasicIntArrayList;
-import org.apache.giraph.types.ops.collections.BasicSet;
 import org.apache.giraph.types.ops.collections.BasicSet.BasicIntOpenHashSet;
+import org.apache.giraph.types.ops.collections.array.WIntArrayList;
 import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.IntWritable;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /** TypeOps implementation for working with IntWritable type */
-public enum IntTypeOps
-    implements PrimitiveIdTypeOps<IntWritable>, NumericTypeOps<IntWritable> {
+public enum IntTypeOps implements
+    PrimitiveIdTypeOps<IntWritable>, NumericTypeOps<IntWritable> {
   /** Singleton instance */
   INSTANCE;
 
@@ -53,33 +56,38 @@ public enum IntTypeOps
   }
 
   @Override
-  public BasicArrayList<IntWritable> createArrayList() {
-    return new BasicIntArrayList();
+  public WIntArrayList createArrayList() {
+    return new WIntArrayList();
   }
 
   @Override
-  public BasicArrayList<IntWritable> createArrayList(int capacity) {
-    return new BasicIntArrayList(capacity);
+  public WIntArrayList createArrayList(int capacity) {
+    return new WIntArrayList(capacity);
   }
 
   @Override
-  public BasicSet<IntWritable> createOpenHashSet() {
+  public WIntArrayList readNewArrayList(DataInput in) throws IOException {
+    return WIntArrayList.readNew(in);
+  }
+
+  @Override
+  public BasicIntOpenHashSet createOpenHashSet() {
     return new BasicIntOpenHashSet();
   }
 
   @Override
-  public BasicSet<IntWritable> createOpenHashSet(long capacity) {
+  public BasicIntOpenHashSet createOpenHashSet(long capacity) {
     return new BasicIntOpenHashSet(capacity);
   }
 
   @Override
-  public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
+  public <V> BasicInt2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
       WritableWriter<V> valueWriter) {
     return new BasicInt2ObjectOpenHashMap<>(valueWriter);
   }
 
   @Override
-  public <V> Basic2ObjectMap<IntWritable, V> create2ObjectOpenHashMap(
+  public <V> BasicInt2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
       int capacity, WritableWriter<V> valueWriter) {
     return new BasicInt2ObjectOpenHashMap<>(capacity, valueWriter);
   }
