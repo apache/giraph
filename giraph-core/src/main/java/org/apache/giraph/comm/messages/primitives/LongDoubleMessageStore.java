@@ -140,7 +140,8 @@ public class LongDoubleMessageStore
 
   @Override
   public boolean hasMessagesForPartition(int partitionId) {
-    return !map.get(partitionId).isEmpty();
+    Long2DoubleOpenHashMap partitionMessages = map.get(partitionId);
+    return partitionMessages != null && !partitionMessages.isEmpty();
   }
 
   @Override

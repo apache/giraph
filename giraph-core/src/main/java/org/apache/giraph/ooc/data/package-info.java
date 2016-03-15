@@ -15,30 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.ooc;
-
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-
 /**
- * Interface for memory estimator. Estimated memory is used in adaptive
- * out-of-core mechanism.
+ * Package of classes related to data structures used for an out-of-core
+ * mechanism
  */
-public interface MemoryEstimator {
-  /**
-   * Initialize the memory estimator.
-   *
-   * @param serviceWorker Worker service
-   */
-  void initialize(CentralizedServiceWorker serviceWorker);
-
-  /**
-   * @return amount of free memory in MB
-   */
-  double freeMemoryMB();
-
-  /**
-   * @return amount of available memory in MB
-   */
-  double maxMemoryMB();
-}
+package org.apache.giraph.ooc.data;

@@ -19,18 +19,13 @@
 package org.apache.giraph.partition;
 
 import com.google.common.collect.Maps;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.VertexIdEdges;
-import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -46,7 +41,11 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class SimplePartitionStore<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends PartitionStore<I, V, E> {
+    implements PartitionStore<I, V, E> {
+  /** Configuration */
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
+  /** Job context (for progress) */
+  private final Mapper<?, ?, ?, ?>.Context context;
   /** Map of stored partitions. */
   private final ConcurrentMap<Integer, Partition<I, V, E>> partitions =
       Maps.newConcurrentMap();
@@ -57,12 +56,11 @@ public class SimplePartitionStore<I extends WritableComparable,
    * Constructor.
    * @param conf Configuration
    * @param context Mapper context
-   * @param serviceWorker Service worker
    */
   public SimplePartitionStore(ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      Mapper<?, ?, ?, ?>.Context context,
-      CentralizedServiceWorker<I, V, E> serviceWorker) {
-    super(conf, context, serviceWorker);
+      Mapper<?, ?, ?, ?>.Context context) {
+    this.conf = conf;
+    this.context = context;
   }
 
   @Override
@@ -108,6 +106,11 @@ public class SimplePartitionStore<I extends WritableComparable,
     } else {
       return partition.getEdgeCount();
     }
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return partitions.size() == 0;
   }
 
   @Override
@@ -162,27 +165,8 @@ public class SimplePartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public void addPartitionEdges(Integer partitionId,
-      VertexIdEdges<I, E> edges) {
-    edgeStore.addPartitionEdges(partitionId, edges);
-  }
+  public void shutdown() { }
 
   @Override
-  public void moveEdgesToVertices() {
-    edgeStore.moveEdgesToVertices();
-  }
-
-  @Override
-  public <M extends Writable> void addPartitionCurrentMessages(
-      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
-    ((MessageStore<I, M>) currentMessageStore)
-        .addPartitionMessages(partitionId, messages);
-  }
-
-  @Override
-  public <M extends Writable> void addPartitionIncomingMessages(
-      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
-    ((MessageStore<I, M>) incomingMessageStore)
-        .addPartitionMessages(partitionId, messages);
-  }
+  public void initialize() { }
 }

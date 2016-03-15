@@ -46,19 +46,10 @@ public interface EdgeStore<I extends WritableComparable,
 
   /**
    * Move all edges from temporary storage to their source vertices.
-   * Note: this method is not thread-safe.
+   * Note: this method is not thread-safe and is called once all vertices and
+   * edges are read in INPUT_SUPERSTEP.
    */
   void moveEdgesToVertices();
-
-  /**
-   * Whether the store contains edges for the given partition.
-   * Note: This method is thread-safe
-   *
-   * @param partitionId Partition id under query
-   * @return true if the store has any edge for the given partition, false
-   *         otherwise
-   */
-  boolean hasPartitionEdges(int partitionId);
 
   /**
    * Deserialize the edges of a given partition, and removes the associated data
@@ -84,4 +75,12 @@ public interface EdgeStore<I extends WritableComparable,
    */
   void readPartitionEdgeStore(int partitionId, DataInput input)
       throws IOException;
+
+  /**
+   * Check if edge store has edge for a given partition
+   *
+   * @param partitionId Id of partition
+   * @return True iff edge store have messages for the given partition
+   */
+  boolean hasEdgesForPartition(int partitionId);
 }

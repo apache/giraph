@@ -23,6 +23,7 @@ import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -32,7 +33,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullTextVertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
-import org.apache.giraph.ooc.DiskBackedPartitionStore;
+import org.apache.giraph.ooc.data.DiskBackedPartitionStore;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
@@ -50,7 +51,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorCompletionService;
@@ -98,18 +98,14 @@ public class TestPartitionStores {
   public void setUp() {
     GiraphConfiguration configuration = new GiraphConfiguration();
     configuration.setComputationClass(MyComputation.class);
-    conf = new ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
-        NullWritable>(configuration);
+    conf = new ImmutableClassesGiraphConfiguration<>(configuration);
     context = Mockito.mock(Mapper.Context.class);
   }
 
   @Test
   public void testSimplePartitionStore() {
-    CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
-    serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     PartitionStore<IntWritable, IntWritable, NullWritable>
-    partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
-                NullWritable>(conf, context, serviceWorker);
+    partitionStore = new SimplePartitionStore<>(conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
   }
@@ -166,10 +162,15 @@ public class TestPartitionStores {
       serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    ServerData<IntWritable, IntWritable, NullWritable>
+        serverData = new ServerData<>(serviceWorker, conf, context);
+    Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
-    PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
-        new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
-            conf, context, serviceWorker);
+    DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
+        partitionStore =
+        (DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>)
+            serverData.getPartitionStore();
+    partitionStore.initialize();
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
     FileUtils.deleteDirectory(directory);
@@ -185,16 +186,19 @@ public class TestPartitionStores {
 
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
-
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    ServerData<IntWritable, IntWritable, NullWritable>
+        serverData = new ServerData<>(serviceWorker, conf, context);
+    Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
-    PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
-        new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
-            conf, context, serviceWorker);
+    DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
+        partitionStore =
+        (DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>)
+            serverData.getPartitionStore();
+    partitionStore.initialize();
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
-
     FileUtils.deleteDirectory(directory);
   }
 
@@ -275,18 +279,18 @@ public class TestPartitionStores {
     GiraphConstants.STATIC_GRAPH.set(conf, true);
     testMultiThreaded();
   }
-
+/*
   @Test
   public void testDiskBackedPartitionStoreAdaptiveOOC() throws Exception {
     GiraphConstants.STATIC_GRAPH.set(conf, true);
     testMultiThreaded();
   }
-
+*/
   private void testMultiThreaded() throws Exception {
     final AtomicInteger vertexCounter = new AtomicInteger(0);
     ExecutorService pool = Executors.newFixedThreadPool(NUM_OF_THREADS);
     ExecutorCompletionService<Boolean> executor =
-      new ExecutorCompletionService<Boolean>(pool);
+      new ExecutorCompletionService<>(pool);
 
     File directory = Files.createTempDir();
     GiraphConstants.PARTITIONS_DIRECTORY.set(
@@ -298,21 +302,25 @@ public class TestPartitionStores {
 
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    ServerData<IntWritable, IntWritable, NullWritable>
+        serverData = new ServerData<>(serviceWorker, conf, context);
+    Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
-    PartitionStore<IntWritable, IntWritable, NullWritable> store =
-        new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
-            conf, context, serviceWorker);
+    DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
+        store =
+        (DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>)
+            serverData.getPartitionStore();
     store.initialize();
 
     // Create a new Graph in memory using multiple threads
     for (int i = 0; i < NUM_OF_THREADS; ++i) {
-      List<Integer> partitionIds = new ArrayList<Integer>();
+      List<Integer> partitionIds = new ArrayList<>();
       for (int id = i; id < NUM_OF_PARTITIONS; id += NUM_OF_THREADS) {
         partitionIds.add(id);
       }
       Worker worker =
         new Worker(vertexCounter, store, partitionIds, conf);
-      executor.submit(worker, new Boolean(true));
+      executor.submit(worker, true);
     }
     for (int i = 0; i < NUM_OF_THREADS; ++i)
       executor.take();
@@ -341,11 +349,8 @@ public class TestPartitionStores {
     for (int i = 0; i < NUM_OF_PARTITIONS; ++i) {
       partition = store.getNextPartition();
       assert partition != null;
-      Iterator<Vertex<IntWritable, IntWritable, NullWritable>> vertexes =
-        partition.iterator();
 
-      while (vertexes.hasNext()) {
-        Vertex<IntWritable, IntWritable, NullWritable> v = vertexes.next();
+      for (Vertex<IntWritable, IntWritable, NullWritable> v : partition) {
         totalValues += v.getId().get();
       }
       store.putPartition(partition);
@@ -358,7 +363,6 @@ public class TestPartitionStores {
   private Partition<IntWritable, IntWritable, NullWritable>
   getPartition(PartitionStore<IntWritable, IntWritable,
       NullWritable> partitionStore, int partitionId) {
-    partitionStore.startIteration();
     Partition p;
     Partition result = null;
     while ((p = partitionStore.getNextPartition()) != null) {
@@ -403,8 +407,11 @@ public class TestPartitionStores {
     partitionStore.addPartition(createPartition(conf, 3, v5));
     partitionStore.addPartition(createPartition(conf, 4, v7));
 
+    partitionStore.startIteration();
     getPartition(partitionStore, 1);
+    partitionStore.startIteration();
     getPartition(partitionStore, 2);
+    partitionStore.startIteration();
     partitionStore.removePartition(3);
     getPartition(partitionStore, 4);
 
@@ -435,16 +442,12 @@ public class TestPartitionStores {
    * @param expected  expected results
    */
   private void checkResults(Iterable<String> results, String[] expected) {
-    Iterator<String> result = results.iterator();
 
-    assert results != null;
-
-    while(result.hasNext()) {
-      String  resultStr = result.next();
+    for (String str : results) {
       boolean found = false;
 
-      for (int j = 0; j < expected.length; ++j) {
-        if (expected[j].equals(resultStr)) {
+      for (String expectedStr : expected) {
+        if (expectedStr.equals(str)) {
           found = true;
         }
       }

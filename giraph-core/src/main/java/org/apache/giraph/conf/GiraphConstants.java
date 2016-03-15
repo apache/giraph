@@ -71,8 +71,6 @@ import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
-import org.apache.giraph.ooc.JVMMemoryEstimator;
-import org.apache.giraph.ooc.MemoryEstimator;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
@@ -975,15 +973,6 @@ public interface GiraphConstants {
   BooleanConfOption USE_OUT_OF_CORE_GRAPH =
       new BooleanConfOption("giraph.useOutOfCoreGraph", false,
           "Enable out-of-core graph.");
-
-  /**
-   * Memory estimator class used in adaptive out-of-core mechanism for deciding
-   * when data should go to disk.
-   */
-  ClassConfOption<MemoryEstimator> OUT_OF_CORE_MEM_ESTIMATOR =
-      ClassConfOption.create("giraph.outOfCoreMemoryEstimator",
-          JVMMemoryEstimator.class, MemoryEstimator.class,
-          "Memory estimator class used for out-of-core decisions");
 
   /** Number of threads participating in swapping graph/messages to disk. */
   IntConfOption NUM_OOC_THREADS =

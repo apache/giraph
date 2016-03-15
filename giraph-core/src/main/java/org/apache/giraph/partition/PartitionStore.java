@@ -18,152 +18,106 @@
 
 package org.apache.giraph.partition;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageData;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.EdgeStore;
-import org.apache.giraph.edge.EdgeStoreFactory;
-import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
-
-import java.io.IOException;
-
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
 
 /**
  * Structure that stores partitions for a worker. PartitionStore does not allow
  * random accesses to partitions except upon removal.
- * This structure is thread-safe.
+ * This structure is thread-safe, unless otherwise specified.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
  */
-public abstract class PartitionStore<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    implements PartitionData<I, V, E>, MessageData<I> {
-  /** Configuration. */
-  protected final ImmutableClassesGiraphConfiguration<I, V, E> conf;
-  /** Context used to report progress */
-  protected final Mapper<?, ?, ?, ?>.Context context;
-  /** service worker reference */
-  protected final CentralizedServiceWorker<I, V, E> serviceWorker;
-
-  /** Edge store for this worker */
-  protected final EdgeStore<I, V, E> edgeStore;
-
-  /** Message store factory */
-  protected MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
-      messageStoreFactory;
+public interface PartitionStore<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
   /**
-   * Message store for incoming messages (messages which will be consumed
-   * in the next super step)
-   */
-  protected volatile MessageStore<I, Writable> incomingMessageStore;
-  /**
-   * Message store for current messages (messages which we received in
-   * previous super step and which will be consumed in current super step)
-   */
-  protected volatile MessageStore<I, Writable> currentMessageStore;
-
-  /**
-   * Constructor for abstract partition store
+   * Add a *new* partition to the store. If the partition is already existed,
+   * it does not add the partition and returns false.
+   * Note: this method is not thread-safe and should be called by a single
+   * thread.
    *
-   * @param conf Job configuration
-   * @param context Mapper context
-   * @param serviceWorker Worker service
+   * @param partition Partition to add
+   * @return Whether the addition made any change in the partition store
    */
-  public PartitionStore(ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      Mapper<?, ?, ?, ?>.Context context,
-      CentralizedServiceWorker<I, V, E> serviceWorker) {
-    this.conf = conf;
-    this.context = context;
-    this.serviceWorker = serviceWorker;
-    this.messageStoreFactory = createMessageStoreFactory();
-    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
-    edgeStoreFactory.initialize(serviceWorker, conf, context);
-    this.edgeStore = edgeStoreFactory.newStore();
-  }
+  boolean addPartition(Partition<I, V, E> partition);
 
   /**
-   * Decide which message store should be used for current application,
-   * and create the factory for that store
+   * Remove a partition and return it. Called from a single thread, *not* from
+   * within a scheduling cycle. This method should *not* be called in
+   * INPUT_SUPERSTEP.
    *
-   * @return Message store factory
+   * @param partitionId Partition id
+   * @return The removed partition
    */
-  private MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
-  createMessageStoreFactory() {
-    Class<? extends MessageStoreFactory> messageStoreFactoryClass =
-        MESSAGE_STORE_FACTORY_CLASS.get(conf);
+  Partition<I, V, E> removePartition(Integer partitionId);
 
-    MessageStoreFactory messageStoreFactoryInstance =
-        ReflectionUtils.newInstance(messageStoreFactoryClass);
-    messageStoreFactoryInstance.initialize(serviceWorker, conf);
+  /**
+   * Whether a specific partition is present in the store.
+   *
+   * @param partitionId Partition id
+   * @return True iff the partition is present
+   */
+  boolean hasPartition(Integer partitionId);
 
-    return messageStoreFactoryInstance;
-  }
+  /**
+   * Return the ids of all the stored partitions as an Iterable.
+   *
+   * @return The partition ids
+   */
+  Iterable<Integer> getPartitionIds();
 
-  @Override
-  public boolean isEmpty() {
-    return getNumPartitions() == 0;
-  }
+  /**
+   * Return the number of stored partitions.
+   *
+   * @return The number of partitions
+   */
+  int getNumPartitions();
 
-  @Override
-  public <M extends Writable> MessageStore<I, M> getIncomingMessageStore() {
-    return (MessageStore<I, M>) incomingMessageStore;
-  }
+  /**
+   * Return the number of vertices in a partition.
+   *
+   * @param partitionId Partition id
+   * @return The number of vertices in the specified partition
+   */
+  long getPartitionVertexCount(Integer partitionId);
 
-  @Override
-  public <M extends Writable> MessageStore<I, M> getCurrentMessageStore() {
-    return (MessageStore<I, M>) currentMessageStore;
-  }
+  /**
+   * Return the number of edges in a partition.
+   *
+   * @param partitionId Partition id
+   * @return The number of edges in the specified partition
+   */
+  long getPartitionEdgeCount(Integer partitionId);
 
-  @Override
-  public void resetMessageStores() throws IOException {
-    if (currentMessageStore != null) {
-      currentMessageStore.clearAll();
-      currentMessageStore = null;
-    }
-    if (incomingMessageStore != null) {
-      incomingMessageStore.clearAll();
-      incomingMessageStore = null;
-    }
-    prepareSuperstep();
-  }
+  /**
+   * Whether the partition store is empty.
+   *
+   * @return True iff there are no partitions in the store
+   */
+  boolean isEmpty();
 
-  /** Prepare for next super step */
-  public void prepareSuperstep() {
-    if (currentMessageStore != null) {
-      try {
-        currentMessageStore.clearAll();
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to clear previous message store");
-      }
-    }
-    currentMessageStore = incomingMessageStore != null ?
-        incomingMessageStore :
-        messageStoreFactory.newStore(conf.getIncomingMessageClasses());
-    incomingMessageStore =
-        messageStoreFactory.newStore(conf.getOutgoingMessageClasses());
-    // finalize current message-store before resolving mutations
-    currentMessageStore.finalizeStore();
-  }
+  /**
+   * Add vertices to a given partition from a given DataOutput instance. This
+   * method is called right after receipt of vertex request in INPUT_SUPERSTEP.
+   *
+   * @param partitionId Partition id
+   * @param extendedDataOutput Output containing serialized vertex data
+   */
+  void addPartitionVertices(Integer partitionId,
+                            ExtendedDataOutput extendedDataOutput);
 
   /**
    * Called at the end of the computation. Called from a single thread.
    */
-  public void shutdown() { }
+  void shutdown();
 
   /**
    * Called at the beginning of the computation. Called from a single thread.
    */
-  public void initialize() { }
+  void initialize();
 
   /**
    * Start the iteration cycle to iterate over partitions. Note that each
@@ -194,7 +148,7 @@ public abstract class PartitionStore<I extends WritableComparable,
    *
    * Called from a single thread.
    */
-  public abstract void startIteration();
+  void startIteration();
 
   /**
    * Return the next partition in iteration for the current superstep.
@@ -204,7 +158,7 @@ public abstract class PartitionStore<I extends WritableComparable,
    *
    * @return The next partition to process
    */
-  public abstract Partition<I, V, E> getNextPartition();
+  Partition<I, V, E> getNextPartition();
 
   /**
    * Put a partition back to the store. Use this method to put a partition
@@ -213,21 +167,5 @@ public abstract class PartitionStore<I extends WritableComparable,
    *
    * @param partition Partition
    */
-  public abstract void putPartition(Partition<I, V, E> partition);
-
-  /**
-   * Move edges from edge store to partitions. This method is called from a
-   * *single thread* once all vertices and edges are read in INPUT_SUPERSTEP.
-   */
-  public abstract void moveEdgesToVertices();
-
-  /**
-   * In case of async message store we have to wait for all messages
-   * to be processed before going into next superstep.
-   */
-  public void waitForComplete() {
-    if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
-      ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
-    }
-  }
+  void putPartition(Partition<I, V, E> partition);
 }

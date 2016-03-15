@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
@@ -93,11 +94,10 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
   @Override
   public void doRequest(ServerData serverData) {
     try {
-      if (serverData.getPartitionStore().getIncomingMessageStore()
-          .isPointerListEncoding()) {
+      MessageStore<I, M> messageStore = serverData.getIncomingMessageStore();
+      if (messageStore.isPointerListEncoding()) {
         // if message store is pointer list based then send data as is
-        serverData.getPartitionStore()
-            .addPartitionIncomingMessages(-1, oneMessageToManyIds);
+        messageStore.addPartitionMessages(-1, oneMessageToManyIds);
       } else { // else split the data per partition and send individually
         CentralizedServiceWorker<I, ?, ?> serviceWorker =
             serverData.getServiceWorker();
@@ -144,9 +144,8 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
         for (Entry<Integer, ByteArrayVertexIdMessages> idMsgs :
             partitionIdMsgs.entrySet()) {
           if (!idMsgs.getValue().isEmpty()) {
-            serverData.getPartitionStore()
-                .addPartitionIncomingMessages(idMsgs.getKey(),
-                    idMsgs.getValue());
+            serverData.getIncomingMessageStore().addPartitionMessages(
+                idMsgs.getKey(), idMsgs.getValue());
           }
         }
       }

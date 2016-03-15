@@ -187,7 +187,9 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
 
   @Override
   public boolean hasMessagesForPartition(int partitionId) {
-    return map.get(partitionId).size() != 0;
+    Basic2ObjectMap<I, DataInputOutput> partitionMessages =
+        map.get(partitionId);
+    return partitionMessages != null && partitionMessages.size() != 0;
   }
 
   @Override

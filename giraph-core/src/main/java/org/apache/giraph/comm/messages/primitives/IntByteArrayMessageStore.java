@@ -178,7 +178,9 @@ public class IntByteArrayMessageStore<M extends Writable>
 
   @Override
   public boolean hasMessagesForPartition(int partitionId) {
-    return !map.get(partitionId).isEmpty();
+    Int2ObjectOpenHashMap<DataInputOutput> partitionMessages =
+        map.get(partitionId);
+    return partitionMessages != null && !partitionMessages.isEmpty();
   }
 
   @Override

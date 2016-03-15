@@ -575,7 +575,7 @@ else[HADOOP_NON_SECURE]*/
 
     if (getConfiguration().hasEdgeInputFormat()) {
       // Move edges from temporary storage to their source vertices.
-      getServerData().getPartitionStore().moveEdgesToVertices();
+      getServerData().getEdgeStore().moveEdgesToVertices();
     }
 
     // Generate the partition stats for the input superstep and process
@@ -783,7 +783,7 @@ else[HADOOP_NON_SECURE]*/
     globalCommHandler.finishSuperstep(workerAggregatorRequestProcessor);
 
     MessageStore<I, Writable> incomingMessageStore =
-        getServerData().getPartitionStore().getIncomingMessageStore();
+        getServerData().getIncomingMessageStore();
     if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
       ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
     }
@@ -1010,13 +1010,16 @@ else[HADOOP_NON_SECURE]*/
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
+            LOG.info("Write thread started!");
             while (true) {
               Partition<I, V, E> partition =
                   getPartitionStore().getNextPartition();
+              LOG.info("partition is : " + partition);
               if (partition == null) {
                 break;
               }
 
+              LOG.info("start to write a partition");
               long verticesWritten = 0;
               for (Vertex<I, V, E> vertex : partition) {
                 vertexWriter.writeVertex(vertex);
@@ -1033,6 +1036,7 @@ else[HADOOP_NON_SECURE]*/
                   nextPrintMsecs = System.currentTimeMillis() + 15000;
                   nextPrintVertices = verticesWritten + 250000;
                 }
+                LOG.info("done writing vertices");
 
                 if (verticesWritten >= nextUpdateProgressVertices) {
                   WorkerProgress.get().addVerticesStored(
@@ -1288,10 +1292,12 @@ else[HADOOP_NON_SECURE]*/
     workerContext.write(checkpointOutputStream);
     getContext().progress();
 
+    // TODO: checkpointing messages along with vertices to avoid multiple loads
+    //       of a partition when out-of-core is enabled.
     for (Integer partitionId : getPartitionStore().getPartitionIds()) {
       // write messages
       checkpointOutputStream.writeInt(partitionId);
-      getServerData().getPartitionStore().getCurrentMessageStore()
+      getServerData().getCurrentMessageStore()
           .writePartition(checkpointOutputStream, partitionId);
       getContext().progress();
 
@@ -1539,9 +1545,11 @@ else[HADOOP_NON_SECURE]*/
       getConfiguration().updateSuperstepClasses(superstepClasses);
       getServerData().resetMessageStores();
 
+      // TODO: checkpointing messages along with vertices to avoid multiple
+      //       loads of a partition when out-of-core is enabled.
       for (int i = 0; i < partitions; i++) {
         int partitionId = checkpointStream.readInt();
-        getServerData().getPartitionStore().getCurrentMessageStore()
+        getServerData().getCurrentMessageStore()
             .readFieldsForPartition(checkpointStream, partitionId);
       }
 

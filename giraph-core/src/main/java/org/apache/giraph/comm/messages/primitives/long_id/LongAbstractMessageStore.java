@@ -102,7 +102,8 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
 
   @Override
   public boolean hasMessagesForPartition(int partitionId) {
-    return !map.get(partitionId).isEmpty();
+    Long2ObjectOpenHashMap<T> partitionMessages = map.get(partitionId);
+    return partitionMessages != null && !partitionMessages.isEmpty();
   }
 
   @Override

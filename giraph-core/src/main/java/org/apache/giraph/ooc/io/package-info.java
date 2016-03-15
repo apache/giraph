@@ -15,31 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.ooc;
-
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.utils.MemoryUtils;
-
 /**
- * Memory estimator class using JVM runtime methods to estimate the
- * free/available memory.
+ * Package of classes related to IO operations in out-of-core mechanism
  */
-public class JVMMemoryEstimator implements MemoryEstimator {
-  /**
-   * Constructor for reflection
-   */
-  public JVMMemoryEstimator() { }
-
-  @Override
-  public void initialize(CentralizedServiceWorker serviceWorker) { }
-
-  @Override
-  public double freeMemoryMB() {
-    return MemoryUtils.freePlusUnallocatedMemoryMB();
-  }
-
-  @Override public double maxMemoryMB() {
-    return MemoryUtils.maxMemoryMB();
-  }
-}
+package org.apache.giraph.ooc.io;

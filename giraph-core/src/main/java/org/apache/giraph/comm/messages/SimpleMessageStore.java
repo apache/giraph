@@ -212,7 +212,8 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
 
   @Override
   public boolean hasMessagesForPartition(int partitionId) {
-    return !map.get(partitionId).isEmpty();
+    ConcurrentMap<I, T> partitionMessages = map.get(partitionId);
+    return partitionMessages != null && !partitionMessages.isEmpty();
   }
 
   @Override

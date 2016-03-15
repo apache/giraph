@@ -71,8 +71,8 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
     while (iterator.hasNext()) {
       iterator.next();
       try {
-        serverData.getPartitionStore().
-            addPartitionIncomingMessages(iterator.getCurrentFirst(),
+        serverData.getIncomingMessageStore().
+            addPartitionMessages(iterator.getCurrentFirst(),
                 iterator.getCurrentSecond());
       } catch (IOException e) {
         throw new RuntimeException("doRequest: Got IOException ", e);

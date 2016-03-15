@@ -178,15 +178,14 @@ public class RequestTest {
 
     // Check the output
     Iterable<IntWritable> vertices =
-        serverData.getPartitionStore().getIncomingMessageStore()
-            .getPartitionDestinationVertices(0);
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
     int keySum = 0;
     int messageSum = 0;
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
       Iterable<IntWritable> messages =
-          serverData.getPartitionStore().<IntWritable>getIncomingMessageStore()
-              .getVertexMessages(vertexId);
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {
           messageSum += message.get();
@@ -224,15 +223,14 @@ public class RequestTest {
 
     // Check the output
     Iterable<IntWritable> vertices =
-        serverData.getPartitionStore().getIncomingMessageStore()
-            .getPartitionDestinationVertices(0);
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
     int keySum = 0;
     int messageSum = 0;
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
       Iterable<IntWritable> messages =
-          serverData.getPartitionStore().<IntWritable>getIncomingMessageStore()
-              .getVertexMessages(vertexId);
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {
           messageSum += message.get();

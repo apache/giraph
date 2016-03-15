@@ -31,19 +31,31 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.EdgeStore;
+import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.ooc.DiskBackedPartitionStore;
+import org.apache.giraph.ooc.data.DiskBackedEdgeStore;
+import org.apache.giraph.ooc.data.DiskBackedMessageStore;
+import org.apache.giraph.ooc.data.DiskBackedPartitionStore;
+import org.apache.giraph.ooc.FixedOutOfCoreEngine;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.SimplePartitionStore;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
 
 /**
  * Anything that the server stores
@@ -56,12 +68,26 @@ import org.apache.log4j.Logger;
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable> {
   /** Class logger */
-  private static final Logger LOG =
-      Logger.getLogger(ServerData.class);
+  private static final Logger LOG = Logger.getLogger(ServerData.class);
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition store for this worker. */
   private volatile PartitionStore<I, V, E> partitionStore;
+  /** Edge store for this worker. */
+  private final EdgeStore<I, V, E> edgeStore;
+  /** Message store factory */
+  private final MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
+      messageStoreFactory;
+  /**
+   * Message store for incoming messages (messages which will be consumed
+   * in the next super step)
+   */
+  private volatile MessageStore<I, Writable> incomingMessageStore;
+  /**
+   * Message store for current messages (messages which we received in
+   * previous super step and which will be consumed in current super step)
+   */
+  private volatile MessageStore<I, Writable> currentMessageStore;
   /**
    * Map of partition ids to vertex mutations from other workers. These are
    * mutations that should be applied before execution of *current* super step.
@@ -81,7 +107,7 @@ public class ServerData<I extends WritableComparable,
       ConcurrentMap<I, VertexMutations<I, V, E>>>
       partitionMutations = Maps.newConcurrentMap();
   /**
-   * Holds aggregtors which current worker owns from current superstep
+   * Holds aggregators which current worker owns from current superstep
    */
   private final OwnerAggregatorServerData ownerAggregatorData;
   /**
@@ -100,6 +126,8 @@ public class ServerData<I extends WritableComparable,
 
   /** Job context (for progress) */
   private final Mapper<?, ?, ?, ?>.Context context;
+  /** Out-of-core engine */
+  private final OutOfCoreEngine oocEngine;
 
   /**
    * Constructor.
@@ -114,17 +142,72 @@ public class ServerData<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context) {
     this.serviceWorker = service;
     this.conf = conf;
+    this.messageStoreFactory = createMessageStoreFactory();
+    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
+    edgeStoreFactory.initialize(service, conf, context);
+    EdgeStore<I, V, E> inMemoryEdgeStore = edgeStoreFactory.newStore();
+    PartitionStore<I, V, E> inMemoryPartitionStore =
+        new SimplePartitionStore<I, V, E>(conf, context);
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
+      int maxPartitionsInMemory =
+          GiraphConstants.MAX_PARTITIONS_IN_MEMORY.get(conf);
+      if (maxPartitionsInMemory == 0) {
+        throw new IllegalStateException("ServerData: Adaptive " +
+            "out-of-core engine is not supported yet! Number of partitions in" +
+            " memory should be greater than 0.");
+      } else {
+        oocEngine = new FixedOutOfCoreEngine(conf, service,
+            maxPartitionsInMemory);
+      }
       partitionStore =
-          new DiskBackedPartitionStore<I, V, E>(conf, context,
-              getServiceWorker());
+          new DiskBackedPartitionStore<I, V, E>(inMemoryPartitionStore,
+              conf, context, service, oocEngine);
+      edgeStore =
+          new DiskBackedEdgeStore<I, V, E>(inMemoryEdgeStore, conf, oocEngine);
     } else {
-      partitionStore =
-          new SimplePartitionStore<I, V, E>(conf, context, getServiceWorker());
+      partitionStore = inMemoryPartitionStore;
+      edgeStore = inMemoryEdgeStore;
+      oocEngine = null;
     }
     ownerAggregatorData = new OwnerAggregatorServerData(context);
     allAggregatorData = new AllAggregatorServerData(context, conf);
     this.context = context;
+  }
+
+  /**
+   * Decide which message store should be used for current application,
+   * and create the factory for that store
+   *
+   * @return Message store factory
+   */
+  private MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
+  createMessageStoreFactory() {
+    Class<? extends MessageStoreFactory> messageStoreFactoryClass =
+        MESSAGE_STORE_FACTORY_CLASS.get(conf);
+
+    MessageStoreFactory messageStoreFactoryInstance =
+        ReflectionUtils.newInstance(messageStoreFactoryClass);
+    messageStoreFactoryInstance.initialize(serviceWorker, conf);
+
+    return messageStoreFactoryInstance;
+  }
+
+  /**
+   * Return the out-of-core engine for this worker.
+   *
+   * @return The out-of-core engine
+   */
+  public OutOfCoreEngine getOocEngine() {
+    return oocEngine;
+  }
+
+  /**
+   * Return the edge store for this worker.
+   *
+   * @return The edge store
+   */
+  public EdgeStore<I, V, E> getEdgeStore() {
+    return edgeStore;
   }
 
   /**
@@ -137,21 +220,103 @@ public class ServerData<I extends WritableComparable,
   }
 
   /**
+   * Get message store for incoming messages (messages which will be consumed
+   * in the next super step)
+   *
+   * @param <M> Message data
+   * @return Incoming message store
+   */
+  public <M extends Writable> MessageStore<I, M> getIncomingMessageStore() {
+    return (MessageStore<I, M>) incomingMessageStore;
+  }
+
+  /**
+   * Get message store for current messages (messages which we received in
+   * previous super step and which will be consumed in current super step)
+   *
+   * @param <M> Message data
+   * @return Current message store
+   */
+  public <M extends Writable> MessageStore<I, M> getCurrentMessageStore() {
+    return (MessageStore<I, M>) currentMessageStore;
+  }
+
+  /**
    * Re-initialize message stores.
    * Discards old values if any.
+   *
    * @throws IOException
    */
   public void resetMessageStores() throws IOException {
-    getPartitionStore().resetMessageStores();
-    currentWorkerToWorkerMessages =
-        Collections.synchronizedList(new ArrayList<Writable>());
-    incomingWorkerToWorkerMessages =
-        Collections.synchronizedList(new ArrayList<Writable>());
+    if (currentMessageStore != null) {
+      currentMessageStore.clearAll();
+      currentMessageStore = null;
+    }
+    if (incomingMessageStore != null) {
+      incomingMessageStore.clearAll();
+      incomingMessageStore = null;
+    }
+    prepareSuperstep();
   }
 
-  /** Prepare for next super step */
+  /** Prepare for next superstep */
   public void prepareSuperstep() {
-    partitionStore.prepareSuperstep();
+    if (currentMessageStore != null) {
+      try {
+        currentMessageStore.clearAll();
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "Failed to clear previous message store");
+      }
+    }
+
+    MessageStore<I, Writable> nextCurrentMessageStore;
+    MessageStore<I, Writable> nextIncomingMessageStore;
+    MessageStore<I, Writable> messageStore;
+
+    // First create the necessary in-memory message stores. If out-of-core
+    // mechanism is enabled, we wrap the in-memory message stores within
+    // disk-backed messages stores.
+    if (incomingMessageStore != null) {
+      nextCurrentMessageStore = incomingMessageStore;
+    } else {
+      messageStore = messageStoreFactory.newStore(
+          conf.getIncomingMessageClasses());
+      if (oocEngine == null) {
+        nextCurrentMessageStore = messageStore;
+      } else {
+        nextCurrentMessageStore = new DiskBackedMessageStore<>(
+            conf, messageStore,
+            conf.getIncomingMessageClasses().useMessageCombiner(),
+            serviceWorker.getSuperstep());
+      }
+    }
+
+    messageStore = messageStoreFactory.newStore(
+        conf.getOutgoingMessageClasses());
+    if (oocEngine == null) {
+      nextIncomingMessageStore = messageStore;
+    } else {
+      nextIncomingMessageStore = new DiskBackedMessageStore<>(
+          conf, messageStore,
+          conf.getOutgoingMessageClasses().useMessageCombiner(),
+          serviceWorker.getSuperstep() + 1);
+    }
+
+    // If out-of-core engine is enabled, we avoid overlapping of out-of-core
+    // decisions with change of superstep. This avoidance is done to simplify
+    // the design and reduce excessive use of synchronization primitives.
+    if (oocEngine != null) {
+      oocEngine.getSuperstepLock().writeLock().lock();
+    }
+    currentMessageStore = nextCurrentMessageStore;
+    incomingMessageStore = nextIncomingMessageStore;
+    if (oocEngine != null) {
+      oocEngine.getMetaPartitionManager().resetMessages();
+      oocEngine.getSuperstepLock().writeLock().unlock();
+    }
+    currentMessageStore.finalizeStore();
+
     currentWorkerToWorkerMessages = incomingWorkerToWorkerMessages;
     incomingWorkerToWorkerMessages =
         Collections.synchronizedList(new ArrayList<Writable>());
@@ -252,8 +417,7 @@ public class ServerData<I extends WritableComparable,
         VertexMutations<I, V, E> vertexMutations = entry.getValue();
         Vertex<I, V, E> vertex = vertexResolver.resolve(vertexId,
             originalVertex, vertexMutations,
-            getPartitionStore().getCurrentMessageStore()
-                .hasMessagesForVertex(entry.getKey()));
+            getCurrentMessageStore().hasMessagesForVertex(entry.getKey()));
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("resolvePartitionMutations: Resolved vertex index " +
@@ -269,8 +433,7 @@ public class ServerData<I extends WritableComparable,
         } else if (originalVertex != null) {
           partition.removeVertex(vertexId);
           try {
-            getPartitionStore().getCurrentMessageStore()
-                .clearVertexMessages(vertexId);
+            getCurrentMessageStore().clearVertexMessages(vertexId);
           } catch (IOException e) {
             throw new IllegalStateException("resolvePartitionMutations: " +
                 "Caught IOException while clearing messages for a deleted " +
@@ -283,7 +446,7 @@ public class ServerData<I extends WritableComparable,
 
     // Keep track of vertices which are not here in the partition, but have
     // received messages
-    Iterable<I> destinations = getPartitionStore().getCurrentMessageStore().
+    Iterable<I> destinations = getCurrentMessageStore().
         getPartitionDestinationVertices(partitionId);
     if (!Iterables.isEmpty(destinations)) {
       for (I vertexId : destinations) {
@@ -305,6 +468,16 @@ public class ServerData<I extends WritableComparable,
           context.progress();
         }
       }
+    }
+  }
+
+  /**
+   * In case of async message store we have to wait for all messages
+   * to be processed before going into next superstep.
+   */
+  public void waitForComplete() {
+    if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
+      ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
     }
   }
 }

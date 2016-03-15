@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * Basic implementation of edges store, extended this to easily define simple
  * and primitive edge stores
@@ -157,7 +159,7 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   getPartitionEdgesIterator(Map<K, OutEdges<I, E>> partitionEdges);
 
   @Override
-  public boolean hasPartitionEdges(int partitionId) {
+  public boolean hasEdgesForPartition(int partitionId) {
     return transientEdges.containsKey(partitionId);
   }
 
@@ -165,21 +167,21 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   public void writePartitionEdgeStore(int partitionId, DataOutput output)
       throws IOException {
     Map<K, OutEdges<I, E>> edges = transientEdges.remove(partitionId);
-    output.writeInt(edges.size());
-    for (Map.Entry<K, OutEdges<I, E>> edge : edges.entrySet()) {
-      writeVertexKey(edge.getKey(), output);
-      edge.getValue().write(output);
+    if (edges != null) {
+      output.writeInt(edges.size());
+      for (Map.Entry<K, OutEdges<I, E>> edge : edges.entrySet()) {
+        writeVertexKey(edge.getKey(), output);
+        edge.getValue().write(output);
+      }
     }
   }
 
   @Override
   public void readPartitionEdgeStore(int partitionId, DataInput input)
       throws IOException {
-    if (transientEdges.containsKey(partitionId)) {
-      throw new IllegalStateException("readPartitionEdgeStore: reading a " +
-          "partition that is already there in the partition store " +
-          "(impossible)");
-    }
+    checkState(!transientEdges.containsKey(partitionId),
+        "readPartitionEdgeStore: reading a partition that is already there in" +
+            " the partition store (impossible)");
     Map<K, OutEdges<I, E>> partitionEdges = getPartitionEdges(partitionId);
     int numEntries = input.readInt();
     for (int i = 0; i < numEntries; ++i) {
