@@ -1275,41 +1275,47 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     String workerInfoHealthyPath =
         getWorkerInfoHealthyPath(getApplicationAttempt(), getSuperstep());
-    List<String> finishedHostnameIdList;
+    List<String> finishedHostnameIdList = new ArrayList<>();
     long nextInfoMillis = System.currentTimeMillis();
     final int defaultTaskTimeoutMsec = 10 * 60 * 1000;  // from TaskTracker
+    final int waitBetweenLogInfoMsec = 30 * 1000;
     final int taskTimeoutMsec = getContext().getConfiguration().getInt(
-        "mapred.task.timeout", defaultTaskTimeoutMsec);
+        "mapred.task.timeout", defaultTaskTimeoutMsec) / 2;
+    long lastRegularRunTimeMsec = 0;
+    int eventLoopTimeout =  Math.min(taskTimeoutMsec, waitBetweenLogInfoMsec);
+    boolean logInfoOnlyRun = false;
     List<WorkerInfo> deadWorkers = new ArrayList<>();
     while (true) {
-      try {
-        finishedHostnameIdList =
-            getZkExt().getChildrenExt(finishedWorkerPath,
-                true,
-                false,
-                false);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "barrierOnWorkerList: KeeperException - Couldn't get " +
-                "children of " + finishedWorkerPath, e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "barrierOnWorkerList: IllegalException - Couldn't get " +
-                "children of " + finishedWorkerPath, e);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("barrierOnWorkerList: Got finished worker list = " +
-            finishedHostnameIdList + ", size = " +
-            finishedHostnameIdList.size() +
-            ", worker list = " +
-            workerInfoList + ", size = " +
-            workerInfoList.size() +
-            " from " + finishedWorkerPath);
+      if (! logInfoOnlyRun) {
+        try {
+          finishedHostnameIdList =
+              getZkExt().getChildrenExt(finishedWorkerPath,
+                                        true,
+                                        false,
+                                        false);
+        } catch (KeeperException e) {
+          throw new IllegalStateException(
+              "barrierOnWorkerList: KeeperException - Couldn't get " +
+                  "children of " + finishedWorkerPath, e);
+        } catch (InterruptedException e) {
+          throw new IllegalStateException(
+              "barrierOnWorkerList: IllegalException - Couldn't get " +
+                  "children of " + finishedWorkerPath, e);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("barrierOnWorkerList: Got finished worker list = " +
+                        finishedHostnameIdList + ", size = " +
+                        finishedHostnameIdList.size() +
+                        ", worker list = " +
+                        workerInfoList + ", size = " +
+                        workerInfoList.size() +
+                        " from " + finishedWorkerPath);
+        }
       }
 
       if (LOG.isInfoEnabled() &&
           (System.currentTimeMillis() > nextInfoMillis)) {
-        nextInfoMillis = System.currentTimeMillis() + 30000;
+        nextInfoMillis = System.currentTimeMillis() + waitBetweenLogInfoMsec;
         LOG.info("barrierOnWorkerList: " +
             finishedHostnameIdList.size() +
             " out of " + workerInfoList.size() +
@@ -1322,28 +1328,46 @@ public class BspServiceMaster<I extends WritableComparable,
           LOG.info("barrierOnWorkerList: Waiting on " + remainingWorkers);
         }
       }
-      getContext().setStatus(getGraphTaskManager().getGraphFunctions() + " - " +
-          finishedHostnameIdList.size() +
-          " finished out of " +
-          workerInfoList.size() +
-          " on superstep " + getSuperstep());
-      if (finishedHostnameIdList.containsAll(hostnameIdList)) {
-        break;
-      }
 
-      for (WorkerInfo deadWorker : deadWorkers) {
-        if (!finishedHostnameIdList.contains(deadWorker.getHostnameId())) {
-          LOG.error("barrierOnWorkerList: no results arived from " +
-              "worker that was pronounced dead: " + deadWorker +
-              " on superstep " + getSuperstep());
-          return false;
+      if (! logInfoOnlyRun) {
+        getContext().setStatus(getGraphTaskManager().getGraphFunctions() +
+                                   " - " +
+                                   finishedHostnameIdList.size() +
+                                   " finished out of " +
+                                   workerInfoList.size() +
+                                   " on superstep " + getSuperstep());
+        if (finishedHostnameIdList.containsAll(hostnameIdList)) {
+          break;
         }
+
+        for (WorkerInfo deadWorker : deadWorkers) {
+          if (!finishedHostnameIdList.contains(deadWorker.getHostnameId())) {
+            LOG.error("barrierOnWorkerList: no results arived from " +
+                          "worker that was pronounced dead: " + deadWorker +
+                          " on superstep " + getSuperstep());
+            return false;
+          }
+        }
+
+        // wall-clock time skew is ignored
+        lastRegularRunTimeMsec = System.currentTimeMillis();
       }
 
       // Wait for a signal or timeout
-      event.waitMsecs(taskTimeoutMsec / 2);
+      boolean eventTriggered = event.waitMsecs(eventLoopTimeout);
+      long elapsedTimeSinceRegularRunMsec = System.currentTimeMillis() -
+          lastRegularRunTimeMsec;
       event.reset();
       getContext().progress();
+
+      if (eventTriggered ||
+          taskTimeoutMsec == eventLoopTimeout ||
+          elapsedTimeSinceRegularRunMsec >= taskTimeoutMsec) {
+        logInfoOnlyRun = false;
+      } else {
+        logInfoOnlyRun = true;
+        continue;
+      }
 
       // Did a worker die?
       try {
