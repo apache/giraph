@@ -18,10 +18,7 @@
 package org.apache.giraph.utils;
 
 /**
- * This Code is Copied from main/java/org/apache/mahout/math/Varint.java
- *
- * Only modification is throwing exceptions for passing negative values to
- * unsigned functions, instead of serializing them.
+ * This Code is adapted from main/java/org/apache/mahout/math/Varint.java
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -42,6 +39,8 @@ package org.apache.giraph.utils;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import com.google.common.base.Preconditions;
 
 /**
  * <p>
@@ -68,131 +67,284 @@ public final class Varint {
   /**
    * Encodes a value using the variable-length encoding from <a
    * href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
-   * Google Protocol Buffers</a>. Zig-zag is not used, so input must not be
-   * negative. If values can be negative, use
-   * {@link #writeSignedVarLong(long, DataOutput)} instead. This method treats
-   * negative input as like a large unsigned value.
+   * Google Protocol Buffers</a>.
    *
-   * @param value
-   *          value to encode
-   * @param out
-   *          to write bytes to
+   * @param value to encode
+   * @param out to write bytes to
+   * @throws IOException
+   *           if {@link DataOutput} throws {@link IOException}
+   */
+  private static void writeVarLong(
+    long value,
+    DataOutput out
+  ) throws IOException {
+    while (true) {
+      int bits = ((int) value) & 0x7f;
+      value >>>= 7;
+      if (value == 0) {
+        out.writeByte((byte) bits);
+        return;
+      }
+      out.writeByte((byte) (bits | 0x80));
+    }
+  }
+
+  /**
+   * Encodes a value using the variable-length encoding from <a
+   * href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
+   * Google Protocol Buffers</a>.
+   *
+   * @param value to encode
+   * @param out to write bytes to
    * @throws IOException
    *           if {@link DataOutput} throws {@link IOException}
    */
   public static void writeUnsignedVarLong(
-      long value, DataOutput out) throws IOException {
-    if (value < 0) {
-      throw new IllegalArgumentException(
-          "Negative value passed into writeUnsignedVarLong - " + value);
-    }
-    while ((value & 0xFFFFFFFFFFFFFF80L) != 0L) {
-      out.writeByte(((int) value & 0x7F) | 0x80);
-      value >>>= 7;
-    }
-    out.writeByte((int) value & 0x7F);
+    long value,
+    DataOutput out
+  ) throws IOException {
+    Preconditions.checkState(
+      value >= 0,
+      "Negative value passed into writeUnsignedVarLong - " + value
+    );
+    writeVarLong(value, out);
   }
 
   /**
-   * @see #writeUnsignedVarLong(long, DataOutput)
-   * @param value
-   *          value to encode
-   * @param out
-   *          to write bytes to
+   * Zig-zag encoding for signed longs
+   *
+   * @param value to encode
+   * @param out to write bytes to
+   * @throws IOException
+   *           if {@link DataOutput} throws {@link IOException}
+   */
+  public static void writeSignedVarLong(
+    long value,
+    DataOutput out
+  ) throws IOException {
+    writeVarLong((value << 1) ^ (value >> 63), out);
+  }
+
+  /**
+   * @see #writeVarLong(long, DataOutput)
+   * @param value to encode
+   * @param out to write bytes to
+   * @throws IOException
+   */
+  private static void writeVarInt(
+    int value,
+    DataOutput out
+  ) throws IOException {
+    while (true) {
+      int bits = value & 0x7f;
+      value >>>= 7;
+      if (value == 0) {
+        out.writeByte((byte) bits);
+        return;
+      }
+      out.writeByte((byte) (bits | 0x80));
+    }
+  }
+
+  /**
+   * @see #writeVarLong(long, DataOutput)
+   * @param value to encode
+   * @param out to write bytes to
+   * @throws IOException
    */
   public static void writeUnsignedVarInt(
-      int value, DataOutput out) throws IOException {
-    if (value < 0) {
-      throw new IllegalArgumentException(
-          "Negative value passed into writeUnsignedVarInt - " + value);
-    }
-    while ((value & 0xFFFFFF80) != 0L) {
-      out.writeByte((value & 0x7F) | 0x80);
-      value >>>= 7;
-    }
-    out.writeByte(value & 0x7F);
+    int value,
+    DataOutput out
+  ) throws IOException {
+    Preconditions.checkState(
+      value >= 0,
+      "Negative value passed into writeUnsignedVarInt - " + value
+    );
+    writeVarInt(value, out);
   }
 
   /**
-   * @param in
-   *          to read bytes from
+   * Zig-zag encoding for signed ints
+   *
+   * @see #writeUnsignedVarInt(int, DataOutput)
+   * @param value to encode
+   * @param out to write bytes to
+   * @throws IOException
+   */
+  public static void writeSignedVarInt(
+    int value,
+    DataOutput out
+  ) throws IOException {
+    writeVarInt((value << 1) ^ (value >> 31), out);
+  }
+
+  /**
+   * @param in to read bytes from
    * @return decode value
    * @throws IOException
    *           if {@link DataInput} throws {@link IOException}
-   * @throws IllegalArgumentException
-   *           if variable-length value does not terminate after 9 bytes have
-   *           been read
-   * @see #writeUnsignedVarLong(long, DataOutput)
    */
   public static long readUnsignedVarLong(DataInput in) throws IOException {
-    long value = 0L;
-    int i = 0;
-    long b = in.readByte();
-    while ((b & 0x80L) != 0) {
-      value |= (b & 0x7F) << i;
-      i += 7;
-      if (i > 63) {
-        throw new IllegalArgumentException(
-            "Variable length quantity is too long");
-      }
-      b = in.readByte();
+    long tmp;
+    // CHECKSTYLE: stop InnerAssignment
+    if ((tmp = in.readByte()) >= 0) {
+      return tmp;
     }
-    return value | (b << i);
+    long result = tmp & 0x7f;
+    if ((tmp = in.readByte()) >= 0) {
+      result |= tmp << 7;
+    } else {
+      result |= (tmp & 0x7f) << 7;
+      if ((tmp = in.readByte()) >= 0) {
+        result |= tmp << 14;
+      } else {
+        result |= (tmp & 0x7f) << 14;
+        if ((tmp = in.readByte()) >= 0) {
+          result |= tmp << 21;
+        } else {
+          result |= (tmp & 0x7f) << 21;
+          if ((tmp = in.readByte()) >= 0) {
+            result |= tmp << 28;
+          } else {
+            result |= (tmp & 0x7f) << 28;
+            if ((tmp = in.readByte()) >= 0) {
+              result |= tmp << 35;
+            } else {
+              result |= (tmp & 0x7f) << 35;
+              if ((tmp = in.readByte()) >= 0) {
+                result |= tmp << 42;
+              } else {
+                result |= (tmp & 0x7f) << 42;
+                if ((tmp = in.readByte()) >= 0) {
+                  result |= tmp << 49;
+                } else {
+                  result |= (tmp & 0x7f) << 49;
+                  if ((tmp = in.readByte()) >= 0) {
+                    result |= tmp << 56;
+                  } else {
+                    result |= (tmp & 0x7f) << 56;
+                    result |= ((long) in.readByte()) << 63;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    // CHECKSTYLE: resume InnerAssignment
+    return result;
   }
 
   /**
-   * @throws IllegalArgumentException
-   *           if variable-length value does not terminate after
-   *           5 bytes have been read
+   * @param in to read bytes from
+   * @return decode value
    * @throws IOException
    *           if {@link DataInput} throws {@link IOException}
-   * @param in to read bytes from.
-   * @return decode value.
+   */
+  public static long readSignedVarLong(DataInput in) throws IOException {
+    long raw = readUnsignedVarLong(in);
+    long temp = (((raw << 63) >> 63) ^ raw) >> 1;
+    return temp ^ (raw & (1L << 63));
+  }
+
+  /**
+   * @throws IOException
+   *           if {@link DataInput} throws {@link IOException}
+   * @param in to read bytes from
+   * @return decode value
    */
   public static int readUnsignedVarInt(DataInput in) throws IOException {
-    int value = 0;
-    int i = 0;
-    int b = in.readByte();
-    while ((b & 0x80) != 0) {
-      value |= (b & 0x7F) << i;
-      i += 7;
-      if (i > 35) {
-        throw new IllegalArgumentException(
-            "Variable length quantity is too long");
-      }
-      b = in.readByte();
+    int tmp;
+    // CHECKSTYLE: stop InnerAssignment
+    if ((tmp = in.readByte()) >= 0) {
+      return tmp;
     }
-    return value | (b << i);
+    int result = tmp & 0x7f;
+    if ((tmp = in.readByte()) >= 0) {
+      result |= tmp << 7;
+    } else {
+      result |= (tmp & 0x7f) << 7;
+      if ((tmp = in.readByte()) >= 0) {
+        result |= tmp << 14;
+      } else {
+        result |= (tmp & 0x7f) << 14;
+        if ((tmp = in.readByte()) >= 0) {
+          result |= tmp << 21;
+        } else {
+          result |= (tmp & 0x7f) << 21;
+          result |= (in.readByte()) << 28;
+        }
+      }
+    }
+    // CHECKSTYLE: resume InnerAssignment
+    return result;
   }
+
+  /**
+   * @throws IOException
+   *           if {@link DataInput} throws {@link IOException}
+   * @param in to read bytes from
+   * @return decode value
+   */
+  public static int readSignedVarInt(DataInput in) throws IOException {
+    int raw = readUnsignedVarInt(in);
+    int temp = (((raw << 31) >> 31) ^ raw) >> 1;
+    return temp ^ (raw & (1 << 31));
+  }
+
   /**
    * Simulation for what will happen when writing an unsigned long value
    * as varlong.
-   * @param value the value
+   * @param value to consider
    * @return the number of bytes needed to write value.
    * @throws IOException
    */
   public static long sizeOfUnsignedVarLong(long value) throws IOException {
-    long cnt = 0;
-    while ((value & 0xFFFFFFFFFFFFFF80L) != 0L) {
-      cnt++;
+    int result = 0;
+    do {
+      result++;
       value >>>= 7;
-    }
-    return ++cnt;
+    } while (value != 0);
+    return result;
+  }
+
+  /**
+   * Simulation for what will happen when writing a signed long value
+   * as varlong.
+   * @param value to consider
+   * @return the number of bytes needed to write value.
+   * @throws IOException
+   */
+  public static long sizeOfSignedVarLong(long value) throws IOException {
+    return sizeOfUnsignedVarLong((value << 1) ^ (value >> 63));
   }
 
   /**
    * Simulation for what will happen when writing an unsigned int value
    * as varint.
-   * @param value the value
+   * @param value to consider
    * @return the number of bytes needed to write value.
    * @throws IOException
    */
-  public static long sizeOfUnsignedVarInt(int value) throws IOException {
-    long cnt = 0;
-    while ((value & 0xFFFFFF80) != 0L) {
+  public static int sizeOfUnsignedVarInt(int value) throws IOException {
+    int cnt = 0;
+    do {
       cnt++;
       value >>>= 7;
-    }
-    return ++cnt;
+    } while (value != 0);
+    return cnt;
   }
+
+  /**
+   * Simulation for what will happen when writing a signed int value
+   * as varint.
+   * @param value to consider
+   * @return the number of bytes needed to write value.
+   * @throws IOException
+   */
+  public static int sizeOfSignedVarInt(int value) throws IOException {
+    return sizeOfUnsignedVarInt((value << 1) ^ (value >> 31));
+  }
+
 }
