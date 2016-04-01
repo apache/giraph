@@ -1221,6 +1221,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Create an extended data input (can be subclassed)
+   *
+   * @param buf Buffer to use for the input
+   * @return ExtendedDataInput object
+   */
+  public ExtendedDataInput createExtendedDataInput(byte[] buf) {
+    if (useUnsafeSerialization) {
+      return new UnsafeByteArrayInputStream(buf);
+    } else {
+      return new ExtendedByteArrayDataInput(buf);
+    }
+  }
+
+  /**
    * Create extendedDataInput based on extendedDataOutput
    *
    * @param extendedDataOutput extendedDataOutput

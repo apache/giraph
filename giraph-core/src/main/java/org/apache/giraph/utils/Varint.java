@@ -40,8 +40,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import com.google.common.base.Preconditions;
-
 /**
  * <p>
  * Encodes signed and unsigned values using a common variable-length scheme,
@@ -103,10 +101,10 @@ public final class Varint {
     long value,
     DataOutput out
   ) throws IOException {
-    Preconditions.checkState(
-      value >= 0,
-      "Negative value passed into writeUnsignedVarLong - " + value
-    );
+    if (value < 0) {
+      throw new IllegalStateException(
+        "Negative value passed into writeUnsignedVarLong - " + value);
+    }
     writeVarLong(value, out);
   }
 
@@ -156,10 +154,10 @@ public final class Varint {
     int value,
     DataOutput out
   ) throws IOException {
-    Preconditions.checkState(
-      value >= 0,
-      "Negative value passed into writeUnsignedVarInt - " + value
-    );
+    if (value < 0) {
+      throw new IllegalStateException(
+        "Negative value passed into writeUnsignedVarInt - " + value);
+    }
     writeVarInt(value, out);
   }
 

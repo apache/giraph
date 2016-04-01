@@ -20,12 +20,8 @@ package org.apache.giraph.edge;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -33,11 +29,15 @@ import java.util.Iterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.ExtendedDataInput;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.Varint;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
 
@@ -109,7 +109,7 @@ public class LongDiffNullArrayEdges
     long target = targetVertexId.get();
 
     if (size > 0) {
-      LongsDiffReader reader = new LongsDiffReader(compressedData);
+      LongsDiffReader reader = new LongsDiffReader(compressedData, getConf());
       for (int i = 0; i < size; i++) {
         long cur = reader.readNext();
         if (cur == target) {
@@ -146,7 +146,7 @@ public class LongDiffNullArrayEdges
       /** Current position in the array. */
       private int position;
       private final LongsDiffReader reader =
-          new LongsDiffReader(compressedData);
+          new LongsDiffReader(compressedData, getConf());
 
       /** Representative edge object. */
       private final MutableEdge<LongWritable, NullWritable> representativeEdge =
@@ -205,8 +205,8 @@ public class LongDiffNullArrayEdges
     int pCompressed = 0;
     int pTransient = 0;
 
-    LongsDiffReader reader = new LongsDiffReader(compressedData);
-    LongsDiffWriter writer = new LongsDiffWriter();
+    LongsDiffReader reader = new LongsDiffReader(compressedData, getConf());
+    LongsDiffWriter writer = new LongsDiffWriter(getConf());
 
     long curValue = size > 0 ? reader.readNext() : Long.MAX_VALUE;
 
@@ -275,7 +275,7 @@ public class LongDiffNullArrayEdges
    */
   private static class LongsDiffReader {
     /** Input stream */
-    private final DataInput input;
+    private final ExtendedDataInput input;
     /** last read value */
     private long current;
     /** True if we haven't read any numbers yet */
@@ -283,10 +283,16 @@ public class LongDiffNullArrayEdges
 
     /**
      * Construct LongsDiffReader
+     *
      * @param compressedData Input byte array
+     * @param conf Conf
      */
-    LongsDiffReader(byte[] compressedData) {
-      input = new DataInputStream(new ByteArrayInputStream(compressedData));
+    public LongsDiffReader(
+      byte[] compressedData,
+      ImmutableClassesGiraphConfiguration<LongWritable, Writable, NullWritable>
+        conf
+    ) {
+      input = conf.createExtendedDataInput(compressedData);
     }
 
     /**
@@ -312,15 +318,24 @@ public class LongDiffNullArrayEdges
    * Writing array of longs diff encoded into the byte array.
    */
   private static class LongsDiffWriter {
-    /** Byte array stream containing result */
-    private final ByteArrayOutputStream resultStream =
-        new ByteArrayOutputStream();
     /** Wrapping resultStream into DataOutputStream */
-    private final DataOutputStream out = new DataOutputStream(resultStream);
+    private final ExtendedDataOutput out;
     /** last value written */
     private long lastWritten;
     /** True if we haven't written any numbers yet */
     private boolean first = true;
+
+    /**
+     * Construct LongsDiffWriter
+     *
+     * @param conf Conf
+     */
+    public LongsDiffWriter(
+      ImmutableClassesGiraphConfiguration<LongWritable, Writable, NullWritable>
+        conf
+    ) {
+      out = conf.createExtendedDataOutput();
+    }
 
     /**
      * Write next value to writer
@@ -350,7 +365,7 @@ public class LongDiffNullArrayEdges
      * @return resulting byte array
      */
     byte[] toByteArray() {
-      return resultStream.toByteArray();
+      return out.toByteArray();
     }
   }
 
