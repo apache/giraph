@@ -49,6 +49,16 @@ public class MasterRequestServerHandler extends
   }
 
   @Override
+  protected short getCurrentMaxCredit() {
+    return 0;
+  }
+
+  @Override
+  protected boolean shouldIgnoreCredit(int taskId) {
+    return true;
+  }
+
+  @Override
   public void processRequest(MasterRequest request) {
     request.doRequest(commHandler);
   }

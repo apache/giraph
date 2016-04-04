@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.requests.WorkerRequest;
@@ -55,6 +56,17 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
       Thread.UncaughtExceptionHandler exceptionHandler) {
     super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.serverData = serverData;
+  }
+
+  @Override
+  protected short getCurrentMaxCredit() {
+    return ((NettyWorkerClient) (serverData.getServiceWorker()
+        .getWorkerClient())).getMaxOpenRequestsPerWorker();
+  }
+
+  @Override
+  protected boolean shouldIgnoreCredit(int taskId) {
+    return taskId == serverData.getServiceWorker().getMasterInfo().getTaskId();
   }
 
   @Override

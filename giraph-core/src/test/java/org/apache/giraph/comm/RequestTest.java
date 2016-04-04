@@ -20,6 +20,7 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.comm.netty.handler.AckSignalFlag;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
@@ -311,5 +312,15 @@ public class RequestTest {
       }
     }
     assertEquals(55, keySum);
+  }
+
+  @Test
+
+  public void creditBasedResponseTest() throws IOException {
+    short response = NettyClient.calculateResponse(AckSignalFlag.NEW_REQUEST,
+        true, (short) 256);
+    assertEquals(NettyClient.getAckSignalFlag(response), AckSignalFlag.NEW_REQUEST);
+    assertEquals(NettyClient.shouldIgnoreCredit(response), true);
+    assertEquals(NettyClient.getCredit(response), (short) 256);
   }
 }

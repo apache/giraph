@@ -180,4 +180,12 @@ else[HADOOP_NON_SECURE]*/
   }
 
 /*end[HADOOP_NON_SECURE]*/
+
+  /**
+   * @return Maximum number of open requests for each worker (user-defined
+   *         value)
+   */
+  public short getMaxOpenRequestsPerWorker() {
+    return nettyClient.getMaxOpenRequestsPerWorker();
+  }
 }
