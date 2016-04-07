@@ -41,6 +41,7 @@ import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Language;
+import org.apache.giraph.graph.MapperObserver;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
@@ -749,6 +750,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   public WorkerObserver[] createWorkerObservers() {
     Class<? extends WorkerObserver>[] klasses = getWorkerObserverClasses();
     WorkerObserver[] objects = new WorkerObserver[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+    }
+    return objects;
+  }
+
+  /**
+   * Create array of MapperObservers.
+   *
+   * @return Instantiated array of MapperObservers.
+   */
+  public MapperObserver[] createMapperObservers() {
+    Class<? extends MapperObserver>[] klasses = getMapperObserverClasses();
+    MapperObserver[] objects = new MapperObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
       objects[i] = ReflectionUtils.newInstance(klasses[i], this);
     }

@@ -33,6 +33,7 @@ import org.apache.giraph.edge.ReuseObjectsOutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.MapperObserver;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
@@ -310,6 +311,16 @@ public class GiraphConfiguration extends Configuration
   public final void addWorkerObserverClass(
       Class<? extends WorkerObserver> workerObserverClass) {
     WORKER_OBSERVER_CLASSES.add(this, workerObserverClass);
+  }
+
+  /**
+   * Add a MapperObserver class (optional)
+   *
+   * @param mapperObserverClass MapperObserver class to add.
+   */
+  public final void addMapperObserverClass(
+      Class<? extends MapperObserver> mapperObserverClass) {
+    MAPPER_OBSERVER_CLASSES.add(this, mapperObserverClass);
   }
 
   /**
@@ -684,6 +695,15 @@ public class GiraphConfiguration extends Configuration
    */
   public Class<? extends WorkerObserver>[] getWorkerObserverClasses() {
     return WORKER_OBSERVER_CLASSES.getArray(this);
+  }
+
+  /**
+   * Get array of MapperObserver classes set in configuration.
+   *
+   * @return array of MapperObserver classes.
+   */
+  public Class<? extends MapperObserver>[] getMapperObserverClasses() {
+    return MAPPER_OBSERVER_CLASSES.getArray(this);
   }
 
   /**

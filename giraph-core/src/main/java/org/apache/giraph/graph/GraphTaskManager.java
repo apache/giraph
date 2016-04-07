@@ -160,6 +160,8 @@ end[PURE_YARN]*/
   private final Mapper<?, ?, ?, ?>.Context context;
   /** is this GraphTaskManager the master? */
   private boolean isMaster;
+  /** Mapper observers */
+  private MapperObserver[] mapperObservers;
 
   /**
    * Default constructor for GiraphTaskManager.
@@ -206,6 +208,7 @@ end[PURE_YARN]*/
     context.setStatus("setup: Beginning worker setup.");
     Configuration hadoopConf = context.getConfiguration();
     conf = new ImmutableClassesGiraphConfiguration<I, V, E>(hadoopConf);
+    setupMapperObservers();
     initializeJobProgressTracker();
     // Write user's graph types (I,V,E,M) back to configuration parameters so
     // that they are set for quicker access later. These types are often
@@ -868,6 +871,16 @@ end[PURE_YARN]*/
     for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
       obs.preApplication();
       context.progress();
+    }
+  }
+
+  /**
+   * Setup mapper observers
+   */
+  public void setupMapperObservers() {
+    mapperObservers = conf.createMapperObservers();
+    for (MapperObserver mapperObserver : mapperObservers) {
+      mapperObserver.setup();
     }
   }
 

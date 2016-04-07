@@ -48,6 +48,7 @@ import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.graph.Language;
+import org.apache.giraph.graph.MapperObserver;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
@@ -202,6 +203,10 @@ public interface GiraphConstants {
   ClassConfOption<WorkerObserver> WORKER_OBSERVER_CLASSES =
       ClassConfOption.create("giraph.worker.observers", null,
           WorkerObserver.class, "Classes for Worker Observer - optional");
+  /** Classes for Mapper Observer - optional */
+  ClassConfOption<MapperObserver> MAPPER_OBSERVER_CLASSES =
+      ClassConfOption.create("giraph.mapper.observers", null,
+          MapperObserver.class, "Classes for Mapper Observer - optional");
   /** Message combiner class - optional */
   ClassConfOption<MessageCombiner> MESSAGE_COMBINER_CLASS =
       ClassConfOption.create("giraph.messageCombinerClass", null,
