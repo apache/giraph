@@ -178,7 +178,6 @@ public class PrepareGraphPieces {
           Edge<I, NullWritable> edge =
               EdgeFactory.create(idTypeOps.createCopy(neighbor));
           vertex.addEdge(edge);
-          set.add(neighbor);
         }
       }
     };
