@@ -18,6 +18,7 @@
 
 package org.apache.giraph.job;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
@@ -240,7 +241,13 @@ public class GiraphJob {
       GiraphJobObserver jobObserver = conf.getJobObserver();
 
       JobProgressTrackerService jobProgressTrackerService =
-          JobProgressTrackerService.createJobProgressServer(conf, jobObserver);
+          JobProgressTrackerService.createJobProgressTrackerService(
+              conf, jobObserver);
+      ClientThriftServer clientThriftServer = null;
+      if (jobProgressTrackerService != null) {
+        clientThriftServer = new ClientThriftServer(
+            conf, ImmutableList.of(jobProgressTrackerService));
+      }
 
       tryCount++;
       Job submittedJob = new Job(conf, jobName);
@@ -271,6 +278,10 @@ public class GiraphJob {
       if (jobProgressTrackerService != null) {
         jobProgressTrackerService.stop(passed);
       }
+      if (clientThriftServer != null) {
+        clientThriftServer.stopThriftServer();
+      }
+
       jobObserver.jobFinished(submittedJob, passed);
 
       if (!passed) {

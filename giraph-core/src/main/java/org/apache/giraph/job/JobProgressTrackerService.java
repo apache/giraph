@@ -24,15 +24,7 @@ import org.apache.giraph.worker.WorkerProgress;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
 
-import com.facebook.swift.codec.ThriftCodecManager;
-import com.facebook.swift.service.ThriftEventHandler;
-import com.facebook.swift.service.ThriftServer;
-import com.facebook.swift.service.ThriftServerConfig;
-import com.facebook.swift.service.ThriftServiceProcessor;
-
 import java.io.IOException;
-import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -54,8 +46,6 @@ public class JobProgressTrackerService implements JobProgressTracker {
   private Thread writerThread;
   /** Whether application is finished */
   private volatile boolean finished = false;
-  /** Server which uses this service */
-  private ThriftServer server;
   /** Number of mappers which the job got */
   private int mappersStarted;
   /** Last time number of mappers started was logged */
@@ -208,7 +198,6 @@ public class JobProgressTrackerService implements JobProgressTracker {
   public void stop(boolean succeeded) {
     finished = true;
     writerThread.interrupt();
-    server.close();
     if (LOG.isInfoEnabled()) {
       LOG.info("Job " + (succeeded ? "finished successfully" : "failed") +
           ", cleaning up...");
@@ -216,37 +205,18 @@ public class JobProgressTrackerService implements JobProgressTracker {
   }
 
   /**
-   * Create job progress server on job client, and update configuration with
-   * its hostname and port so mappers would know what to connect to. Returns
-   * null if progress shouldn't be tracked
+   * Create job progress server on job client if enabled in configuration.
    *
    * @param conf Configuration
    * @param jobObserver Giraph job callbacks
    * @return JobProgressTrackerService
    */
-  public static JobProgressTrackerService createJobProgressServer(
+  public static JobProgressTrackerService createJobProgressTrackerService(
       GiraphConfiguration conf, GiraphJobObserver jobObserver) {
     if (!conf.trackJobProgressOnClient()) {
       return null;
     }
-    try {
-      JobProgressTrackerService service =
-          new JobProgressTrackerService(conf, jobObserver);
-      ThriftServiceProcessor processor =
-          new ThriftServiceProcessor(new ThriftCodecManager(),
-              new ArrayList<ThriftEventHandler>(), service);
-      service.server = new ThriftServer(processor, new ThriftServerConfig());
-      service.server.start();
-      JOB_PROGRESS_SERVICE_HOST.set(conf,
-          InetAddress.getLocalHost().getHostName());
-      JOB_PROGRESS_SERVICE_PORT.set(conf, service.server.getPort());
-      return service;
-      // CHECKSTYLE: stop IllegalCatch
-    } catch (Exception e) {
-      // CHECKSTYLE: resume IllegalCatch
-      LOG.warn("Exception occurred while trying to create " +
-          "JobProgressTrackerService - not using progress reporting", e);
-      return null;
-    }
+
+    return new JobProgressTrackerService(conf, jobObserver);
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.job.ClientThriftServer;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.log4j.Logger;
@@ -78,8 +79,8 @@ public class RetryableJobProgressTrackerClient
         ImmutableSet.<ThriftClientEventHandler>of());
     FramedClientConnector connector =
         new FramedClientConnector(new InetSocketAddress(
-            JOB_PROGRESS_SERVICE_HOST.get(conf),
-            JOB_PROGRESS_SERVICE_PORT.get(conf)));
+            ClientThriftServer.CLIENT_THRIFT_SERVER_HOST.get(conf),
+            ClientThriftServer.CLIENT_THRIFT_SERVER_PORT.get(conf)));
     jobProgressTracker =
         clientManager.createClient(connector, JobProgressTracker.class).get();
 
