@@ -184,6 +184,11 @@ public class JobProgressTrackerService implements JobProgressTracker {
   }
 
   @Override
+  public void logError(String logLine) {
+    LOG.error(logLine);
+  }
+
+  @Override
   public void logFailure(String reason) {
     LOG.fatal(reason);
     finished = true;

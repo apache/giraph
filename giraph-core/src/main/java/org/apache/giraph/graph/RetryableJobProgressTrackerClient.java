@@ -121,6 +121,16 @@ public class RetryableJobProgressTrackerClient
   }
 
   @Override
+  public synchronized void logError(final String logLine) {
+    executeWithRetry(new Runnable() {
+      @Override
+      public void run() {
+        jobProgressTracker.logError(logLine);
+      }
+    });
+  }
+
+  @Override
   public synchronized void logFailure(final String reason) {
     executeWithRetry(new Runnable() {
       @Override

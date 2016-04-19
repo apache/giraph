@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -97,6 +98,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     } catch (RuntimeException e) {
       // CHECKSTYLE: resume IllegalCatch
       LOG.error("Caught an unrecoverable exception " + e.getMessage(), e);
+      graphTaskManager.getJobProgressTracker().logError(
+          "Exception occurred on mapper " +
+              graphTaskManager.getConf().getTaskPartition() + ": " +
+              ExceptionUtils.getStackTrace(e));
       graphTaskManager.zooKeeperCleanup();
       graphTaskManager.workerFailureCleanup();
       throw new IllegalStateException(

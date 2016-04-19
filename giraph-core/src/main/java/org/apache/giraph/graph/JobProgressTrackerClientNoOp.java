@@ -38,6 +38,10 @@ public class JobProgressTrackerClientNoOp implements JobProgressTrackerClient {
   }
 
   @Override
+  public void logError(String logLine) {
+  }
+
+  @Override
   public void logFailure(String reason) {
   }
 

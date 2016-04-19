@@ -52,6 +52,15 @@ public interface JobProgressTracker {
   void logInfo(String logLine);
 
   /**
+   * Call this when you want to log an error line from any mapper to command
+   * line
+   *
+   * @param logLine Line to log
+   */
+  @ThriftMethod
+  void logError(String logLine);
+
+  /**
    * Notify that job is failing
    *
    * @param reason Reason for failure
