@@ -671,6 +671,14 @@ under the License.
           <version>2.9</version>
           <configuration>
             <javadocExecutable>${project.build.javaHome}/bin/javadoc</javadocExecutable>
+            <!--
+             JDK8 adds lots of strict checking in javadoc, disabling for now.
+            -->
+            <additionalparam>-Xdoclint:none</additionalparam>
+            <!--
+             Don't fail the build if javadoc fails.
+            -->
+            <failOnError>false</failOnError>
           </configuration>
         </plugin>
         <plugin>
