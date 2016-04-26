@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.time.SystemTime;
@@ -30,6 +31,8 @@ import org.apache.log4j.Logger;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED;
 
@@ -61,6 +64,10 @@ public abstract class RequestServerHandler<R> extends
   private final Thread.UncaughtExceptionHandler exceptionHandler;
   /** Do we have a limit on the number of open requests per worker */
   private final boolean limitOpenRequestsPerWorker;
+  /** Whether it is the first time reading/handling a request*/
+  private final AtomicBoolean firstRead = new AtomicBoolean(true);
+  /** Cached value for NETTY_AUTO_READ configuration option */
+  private final boolean nettyAutoRead;
 
   /**
    * Constructor
@@ -81,6 +88,7 @@ public abstract class RequestServerHandler<R> extends
     this.exceptionHandler = exceptionHandler;
     this.limitOpenRequestsPerWorker =
         NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.get(conf);
+    this.nettyAutoRead = GiraphConstants.NETTY_AUTO_READ.get(conf);
   }
 
   @Override
@@ -141,6 +149,24 @@ public abstract class RequestServerHandler<R> extends
     buffer.writeShort(signal);
 
     ctx.write(buffer);
+    // NettyServer is bootstrapped with auto-read set to true by default. After
+    // the first request is processed, we set auto-read to false. This prevents
+    // netty from reading requests continuously and putting them in off-heap
+    // memory. Instead, we will call `read` on requests one by one, so that the
+    // lower level transport layer handles the congestion if the rate of
+    // incoming requests is more than the available processing capability.
+    if (!nettyAutoRead && firstRead.compareAndSet(true, false)) {
+      ctx.channel().config().setAutoRead(false);
+    }
+  }
+
+  @Override
+  public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    if (!nettyAutoRead) {
+      ctx.read();
+    } else {
+      super.channelReadComplete(ctx);
+    }
   }
 
   /**
