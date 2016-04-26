@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.comm.netty.NettyWorkerClient;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.requests.WorkerRequest;
@@ -48,25 +48,17 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
    * @param conf                     Configuration
    * @param myTaskInfo               Current task info
    * @param exceptionHandler         Handles uncaught exceptions
+   * @param flowControl              Reference to the flow control used
    */
   public WorkerRequestServerHandler(ServerData<I, V, E> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
       TaskInfo myTaskInfo,
-      Thread.UncaughtExceptionHandler exceptionHandler) {
+      Thread.UncaughtExceptionHandler exceptionHandler,
+      FlowControl flowControl) {
     super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.serverData = serverData;
-  }
-
-  @Override
-  protected short getCurrentMaxCredit() {
-    return ((NettyWorkerClient) (serverData.getServiceWorker()
-        .getWorkerClient())).getMaxOpenRequestsPerWorker();
-  }
-
-  @Override
-  protected boolean shouldIgnoreCredit(int taskId) {
-    return taskId == serverData.getServiceWorker().getMasterInfo().getTaskId();
+    this.flowControl = flowControl;
   }
 
   @Override
@@ -80,6 +72,8 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
       RequestServerHandler.Factory {
     /** Data that can be accessed for handling requests */
     private final ServerData<I, V, E> serverData;
+    /** Flow control used in sending requests */
+    private FlowControl flowControl;
 
     /**
      * Constructor
@@ -97,7 +91,13 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
         TaskInfo myTaskInfo,
         Thread.UncaughtExceptionHandler exceptionHandler) {
       return new WorkerRequestServerHandler<I, V, E, Writable>(serverData,
-          workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
+          workerRequestReservedMap, conf, myTaskInfo, exceptionHandler,
+          flowControl);
+    }
+
+    @Override
+    public void setFlowControl(FlowControl flowControl) {
+      this.flowControl = flowControl;
     }
   }
 }

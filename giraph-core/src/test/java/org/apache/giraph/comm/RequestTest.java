@@ -102,6 +102,7 @@ public class RequestTest {
     workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
     client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
   }
@@ -312,15 +313,5 @@ public class RequestTest {
       }
     }
     assertEquals(55, keySum);
-  }
-
-  @Test
-
-  public void creditBasedResponseTest() throws IOException {
-    short response = NettyClient.calculateResponse(AckSignalFlag.NEW_REQUEST,
-        true, (short) 256);
-    assertEquals(NettyClient.getAckSignalFlag(response), AckSignalFlag.NEW_REQUEST);
-    assertEquals(NettyClient.shouldIgnoreCredit(response), true);
-    assertEquals(NettyClient.getCredit(response), (short) 256);
   }
 }

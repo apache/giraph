@@ -212,6 +212,7 @@ public class BspServiceWorker<I extends WritableComparable,
     workerInfo.setTaskId(getTaskPartition());
     workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
         graphTaskManager.createUncaughtExceptionHandler());
+    workerServer.setFlowControl(workerClient.getFlowControl());
 
     workerAggregatorRequestProcessor =
         new NettyWorkerAggregatorRequestProcessor(getContext(), conf, this);
@@ -1837,17 +1838,6 @@ else[HADOOP_NON_SECURE]*/
           globalStats);
     }
     return globalStats;
-  }
-
-  @Override
-  public int getNumPartitionsOwned() {
-    int count = 0;
-    for (PartitionOwner partitionOwner : getPartitionOwners()) {
-      if (partitionOwner.getWorkerInfo().equals(getWorkerInfo())) {
-        count++;
-      }
-    }
-    return count;
   }
 
   @Override

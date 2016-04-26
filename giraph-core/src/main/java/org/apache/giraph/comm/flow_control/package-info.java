@@ -15,40 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.comm;
-
-import org.apache.giraph.comm.flow_control.FlowControl;
-
-import java.net.InetSocketAddress;
-
 /**
- * Interface for master to receive messages from workers
+ * Package for flow-control policies.
  */
-public interface MasterServer {
-  /**
-   * Get server address
-   *
-   * @return Address used by this server
-   */
-  InetSocketAddress getMyAddress();
-
-  /**
-   * Get server host or IP
-   *
-   * @return Server host or IP
-   */
-  String getLocalHostOrIp();
-
-  /**
-   * Shuts down.
-   */
-  void close();
-
-  /**
-   * Inform the server about the flow control policy used in sending requests
-   *
-   * @param flowControl reference to flow control policy
-   */
-  void setFlowControl(FlowControl flowControl);
-}
+package org.apache.giraph.comm.flow_control;

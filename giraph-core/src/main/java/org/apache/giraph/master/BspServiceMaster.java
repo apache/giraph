@@ -853,6 +853,7 @@ public class BspServiceMaster<I extends WritableComparable,
           masterClient =
               new NettyMasterClient(getContext(), getConfiguration(), this,
                   getGraphTaskManager().createUncaughtExceptionHandler());
+          masterServer.setFlowControl(masterClient.getFlowControl());
 
           if (LOG.isInfoEnabled()) {
             LOG.info("becomeMaster: I am now the master!");

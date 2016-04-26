@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.MasterRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
@@ -37,25 +38,18 @@ public class MasterRequestServerHandler extends
    * @param myTaskInfo               Current task info
    * @param commHandler              Master communication handler
    * @param exceptionHandler         Handles uncaught exceptions
+   * @param flowControl              Reference to the flow control used
    */
   public MasterRequestServerHandler(
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
       TaskInfo myTaskInfo,
       MasterGlobalCommHandler commHandler,
-      Thread.UncaughtExceptionHandler exceptionHandler) {
+      Thread.UncaughtExceptionHandler exceptionHandler,
+      FlowControl flowControl) {
     super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.commHandler = commHandler;
-  }
-
-  @Override
-  protected short getCurrentMaxCredit() {
-    return 0;
-  }
-
-  @Override
-  protected boolean shouldIgnoreCredit(int taskId) {
-    return true;
+    this.flowControl = flowControl;
   }
 
   @Override
@@ -69,6 +63,8 @@ public class MasterRequestServerHandler extends
   public static class Factory implements RequestServerHandler.Factory {
     /** Master aggregator handler */
     private final MasterGlobalCommHandler commHandler;
+    /** Flow control used in sending requests */
+    private FlowControl flowControl;
 
     /**
      * Constructor
@@ -86,7 +82,12 @@ public class MasterRequestServerHandler extends
         TaskInfo myTaskInfo,
         Thread.UncaughtExceptionHandler exceptionHandler) {
       return new MasterRequestServerHandler(workerRequestReservedMap, conf,
-          myTaskInfo, commHandler, exceptionHandler);
+          myTaskInfo, commHandler, exceptionHandler, flowControl);
+    }
+
+    @Override
+    public void setFlowControl(FlowControl flowControl) {
+      this.flowControl = flowControl;
     }
   }
 }

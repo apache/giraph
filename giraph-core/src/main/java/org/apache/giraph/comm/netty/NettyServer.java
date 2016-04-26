@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 /*if_not[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.AuthorizeServerHandler;
 /*end[HADOOP_NON_SECURE]*/
@@ -60,6 +61,7 @@ import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.giraph.conf.GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS;
 
 /**
@@ -418,5 +420,14 @@ public class NettyServer {
     return localHostOrIp;
   }
 
+  /**
+   * Inform the server about the flow control policy used in sending requests
+   *
+   * @param flowControl reference to the flow control used
+   */
+  public void setFlowControl(FlowControl flowControl) {
+    checkState(requestServerHandlerFactory != null);
+    requestServerHandlerFactory.setFlowControl(flowControl);
+  }
 }
 

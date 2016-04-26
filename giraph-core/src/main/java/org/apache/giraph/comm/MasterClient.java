@@ -20,6 +20,7 @@ package org.apache.giraph.comm;
 
 import java.io.IOException;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.hadoop.io.Writable;
 
@@ -66,5 +67,12 @@ public interface MasterClient {
    * Closes all connections.
    */
   void closeConnections();
+
+  /**
+   * Get the reference to the flow control policy used for sending requests
+   *
+   * @return reference to the flow control policy
+   */
+  FlowControl getFlowControl();
 }
 

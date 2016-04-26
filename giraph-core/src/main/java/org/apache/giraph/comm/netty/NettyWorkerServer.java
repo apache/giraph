@@ -21,6 +21,7 @@ package org.apache.giraph.comm.netty;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerServer;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
@@ -104,5 +105,10 @@ public class NettyWorkerServer<I extends WritableComparable,
   @Override
   public void close() {
     nettyServer.stop();
+  }
+
+  @Override
+  public void setFlowControl(FlowControl flowControl) {
+    nettyServer.setFlowControl(flowControl);
   }
 }

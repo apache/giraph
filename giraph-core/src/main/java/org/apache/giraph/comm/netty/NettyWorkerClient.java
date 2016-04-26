@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -181,11 +182,8 @@ else[HADOOP_NON_SECURE]*/
 
 /*end[HADOOP_NON_SECURE]*/
 
-  /**
-   * @return Maximum number of open requests for each worker (user-defined
-   *         value)
-   */
-  public short getMaxOpenRequestsPerWorker() {
-    return nettyClient.getMaxOpenRequestsPerWorker();
+  @Override
+  public FlowControl getFlowControl() {
+    return nettyClient.getFlowControl();
   }
 }

@@ -92,6 +92,7 @@ public class SaslConnectionTest {
 
     NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(Lists.<WorkerInfo>newArrayList(workerInfo));
 
     client.stop();

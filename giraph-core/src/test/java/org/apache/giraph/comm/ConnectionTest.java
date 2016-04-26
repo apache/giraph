@@ -76,6 +76,7 @@ public class ConnectionTest {
 
     NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
 
@@ -125,6 +126,9 @@ public class ConnectionTest {
 
     NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
+    server1.setFlowControl(client.getFlowControl());
+    server2.setFlowControl(client.getFlowControl());
+    server3.setFlowControl(client.getFlowControl());
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo1,
         workerInfo2, workerInfo3);
     client.connectAllAddresses(addresses);
@@ -165,6 +169,7 @@ public class ConnectionTest {
     NettyClient client3 = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
     client3.connectAllAddresses(addresses);
+    server.setFlowControl(client1.getFlowControl());
 
     client1.stop();
     client2.stop();

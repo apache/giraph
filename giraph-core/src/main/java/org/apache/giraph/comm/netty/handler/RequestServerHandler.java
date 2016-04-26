@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.comm.netty.NettyClient;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -52,6 +52,8 @@ public abstract class RequestServerHandler<R> extends
       Logger.getLogger(RequestServerHandler.class);
   /** Already closed first request? */
   private static volatile boolean ALREADY_CLOSED_FIRST_REQUEST = false;
+  /** Flow control used in sending requests */
+  protected FlowControl flowControl;
   /** Close connection on first request (used for simulating failure) */
   private final boolean closeFirstRequest;
   /** Request reserved map (for exactly one semantics) */
@@ -62,8 +64,6 @@ public abstract class RequestServerHandler<R> extends
   private long startProcessingNanoseconds = -1;
   /** Handler for uncaught exceptions */
   private final Thread.UncaughtExceptionHandler exceptionHandler;
-  /** Do we have a limit on the number of open requests per worker */
-  private final boolean limitOpenRequestsPerWorker;
   /** Whether it is the first time reading/handling a request*/
   private final AtomicBoolean firstRead = new AtomicBoolean(true);
   /** Cached value for NETTY_AUTO_READ configuration option */
@@ -86,8 +86,6 @@ public abstract class RequestServerHandler<R> extends
     closeFirstRequest = NETTY_SIMULATE_FIRST_REQUEST_CLOSED.get(conf);
     this.myTaskInfo = myTaskInfo;
     this.exceptionHandler = exceptionHandler;
-    this.limitOpenRequestsPerWorker =
-        NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.get(conf);
     this.nettyAutoRead = GiraphConstants.NETTY_AUTO_READ.get(conf);
   }
 
@@ -139,15 +137,9 @@ public abstract class RequestServerHandler<R> extends
     ByteBuf buffer = ctx.alloc().buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
     buffer.writeLong(request.getRequestId());
-    short signal;
-    if (limitOpenRequestsPerWorker) {
-      signal = NettyClient.calculateResponse(alreadyDone,
-          shouldIgnoreCredit(request.getClientId()), getCurrentMaxCredit());
-    } else {
-      signal = (short) alreadyDone.ordinal();
-    }
+    short signal =
+        flowControl.calculateResponse(alreadyDone, request.getClientId());
     buffer.writeShort(signal);
-
     ctx.write(buffer);
     // NettyServer is bootstrapped with auto-read set to true by default. After
     // the first request is processed, we set auto-read to false. This prevents
@@ -168,25 +160,6 @@ public abstract class RequestServerHandler<R> extends
       super.channelReadComplete(ctx);
     }
   }
-
-  /**
-   * Get the maximum number of open requests per worker (credit) at the moment
-   * the method is called. This number should generally depend on the available
-   * memory and processing rate.
-   *
-   * @return maximum number of open requests for each worker
-   */
-  protected abstract short getCurrentMaxCredit();
-
-  /**
-   * Whether we should ignore credit-based control flow in communicating with
-   * task with a given id. Generally, communication with master node does not
-   * require any control-flow mechanism.
-   *
-   * @param taskId id of the task on the other end of the communication
-   * @return 0 if credit should be ignored, 1 otherwise
-   */
-  protected abstract boolean shouldIgnoreCredit(int taskId);
 
   /**
    * Set the flag indicating already closed first request
@@ -244,5 +217,13 @@ public abstract class RequestServerHandler<R> extends
         ImmutableClassesGiraphConfiguration conf,
         TaskInfo myTaskInfo,
         Thread.UncaughtExceptionHandler exceptionHandler);
+
+    /**
+     * Inform the factory about the flow control policy used (this method should
+     * be called before any call to `#newHandle()`)
+     *
+     * @param flowControl reference to flow control used
+     */
+    void setFlowControl(FlowControl flowControl);
   }
 }

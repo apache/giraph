@@ -25,7 +25,6 @@ import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
-import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
@@ -183,13 +182,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
       Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
   /**
-   * Get master info
-   *
-   * @return Master info
-   */
-  MasterInfo getMasterInfo();
-
-  /**
    * Get the GraphTaskManager that this service is using.  Vertices need to know
    * this.
    *
@@ -246,13 +238,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * previous superstep.
    */
   GlobalStats getGlobalStats();
-
-  /**
-   * Get the number of partitions owned by this worker
-   *
-   * @return number of partitions owned
-   */
-  int getNumPartitionsOwned();
 
   /**
    * Get input splits handler used during input
