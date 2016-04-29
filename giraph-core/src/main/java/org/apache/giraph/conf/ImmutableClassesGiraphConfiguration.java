@@ -1262,6 +1262,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Whether to use an unsafe serialization
+   *
+   * @return whether to use unsafe serialization
+   */
+  public boolean getUseUnsafeSerialization() {
+    return useUnsafeSerialization;
+  }
+
+  /**
    * Update Computation and MessageCombiner class used
    *
    * @param superstepClasses SuperstepClasses
