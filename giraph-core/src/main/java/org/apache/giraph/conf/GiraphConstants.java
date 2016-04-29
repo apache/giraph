@@ -682,6 +682,11 @@ public interface GiraphConstants {
       new IntConfOption("giraph.nettyMaxConnectionFailures", 1000,
           "Netty max connection failures");
 
+  /** How long to wait before trying to reconnect failed connections */
+  IntConfOption WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS =
+      new IntConfOption("giraph.waitTimeBetweenConnectionRetriesMs", 500,
+          "");
+
   /** Initial port to start using for the IPC communication */
   IntConfOption IPC_INITIAL_PORT =
       new IntConfOption("giraph.ipcInitialPort", 30000,

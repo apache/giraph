@@ -148,6 +148,12 @@ under the License.
          <td>Enable the Metrics system</td>
        </tr>
        <tr>
+         <td>giraph.nettyAutoRead</td>
+         <td>boolean</td>
+         <td>true</td>
+         <td>Whether netty should pro-actively read requests and feed them to its processing pipeline</td>
+       </tr>
+       <tr>
          <td>giraph.nettyClientUseExecutionHandler</td>
          <td>boolean</td>
          <td>true</td>
@@ -374,6 +380,12 @@ under the License.
          <td>class</td>
          <td>DefaultGiraphJobRetryChecker</td>
          <td>Class which decides whether a failed job should be retried - optional</td>
+       </tr>
+       <tr>
+         <td>giraph.mapper.observers</td>
+         <td>class</td>
+         <td>null</td>
+         <td>Classes for Mapper Observer - optional</td>
        </tr>
        <tr>
          <td>giraph.mappingInputFormatClass</td>
@@ -818,6 +830,12 @@ under the License.
          <td>integer</td>
          <td>900000</td>
          <td>Maximum timeout (in ms) for waiting for all all tasks to complete</td>
+       </tr>
+       <tr>
+         <td>giraph.waitTimeBetweenConnectionRetriesMs</td>
+         <td>integer</td>
+         <td>500</td>
+         <td></td>
        </tr>
        <tr>
          <td>giraph.waitingRequestMsecs</td>

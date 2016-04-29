@@ -91,6 +91,7 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_AFTE
 import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS;
 import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER;
 import static org.apache.giraph.conf.GiraphConstants.NETTY_MAX_CONNECTION_FAILURES;
+import static org.apache.giraph.conf.GiraphConstants.WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS;
 import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 
 /**
@@ -166,6 +167,8 @@ public class NettyClient {
   private final float requestSizeWarningThreshold;
   /** Maximum number of connection failures */
   private final int maxConnectionFailures;
+  /** How long to wait before trying to reconnect failed connections */
+  private final long waitTimeBetweenConnectionRetriesMs;
   /** Maximum number of milliseconds for a request */
   private final int maxRequestMilliseconds;
   /** Waiting interval for checking outstanding requests msecs */
@@ -239,6 +242,8 @@ public class NettyClient {
 
     maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
     maxConnectionFailures = NETTY_MAX_CONNECTION_FAILURES.get(conf);
+    waitTimeBetweenConnectionRetriesMs =
+        WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS.get(conf);
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
     maxPoolSize = GiraphConstants.NETTY_CLIENT_THREADS.get(conf);
     maxResolveAddressAttempts = MAX_RESOLVE_ADDRESS_ATTEMPTS.get(conf);
@@ -462,11 +467,24 @@ public class NettyClient {
     int connected = 0;
     while (failures < maxConnectionFailures) {
       List<ChannelFutureAddress> nextCheckFutures = Lists.newArrayList();
+      boolean isFirstFailure = true;
       for (ChannelFutureAddress waitingConnection : waitingConnectionList) {
         context.progress();
         ChannelFuture future = waitingConnection.future;
         ProgressableUtils.awaitChannelFuture(future, context);
-        if (!future.isSuccess()) {
+        if (!future.isSuccess() || !future.channel().isOpen()) {
+          // Make a short pause before trying to reconnect failed addresses
+          // again, but to do it just once per iterating through channels
+          if (isFirstFailure) {
+            isFirstFailure = false;
+            try {
+              Thread.sleep(waitTimeBetweenConnectionRetriesMs);
+            } catch (InterruptedException e) {
+              throw new IllegalStateException(
+                  "connectAllAddresses: InterruptedException occurred", e);
+            }
+          }
+
           LOG.warn("connectAllAddresses: Future failed " +
               "to connect with " + waitingConnection.address + " with " +
               failures + " failures because of " + future.cause());
