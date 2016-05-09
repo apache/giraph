@@ -71,4 +71,14 @@ public interface NumericTypeOps<T> extends TypeOps<T> {
    * @param value Value to negate
    */
   void negate(T value);
+
+  /**
+   * Compare two values
+   *
+   * @param value1 First value
+   * @param value2 Second value
+   * @return 0 if values are equal, negative value if value1<value2 and
+   *         positive value if value1>value2
+   */
+  int compare(T value1, T value2);
 }

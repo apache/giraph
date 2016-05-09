@@ -126,4 +126,9 @@ public enum LongTypeOps implements
   public void negate(LongWritable value) {
     value.set(-value.get());
   }
+
+  @Override
+  public int compare(LongWritable value1, LongWritable value2) {
+    return Long.compare(value1.get(), value2.get());
+  }
 }

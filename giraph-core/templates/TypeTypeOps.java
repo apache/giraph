@@ -143,5 +143,10 @@ public enum ${type.camel}TypeOps implements
   public void negate(${type.camel}Writable value) {
     value.set(<@cast_if_needed_e expr="-value.get()"/>);
   }
+
+  @Override
+  public int compare(${type.camel}Writable value1, ${type.camel}Writable value2) {
+    return ${type.boxed}.compare(value1.get(), value2.get());
+  }
 </#if>
 }

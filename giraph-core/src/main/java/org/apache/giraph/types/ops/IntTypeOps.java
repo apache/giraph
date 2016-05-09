@@ -126,4 +126,9 @@ public enum IntTypeOps implements
   public void negate(IntWritable value) {
     value.set(-value.get());
   }
+
+  @Override
+  public int compare(IntWritable value1, IntWritable value2) {
+    return Integer.compare(value1.get(), value2.get());
+  }
 }

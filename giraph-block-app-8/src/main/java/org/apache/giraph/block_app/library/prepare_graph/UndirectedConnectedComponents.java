@@ -34,6 +34,7 @@ import org.apache.giraph.block_app.library.SendMessageChain;
 import org.apache.giraph.block_app.library.VertexSuppliers;
 import org.apache.giraph.block_app.reducers.map.BasicMapReduce;
 import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.combiner.MinMessageCombiner;
 import org.apache.giraph.combiner.SumMessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
@@ -47,6 +48,7 @@ import org.apache.giraph.reducers.impl.MaxPairReducer;
 import org.apache.giraph.reducers.impl.SumReduce;
 import org.apache.giraph.types.NoMessage;
 import org.apache.giraph.types.ops.LongTypeOps;
+import org.apache.giraph.types.ops.NumericTypeOps;
 import org.apache.giraph.types.ops.TypeOps;
 import org.apache.giraph.writable.tuple.LongLongWritable;
 import org.apache.giraph.writable.tuple.PairWritable;
@@ -55,7 +57,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 
 /**
@@ -98,6 +99,7 @@ public class UndirectedConnectedComponents {
       <I extends WritableComparable, V extends Writable>
       extends Piece<I, V, Writable, I, Object> {
     private final TypeOps<I> idTypeOps;
+    private final MinMessageCombiner<I, I> minMessageCombiner;
     private final Supplier<Boolean> vertexToPropagate;
     private final Consumer<Boolean> vertexUpdatedComponent;
     private final Consumer<Boolean> converged;
@@ -118,6 +120,8 @@ public class UndirectedConnectedComponents {
         SupplierFromVertex<I, V, Writable,
           ? extends Iterable<? extends Edge<I, ?>>> edgeSupplier) {
       this.idTypeOps = idTypeOps;
+      this.minMessageCombiner = idTypeOps instanceof NumericTypeOps ?
+          new MinMessageCombiner<>((NumericTypeOps<I>) idTypeOps) : null;
       this.vertexToPropagate = vertexToPropagate;
       this.vertexUpdatedComponent = vertexUpdatedComponent;
       this.converged = converged;
@@ -137,22 +141,14 @@ public class UndirectedConnectedComponents {
         final BlockWorkerSendApi<I, V, Writable, I> workerApi,
         Object executionStage) {
       final LongWritable one = new LongWritable(1);
-      return new InnerVertexSender() {
-        @Override
-        public void vertexSend(Vertex<I, V, Writable> vertex) {
-          if (vertexToPropagate.get()) {
-            workerApi.sendMessageToMultipleEdges(
-                Iterators.transform(
-                    edgeSupplier.get(vertex).iterator(),
-                    new Function<Edge<I, ?>, I>() {
-                      @Override
-                      public I apply(Edge<I, ?> edge) {
-                        return edge.getTargetVertexId();
-                      }
-                    }),
-                getComponent.get(vertex));
-            propagatedAggregator.reduce(one);
-          }
+      return vertex -> {
+        if (vertexToPropagate.get()) {
+          workerApi.sendMessageToMultipleEdges(
+              Iterators.transform(
+                  edgeSupplier.get(vertex).iterator(),
+                  edge -> edge.getTargetVertexId()),
+              getComponent.get(vertex));
+          propagatedAggregator.reduce(one);
         }
       };
     }
@@ -169,26 +165,21 @@ public class UndirectedConnectedComponents {
     public VertexReceiver<I, V, Writable, I> getVertexReceiver(
         BlockWorkerReceiveApi<I> workerApi, Object executionStage) {
       return new InnerVertexReceiver() {
-        private final I received = idTypeOps.create();
+        private final I newComponent = idTypeOps.create();
 
         @Override
         public void vertexReceive(Vertex<I, V, Writable> vertex,
             Iterable<I> messages) {
-          boolean first = true;
+          idTypeOps.set(newComponent, getComponent.get(vertex));
           for (I value : messages) {
-            if (first) {
-              idTypeOps.set(received, value);
-              first = false;
-            } else {
-              if (received.compareTo(value) > 0) {
-                idTypeOps.set(received, value);
-              }
+            if (newComponent.compareTo(value) > 0) {
+              idTypeOps.set(newComponent, value);
             }
           }
 
           I cur = getComponent.get(vertex);
-          if (!first && cur.compareTo(received) > 0) {
-            setComponent.apply(vertex, received);
+          if (cur.compareTo(newComponent) > 0) {
+            setComponent.apply(vertex, newComponent);
             vertexUpdatedComponent.apply(true);
           } else {
             vertexUpdatedComponent.apply(false);
@@ -198,8 +189,19 @@ public class UndirectedConnectedComponents {
     }
 
     @Override
+    public MessageCombiner<? super I, I> getMessageCombiner(
+        ImmutableClassesGiraphConfiguration conf) {
+      return minMessageCombiner;
+    }
+
+    @Override
     public Class<I> getMessageClass() {
-      return idTypeOps.getTypeClass();
+      return minMessageCombiner == null ? idTypeOps.getTypeClass() : null;
+    }
+
+    @Override
+    protected boolean allowOneMessageToManyIdsEncoding() {
+      return true;
     }
   }
 

@@ -101,4 +101,9 @@ public enum FloatTypeOps implements
   public void negate(FloatWritable value) {
     value.set(-value.get());
   }
+
+  @Override
+  public int compare(FloatWritable value1, FloatWritable value2) {
+    return Float.compare(value1.get(), value2.get());
+  }
 }

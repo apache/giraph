@@ -101,4 +101,9 @@ public enum ByteTypeOps implements
   public void negate(ByteWritable value) {
     value.set((byte) (-value.get()));
   }
+
+  @Override
+  public int compare(ByteWritable value1, ByteWritable value2) {
+    return Byte.compare(value1.get(), value2.get());
+  }
 }

@@ -101,4 +101,9 @@ public enum DoubleTypeOps implements
   public void negate(DoubleWritable value) {
     value.set(-value.get());
   }
+
+  @Override
+  public int compare(DoubleWritable value1, DoubleWritable value2) {
+    return Double.compare(value1.get(), value2.get());
+  }
 }
