@@ -52,7 +52,7 @@ public class BlockUtils {
       ClassConfOption.create("digraph.block_factory", null, BlockFactory.class,
           "block factory describing giraph job");
 
-  /** Property describing BlockFactory to use for current application run */
+  /** Property describing block worker context value class to use */
   public static final ClassConfOption<Object> BLOCK_WORKER_CONTEXT_VALUE_CLASS =
       ClassConfOption.create(
           "digraph.block_worker_context_value_class",

@@ -65,6 +65,8 @@ public class BlockWorkerContextLogic {
       BlockWorkerContextSendApi sendApi,
       BlockWorkerPieces workerPieces, long superstep,
       List<Writable> messages) {
+    workerPieces.getBlockApiHandle().setWorkerContextReceiveApi(receiveApi);
+    workerPieces.getBlockApiHandle().setWorkerContextSendApi(sendApi);
     if (BlockUtils.LOG_EXECUTION_STATUS.get(receiveApi.getConf())) {
       LOG.info("Worker executing " + workerPieces + " in " + superstep +
           " superstep");

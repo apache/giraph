@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.conf.DefaultMessageClasses;
 import org.apache.giraph.conf.GiraphConstants;
@@ -52,11 +53,14 @@ public class BlockWorkerPieces<S> {
 
   private final PairedPieceAndStage<S> receiver;
   private final PairedPieceAndStage<S> sender;
+  private final BlockApiHandle blockApiHandle;
 
   public BlockWorkerPieces(
-      PairedPieceAndStage<S> receiver, PairedPieceAndStage<S> sender) {
+      PairedPieceAndStage<S> receiver, PairedPieceAndStage<S> sender,
+      BlockApiHandle blockApiHandle) {
     this.receiver = receiver;
     this.sender = sender;
+    this.blockApiHandle = blockApiHandle;
   }
 
   public PairedPieceAndStage<S> getReceiver() {
@@ -65,6 +69,10 @@ public class BlockWorkerPieces<S> {
 
   public PairedPieceAndStage<S> getSender() {
     return sender;
+  }
+
+  public BlockApiHandle getBlockApiHandle() {
+    return blockApiHandle;
   }
 
   public MessageClasses getOutgoingMessageClasses(

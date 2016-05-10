@@ -40,6 +40,8 @@ public class BlockWorkerLogic {
 
   public void preSuperstep(
       BlockWorkerReceiveApi receiveApi, BlockWorkerSendApi sendApi) {
+    pieces.getBlockApiHandle().setWorkerReceiveApi(receiveApi);
+    pieces.getBlockApiHandle().setWorkerSendApi(sendApi);
     if (pieces.getReceiver() != null) {
       receiveFunctions = pieces.getReceiver().getVertexReceiver(receiveApi);
     }

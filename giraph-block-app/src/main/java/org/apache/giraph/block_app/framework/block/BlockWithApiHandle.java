@@ -15,19 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.block_app.framework.api;
+package org.apache.giraph.block_app.framework.block;
 
-import org.apache.giraph.worker.WorkerBroadcastUsage;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 
 /**
- * Block computation API available for worker receive methods.
- *
- * Interface to the Computation methods.
- *
- * @param <I> vertex Id type.
+ * Applications that need access to a {@link BlockApiHandle} should return a
+ * {@link Block} of this type.
  */
-@SuppressWarnings("rawtypes")
-public interface BlockWorkerReceiveApi<I extends WritableComparable>
-    extends BlockWorkerApi<I>, WorkerBroadcastUsage {
+public interface BlockWithApiHandle extends Block {
+  BlockApiHandle getBlockApiHandle();
 }

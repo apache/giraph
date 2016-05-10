@@ -26,9 +26,11 @@ import java.util.TreeMap;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.giraph.block_app.framework.BlockFactory;
 import org.apache.giraph.block_app.framework.BlockUtils;
+import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.api.BlockOutputHandleAccessor;
 import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.BlockWithApiHandle;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.function.Consumer;
@@ -53,6 +55,7 @@ public class BlockMasterLogic<S> {
   private long lastTimestamp = -1;
   private BlockWorkerPieces previousWorkerPieces;
   private boolean computationDone;
+  private BlockApiHandle blockApiHandle;
 
   /** Tracks elapsed time on master for each distinct Piece */
   private final TimeStatsPerEvent masterPerPieceTimeStats =
@@ -82,6 +85,14 @@ public class BlockMasterLogic<S> {
     this.computationDone = false;
 
     LOG.info("Executing application - " + executionBlock);
+    if (executionBlock instanceof BlockWithApiHandle) {
+      blockApiHandle =
+        ((BlockWithApiHandle) executionBlock).getBlockApiHandle();
+    }
+    if (blockApiHandle == null) {
+      blockApiHandle = new BlockApiHandle();
+    }
+    blockApiHandle.setMasterApi(masterApi);
 
     // We register all possible aggregators at the beginning
     executionBlock.forAllPossiblePieces(new Consumer<AbstractPiece>() {
@@ -89,7 +100,7 @@ public class BlockMasterLogic<S> {
       @SuppressWarnings("deprecation")
       @Override
       public void apply(AbstractPiece piece) {
-        // no need to regiser the same piece twice.
+        // no need to register the same piece twice.
         if (registeredPieces.add(piece)) {
           try {
             piece.registerAggregators(masterApi);
@@ -178,7 +189,8 @@ public class BlockMasterLogic<S> {
         postApplication();
         result = null;
       } else {
-        result = new BlockWorkerPieces<>(previousPiece, nextPiece);
+        result = new BlockWorkerPieces<>(
+          previousPiece, nextPiece, blockApiHandle);
         if (logExecutionStatus) {
           LOG.info("Master in " + superstep + " superstep passing " +
               result + " to be executed");
