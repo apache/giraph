@@ -38,6 +38,7 @@ import com.google.common.io.Closeables;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Wrapper around JobProgressTracker which retires to connect and swallows
@@ -159,9 +160,9 @@ public class RetryableJobProgressTrackerClient
   private void executeWithRetry(Runnable runnable) {
     try {
       runnable.run();
-    } catch (RuntimeTTransportException te) {
+    } catch (RuntimeTTransportException | RejectedExecutionException te) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("RuntimeTTransportException occurred while talking to " +
+        LOG.debug(te.getClass() + " occurred while talking to " +
             "JobProgressTracker server, trying to reconnect", te);
       }
       try {
@@ -171,7 +172,8 @@ public class RetryableJobProgressTrackerClient
         } catch (Exception e) {
           // CHECKSTYLE: resume IllegalCatch
           if (LOG.isDebugEnabled()) {
-            LOG.debug("");
+            LOG.debug(
+                "Exception occurred while trying to close client manager", e);
           }
         }
         resetConnection();
