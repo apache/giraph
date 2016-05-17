@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.generate;
 
+import org.junit.Test;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -133,11 +135,15 @@ public class GeneratePrimitiveClasses {
 
     EnumSet<PrimitiveType> writableSet = EnumSet.noneOf(PrimitiveType.class);
     EnumSet<PrimitiveType> ids = EnumSet.noneOf(PrimitiveType.class);
+    EnumSet<PrimitiveType> numerics = EnumSet.noneOf(PrimitiveType.class);
     for (PrimitiveType type : EnumSet.allOf(PrimitiveType.class)) {
       if (type.hasWritable()) {
         writableSet.add(type);
         if (type.isId()) {
           ids.add(type);
+        }
+        if (type.isNumeric()) {
+          numerics.add(type);
         }
       }
     }
@@ -160,6 +166,41 @@ public class GeneratePrimitiveClasses {
         "WTypeArrayList.java",
         "src/main/java/org/apache/giraph/types/ops/collections/array/W%sArrayList.java");
 
+    generateForAll(
+        cfg,
+        writableSet,
+        writableSet,
+        "TypeTypeConsumer.java",
+        "src/main/java/org/apache/giraph/function/primitive/pairs/%s%sConsumer.java");
+
+    generateForAll(
+        cfg,
+        writableSet,
+        writableSet,
+        "TypeTypePredicate.java",
+        "src/main/java/org/apache/giraph/function/primitive/pairs/%s%sPredicate.java");
+
+    generateForAll(
+        cfg,
+        ids,
+        numerics,
+        "Type2TypeMapEntryIterable.java",
+        "src/main/java/org/apache/giraph/types/heaps/%s2%sMapEntryIterable.java");
+
+    generateForAll(
+        cfg,
+        ids,
+        numerics,
+        "FixedCapacityType2TypeMinHeap.java",
+        "src/main/java/org/apache/giraph/types/heaps/FixedCapacity%s%sMinHeap.java");
+
+    generateForAll(
+        cfg,
+        ids,
+        numerics,
+        "TestFixedCapacityType2TypeMinHeap.java",
+        "src/test/java/org/apache/giraph/types/heaps/TestFixedCapacity%s%sMinHeap.java");
+
     System.out.println("Successfully generated classes");
   }
 
@@ -175,6 +216,26 @@ public class GeneratePrimitiveClasses {
       generateAndWrite(cfg, props,
           template,
           String.format(outputPattern, type.getCamel()));
+    }
+  }
+
+  /**
+   * Generate a set of files from a template, one for each combination of
+   * types in the passed sets, where added entry for "type1" and "type2" to
+   * that object is added, on top of default entries.
+   */
+  private static void generateForAll(Configuration cfg,
+      EnumSet<PrimitiveType> types1, EnumSet<PrimitiveType> types2,
+      String template, String outputPattern) throws TemplateNotFoundException, MalformedTemplateNameException, ParseException, FileNotFoundException, IOException, TemplateException {
+    for (PrimitiveType type1 : types1) {
+      for (PrimitiveType type2 : types2) {
+        Map<String, Object> props = defaultMap();
+        props.put("type1", type1);
+        props.put("type2", type2);
+        generateAndWrite(cfg, props,
+            template,
+            String.format(outputPattern, type1.getCamel(), type2.getCamel()));
+      }
     }
   }
 
