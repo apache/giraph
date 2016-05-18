@@ -241,7 +241,7 @@ public class GiraphJob {
       GiraphJobObserver jobObserver = conf.getJobObserver();
 
       JobProgressTrackerService jobProgressTrackerService =
-          JobProgressTrackerService.createJobProgressTrackerService(
+          DefaultJobProgressTrackerService.createJobProgressTrackerService(
               conf, jobObserver);
       ClientThriftServer clientThriftServer = null;
       if (jobProgressTrackerService != null) {

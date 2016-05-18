@@ -376,6 +376,12 @@ under the License.
          <td>Observer class to watch over job status - optional</td>
        </tr>
        <tr>
+         <td>giraph.jobProgressTrackerClass</td>
+         <td>class</td>
+         <td>DefaultJobProgressTrackerService</td>
+         <td>Class to use to track job progress on client</td>
+       </tr>
+       <tr>
          <td>giraph.jobRetryCheckerClass</td>
          <td>class</td>
          <td>DefaultGiraphJobRetryChecker</td>

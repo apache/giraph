@@ -60,9 +60,11 @@ import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.DefaultGiraphJobRetryChecker;
 import org.apache.giraph.job.DefaultJobObserver;
+import org.apache.giraph.job.DefaultJobProgressTrackerService;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.job.HaltApplicationUtils;
+import org.apache.giraph.job.JobProgressTrackerService;
 import org.apache.giraph.mapping.MappingStore;
 import org.apache.giraph.mapping.MappingStoreOps;
 import org.apache.giraph.mapping.translate.TranslateEdge;
@@ -1169,6 +1171,13 @@ public interface GiraphConstants {
   BooleanConfOption TRACK_JOB_PROGRESS_ON_CLIENT =
       new BooleanConfOption("giraph.trackJobProgressOnClient", false,
           "Whether to track job progress on client or not");
+
+  /** Class to use to track job progress on client */
+  ClassConfOption<JobProgressTrackerService> JOB_PROGRESS_TRACKER_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerClass",
+          DefaultJobProgressTrackerService.class,
+          JobProgressTrackerService.class,
+          "Class to use to track job progress on client");
 
   /** Number of retries for creating the HDFS files */
   IntConfOption HDFS_FILE_CREATION_RETRIES =

@@ -31,3 +31,6 @@ failed-profile.txt
 
 /for-each-profile-results.txt
 /giraph-hive/derby.log
+
+# File with all giraph conf options
+/src/site/xdoc/options.xml
