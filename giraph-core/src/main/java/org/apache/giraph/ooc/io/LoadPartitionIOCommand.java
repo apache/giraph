@@ -54,19 +54,22 @@ public class LoadPartitionIOCommand extends IOCommand {
   }
 
   @Override
-  public void execute(String basePath) throws IOException {
+  public boolean execute(String basePath) throws IOException {
+    boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startLoadingPartition(partitionId, superstep)) {
-      long currentSuperstep = oocEngine.getServiceWorker().getSuperstep();
+      long currentSuperstep = oocEngine.getSuperstep();
       DiskBackedPartitionStore partitionStore =
           (DiskBackedPartitionStore)
               oocEngine.getServerData().getPartitionStore();
-      partitionStore.loadPartitionData(partitionId, basePath);
+      numBytesTransferred +=
+          partitionStore.loadPartitionData(partitionId, basePath);
       if (currentSuperstep == BspService.INPUT_SUPERSTEP &&
           superstep == currentSuperstep) {
         DiskBackedEdgeStore edgeStore =
             (DiskBackedEdgeStore) oocEngine.getServerData().getEdgeStore();
-        edgeStore.loadPartitionData(partitionId, basePath);
+        numBytesTransferred +=
+            edgeStore.loadPartitionData(partitionId, basePath);
       }
       MessageStore messageStore;
       if (currentSuperstep == superstep) {
@@ -76,12 +79,19 @@ public class LoadPartitionIOCommand extends IOCommand {
         messageStore = oocEngine.getServerData().getIncomingMessageStore();
       }
       if (messageStore != null) {
-        ((DiskBackedMessageStore) messageStore)
+        numBytesTransferred += ((DiskBackedMessageStore) messageStore)
             .loadPartitionData(partitionId, basePath);
       }
       oocEngine.getMetaPartitionManager()
           .doneLoadingPartition(partitionId, superstep);
+      executed = true;
     }
+    return executed;
+  }
+
+  @Override
+  public IOCommandType getType() {
+    return IOCommandType.LOAD_PARTITION;
   }
 
   @Override

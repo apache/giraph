@@ -44,7 +44,7 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUES
 public abstract class RequestServerHandler<R> extends
   ChannelInboundHandlerAdapter {
   /** Number of bytes in the encoded response */
-  public static final int RESPONSE_BYTES = 14;
+  public static final int RESPONSE_BYTES = 16;
   /** Time class to use */
   private static Time TIME = SystemTime.get();
   /** Class logger */
@@ -137,9 +137,9 @@ public abstract class RequestServerHandler<R> extends
     ByteBuf buffer = ctx.alloc().buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
     buffer.writeLong(request.getRequestId());
-    short signal =
+    int signal =
         flowControl.calculateResponse(alreadyDone, request.getClientId());
-    buffer.writeShort(signal);
+    buffer.writeInt(signal);
     ctx.write(buffer);
     // NettyServer is bootstrapped with auto-read set to true by default. After
     // the first request is processed, we set auto-read to false. This prevents

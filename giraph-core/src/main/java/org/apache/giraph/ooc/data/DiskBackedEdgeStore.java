@@ -125,21 +125,21 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
   }
 
   @Override
-  public void loadPartitionData(int partitionId, String basePath)
+  public long loadPartitionData(int partitionId, String basePath)
       throws IOException {
-    super.loadPartitionData(partitionId, getPath(basePath));
+    return super.loadPartitionData(partitionId, getPath(basePath));
   }
 
   @Override
-  public void offloadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId, String basePath)
       throws IOException {
-    super.offloadPartitionData(partitionId, getPath(basePath));
+    return super.offloadPartitionData(partitionId, getPath(basePath));
   }
 
   @Override
-  public void offloadBuffers(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId, String basePath)
       throws IOException {
-    super.offloadBuffers(partitionId, getPath(basePath));
+    return super.offloadBuffers(partitionId, getPath(basePath));
   }
 
   @Override
@@ -157,8 +157,9 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
   }
 
   @Override
-  protected void loadInMemoryPartitionData(int partitionId, String path)
+  protected long loadInMemoryPartitionData(int partitionId, String path)
       throws IOException {
+    long numBytes = 0;
     File file = new File(path);
     if (file.exists()) {
       if (LOG.isDebugEnabled()) {
@@ -170,14 +171,17 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
       DataInputStream dis = new DataInputStream(bis);
       edgeStore.readPartitionEdgeStore(partitionId, dis);
       dis.close();
+      numBytes = file.length();
       checkState(file.delete(), "loadInMemoryPartitionData: failed to delete " +
           "%s.", file.getAbsoluteFile());
     }
+    return numBytes;
   }
 
   @Override
-  protected void offloadInMemoryPartitionData(int partitionId, String path)
+  protected long offloadInMemoryPartitionData(int partitionId, String path)
       throws IOException {
+    long numBytes = 0;
     if (edgeStore.hasEdgesForPartition(partitionId)) {
       File file = new File(path);
       checkState(!file.exists(), "offloadInMemoryPartitionData: edge store " +
@@ -190,7 +194,9 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
       DataOutputStream dos = new DataOutputStream(bos);
       edgeStore.writePartitionEdgeStore(partitionId, dos);
       dos.close();
+      numBytes = dos.size();
     }
+    return numBytes;
   }
 
   @Override

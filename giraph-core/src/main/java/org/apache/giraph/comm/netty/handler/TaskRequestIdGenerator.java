@@ -19,31 +19,29 @@
 package org.apache.giraph.comm.netty.handler;
 
 import com.google.common.collect.Maps;
-import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Generate different request ids based on the address of the well known
- * port on the workers.  Thread-safe.
+ * Generate different request ids based on the task id.  Thread-safe.
  */
-public class AddressRequestIdGenerator {
-  /** Address request generator map */
-  private final ConcurrentMap<InetSocketAddress, AtomicLong>
-  addressRequestGeneratorMap = Maps.newConcurrentMap();
+public class TaskRequestIdGenerator {
+  /** Task request generator map */
+  private final ConcurrentMap<Integer, AtomicLong>
+      taskRequestGeneratorMap = Maps.newConcurrentMap();
 
   /**
    * Get the next request id for a given destination.  Thread-safe.
    *
-   * @param address Address of the worker (consistent during a superstep)
+   * @param taskId id of the task(consistent during a superstep)
    * @return Valid request id
    */
-  public Long getNextRequestId(InetSocketAddress address) {
-    AtomicLong requestGenerator = addressRequestGeneratorMap.get(address);
+  public Long getNextRequestId(Integer taskId) {
+    AtomicLong requestGenerator = taskRequestGeneratorMap.get(taskId);
     if (requestGenerator == null) {
       requestGenerator = new AtomicLong(0);
       AtomicLong oldRequestGenerator =
-          addressRequestGeneratorMap.putIfAbsent(address, requestGenerator);
+          taskRequestGeneratorMap.putIfAbsent(taskId, requestGenerator);
       if (oldRequestGenerator != null) {
         requestGenerator = oldRequestGenerator;
       }

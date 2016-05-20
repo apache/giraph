@@ -19,6 +19,8 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.graph.GraphTaskManager;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.OutOfCoreIOCallable;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.hadoop.io.Writable;
 
@@ -28,6 +30,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Per-superstep metrics for a Worker.
@@ -43,6 +46,14 @@ public class WorkerSuperstepMetrics implements Writable {
   private LongAndTimeUnit superstepTimer;
   /** Time spent waiting for other workers to finish */
   private LongAndTimeUnit waitRequestsTimer;
+  /** Time spent doing GC in a superstep */
+  private LongAndTimeUnit superstepGCTimer;
+  /** Number of bytes loaded from disk to memory in out-of-core mechanism */
+  private long bytesLoadedFromDisk;
+  /** Number of bytes stored from memory to disk in out-of-core mechanism */
+  private long bytesStoredOnDisk;
+  /** Percentage of graph kept in memory */
+  private double graphPercentageInMemory;
 
   /**
    * Constructor
@@ -53,6 +64,11 @@ public class WorkerSuperstepMetrics implements Writable {
     timeToFirstMsg = new LongAndTimeUnit();
     superstepTimer = new LongAndTimeUnit();
     waitRequestsTimer = new LongAndTimeUnit();
+    superstepGCTimer = new LongAndTimeUnit();
+    superstepGCTimer.setTimeUnit(TimeUnit.MILLISECONDS);
+    bytesLoadedFromDisk = 0;
+    bytesStoredOnDisk = 0;
+    graphPercentageInMemory = 0;
   }
 
   /**
@@ -66,6 +82,20 @@ public class WorkerSuperstepMetrics implements Writable {
     readGiraphTimer(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG, timeToFirstMsg);
     readGiraphTimer(GraphTaskManager.TIMER_SUPERSTEP_TIME, superstepTimer);
     readGiraphTimer(BspServiceWorker.TIMER_WAIT_REQUESTS, waitRequestsTimer);
+    SuperstepMetricsRegistry registry = GiraphMetrics.get().perSuperstep();
+    superstepGCTimer.setValue(
+        registry.getCounter(GraphTaskManager.TIMER_SUPERSTEP_GC_TIME).count());
+    bytesLoadedFromDisk =
+        registry.getCounter(OutOfCoreIOCallable.BYTES_LOAD_FROM_DISK).count();
+    bytesStoredOnDisk =
+        registry.getCounter(OutOfCoreIOCallable.BYTES_STORE_TO_DISK).count();
+    Gauge<Double> gauge =
+        registry.getExistingGauge(OutOfCoreEngine.GRAPH_PERCENTAGE_IN_MEMORY);
+    if (gauge != null) {
+      graphPercentageInMemory = gauge.value();
+    } else {
+      graphPercentageInMemory = 100;
+    }
     return this;
   }
 
@@ -99,6 +129,9 @@ public class WorkerSuperstepMetrics implements Writable {
     out.println("--- METRICS: superstep " + superstep + " ---");
     out.println("  superstep time: " + superstepTimer);
     out.println("  compute all partitions: " + computeAllTimer);
+    out.println("  time spent in gc: " + superstepGCTimer);
+    out.println("  bytes transferred in out-of-core: " +
+        (bytesLoadedFromDisk + bytesStoredOnDisk));
     out.println("  network communication time: " + commTimer);
     out.println("  time to first message: " + timeToFirstMsg);
     out.println("  wait on requests time: " + waitRequestsTimer);
@@ -140,6 +173,29 @@ public class WorkerSuperstepMetrics implements Writable {
     return waitRequestsTimer.getValue();
   }
 
+  /**
+   * @return number of bytes loaded from disk by out-of-core mechanism (if any
+   *         is used)
+   */
+  public long getBytesLoadedFromDisk() {
+    return bytesLoadedFromDisk;
+  }
+
+  /**
+   * @return number of bytes stored on disk by out-of-core mechanism (if any is
+   *         used)
+   */
+  public long getBytesStoredOnDisk() {
+    return bytesStoredOnDisk;
+  }
+
+  /**
+   * @return a rough estimate of percentage of graph in memory
+   */
+  public double getGraphPercentageInMemory() {
+    return graphPercentageInMemory;
+  }
+
   @Override
   public void readFields(DataInput dataInput) throws IOException {
     commTimer.setValue(dataInput.readLong());
@@ -147,6 +203,9 @@ public class WorkerSuperstepMetrics implements Writable {
     timeToFirstMsg.setValue(dataInput.readLong());
     superstepTimer.setValue(dataInput.readLong());
     waitRequestsTimer.setValue(dataInput.readLong());
+    bytesLoadedFromDisk = dataInput.readLong();
+    bytesStoredOnDisk = dataInput.readLong();
+    graphPercentageInMemory = dataInput.readDouble();
   }
 
   @Override
@@ -156,5 +215,8 @@ public class WorkerSuperstepMetrics implements Writable {
     dataOutput.writeLong(timeToFirstMsg.getValue());
     dataOutput.writeLong(superstepTimer.getValue());
     dataOutput.writeLong(waitRequestsTimer.getValue());
+    dataOutput.writeLong(bytesLoadedFromDisk);
+    dataOutput.writeLong(bytesStoredOnDisk);
+    dataOutput.writeDouble(graphPercentageInMemory);
   }
 }

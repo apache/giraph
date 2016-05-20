@@ -19,6 +19,8 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -29,6 +31,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import com.sun.management.GarbageCollectionNotificationInfo;
+import com.yammer.metrics.core.Counter;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -46,6 +50,7 @@ import org.apache.giraph.metrics.GiraphTimer;
 import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
@@ -69,6 +74,11 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
+
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.openmbean.CompositeData;
 
 /**
  * The Giraph-specific business logic for a single BSP
@@ -110,6 +120,8 @@ end[PURE_YARN]*/
       "time-to-first-message-ms";
   /** Name of metric for time from first message till last message flushed */
   public static final String TIMER_COMMUNICATION_TIME = "communication-time-ms";
+  /** Name of metric for time spent doing GC per superstep in msec */
+  public static final String TIMER_SUPERSTEP_GC_TIME = "superstep-gc-time-ms";
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphTaskManager.class);
@@ -156,6 +168,8 @@ end[PURE_YARN]*/
   private GiraphTimerContext communicationTimerContext;
   /** Timer for WorkerContext#preSuperstep() */
   private GiraphTimer wcPreSuperstepTimer;
+  /** Timer to keep aggregated time spent in GC in a superstep */
+  private Counter gcTimeMetric;
   /** The Hadoop Mapper#Context for this job */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** is this GraphTaskManager the master? */
@@ -293,7 +307,9 @@ end[PURE_YARN]*/
       return;
     }
     preLoadOnWorkerObservers();
+    GiraphTimerContext superstepTimerContext = superstepTimer.time();
     finishedSuperstepStats = serviceWorker.setup();
+    superstepTimerContext.stop();
     if (collectInputSuperstepStats(finishedSuperstepStats)) {
       return;
     }
@@ -304,8 +320,7 @@ end[PURE_YARN]*/
     // main superstep processing loop
     while (!finishedSuperstepStats.allVerticesHalted()) {
       final long superstep = serviceWorker.getSuperstep();
-      GiraphTimerContext superstepTimerContext =
-        getTimerForThisSuperstep(superstep);
+      superstepTimerContext = getTimerForThisSuperstep(superstep);
       GraphState graphState = new GraphState(superstep,
           finishedSuperstepStats.getVertexCount(),
           finishedSuperstepStats.getEdgeCount(),
@@ -619,9 +634,49 @@ end[PURE_YARN]*/
         LOG.info("setup: Starting up BspServiceWorker...");
       }
       serviceWorker = new BspServiceWorker<I, V, E>(context, this);
+      installGCMonitoring();
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Registering health of this worker...");
       }
+    }
+  }
+
+  /**
+   * Install GC monitoring. This method intercepts all GC, log the gc, and
+   * notifies an out-of-core engine (if any is used) about the GC.
+   */
+  private void installGCMonitoring() {
+    List<GarbageCollectorMXBean> mxBeans = ManagementFactory
+        .getGarbageCollectorMXBeans();
+    final OutOfCoreEngine oocEngine =
+        serviceWorker.getServerData().getOocEngine();
+    for (GarbageCollectorMXBean gcBean : mxBeans) {
+      NotificationEmitter emitter = (NotificationEmitter) gcBean;
+      NotificationListener listener = new NotificationListener() {
+        @Override
+        public void handleNotification(Notification notification,
+                                       Object handle) {
+          if (notification.getType().equals(GarbageCollectionNotificationInfo
+              .GARBAGE_COLLECTION_NOTIFICATION)) {
+            GarbageCollectionNotificationInfo info =
+                GarbageCollectionNotificationInfo.from(
+                    (CompositeData) notification.getUserData());
+
+            if (LOG.isInfoEnabled()) {
+              LOG.info("installGCMonitoring: name = " + info.getGcName() +
+                  ", action = " + info.getGcAction() + ", cause = " +
+                  info.getGcCause() + ", duration = " +
+                  info.getGcInfo().getDuration() + "ms");
+            }
+            gcTimeMetric.inc(info.getGcInfo().getDuration());
+            if (oocEngine != null) {
+              oocEngine.gcCompleted(info);
+            }
+          }
+        }
+      };
+      //Add the listener
+      emitter.addNotificationListener(listener, null, null);
     }
   }
 
@@ -680,6 +735,7 @@ end[PURE_YARN]*/
         TIMER_TIME_TO_FIRST_MSG, TimeUnit.MICROSECONDS);
     communicationTimer = new GiraphTimer(superstepMetrics,
         TIMER_COMMUNICATION_TIME, TimeUnit.MILLISECONDS);
+    gcTimeMetric = superstepMetrics.getCounter(TIMER_SUPERSTEP_GC_TIME);
     wcPreSuperstepTimer = new GiraphTimer(superstepMetrics,
         "worker-context-pre-superstep", TimeUnit.MILLISECONDS);
   }
@@ -1000,6 +1056,12 @@ end[PURE_YARN]*/
     return conf;
   }
 
+  /**
+   * @return Time spent in GC recorder by the GC listener
+   */
+  public long getSuperstepGCTime() {
+    return gcTimeMetric.count();
+  }
 
   /**
    * Default handler for uncaught exceptions.

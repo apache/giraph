@@ -42,13 +42,19 @@ public class WaitIOCommand extends IOCommand {
   }
 
   @Override
-  public void execute(String basePath) throws IOException {
+  public boolean execute(String basePath) throws IOException {
     try {
       TimeUnit.MILLISECONDS.sleep(waitDuration);
     } catch (InterruptedException e) {
       throw new IllegalStateException("execute: caught InterruptedException " +
           "while IO thread is waiting!");
     }
+    return true;
+  }
+
+  @Override
+  public IOCommandType getType() {
+    return IOCommandType.WAIT;
   }
 
   @Override

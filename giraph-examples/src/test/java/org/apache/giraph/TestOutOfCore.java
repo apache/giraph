@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
@@ -62,12 +63,13 @@ public class TestOutOfCore extends BspCase {
         SimplePageRankComputation.SimplePageRankWorkerContext.class);
     conf.setMasterComputeClass(
         SimplePageRankComputation.SimplePageRankMasterCompute.class);
+    GiraphConstants.METRICS_ENABLE.set(conf, true);
     GiraphConstants.USER_PARTITION_COUNT.set(conf, NUM_PARTITIONS);
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.set(conf, true);
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
     GiraphConstants.NUM_COMPUTE_THREADS.set(conf, 8);
     GiraphConstants.NUM_INPUT_THREADS.set(conf, 8);
-    GiraphConstants.NUM_OOC_THREADS.set(conf, 4);
     GiraphConstants.NUM_OUTPUT_THREADS.set(conf, 8);
     GiraphConstants.PARTITIONS_DIRECTORY.set(conf, "disk0,disk1,disk2");
     GiraphJob job = prepareJob(getCallingMethodName(), conf,

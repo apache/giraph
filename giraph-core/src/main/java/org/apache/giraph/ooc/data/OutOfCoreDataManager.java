@@ -181,18 +181,22 @@ public abstract class OutOfCoreDataManager<T> {
 
   /**
    * Loads and assembles all data for a given partition, and put it into the
-   * data store.
+   * data store. Returns the number of bytes transferred from disk to memory in
+   * the loading process.
    *
    * @param partitionId id of the partition to load ana assemble all data for
    * @param basePath path to load the data from
+   * @return number of bytes loaded from disk to memory
    * @throws IOException
    */
-  public void loadPartitionData(int partitionId, String basePath)
+  public long loadPartitionData(int partitionId, String basePath)
       throws IOException {
+    long numBytes = 0;
     ReadWriteLock rwLock = getPartitionLock(partitionId);
     rwLock.writeLock().lock();
     if (hasPartitionDataOnDisk.contains(partitionId)) {
-      loadInMemoryPartitionData(partitionId, getPath(basePath, partitionId));
+      numBytes += loadInMemoryPartitionData(partitionId,
+          getPath(basePath, partitionId));
       hasPartitionDataOnDisk.remove(partitionId);
       // Loading raw data buffers from disk if there is any and applying those
       // to already loaded in-memory data.
@@ -213,6 +217,7 @@ public abstract class OutOfCoreDataManager<T> {
           addEntryToImMemoryPartitionData(partitionId, entry);
         }
         dis.close();
+        numBytes +=  file.length();
         checkState(file.delete(), "loadPartitionData: failed to delete %s.",
             file.getAbsoluteFile());
       }
@@ -225,38 +230,44 @@ public abstract class OutOfCoreDataManager<T> {
       }
     }
     rwLock.writeLock().unlock();
+    return numBytes;
   }
 
   /**
-   * Offloads partition data of a given partition in the data store to disk
+   * Offloads partition data of a given partition in the data store to disk, and
+   * returns the number of bytes offloaded from memory to disk.
    *
    * @param partitionId id of the partition to offload its data
    * @param basePath path to offload the data to
+   * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       "UL_UNRELEASED_LOCK_EXCEPTION_PATH")
-  public void offloadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId, String basePath)
       throws IOException {
     ReadWriteLock rwLock = getPartitionLock(partitionId);
     rwLock.writeLock().lock();
     hasPartitionDataOnDisk.add(partitionId);
     rwLock.writeLock().unlock();
-    offloadInMemoryPartitionData(partitionId, getPath(basePath, partitionId));
+    return offloadInMemoryPartitionData(partitionId,
+        getPath(basePath, partitionId));
   }
 
   /**
-   * Offloads raw data buffers of a given partition to disk
+   * Offloads raw data buffers of a given partition to disk, and returns the
+   * number of bytes offloaded from memory to disk.
    *
    * @param partitionId id of the partition to offload its raw data buffers
    * @param basePath path to offload the data to
+   * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
-  public void offloadBuffers(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId, String basePath)
       throws IOException {
     Pair<Integer, List<T>> pair = dataBuffers.get(partitionId);
     if (pair == null || pair.getLeft() < minBufferSizeToOffload) {
-      return;
+      return 0;
     }
     ReadWriteLock rwLock = getPartitionLock(partitionId);
     rwLock.writeLock().lock();
@@ -272,6 +283,7 @@ public abstract class OutOfCoreDataManager<T> {
       writeEntry(entry, dos);
     }
     dos.close();
+    long numBytes = dos.size();
     int numBuffers = pair.getRight().size();
     Integer oldNumBuffersOnDisk =
         numDataBuffersOnDisk.putIfAbsent(partitionId, numBuffers);
@@ -279,6 +291,7 @@ public abstract class OutOfCoreDataManager<T> {
       numDataBuffersOnDisk.replace(partitionId,
           oldNumBuffersOnDisk + numBuffers);
     }
+    return numBytes;
   }
 
   /**
@@ -345,24 +358,27 @@ public abstract class OutOfCoreDataManager<T> {
   protected abstract T readNextEntry(DataInput in) throws IOException;
 
   /**
-   * Loads data of a partition into data store.
+   * Loads data of a partition into data store. Returns number of bytes loaded.
    *
    * @param partitionId id of the partition to load its data
    * @param path path from which data should be loaded
+   * @return number of bytes loaded from disk to memory
    * @throws IOException
    */
-  protected abstract void loadInMemoryPartitionData(int partitionId,
+  protected abstract long loadInMemoryPartitionData(int partitionId,
                                                     String path)
       throws IOException;
 
   /**
-   * Offloads data of a partition in data store to disk.
+   * Offloads data of a partition in data store to disk. Returns the number of
+   * bytes offloaded to disk
    *
    * @param partitionId id of the partition to offload to disk
    * @param path path to which data should be offloaded
+   * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
-  protected abstract void offloadInMemoryPartitionData(int partitionId,
+  protected abstract long offloadInMemoryPartitionData(int partitionId,
                                                        String path)
       throws IOException;
 

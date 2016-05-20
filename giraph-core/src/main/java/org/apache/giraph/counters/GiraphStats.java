@@ -47,7 +47,7 @@ public class GiraphStats extends HadoopCountersBase {
     = "Aggregate sent messages";
   /** aggregate sent messages bytes counter name */
   public static final String AGGREGATE_SENT_MESSAGE_BYTES_NAME
-    = "Aggregate sent message message bytes";
+    = "Aggregate sent message bytes";
   /** workers counter name */
   public static final String CURRENT_WORKERS_NAME = "Current workers";
   /** current master partition task counter name */
@@ -56,6 +56,12 @@ public class GiraphStats extends HadoopCountersBase {
   /** last checkpointed superstep counter name */
   public static final String LAST_CHECKPOINTED_SUPERSTEP_NAME =
       "Last checkpointed superstep";
+  /** aggregate bytes loaded from local disks in out-of-core */
+  public static final String OOC_BYTES_LOADED_NAME =
+      "Aggregate bytes loaded from local disks (out-of-core)";
+  /** aggregate bytes stored to local disks in out-of-core */
+  public static final String OOC_BYTES_STORED_NAME =
+      "Aggregate bytes stored to local disks (out-of-core)";
 
   /** Singleton instance for everyone to use */
   private static GiraphStats INSTANCE;
@@ -82,8 +88,12 @@ public class GiraphStats extends HadoopCountersBase {
   private static final int AGG_SENT_MESSAGES = 9;
   /** Aggregate sent message bytes counter */
   private static final int AGG_SENT_MESSAGE_BYTES = 10;
+  /** Aggregate OOC loaded bytes counter */
+  private static final int OOC_BYTES_LOADED = 11;
+  /** Aggregate OOC stored bytes counter */
+  private static final int OOC_BYTES_STORED = 12;
   /** Number of counters in this class */
-  private static final int NUM_COUNTERS = 11;
+  private static final int NUM_COUNTERS = 13;
 
   /** All the counters stored */
   private final GiraphHadoopCounter[] counters;
@@ -111,6 +121,8 @@ public class GiraphStats extends HadoopCountersBase {
         getCounter(AGGREGATE_SENT_MESSAGES_NAME);
     counters[AGG_SENT_MESSAGE_BYTES] =
         getCounter(AGGREGATE_SENT_MESSAGE_BYTES_NAME);
+    counters[OOC_BYTES_LOADED] = getCounter(OOC_BYTES_LOADED_NAME);
+    counters[OOC_BYTES_STORED] = getCounter(OOC_BYTES_STORED_NAME);
   }
 
   /**
@@ -228,6 +240,24 @@ public class GiraphStats extends HadoopCountersBase {
    */
   public GiraphHadoopCounter getLastCheckpointedSuperstep() {
     return counters[LAST_CHECKPOINTED_SUPERSTEP];
+  }
+
+  /**
+   * Get OOCBytesLoaded counter
+   *
+   * @return OOCBytesLoaded counter
+   */
+  public GiraphHadoopCounter getAggregateOOCBytesLoaded() {
+    return counters[OOC_BYTES_LOADED];
+  }
+
+  /**
+   * Get OOCBytesStored counter
+   *
+   * @return OOCBytesStored counter
+   */
+  public GiraphHadoopCounter getAggregateOOCBytesStored() {
+    return counters[OOC_BYTES_STORED];
   }
 
   @Override

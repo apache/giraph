@@ -44,29 +44,38 @@ public class StorePartitionIOCommand extends IOCommand {
   }
 
   @Override
-  public void execute(String basePath) throws IOException {
+  public boolean execute(String basePath) throws IOException {
+    boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingPartition(partitionId)) {
       DiskBackedPartitionStore partitionStore =
           (DiskBackedPartitionStore)
               oocEngine.getServerData().getPartitionStore();
-      partitionStore.offloadPartitionData(partitionId, basePath);
-      if (oocEngine.getServiceWorker().getSuperstep() !=
-          BspService.INPUT_SUPERSTEP) {
+      numBytesTransferred +=
+          partitionStore.offloadPartitionData(partitionId, basePath);
+      if (oocEngine.getSuperstep() != BspService.INPUT_SUPERSTEP) {
         MessageStore messageStore =
             oocEngine.getServerData().getCurrentMessageStore();
         if (messageStore != null) {
-          ((DiskBackedMessageStore) messageStore)
+          numBytesTransferred += ((DiskBackedMessageStore) messageStore)
               .offloadPartitionData(partitionId, basePath);
         }
       } else {
         DiskBackedEdgeStore edgeStore =
             (DiskBackedEdgeStore)
                 oocEngine.getServerData().getEdgeStore();
-        edgeStore.offloadPartitionData(partitionId, basePath);
+        numBytesTransferred +=
+            edgeStore.offloadPartitionData(partitionId, basePath);
       }
       oocEngine.getMetaPartitionManager().doneOffloadingPartition(partitionId);
+      executed = true;
     }
+    return executed;
+  }
+
+  @Override
+  public IOCommandType getType() {
+    return IOCommandType.STORE_PARTITION;
   }
 
   @Override

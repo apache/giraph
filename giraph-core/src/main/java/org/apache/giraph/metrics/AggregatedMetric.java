@@ -20,41 +20,26 @@ package org.apache.giraph.metrics;
 
 /**
  * An aggregator over metrics from multiple hosts. Computes min, max, and mean.
+ *
+ * @param <T> value type
  */
-public class AggregatedMetric {
+public abstract class AggregatedMetric<T extends Number> {
   /** Minimum value seen with the host that it came from */
-  private ValueWithHostname min;
+  protected ValueWithHostname<T> min;
   /** Maximum value seen with the host that it came from */
-  private ValueWithHostname max;
+  protected ValueWithHostname<T> max;
   /** Total of all the values seen */
-  private long sum;
+  protected T sum;
   /** Number of values seen */
-  private long count;
-
-  /**
-   * Create new aggregated metric.
-   */
-  public AggregatedMetric() {
-    min = new ValueWithHostname(Long.MAX_VALUE);
-    max = new ValueWithHostname(Long.MIN_VALUE);
-  }
+  protected long count;
 
   /**
    * Add another item to the aggregation.
    *
-   * @param value long value to add
+   * @param value value to add
    * @param hostnamePartitionId String hostname it came from
    */
-  public void addItem(long value, String hostnamePartitionId) {
-    if (value < min.getValue()) {
-      min.set(value, hostnamePartitionId);
-    }
-    if (value > max.getValue()) {
-      max.set(value, hostnamePartitionId);
-    }
-    sum += value;
-    count++;
-  }
+  public abstract void addItem(T value, String hostnamePartitionId);
 
   /**
    * Whether this AggregatedMetric has any data.
@@ -70,7 +55,7 @@ public class AggregatedMetric {
    *
    * @return ValueWithHostname for minimum
    */
-  public ValueWithHostname min() {
+  public ValueWithHostname<T> min() {
     return min;
   }
 
@@ -79,16 +64,16 @@ public class AggregatedMetric {
    *
    * @return ValueWithHostname for maximum
    */
-  public ValueWithHostname max() {
+  public ValueWithHostname<T> max() {
     return max;
   }
 
   /**
    * Get total of all the values seen
    *
-   * @return long total of values seen
+   * @return total of values seen
    */
-  public long sum() {
+  public T sum() {
     return sum;
   }
 
@@ -97,9 +82,7 @@ public class AggregatedMetric {
    *
    * @return computed average of all the values
    */
-  public double mean() {
-    return sum / (double) count;
-  }
+  public abstract double mean();
 
   /**
    * Get number of values seen
@@ -110,3 +93,4 @@ public class AggregatedMetric {
     return count;
   }
 }
+

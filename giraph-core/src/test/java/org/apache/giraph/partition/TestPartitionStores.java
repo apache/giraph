@@ -24,6 +24,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -279,13 +280,14 @@ public class TestPartitionStores {
     GiraphConstants.STATIC_GRAPH.set(conf, true);
     testMultiThreaded();
   }
-/*
+
   @Test
   public void testDiskBackedPartitionStoreAdaptiveOOC() throws Exception {
     GiraphConstants.STATIC_GRAPH.set(conf, true);
+    NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.set(conf, true);
     testMultiThreaded();
   }
-*/
+
   private void testMultiThreaded() throws Exception {
     final AtomicInteger vertexCounter = new AtomicInteger(0);
     ExecutorService pool = Executors.newFixedThreadPool(NUM_OF_THREADS);

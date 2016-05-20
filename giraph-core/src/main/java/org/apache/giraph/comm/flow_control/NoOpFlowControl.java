@@ -45,10 +45,10 @@ public class NoOpFlowControl implements FlowControl {
   }
 
   @Override
-  public void messageAckReceived(int taskId, short response) { }
+  public void messageAckReceived(int taskId, long requestId, int response) { }
 
   @Override
-  public AckSignalFlag getAckSignalFlag(short response) {
+  public AckSignalFlag getAckSignalFlag(int response) {
     return AckSignalFlag.values()[response];
   }
 
@@ -61,7 +61,13 @@ public class NoOpFlowControl implements FlowControl {
   }
 
   @Override
-  public short calculateResponse(AckSignalFlag alreadyDone, int taskId) {
-    return (short) alreadyDone.ordinal();
+  public int calculateResponse(AckSignalFlag alreadyDone, int taskId) {
+    return alreadyDone.ordinal();
   }
+
+  @Override
+  public void shutdown() { }
+
+  @Override
+  public void logInfo() { }
 }

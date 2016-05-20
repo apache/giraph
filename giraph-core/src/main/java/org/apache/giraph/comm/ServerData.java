@@ -44,7 +44,6 @@ import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.ooc.data.DiskBackedEdgeStore;
 import org.apache.giraph.ooc.data.DiskBackedMessageStore;
 import org.apache.giraph.ooc.data.DiskBackedPartitionStore;
-import org.apache.giraph.ooc.FixedOutOfCoreEngine;
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
@@ -149,16 +148,7 @@ public class ServerData<I extends WritableComparable,
     PartitionStore<I, V, E> inMemoryPartitionStore =
         new SimplePartitionStore<I, V, E>(conf, context);
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
-      int maxPartitionsInMemory =
-          GiraphConstants.MAX_PARTITIONS_IN_MEMORY.get(conf);
-      if (maxPartitionsInMemory == 0) {
-        throw new IllegalStateException("ServerData: Adaptive " +
-            "out-of-core engine is not supported yet! Number of partitions in" +
-            " memory should be greater than 0.");
-      } else {
-        oocEngine = new FixedOutOfCoreEngine(conf, service,
-            maxPartitionsInMemory);
-      }
+      oocEngine = new OutOfCoreEngine(conf, service);
       partitionStore =
           new DiskBackedPartitionStore<I, V, E>(inMemoryPartitionStore,
               conf, context, service, oocEngine);
@@ -312,7 +302,7 @@ public class ServerData<I extends WritableComparable,
     currentMessageStore = nextCurrentMessageStore;
     incomingMessageStore = nextIncomingMessageStore;
     if (oocEngine != null) {
-      oocEngine.getMetaPartitionManager().resetMessages();
+      oocEngine.reset();
       oocEngine.getSuperstepLock().writeLock().unlock();
     }
     currentMessageStore.finalizeStore();

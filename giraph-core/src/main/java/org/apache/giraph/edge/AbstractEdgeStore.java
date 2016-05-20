@@ -23,6 +23,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.ProgressableUtils;
@@ -78,6 +79,8 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
    * from the one used during computation.
    */
   protected boolean useInputOutEdges;
+  /** Whether we spilled edges on disk */
+  private boolean hasEdgesOnDisk = false;
 
   /**
    * Constructor.
@@ -169,6 +172,9 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
     Map<K, OutEdges<I, E>> edges = transientEdges.remove(partitionId);
     if (edges != null) {
       output.writeInt(edges.size());
+      if (edges.size() > 0) {
+        hasEdgesOnDisk = true;
+      }
       for (Map.Entry<K, OutEdges<I, E>> edge : edges.entrySet()) {
         writeVertexKey(edge.getKey(), output);
         edge.getValue().write(output);
@@ -242,7 +248,7 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   @Override
   public void moveEdgesToVertices() {
     final boolean createSourceVertex = configuration.getCreateSourceVertex();
-    if (transientEdges.isEmpty()) {
+    if (transientEdges.isEmpty() && !hasEdgesOnDisk) {
       if (LOG.isInfoEnabled()) {
         LOG.info("moveEdgesToVertices: No edges to move");
       }
@@ -264,6 +270,10 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
           public Void call() throws Exception {
             Integer partitionId;
             I representativeVertexId = configuration.createVertexId();
+            OutOfCoreEngine oocEngine = service.getServerData().getOocEngine();
+            if (oocEngine != null) {
+              oocEngine.processingThreadStart();
+            }
             while (true) {
               Partition<I, V, E> partition =
                   service.getPartitionStore().getNextPartition();
@@ -280,7 +290,15 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
               Iterator<Et> iterator =
                   getPartitionEdgesIterator(partitionEdges);
               // process all vertices in given partition
+              int count = 0;
               while (iterator.hasNext()) {
+                // If out-of-core mechanism is used, check whether this thread
+                // can stay active or it should temporarily suspend and stop
+                // processing and generating more data for the moment.
+                if (oocEngine != null &&
+                    (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+                  oocEngine.activeThreadCheckIn();
+                }
                 Et entry = iterator.next();
                 I vertexId = getVertexId(entry, representativeVertexId);
                 OutEdges<I, E> outEdges = convertInputToComputeEdges(
@@ -319,6 +337,9 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
               // (e.g. DiskBackedPartitionStore) require us to put back the
               // partition after modifying it.
               service.getPartitionStore().putPartition(partition);
+            }
+            if (oocEngine != null) {
+              oocEngine.processingThreadFinish();
             }
             return null;
           }

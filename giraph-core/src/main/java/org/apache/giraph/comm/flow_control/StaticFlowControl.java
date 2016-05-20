@@ -31,6 +31,8 @@ import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.log4j.Logger;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 
 /**
@@ -69,6 +71,8 @@ public class StaticFlowControl implements
   private final Object requestSpotAvailable = new Object();
   /** Counter for time spent waiting on too many open requests */
   private Counter timeWaitingOnOpenRequests;
+  /** Number of threads waiting on too many open requests */
+  private final AtomicInteger numWaitingThreads = new AtomicInteger(0);
 
   /**
    * Constructor
@@ -108,11 +112,12 @@ public class StaticFlowControl implements
   }
 
   /**
-   * Ensure that at most maxOpenRequests are not complete.  Periodically,
-   * check the state of every request.  If we find the connection failed,
-   * re-establish it and re-send the request.
+   * Ensure that at most numberOfRequestsToProceed are not complete.
+   * Periodically, check the state of every request.  If we find the connection
+   * failed, re-establish it and re-send the request.
    */
   private void waitSomeRequests() {
+    numWaitingThreads.getAndIncrement();
     while (nettyClient.getNumberOfOpenRequests() > numberOfRequestsToProceed) {
       // Wait for requests to complete for some time
       synchronized (requestSpotAvailable) {
@@ -129,23 +134,36 @@ public class StaticFlowControl implements
       }
       nettyClient.logAndSanityCheck();
     }
+    numWaitingThreads.getAndDecrement();
   }
 
   @Override
-  public void messageAckReceived(int taskId, short response) {
+  public void messageAckReceived(int taskId, long requestId, int response) {
     synchronized (requestSpotAvailable) {
       requestSpotAvailable.notifyAll();
     }
   }
 
   @Override
-  public AckSignalFlag getAckSignalFlag(short response) {
+  public AckSignalFlag getAckSignalFlag(int response) {
     return AckSignalFlag.values()[response];
   }
 
   @Override
-  public short calculateResponse(AckSignalFlag alreadyDone, int taskId) {
-    return (short) alreadyDone.ordinal();
+  public int calculateResponse(AckSignalFlag alreadyDone, int clientId) {
+    return alreadyDone.ordinal();
+  }
+
+  @Override
+  public void shutdown() { }
+
+  @Override
+  public void logInfo() {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("logInfo: " + numWaitingThreads.get() + " threads waiting " +
+          "until number of open requests falls below " +
+          numberOfRequestsToProceed);
+    }
   }
 
   @Override

@@ -42,6 +42,10 @@ public class GlobalStats implements Writable {
   private long messageBytesCount = 0;
   /** Whether the computation should be halted */
   private boolean haltComputation = false;
+  /** Bytes of data stored to disk in the last superstep */
+  private long oocStoreBytesCount = 0;
+  /** Bytes of data loaded to disk in the last superstep */
+  private long oocLoadBytesCount = 0;
   /**
    * Master's decision on whether we should checkpoint and
    * what to do next.
@@ -88,12 +92,38 @@ public class GlobalStats implements Writable {
     haltComputation = value;
   }
 
+  public long getOocStoreBytesCount() {
+    return oocStoreBytesCount;
+  }
+
+  public long getOocLoadBytesCount() {
+    return oocLoadBytesCount;
+  }
+
   public CheckpointStatus getCheckpointStatus() {
     return checkpointStatus;
   }
 
   public void setCheckpointStatus(CheckpointStatus checkpointStatus) {
     this.checkpointStatus = checkpointStatus;
+  }
+
+  /**
+   * Add bytes loaded to the global stats.
+   *
+   * @param oocLoadBytesCount number of bytes to be added
+   */
+  public void addOocLoadBytesCount(long oocLoadBytesCount) {
+    this.oocLoadBytesCount += oocLoadBytesCount;
+  }
+
+  /**
+   * Add bytes stored to the global stats.
+   *
+   * @param oocStoreBytesCount number of bytes to be added
+   */
+  public void addOocStoreBytesCount(long oocStoreBytesCount) {
+    this.oocStoreBytesCount += oocStoreBytesCount;
   }
 
   /**

@@ -27,6 +27,7 @@ import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.InputType;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.hadoop.io.Writable;
@@ -154,7 +155,16 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     long inputSplitEdgesLoaded = 0;
     long inputSplitEdgesFiltered = 0;
 
+    int count = 0;
+    OutOfCoreEngine oocEngine = bspServiceWorker.getServerData().getOocEngine();
     while (edgeReader.nextEdge()) {
+      // If out-of-core mechanism is used, check whether this thread
+      // can stay active or it should temporarily suspend and stop
+      // processing and generating more data for the moment.
+      if (oocEngine != null &&
+          (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+        oocEngine.activeThreadCheckIn();
+      }
       I sourceId = edgeReader.getCurrentSourceId();
       Edge<I, E> readerEdge = edgeReader.getCurrentEdge();
       if (sourceId == null) {

@@ -31,6 +31,7 @@ import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
@@ -99,6 +100,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private final Counter messageBytesSentCounter;
   /** Compute time per partition */
   private final Histogram histogramComputePerPartition;
+  /** GC time per compute thread */
+  private final Histogram histogramGCTimePerThread;
+  /** Wait time per compute thread */
+  private final Histogram histogramWaitTimePerThread;
+  /** Processing time per compute thread */
+  private final Histogram histogramProcessingTimePerThread;
 
   /**
    * Constructor
@@ -125,6 +132,11 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       metrics.getCounter(MetricNames.MESSAGE_BYTES_SENT);
     histogramComputePerPartition = metrics.getUniformHistogram(
         MetricNames.HISTOGRAM_COMPUTE_PER_PARTITION);
+    histogramGCTimePerThread = metrics.getUniformHistogram("gc-per-thread-ms");
+    histogramWaitTimePerThread =
+        metrics.getUniformHistogram("wait-per-thread-ms");
+    histogramProcessingTimePerThread =
+        metrics.getUniformHistogram("processing-per-thread-ms");
   }
 
   @Override
@@ -148,17 +160,32 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
     PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
+    OutOfCoreEngine oocEngine = serviceWorker.getServerData().getOocEngine();
+    GraphTaskManager<I, V, E> taskManager = serviceWorker.getGraphTaskManager();
+    if (oocEngine != null) {
+      oocEngine.processingThreadStart();
+    }
+    long timeWaiting = 0;
+    long timeProcessing = 0;
+    long timeDoingGC = 0;
     while (true) {
       long startTime = System.currentTimeMillis();
+      long startGCTime = taskManager.getSuperstepGCTime();
       Partition<I, V, E> partition = partitionStore.getNextPartition();
+      long timeDoingGCWhileWaiting =
+          taskManager.getSuperstepGCTime() - startGCTime;
+      timeDoingGC += timeDoingGCWhileWaiting;
+      timeWaiting += System.currentTimeMillis() - startTime -
+          timeDoingGCWhileWaiting;
       if (partition == null) {
         break;
       }
-
+      long startProcessingTime = System.currentTimeMillis();
+      startGCTime = taskManager.getSuperstepGCTime();
       try {
         serviceWorker.getServerData().resolvePartitionMutation(partition);
         PartitionStats partitionStats =
-            computePartition(computation, partition);
+            computePartition(computation, partition, oocEngine);
         partitionStatsList.add(partitionStats);
         long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
         partitionStats.addMessagesSentCount(partitionMsgs);
@@ -180,10 +207,17 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       } finally {
         partitionStore.putPartition(partition);
       }
+      long timeDoingGCWhileProcessing =
+          taskManager.getSuperstepGCTime() - startGCTime;
+      timeDoingGC += timeDoingGCWhileProcessing;
+      timeProcessing += System.currentTimeMillis() - startProcessingTime -
+          timeDoingGCWhileProcessing;
       histogramComputePerPartition.update(
           System.currentTimeMillis() - startTime);
     }
-
+    histogramGCTimePerThread.update(timeDoingGC);
+    histogramWaitTimePerThread.update(timeWaiting);
+    histogramProcessingTimePerThread.update(timeProcessing);
     computation.postSuperstep();
 
     // Return VertexWriter after the usage
@@ -194,7 +228,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           Time.NS_PER_SECOND_AS_FLOAT;
       LOG.info("call: Computation took " + seconds + " secs for "  +
           partitionStatsList.size() + " partitions on superstep " +
-          graphState.getSuperstep() + ".  Flushing started");
+          graphState.getSuperstep() + ".  Flushing started (time waiting on " +
+          "partitions was " +
+          String.format("%.2f s", timeWaiting / 1000.0) + ", time processing " +
+          "partitions was " + String.format("%.2f s", timeProcessing / 1000.0) +
+          ", time spent on gc was " +
+          String.format("%.2f s", timeDoingGC / 1000.0) + ")");
     }
     try {
       workerClientRequestProcessor.flush();
@@ -211,6 +250,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     } catch (IOException e) {
       throw new IllegalStateException("call: Flushing failed.", e);
     }
+    if (oocEngine != null) {
+      oocEngine.processingThreadFinish();
+    }
     return partitionStatsList;
   }
 
@@ -219,17 +261,27 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
    *
    * @param computation Computation to use
    * @param partition Partition to compute
+   * @param oocEngine out-of-core engine
    * @return Partition stats for this computed partition
    */
   private PartitionStats computePartition(
       Computation<I, V, E, M1, M2> computation,
-      Partition<I, V, E> partition) throws IOException, InterruptedException {
+      Partition<I, V, E> partition, OutOfCoreEngine oocEngine)
+      throws IOException, InterruptedException {
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
     long verticesComputedProgress = 0;
     // Make sure this is thread-safe across runs
     synchronized (partition) {
+      int count = 0;
       for (Vertex<I, V, E> vertex : partition) {
+        // If out-of-core mechanism is used, check whether this thread
+        // can stay active or it should temporarily suspend and stop
+        // processing and generating more data for the moment.
+        if (oocEngine != null &&
+            (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+          oocEngine.activeThreadCheckIn();
+        }
         Iterable<M1> messages = messageStore.getVertexMessages(vertex.getId());
         if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
           vertex.wakeUp();

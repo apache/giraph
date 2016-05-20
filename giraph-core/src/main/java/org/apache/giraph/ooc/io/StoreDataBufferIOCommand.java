@@ -54,7 +54,8 @@ public class StoreDataBufferIOCommand extends IOCommand {
   }
 
   @Override
-  public void execute(String basePath) throws IOException {
+  public boolean execute(String basePath) throws IOException {
+    boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingBuffer(partitionId)) {
       switch (type) {
@@ -62,23 +63,32 @@ public class StoreDataBufferIOCommand extends IOCommand {
         DiskBackedPartitionStore partitionStore =
             (DiskBackedPartitionStore)
                 oocEngine.getServerData().getPartitionStore();
-        partitionStore.offloadBuffers(partitionId, basePath);
+        numBytesTransferred +=
+            partitionStore.offloadBuffers(partitionId, basePath);
         DiskBackedEdgeStore edgeStore =
             (DiskBackedEdgeStore) oocEngine.getServerData().getEdgeStore();
-        edgeStore.offloadBuffers(partitionId, basePath);
+        numBytesTransferred += edgeStore.offloadBuffers(partitionId, basePath);
         break;
       case MESSAGE:
         DiskBackedMessageStore messageStore =
             (DiskBackedMessageStore)
                 oocEngine.getServerData().getIncomingMessageStore();
-        messageStore.offloadBuffers(partitionId, basePath);
+        numBytesTransferred +=
+            messageStore.offloadBuffers(partitionId, basePath);
         break;
       default:
         throw new IllegalStateException("execute: requested data buffer type " +
             "does not exist!");
       }
       oocEngine.getMetaPartitionManager().doneOffloadingBuffer(partitionId);
+      executed = true;
     }
+    return executed;
+  }
+
+  @Override
+  public IOCommandType getType() {
+    return IOCommandType.STORE_BUFFER;
   }
 
   @Override

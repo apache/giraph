@@ -71,6 +71,8 @@ import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.ooc.OutOfCoreOracle;
+import org.apache.giraph.ooc.ThresholdBasedOracle;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
@@ -995,18 +997,22 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.useOutOfCoreGraph", false,
           "Enable out-of-core graph.");
 
-  /** Number of threads participating in swapping graph/messages to disk. */
-  IntConfOption NUM_OOC_THREADS =
-      new IntConfOption("giraph.numOutOfCoreThreads", 1,
-          "Number of threads participating in swapping data to disk.");
+  /**
+   * Out-of-core oracle that is to be used for adaptive out-of-core engine. If
+   * the `MAX_PARTITIONS_IN_MEMORY` is already set, this will be over-written
+   * to be `FixedPartitionsOracle`.
+   */
+  ClassConfOption<OutOfCoreOracle> OUT_OF_CORE_ORACLE =
+      ClassConfOption.create("giraph.outOfCoreOracle",
+          ThresholdBasedOracle.class, OutOfCoreOracle.class,
+          "Out-of-core oracle that is to be used for adaptive out-of-core " +
+              "engine");
 
   /** Maximum number of partitions to hold in memory for each worker. */
   IntConfOption MAX_PARTITIONS_IN_MEMORY =
       new IntConfOption("giraph.maxPartitionsInMemory", 0,
           "Maximum number of partitions to hold in memory for each worker. By" +
               " default it is set to 0 (for adaptive out-of-core mechanism");
-
-
 
   /** Directory to write YourKit snapshots to */
   String YOURKIT_OUTPUT_DIR = "giraph.yourkit.outputDir";

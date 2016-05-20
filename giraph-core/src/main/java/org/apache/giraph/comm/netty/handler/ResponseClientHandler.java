@@ -64,11 +64,11 @@ public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
     ByteBuf buf = (ByteBuf) msg;
     int senderId = -1;
     long requestId = -1;
-    short response = -1;
+    int response = -1;
     try {
       senderId = buf.readInt();
       requestId = buf.readLong();
-      response = buf.readShort();
+      response = buf.readInt();
     } catch (IndexOutOfBoundsException e) {
       throw new IllegalStateException(
           "channelRead: Got IndexOutOfBoundsException ", e);

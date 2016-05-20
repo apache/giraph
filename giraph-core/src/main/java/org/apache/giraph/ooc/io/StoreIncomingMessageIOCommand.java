@@ -41,16 +41,25 @@ public class StoreIncomingMessageIOCommand extends IOCommand {
   }
 
   @Override
-  public void execute(String basePath) throws IOException {
+  public boolean execute(String basePath) throws IOException {
+    boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingMessages(partitionId)) {
       DiskBackedMessageStore messageStore =
           (DiskBackedMessageStore)
               oocEngine.getServerData().getIncomingMessageStore();
       checkState(messageStore != null);
-      messageStore.offloadPartitionData(partitionId, basePath);
+      numBytesTransferred +=
+          messageStore.offloadPartitionData(partitionId, basePath);
       oocEngine.getMetaPartitionManager().doneOffloadingMessages(partitionId);
+      executed = true;
     }
+    return executed;
+  }
+
+  @Override
+  public IOCommandType getType() {
+    return IOCommandType.STORE_MESSAGE;
   }
 
   @Override

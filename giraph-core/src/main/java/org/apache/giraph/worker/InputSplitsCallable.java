@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -33,6 +34,7 @@ import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.metrics.MeterDesc;
 import org.apache.giraph.metrics.MetricNames;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -78,8 +80,9 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   private final long startNanos = TIME.getNanoseconds();
   /** Whether to prioritize local input splits. */
   private final boolean useLocality;
+  /** Service worker */
+  private final CentralizedServiceWorker<I, V, E> serviceWorker;
 
-  // CHECKSTYLE: stop ParameterNumberCheck
   /**
    * Constructor.
    *
@@ -101,8 +104,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     this.useLocality = configuration.useInputSplitLocality();
     this.splitsHandler = splitsHandler;
     this.configuration = configuration;
+    this.serviceWorker = bspServiceWorker;
   }
-  // CHECKSTYLE: resume ParameterNumberCheck
 
   /**
    * Get input format
@@ -208,12 +211,25 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     byte[] serializedInputSplit;
     int inputSplitsProcessed = 0;
     try {
+      OutOfCoreEngine oocEngine = serviceWorker.getServerData().getOocEngine();
+      if (oocEngine != null) {
+        oocEngine.processingThreadStart();
+      }
       while ((serializedInputSplit =
           splitsHandler.reserveInputSplit(getInputType())) != null) {
+        // If out-of-core mechanism is used, check whether this thread
+        // can stay active or it should temporarily suspend and stop
+        // processing and generating more data for the moment.
+        if (oocEngine != null) {
+          oocEngine.activeThreadCheckIn();
+        }
         vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
             loadInputSplit(serializedInputSplit));
         context.progress();
         ++inputSplitsProcessed;
+      }
+      if (oocEngine != null) {
+        oocEngine.processingThreadFinish();
       }
     } catch (InterruptedException e) {
       throw new IllegalStateException("call: InterruptedException", e);

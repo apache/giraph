@@ -45,9 +45,10 @@ public interface FlowControl {
    * Notify the flow control policy that an open request is completed.
    *
    * @param taskId id of the task to which the open request is completed
-   * @param response the response heard from the task
+   * @param requestId id of the open request which is completed
+   * @param response the response heard from the client
    */
-  void messageAckReceived(int taskId, short response);
+  void messageAckReceived(int taskId, long requestId, int response);
 
   /**
    * Decode the acknowledgement signal from the response after an open request
@@ -56,7 +57,7 @@ public interface FlowControl {
    * @param response the response heard after completion of a request
    * @return the Acknowledgement signal decoded from the response
    */
-  AckSignalFlag getAckSignalFlag(short response);
+  AckSignalFlag getAckSignalFlag(int response);
 
   /**
    * There may be requests in possession of the flow control mechanism, as the
@@ -79,5 +80,15 @@ public interface FlowControl {
    * @param taskId id of the task the acknowledgement is for
    * @return the response to piggyback along with the acknowledgement message
    */
-  short calculateResponse(AckSignalFlag flag, int taskId);
+  int calculateResponse(AckSignalFlag flag, int taskId);
+
+  /**
+   * Shutdown the flow control policy
+   */
+  void shutdown();
+
+  /**
+   * Log the status of the flow control
+   */
+  void logInfo();
 }

@@ -20,27 +20,29 @@ package org.apache.giraph.metrics;
 
 /**
  * Pair of value with host it came from.
+ *
+ * @param <T> types of value (either long or double)
  */
-class ValueWithHostname {
+class ValueWithHostname<T extends Number> {
   /** long value we're holding */
-  private long value;
+  private T value;
   /** host associated with value */
   private String hostname;
 
   /**
    * Create with initial value
    *
-   * @param value long initial value to use
+   * @param value initial value to use
    */
-  public ValueWithHostname(long value) {
+  public ValueWithHostname(T value) {
     this.value = value;
     this.hostname = null;
   }
 
   /**
-   * @return long value
+   * @return value
    */
-  public long getValue() {
+  public T getValue() {
     return value;
   }
 
@@ -62,10 +64,10 @@ class ValueWithHostname {
 
   /**
    * Set value and partition together.
-   * @param value long value to use.
+   * @param value value to use.
    * @param hostname String host it came from.
    */
-  public void set(long value, String hostname) {
+  public void set(T value, String hostname) {
     this.value = value;
     this.hostname = hostname;
   }

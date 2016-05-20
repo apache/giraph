@@ -23,7 +23,7 @@ import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.flow_control.NoOpFlowControl;
 import org.apache.giraph.comm.flow_control.StaticFlowControl;
 import org.apache.giraph.comm.netty.handler.AckSignalFlag;
-import org.apache.giraph.comm.netty.handler.AddressRequestIdGenerator;
+import org.apache.giraph.comm.netty.handler.TaskRequestIdGenerator;
 import org.apache.giraph.comm.netty.handler.ClientRequestId;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
@@ -174,12 +174,12 @@ public class NettyClient {
   /** Waiting interval for checking outstanding requests msecs */
   private final int waitingRequestMsecs;
   /** Timed logger for printing request debugging */
-  private final TimedLogger requestLogger = new TimedLogger(15 * 1000, LOG);
+  private final TimedLogger requestLogger;
   /** Worker executor group */
   private final EventLoopGroup workerGroup;
-  /** Address request id generator */
-  private final AddressRequestIdGenerator addressRequestIdGenerator =
-      new AddressRequestIdGenerator();
+  /** Task request id generator */
+  private final TaskRequestIdGenerator taskRequestIdGenerator =
+      new TaskRequestIdGenerator();
   /** Task info */
   private final TaskInfo myTaskInfo;
   /** Maximum thread pool size */
@@ -245,6 +245,7 @@ public class NettyClient {
     waitTimeBetweenConnectionRetriesMs =
         WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS.get(conf);
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
+    requestLogger = new TimedLogger(waitingRequestMsecs, LOG);
     maxPoolSize = GiraphConstants.NETTY_CLIENT_THREADS.get(conf);
     maxResolveAddressAttempts = MAX_RESOLVE_ADDRESS_ATTEMPTS.get(conf);
 
@@ -621,6 +622,7 @@ public class NettyClient {
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Halting netty client");
     }
+    flowControl.shutdown();
     // Close connections asynchronously, in a Netty-approved
     // way, without cleaning up thread pools until all channels
     // in addressChannelMap are closed (success or failure)
@@ -730,14 +732,16 @@ public class NettyClient {
    *
    * @param destTaskId destination to send the request to
    * @param request request itself
+   * @return request id generated for sending the request
    */
-  public void doSend(int destTaskId, WritableRequest request) {
+  public Long doSend(int destTaskId, WritableRequest request) {
     InetSocketAddress remoteServer = taskIdAddressMap.get(destTaskId);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
       inboundByteCounter.resetAll();
       outboundByteCounter.resetAll();
     }
     boolean registerRequest = true;
+    Long requestId = null;
 /*if_not[HADOOP_NON_SECURE]*/
     if (request.getType() == RequestType.SASL_TOKEN_MESSAGE_REQUEST) {
       registerRequest = false;
@@ -748,8 +752,8 @@ public class NettyClient {
     RequestInfo newRequestInfo = new RequestInfo(remoteServer, request);
     if (registerRequest) {
       request.setClientId(myTaskInfo.getTaskId());
-      request.setRequestId(
-        addressRequestIdGenerator.getNextRequestId(remoteServer));
+      requestId = taskRequestIdGenerator.getNextRequestId(destTaskId);
+      request.setRequestId(requestId);
       ClientRequestId clientRequestId =
         new ClientRequestId(destTaskId, request.getRequestId());
       RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
@@ -769,6 +773,7 @@ public class NettyClient {
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
     writeFuture.addListener(logErrorListener);
+    return requestId;
   }
 
   /**
@@ -779,7 +784,7 @@ public class NettyClient {
    * @param response Actual response
    * @param shouldDrop Drop the message?
    */
-  public void messageReceived(int senderId, long requestId, short response,
+  public void messageReceived(int senderId, long requestId, int response,
       boolean shouldDrop) {
     if (shouldDrop) {
       synchronized (clientRequestIdRequestInfoMap) {
@@ -806,7 +811,7 @@ public class NettyClient {
             requestInfo + ".  Waiting on " +
             clientRequestIdRequestInfoMap.size() + " requests");
       }
-      flowControl.messageAckReceived(senderId, response);
+      flowControl.messageAckReceived(senderId, requestId, response);
       // Help #waitAllRequests() to finish faster
       synchronized (clientRequestIdRequestInfoMap) {
         clientRequestIdRequestInfoMap.notifyAll();
@@ -862,8 +867,7 @@ public class NettyClient {
       LOG.info("logInfoAboutOpenRequests: Waiting interval of " +
           waitingRequestMsecs + " msecs, " +
           clientRequestIdRequestInfoMap.size() +
-          " open requests, " + flowControl.getNumberOfUnsentRequests() +
-          " cached unsent requests, " + inboundByteCounter.getMetrics() + "\n" +
+          " open requests, " + inboundByteCounter.getMetrics() + "\n" +
           outboundByteCounter.getMetrics());
 
       if (clientRequestIdRequestInfoMap.size() < MAX_REQUESTS_TO_LIST) {
@@ -907,6 +911,7 @@ public class NettyClient {
             .append(", ");
       }
       LOG.info(message);
+      flowControl.logInfo();
     }
   }
 
@@ -1019,6 +1024,16 @@ public class NettyClient {
 
   public FlowControl getFlowControl() {
     return flowControl;
+  }
+
+  /**
+   * Generate and get the next request id to be used for a given worker
+   *
+   * @param taskId id of the worker to generate the next request id
+   * @return request id
+   */
+  public Long getNextRequestId(int taskId) {
+    return taskRequestIdGenerator.getNextRequestId(taskId);
   }
 
   /**

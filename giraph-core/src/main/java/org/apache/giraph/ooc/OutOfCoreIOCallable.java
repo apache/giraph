@@ -18,7 +18,13 @@
 
 package org.apache.giraph.ooc;
 
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Histogram;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.ooc.io.IOCommand;
+import org.apache.giraph.ooc.io.LoadPartitionIOCommand;
 import org.apache.giraph.ooc.io.WaitIOCommand;
 import org.apache.log4j.Logger;
 
@@ -27,7 +33,16 @@ import java.util.concurrent.Callable;
 /**
  * IO threads for out-of-core mechanism.
  */
-public class OutOfCoreIOCallable implements Callable<Void> {
+public class OutOfCoreIOCallable implements Callable<Void>,
+    ResetSuperstepMetricsObserver {
+  /** Name of Metric for number of bytes read from disk */
+  public static final String BYTES_LOAD_FROM_DISK = "ooc-bytes-load";
+  /** Name of Metric for number of bytes written to disk */
+  public static final String BYTES_STORE_TO_DISK = "ooc-bytes-store";
+  /** Name of Metric for size of loads */
+  public static final String HISTOGRAM_LOAD_SIZE = "ooc-load-size-bytes";
+  /** Name of Metric for size of stores */
+  public static final String HISTOGRAM_STORE_SIZE = "ooc-store-size-bytes";
   /** Class logger. */
   private static final Logger LOG = Logger.getLogger(OutOfCoreIOCallable.class);
   /** Out-of-core engine */
@@ -36,6 +51,14 @@ public class OutOfCoreIOCallable implements Callable<Void> {
   private final String basePath;
   /** Thread id/Disk id */
   private final int diskId;
+  /** How many bytes of data is read from disk */
+  private Counter bytesReadPerSuperstep;
+  /** How many bytes of data is written to disk */
+  private Counter bytesWrittenPerSuperstep;
+  /** Size of load IO commands */
+  private Histogram histogramLoadSize;
+  /** Size of store IO commands */
+  private Histogram histogramStoreSize;
 
   /**
    * Constructor
@@ -49,10 +72,12 @@ public class OutOfCoreIOCallable implements Callable<Void> {
     this.oocEngine = oocEngine;
     this.basePath = basePath;
     this.diskId = diskId;
+    newSuperstep(GiraphMetrics.get().perSuperstep());
+    GiraphMetrics.get().addSuperstepResetObserver(this);
   }
 
   @Override
-  public Void call() {
+  public Void call() throws Exception {
     while (true) {
       oocEngine.getSuperstepLock().readLock().lock();
       IOCommand command = oocEngine.getIOScheduler().getNextIOCommand(diskId);
@@ -67,17 +92,44 @@ public class OutOfCoreIOCallable implements Callable<Void> {
       if (command instanceof WaitIOCommand) {
         oocEngine.getSuperstepLock().readLock().unlock();
       }
+
+      boolean commandExecuted = false;
+      long duration = 0;
+      long bytes;
       // CHECKSTYLE: stop IllegalCatch
       try {
-        command.execute(basePath);
+        long startTime = System.currentTimeMillis();
+        commandExecuted = command.execute(basePath);
+        duration = System.currentTimeMillis() - startTime;
+        bytes = command.bytesTransferred();
+        if (LOG.isInfoEnabled()) {
+          LOG.info("call: thread " + diskId + "'s command " + command +
+              " completed: bytes= " + bytes + ", duration=" + duration + ", " +
+              "bandwidth=" + String.format("%.2f", (double) bytes / duration *
+              1000 / 1024 / 1024));
+        }
       } catch (Exception e) {
         oocEngine.failTheJob();
-        LOG.info("call: execution of IO command " + command + " failed!");
+        LOG.error("call: execution of IO command " + command + " failed!");
         throw new RuntimeException(e);
       }
       // CHECKSTYLE: resume IllegalCatch
       if (!(command instanceof WaitIOCommand)) {
         oocEngine.getSuperstepLock().readLock().unlock();
+        if (bytes != 0) {
+          if (command instanceof LoadPartitionIOCommand) {
+            bytesReadPerSuperstep.inc(bytes);
+            histogramLoadSize.update(bytes);
+          } else {
+            bytesWrittenPerSuperstep.inc(bytes);
+            histogramStoreSize.update(bytes);
+          }
+        }
+      }
+
+      if (commandExecuted && duration > 0) {
+        oocEngine.getIOStatistics().update(command.getType(),
+            command.bytesTransferred(), duration);
       }
       oocEngine.getIOScheduler().ioCommandCompleted(command);
     }
@@ -85,6 +137,17 @@ public class OutOfCoreIOCallable implements Callable<Void> {
       LOG.info("call: out-of-core IO thread " + diskId + " terminating!");
     }
     return null;
+  }
+
+  @Override
+  public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
+    bytesReadPerSuperstep = superstepMetrics.getCounter(BYTES_LOAD_FROM_DISK);
+    bytesWrittenPerSuperstep =
+        superstepMetrics.getCounter(BYTES_STORE_TO_DISK);
+    histogramLoadSize =
+        superstepMetrics.getUniformHistogram(HISTOGRAM_LOAD_SIZE);
+    histogramStoreSize =
+        superstepMetrics.getUniformHistogram(HISTOGRAM_STORE_SIZE);
   }
 }
 

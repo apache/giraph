@@ -942,6 +942,10 @@ public class BspServiceMaster<I extends WritableComparable,
                   workerFinishedInfoObj.getString(
                       JSONOBJ_METRICS_KEY)),
               workerMetrics);
+          globalStats.addOocLoadBytesCount(
+              workerMetrics.getBytesLoadedFromDisk());
+          globalStats.addOocStoreBytesCount(
+              workerMetrics.getBytesStoredOnDisk());
           aggregatedMetrics.add(workerMetrics, hostnamePartitionId);
         }
       } catch (JSONException e) {
@@ -2050,5 +2054,9 @@ public class BspServiceMaster<I extends WritableComparable,
     gs.getAggregateSentMessages().increment(globalStats.getMessageCount());
     gs.getAggregateSentMessageBytes()
       .increment(globalStats.getMessageBytesCount());
+    gs.getAggregateOOCBytesLoaded()
+      .increment(globalStats.getOocLoadBytesCount());
+    gs.getAggregateOOCBytesStored()
+      .increment(globalStats.getOocStoreBytesCount());
   }
 }

@@ -38,6 +38,12 @@ public final class AdjustableSemaphore extends Semaphore {
     maxPermits = permits;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      "UG_SYNC_SET_UNSYNC_GET")
+  public int getMaxPermits() {
+    return maxPermits;
+  }
+
   /**
    * Adjusts the maximum number of available permits.
    *

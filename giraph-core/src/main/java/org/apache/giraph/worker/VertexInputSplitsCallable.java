@@ -31,6 +31,7 @@ import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.io.InputType;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
@@ -168,7 +169,16 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     long edgesSinceLastUpdate = 0;
     long inputSplitEdgesLoaded = 0;
 
+    int count = 0;
+    OutOfCoreEngine oocEngine = bspServiceWorker.getServerData().getOocEngine();
     while (vertexReader.nextVertex()) {
+      // If out-of-core mechanism is used, check whether this thread
+      // can stay active or it should temporarily suspend and stop
+      // processing and generating more data for the moment.
+      if (oocEngine != null &&
+          (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+        oocEngine.activeThreadCheckIn();
+      }
       Vertex<I, V, E> readerVertex = vertexReader.getCurrentVertex();
       if (readerVertex.getId() == null) {
         throw new IllegalArgumentException(

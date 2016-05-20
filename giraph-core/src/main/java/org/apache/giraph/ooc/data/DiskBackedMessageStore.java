@@ -20,6 +20,7 @@ package org.apache.giraph.ooc.data;
 
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -60,6 +61,8 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   private final boolean useMessageCombiner;
   /** Which superstep this message store is used for */
   private final long superstep;
+  /** Message value class */
+  private final MessageValueFactory<M> messageValueFactory;
 
   /**
    * Type of VertexIdMessage class (container for serialized messages) received
@@ -94,6 +97,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     this.messageStore = messageStore;
     this.useMessageCombiner = useMessageCombiner;
     this.superstep = superstep;
+    this.messageValueFactory = config.createOutgoingMessageValueFactory();
   }
 
   @Override
@@ -148,26 +152,33 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void loadPartitionData(int partitionId, String basePath)
+  public long loadPartitionData(int partitionId, String basePath)
       throws IOException {
     if (!useMessageCombiner) {
-      super.loadPartitionData(partitionId, getPath(basePath, superstep));
+      return super.loadPartitionData(partitionId, getPath(basePath, superstep));
+    } else {
+      return 0;
     }
   }
 
   @Override
-  public void offloadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId, String basePath)
       throws IOException {
     if (!useMessageCombiner) {
-      super.offloadPartitionData(partitionId, getPath(basePath, superstep));
+      return
+          super.offloadPartitionData(partitionId, getPath(basePath, superstep));
+    } else {
+      return 0;
     }
   }
 
   @Override
-  public void offloadBuffers(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId, String basePath)
       throws IOException {
     if (!useMessageCombiner) {
-      super.offloadBuffers(partitionId, getPath(basePath, superstep));
+      return super.offloadBuffers(partitionId, getPath(basePath, superstep));
+    } else {
+      return 0;
     }
   }
 
@@ -210,26 +221,24 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       throw new IllegalStateException("writeEntry: serialized message " +
           "type is not supported");
     }
-    out.writeInt(messageClass.ordinal());
+    out.writeByte(messageClass.ordinal());
     messages.write(out);
   }
 
   @Override
   protected VertexIdMessages<I, M> readNextEntry(DataInput in)
       throws IOException {
-    int messageType = in.readInt();
+    byte messageType = in.readByte();
     SerializedMessageClass messageClass =
         SerializedMessageClass.values()[messageType];
     VertexIdMessages<I, M> vim;
     switch (messageClass) {
     case BYTE_ARRAY_VERTEX_ID_MESSAGES:
-      vim = new ByteArrayVertexIdMessages<>(
-          config.<M>createOutgoingMessageValueFactory());
+      vim = new ByteArrayVertexIdMessages<>(messageValueFactory);
       vim.setConf(config);
       break;
     case BYTE_ARRAY_ONE_MESSAGE_TO_MANY_IDS:
-      vim = new ByteArrayOneMessageToManyIds<>(
-          config.<M>createOutgoingMessageValueFactory());
+      vim = new ByteArrayOneMessageToManyIds<>(messageValueFactory);
       vim.setConf(config);
       break;
     default:
@@ -241,8 +250,9 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  protected void loadInMemoryPartitionData(int partitionId, String basePath)
+  protected long loadInMemoryPartitionData(int partitionId, String basePath)
       throws IOException {
+    long numBytes = 0;
     File file = new File(basePath);
     if (file.exists()) {
       if (LOG.isDebugEnabled()) {
@@ -254,14 +264,17 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       DataInputStream dis = new DataInputStream(bis);
       messageStore.readFieldsForPartition(dis, partitionId);
       dis.close();
+      numBytes = file.length();
       checkState(file.delete(), "loadInMemoryPartitionData: failed to delete " +
           "%s.", file.getAbsoluteFile());
     }
+    return numBytes;
   }
 
   @Override
-  protected void offloadInMemoryPartitionData(int partitionId, String basePath)
+  protected long offloadInMemoryPartitionData(int partitionId, String basePath)
       throws IOException {
+    long numBytes = 0;
     if (messageStore.hasMessagesForPartition(partitionId)) {
       File file = new File(basePath);
       checkState(!file.exists(), "offloadInMemoryPartitionData: message store" +
@@ -275,7 +288,9 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       messageStore.writePartition(outputStream, partitionId);
       messageStore.clearPartition(partitionId);
       outputStream.close();
+      numBytes += outputStream.size();
     }
+    return numBytes;
   }
 
   @Override
