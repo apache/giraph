@@ -95,7 +95,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
   @Override
   public void addPartitionMessages(
-    int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+    int partitionId, VertexIdMessages<I, M> messages) {
     ConcurrentMap<I, DataInputOutput> partitionMap =
         getOrCreatePartitionMap(partitionId);
     VertexIdMessageBytesIterator<I, M> vertexIdMessageBytesIterator =
@@ -117,17 +117,22 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         }
       }
     } else {
-      VertexIdMessageIterator<I, M> vertexIdMessageIterator =
-          messages.getVertexIdMessageIterator();
-      while (vertexIdMessageIterator.hasNext()) {
-        vertexIdMessageIterator.next();
-        DataInputOutput dataInputOutput =
-            getDataInputOutput(partitionMap, vertexIdMessageIterator);
+      try {
+        VertexIdMessageIterator<I, M> vertexIdMessageIterator =
+            messages.getVertexIdMessageIterator();
+        while (vertexIdMessageIterator.hasNext()) {
+          vertexIdMessageIterator.next();
+          DataInputOutput dataInputOutput =
+              getDataInputOutput(partitionMap, vertexIdMessageIterator);
 
-        synchronized (dataInputOutput) {
-          VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
-              vertexIdMessageIterator, dataInputOutput.getDataOutput());
+          synchronized (dataInputOutput) {
+            VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
+                vertexIdMessageIterator, dataInputOutput.getDataOutput());
+          }
         }
+      } catch (IOException e) {
+        throw new RuntimeException("addPartitionMessages: IOException while" +
+            " adding messages for a partition: " + e);
       }
     }
   }
@@ -224,11 +229,6 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
       this.service = service;
       this.config = conf;
-    }
-
-    @Override
-    public boolean shouldTraverseMessagesInOrder() {
-      return false;
     }
   }
 }

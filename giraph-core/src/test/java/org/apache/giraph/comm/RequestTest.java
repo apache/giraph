@@ -80,7 +80,7 @@ public class RequestTest {
   private WorkerInfo workerInfo;
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() {
     // Setup the conf
     GiraphConfiguration tmpConf = new GiraphConfiguration();
     GiraphConstants.COMPUTATION_CLASS.set(tmpConf, IntNoOpComputation.class);
@@ -108,7 +108,7 @@ public class RequestTest {
   }
 
   @Test
-  public void sendVertexPartition() throws IOException {
+  public void sendVertexPartition() {
     // Data to send
     int partitionId = 13;
     Partition<IntWritable, IntWritable, IntWritable> partition =
@@ -145,7 +145,7 @@ public class RequestTest {
   }
 
   @Test
-  public void sendWorkerMessagesRequest() throws IOException {
+  public void sendWorkerMessagesRequest() {
     // Data to send
     PairList<Integer, VertexIdMessages<IntWritable,
             IntWritable>>
@@ -244,7 +244,7 @@ public class RequestTest {
   }
 
   @Test
-  public void sendPartitionMutationsRequest() throws IOException {
+  public void sendPartitionMutationsRequest() {
     // Data to send
     int partitionId = 19;
     Map<IntWritable, VertexMutations<IntWritable, IntWritable,

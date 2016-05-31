@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -234,10 +233,8 @@ public class ServerData<I extends WritableComparable,
   /**
    * Re-initialize message stores.
    * Discards old values if any.
-   *
-   * @throws IOException
    */
-  public void resetMessageStores() throws IOException {
+  public void resetMessageStores() {
     if (currentMessageStore != null) {
       currentMessageStore.clearAll();
       currentMessageStore = null;
@@ -252,12 +249,7 @@ public class ServerData<I extends WritableComparable,
   /** Prepare for next superstep */
   public void prepareSuperstep() {
     if (currentMessageStore != null) {
-      try {
-        currentMessageStore.clearAll();
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to clear previous message store");
-      }
+      currentMessageStore.clearAll();
     }
 
     MessageStore<I, Writable> nextCurrentMessageStore;
@@ -422,13 +414,7 @@ public class ServerData<I extends WritableComparable,
           partition.putVertex(vertex);
         } else if (originalVertex != null) {
           partition.removeVertex(vertexId);
-          try {
-            getCurrentMessageStore().clearVertexMessages(vertexId);
-          } catch (IOException e) {
-            throw new IllegalStateException("resolvePartitionMutations: " +
-                "Caught IOException while clearing messages for a deleted " +
-                "vertex due to a mutation");
-          }
+          getCurrentMessageStore().clearVertexMessages(vertexId);
         }
         context.progress();
       }

@@ -29,7 +29,6 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -91,7 +90,7 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.get(partitionId).clear();
   }
 
@@ -107,13 +106,13 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
   }
 
   @Override
-  public void clearVertexMessages(LongWritable vertexId) throws IOException {
+  public void clearVertexMessages(LongWritable vertexId) {
     getPartitionMap(vertexId).remove(vertexId.get());
   }
 
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     map.clear();
   }
 

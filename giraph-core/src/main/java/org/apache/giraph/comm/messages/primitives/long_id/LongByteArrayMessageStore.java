@@ -89,7 +89,7 @@ public class LongByteArrayMessageStore<M extends Writable>
 
   @Override
   public void addPartitionMessages(int partitionId,
-    VertexIdMessages<LongWritable, M> messages) throws IOException {
+    VertexIdMessages<LongWritable, M> messages) {
     Long2ObjectOpenHashMap<DataInputOutput> partitionMap = map.get(partitionId);
     synchronized (partitionMap) {
       VertexIdMessageBytesIterator<LongWritable, M>
@@ -109,14 +109,19 @@ public class LongByteArrayMessageStore<M extends Writable>
               dataInputOutput.getDataOutput());
         }
       } else {
-        VertexIdMessageIterator<LongWritable, M>
-            iterator = messages.getVertexIdMessageIterator();
-        while (iterator.hasNext()) {
-          iterator.next();
-          DataInputOutput dataInputOutput =  getDataInputOutput(partitionMap,
-              iterator.getCurrentVertexId().get());
-          VerboseByteStructMessageWrite.verboseWriteCurrentMessage(iterator,
-              dataInputOutput.getDataOutput());
+        try {
+          VertexIdMessageIterator<LongWritable, M>
+              iterator = messages.getVertexIdMessageIterator();
+          while (iterator.hasNext()) {
+            iterator.next();
+            DataInputOutput dataInputOutput = getDataInputOutput(partitionMap,
+                iterator.getCurrentVertexId().get());
+            VerboseByteStructMessageWrite.verboseWriteCurrentMessage(iterator,
+                dataInputOutput.getDataOutput());
+          }
+        } catch (IOException e) {
+          throw new RuntimeException("addPartitionMessages: IOException while" +
+              " adding messages for a partition: " + e);
         }
       }
     }
@@ -128,7 +133,7 @@ public class LongByteArrayMessageStore<M extends Writable>
 
   @Override
   public Iterable<M> getVertexMessages(
-    LongWritable vertexId) throws IOException {
+    LongWritable vertexId) {
     DataInputOutput dataInputOutput =
         getPartitionMap(vertexId).get(vertexId.get());
     if (dataInputOutput == null) {

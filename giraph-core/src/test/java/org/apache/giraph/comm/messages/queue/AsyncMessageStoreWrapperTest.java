@@ -41,7 +41,7 @@ public class AsyncMessageStoreWrapperTest {
 
 
   @Test
-  public void testAsyncQueue() throws IOException {
+  public void testAsyncQueue() {
     TestMessageStore store = new TestMessageStore();
 
     AsyncMessageStoreWrapper<LongWritable, IntWritable> queue =
@@ -65,7 +65,7 @@ public class AsyncMessageStoreWrapperTest {
     private int counters[] = new int[5];
 
     @Override
-    public void addPartitionMessages(int partition, VertexIdMessages messages) throws IOException {
+    public void addPartitionMessages(int partition, VertexIdMessages messages) {
       assertNotNull(messages);
       counters[partition]++;
     }
@@ -76,17 +76,17 @@ public class AsyncMessageStoreWrapperTest {
     }
 
     @Override
-    public Iterable<IntWritable> getVertexMessages(LongWritable vertexId) throws IOException {
+    public Iterable<IntWritable> getVertexMessages(LongWritable vertexId) {
       return null;
     }
 
     @Override
-    public void clearVertexMessages(LongWritable vertexId) throws IOException {
+    public void clearVertexMessages(LongWritable vertexId) {
 
     }
 
     @Override
-    public void clearAll() throws IOException {
+    public void clearAll() {
 
     }
 
@@ -111,7 +111,7 @@ public class AsyncMessageStoreWrapperTest {
     }
 
     @Override
-    public void clearPartition(int partitionId) throws IOException {
+    public void clearPartition(int partitionId) {
 
     }
 

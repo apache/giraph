@@ -54,7 +54,7 @@ public class TestLongDoublePrimitiveMessageStores {
     service;
 
   @Before
-  public void prepare() throws IOException {
+  public void prepare() {
     service = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(
         service.getPartitionId(Mockito.any(LongWritable.class))).thenAnswer(
@@ -104,8 +104,7 @@ public class TestLongDoublePrimitiveMessageStores {
   }
 
   private static void insertLongDoubleMessages(
-      MessageStore<LongWritable, DoubleWritable> messageStore) throws
-      IOException {
+      MessageStore<LongWritable, DoubleWritable> messageStore) {
     ByteArrayVertexIdMessages<LongWritable, DoubleWritable> messages =
         createLongDoubleMessages();
     messages.add(new LongWritable(0), new DoubleWritable(1));
@@ -123,7 +122,7 @@ public class TestLongDoublePrimitiveMessageStores {
   }
 
   @Test
-  public void testLongDoubleMessageStore() throws IOException {
+  public void testLongDoubleMessageStore() {
     LongDoubleMessageStore messageStore =
         new LongDoubleMessageStore(service, new DoubleSumMessageCombiner());
     insertLongDoubleMessages(messageStore);
@@ -145,7 +144,7 @@ public class TestLongDoublePrimitiveMessageStores {
   }
 
   @Test
-  public void testLongByteArrayMessageStore() throws IOException {
+  public void testLongByteArrayMessageStore() {
     LongByteArrayMessageStore<DoubleWritable> messageStore =
         new LongByteArrayMessageStore<DoubleWritable>(
             new TestMessageValueFactory<DoubleWritable>(DoubleWritable.class),

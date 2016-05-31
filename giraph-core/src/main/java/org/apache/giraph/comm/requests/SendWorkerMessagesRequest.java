@@ -18,8 +18,6 @@
 
 package org.apache.giraph.comm.requests;
 
-import java.io.IOException;
-
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
@@ -70,13 +68,9 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
         iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      try {
-        serverData.getIncomingMessageStore().
-            addPartitionMessages(iterator.getCurrentFirst(),
-                iterator.getCurrentSecond());
-      } catch (IOException e) {
-        throw new RuntimeException("doRequest: Got IOException ", e);
-      }
+      serverData.getIncomingMessageStore().
+          addPartitionMessages(iterator.getCurrentFirst(),
+              iterator.getCurrentSecond());
     }
   }
 }

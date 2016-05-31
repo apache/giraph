@@ -19,8 +19,6 @@ package org.apache.giraph.graph;
 
 import com.google.common.collect.Lists;
 
-import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStoreFactory;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ArrayListEdges;

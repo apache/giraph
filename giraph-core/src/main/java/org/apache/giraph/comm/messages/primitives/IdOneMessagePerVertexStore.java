@@ -125,7 +125,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(
       int partitionId,
-      VertexIdMessages<I, M> messages) throws IOException {
+      VertexIdMessages<I, M> messages) {
     Basic2ObjectMap<I, M> partitionMap = map.get(partitionId);
     synchronized (partitionMap) {
       VertexIdMessageIterator<I, M>
@@ -152,7 +152,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.get(partitionId).clear();
   }
 
@@ -168,8 +168,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
-  public Iterable<M> getVertexMessages(
-      I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     Basic2ObjectMap<I, M> partitionMap = getPartitionMap(vertexId);
     if (!partitionMap.containsKey(vertexId)) {
       return EmptyIterable.get();
@@ -179,12 +178,12 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
+  public void clearVertexMessages(I vertexId) {
     getPartitionMap(vertexId).remove(vertexId);
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     map.clear();
   }
 

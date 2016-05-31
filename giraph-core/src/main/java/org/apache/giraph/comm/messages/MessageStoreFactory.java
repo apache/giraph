@@ -50,14 +50,4 @@ public interface MessageStoreFactory<I extends WritableComparable,
    */
   void initialize(CentralizedServiceWorker<I, ?, ?> service,
       ImmutableClassesGiraphConfiguration<I, ?, ?> conf);
-
-  /**
-   * This method is more for the performance optimization. If the message
-   * traversal would be done in order then data structure which is optimized
-   * for such traversal can be used.
-   *
-   * @return true if the messages would be traversed in order
-   * else return false
-   */
-  boolean shouldTraverseMessagesInOrder();
 }

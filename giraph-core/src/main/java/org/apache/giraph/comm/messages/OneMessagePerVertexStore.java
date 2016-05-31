@@ -71,7 +71,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(
       int partitionId,
-      VertexIdMessages<I, M> messages) throws IOException {
+      VertexIdMessages<I, M> messages) {
     ConcurrentMap<I, M> partitionMap =
         getOrCreatePartitionMap(partitionId);
     VertexIdMessageIterator<I, M> vertexIdMessageIterator =
@@ -174,11 +174,6 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
         ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
       this.service = service;
       this.config = conf;
-    }
-
-    @Override
-    public boolean shouldTraverseMessagesInOrder() {
-      return false;
     }
   }
 }

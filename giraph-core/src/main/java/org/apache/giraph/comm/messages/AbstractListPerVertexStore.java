@@ -26,7 +26,6 @@ import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -89,7 +88,7 @@ public abstract class AbstractListPerVertexStore<I extends WritableComparable,
   }
 
   @Override
-  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     ConcurrentMap<I, L> partitionMap =
         map.get(getPartitionId(vertexId));
     if (partitionMap == null) {

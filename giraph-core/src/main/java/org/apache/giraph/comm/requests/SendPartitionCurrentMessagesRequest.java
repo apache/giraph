@@ -85,12 +85,8 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E> serverData) {
-    try {
-      serverData.<M>getCurrentMessageStore().addPartitionMessages(partitionId,
-          vertexIdMessageMap);
-    } catch (IOException e) {
-      throw new RuntimeException("doRequest: Got IOException ", e);
-    }
+    serverData.<M>getCurrentMessageStore().addPartitionMessages(partitionId,
+        vertexIdMessageMap);
   }
 
   @Override

@@ -80,32 +80,37 @@ public class LongPointerListMessageStore<M extends Writable>
 
   @Override
   public void addPartitionMessages(int partitionId,
-    VertexIdMessages<LongWritable, M> messages) throws IOException {
-    VertexIdMessageIterator<LongWritable, M> iterator =
-        messages.getVertexIdMessageIterator();
-    long pointer = 0;
-    LongArrayList list;
-    while (iterator.hasNext()) {
-      iterator.next();
-      M msg = iterator.getCurrentMessage();
-      list = getList(iterator);
-      if (iterator.isNewMessage()) {
-        IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
-        pointer = indexAndDataOut.getIndex();
-        pointer <<= 32;
-        ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
-        pointer += dataOutput.getPos();
-        msg.write(dataOutput);
+    VertexIdMessages<LongWritable, M> messages) {
+    try {
+      VertexIdMessageIterator<LongWritable, M> iterator =
+          messages.getVertexIdMessageIterator();
+      long pointer = 0;
+      LongArrayList list;
+      while (iterator.hasNext()) {
+        iterator.next();
+        M msg = iterator.getCurrentMessage();
+        list = getList(iterator);
+        if (iterator.isNewMessage()) {
+          IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
+          pointer = indexAndDataOut.getIndex();
+          pointer <<= 32;
+          ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
+          pointer += dataOutput.getPos();
+          msg.write(dataOutput);
+        }
+        synchronized (list) { // TODO - any better way?
+          list.add(pointer);
+        }
       }
-      synchronized (list) { // TODO - any better way?
-        list.add(pointer);
-      }
+    } catch (IOException e) {
+      throw new RuntimeException("addPartitionMessages: IOException while" +
+          " adding messages for a partition: " + e);
     }
   }
 
   @Override
   public Iterable<M> getVertexMessages(
-    LongWritable vertexId) throws IOException {
+    LongWritable vertexId) {
     LongArrayList list = getPartitionMap(vertexId).get(
         vertexId.get());
     if (list == null) {

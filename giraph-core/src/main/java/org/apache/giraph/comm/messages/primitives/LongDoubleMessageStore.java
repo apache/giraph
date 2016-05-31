@@ -97,8 +97,7 @@ public class LongDoubleMessageStore
 
   @Override
   public void addPartitionMessages(int partitionId,
-      VertexIdMessages<LongWritable, DoubleWritable> messages) throws
-      IOException {
+      VertexIdMessages<LongWritable, DoubleWritable> messages) {
     LongWritable reusableVertexId = new LongWritable();
     DoubleWritable reusableMessage = new DoubleWritable();
     DoubleWritable reusableCurrentMessage = new DoubleWritable();
@@ -129,7 +128,7 @@ public class LongDoubleMessageStore
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.get(partitionId).clear();
   }
 
@@ -146,7 +145,7 @@ public class LongDoubleMessageStore
 
   @Override
   public Iterable<DoubleWritable> getVertexMessages(
-      LongWritable vertexId) throws IOException {
+      LongWritable vertexId) {
     Long2DoubleOpenHashMap partitionMap = getPartitionMap(vertexId);
     if (!partitionMap.containsKey(vertexId.get())) {
       return EmptyIterable.get();
@@ -157,12 +156,12 @@ public class LongDoubleMessageStore
   }
 
   @Override
-  public void clearVertexMessages(LongWritable vertexId) throws IOException {
+  public void clearVertexMessages(LongWritable vertexId) {
     getPartitionMap(vertexId).remove(vertexId.get());
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     map.clear();
   }
 

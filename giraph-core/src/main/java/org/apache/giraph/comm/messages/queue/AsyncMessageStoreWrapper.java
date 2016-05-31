@@ -113,17 +113,17 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
   }
 
   @Override
-  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     return store.getVertexMessages(vertexId);
   }
 
   @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
+  public void clearVertexMessages(I vertexId) {
     store.clearVertexMessages(vertexId);
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     try {
       for (BlockingQueue<PartitionMessage<I, M>> queue : queues) {
         queue.put(SHUTDOWN_QUEUE_MESSAGE);
@@ -147,7 +147,7 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
 
   @Override
   public void addPartitionMessages(
-      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+      int partitionId, VertexIdMessages<I, M> messages) {
     int hash = partition2Queue.get(partitionId);
     try {
       queues[hash].put(new PartitionMessage<>(partitionId, messages));
@@ -167,7 +167,7 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     store.clearPartition(partitionId);
   }
 
@@ -232,7 +232,7 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
               return;
             }
           }
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
           LOG.error("MessageStoreQueueWorker.run: " + message, e);
           return;
         }

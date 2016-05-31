@@ -77,26 +77,31 @@ public class PointerListPerVertexStore<I extends WritableComparable,
 
   @Override
   public void addPartitionMessages(
-    int partitionId, VertexIdMessages<I, M> messages) throws IOException {
-    VertexIdMessageIterator<I, M> vertexIdMessageIterator =
-        messages.getVertexIdMessageIterator();
-    long pointer = 0;
-    LongArrayList list;
-    while (vertexIdMessageIterator.hasNext()) {
-      vertexIdMessageIterator.next();
-      M msg = vertexIdMessageIterator.getCurrentMessage();
-      list = getOrCreateList(vertexIdMessageIterator);
-      if (vertexIdMessageIterator.isNewMessage()) {
-        IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
-        pointer = indexAndDataOut.getIndex();
-        pointer <<= 32;
-        ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
-        pointer += dataOutput.getPos();
-        msg.write(dataOutput);
+    int partitionId, VertexIdMessages<I, M> messages) {
+    try {
+      VertexIdMessageIterator<I, M> vertexIdMessageIterator =
+          messages.getVertexIdMessageIterator();
+      long pointer = 0;
+      LongArrayList list;
+      while (vertexIdMessageIterator.hasNext()) {
+        vertexIdMessageIterator.next();
+        M msg = vertexIdMessageIterator.getCurrentMessage();
+        list = getOrCreateList(vertexIdMessageIterator);
+        if (vertexIdMessageIterator.isNewMessage()) {
+          IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
+          pointer = indexAndDataOut.getIndex();
+          pointer <<= 32;
+          ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
+          pointer += dataOutput.getPos();
+          msg.write(dataOutput);
+        }
+        synchronized (list) {
+          list.add(pointer);
+        }
       }
-      synchronized (list) {
-        list.add(pointer);
-      }
+    } catch (IOException e) {
+      throw new RuntimeException("addPartitionMessages: IOException while" +
+          " adding messages for a partition: " + e);
     }
   }
 

@@ -218,16 +218,11 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     vertexIdMessages.initialize();
     for (I vertexId :
         messageStore.getPartitionDestinationVertices(partitionId)) {
-      try {
-        // Messages cannot be re-used from this iterable, but add()
-        // serializes the message, making this safe
-        Iterable<Writable> messages = messageStore.getVertexMessages(vertexId);
-        for (Writable message : messages) {
-          vertexIdMessages.add(vertexId, message);
-        }
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "sendPartitionMessages: Got IOException ", e);
+      // Messages cannot be re-used from this iterable, but add()
+      // serializes the message, making this safe
+      Iterable<Writable> messages = messageStore.getVertexMessages(vertexId);
+      for (Writable message : messages) {
+        vertexIdMessages.add(vertexId, message);
       }
       if (vertexIdMessages.getSize() > maxMessagesSizePerWorker) {
         WritableRequest messagesRequest =
@@ -247,13 +242,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
           partitionId, vertexIdMessages);
       doRequest(workerInfo, messagesRequest);
     }
-    try {
-      messageStore.clearPartition(partitionId);
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "sendPartitionMessages: Got IOException while removing messages " +
-              "for partition " + partitionId + " :" + e);
-    }
+    messageStore.clearPartition(partitionId);
   }
 
   @Override

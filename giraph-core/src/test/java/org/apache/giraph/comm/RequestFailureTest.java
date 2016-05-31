@@ -103,7 +103,7 @@ public class RequestFailureTest {
     return request;
   }
 
-  private void checkResult(int numRequests) throws IOException {
+  private void checkResult(int numRequests) {
     // Check the output
     Iterable<IntWritable> vertices =
         serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);

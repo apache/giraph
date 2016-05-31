@@ -206,9 +206,4 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
     this.service = service;
     this.conf = conf;
   }
-
-  @Override
-  public boolean shouldTraverseMessagesInOrder() {
-    return false;
-  }
 }

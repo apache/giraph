@@ -57,7 +57,7 @@ public class TestIntFloatPrimitiveMessageStores {
       Writable> conf;
 
   @Before
-  public void prepare() throws IOException {
+  public void prepare() {
     service = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(
         service.getPartitionId(Mockito.any(IntWritable.class))).thenAnswer(
@@ -103,8 +103,7 @@ public class TestIntFloatPrimitiveMessageStores {
   }
 
   private static void insertIntFloatMessages(
-      MessageStore<IntWritable, FloatWritable> messageStore) throws
-      IOException {
+      MessageStore<IntWritable, FloatWritable> messageStore) {
     ByteArrayVertexIdMessages<IntWritable, FloatWritable> messages =
         createIntFloatMessages();
     messages.add(new IntWritable(0), new FloatWritable(1));
@@ -122,7 +121,7 @@ public class TestIntFloatPrimitiveMessageStores {
   }
 
   @Test
-  public void testIntFloatMessageStore() throws IOException {
+  public void testIntFloatMessageStore() {
     IntFloatMessageStore messageStore =
         new IntFloatMessageStore(service, new FloatSumMessageCombiner());
     insertIntFloatMessages(messageStore);
@@ -144,7 +143,7 @@ public class TestIntFloatPrimitiveMessageStores {
   }
 
   @Test
-  public void testIntByteArrayMessageStore() throws IOException {
+  public void testIntByteArrayMessageStore() {
     IntByteArrayMessageStore<FloatWritable> messageStore =
         new IntByteArrayMessageStore<FloatWritable>(new
             TestMessageValueFactory<FloatWritable>(FloatWritable.class),
@@ -174,8 +173,7 @@ public class TestIntFloatPrimitiveMessageStores {
   }
 
   @Test
-  public void testIntByteArrayMessageStoreWithMessageEncoding() throws
-      IOException {
+  public void testIntByteArrayMessageStoreWithMessageEncoding() {
     GiraphConstants.USE_MESSAGE_SIZE_ENCODING.set(conf, true);
     testIntByteArrayMessageStore();
     GiraphConstants.USE_MESSAGE_SIZE_ENCODING.set(conf, false);

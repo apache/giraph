@@ -18,21 +18,16 @@
 
 package org.apache.giraph.partition;
 
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -64,11 +59,7 @@ public class SimplePartition<I extends WritableComparable,
   @Override
   public void initialize(int partitionId, Progressable progressable) {
     super.initialize(partitionId, progressable);
-    if (shouldTraverseMessageInOrder()) {
-      vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E>>();
-    } else {
-      vertexMap = Maps.newConcurrentMap();
-    }
+    vertexMap = Maps.newConcurrentMap();
   }
 
   @Override
@@ -145,11 +136,7 @@ public class SimplePartition<I extends WritableComparable,
   @Override
   public void readFields(DataInput input) throws IOException {
     super.readFields(input);
-    if (shouldTraverseMessageInOrder()) {
-      vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E>>();
-    } else {
-      vertexMap = Maps.newConcurrentMap();
-    }
+    vertexMap = Maps.newConcurrentMap();
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
       progress();
@@ -176,21 +163,5 @@ public class SimplePartition<I extends WritableComparable,
   @Override
   public Iterator<Vertex<I, V, E>> iterator() {
     return vertexMap.values().iterator();
-  }
-
-  /**
-   * This method specifies if the message store factory, that is been
-   * configured, has requirement of traversing messages in order.
-   *
-   * @return true if the message store factory has specified traversing
-   * messages in ordered, else return false.
-   */
-  private boolean shouldTraverseMessageInOrder() {
-    Class<? extends MessageStoreFactory> messageStoreFactoryClass =
-        MESSAGE_STORE_FACTORY_CLASS.get(getConf());
-
-    MessageStoreFactory messageStoreFactoryInstance =
-        ReflectionUtils.newInstance(messageStoreFactoryClass);
-    return messageStoreFactoryInstance.shouldTraverseMessagesInOrder();
   }
 }

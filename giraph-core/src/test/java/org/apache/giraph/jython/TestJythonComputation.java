@@ -19,7 +19,6 @@ package org.apache.giraph.jython;
 
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStoreFactory;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
@@ -41,11 +40,6 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 public class TestJythonComputation {
-
-  @Test
-  public void testCountEdgesDiskBackedMessageStoreFactory() throws Exception {
-    testCountEdges(DiskBackedMessageStoreFactory.class);
-  }
 
   @Test
   public void testCountEdgesInMemoryMessageStoreFactory() throws Exception {

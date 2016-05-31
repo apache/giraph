@@ -96,8 +96,7 @@ public class IntFloatMessageStore
 
   @Override
   public void addPartitionMessages(int partitionId,
-      VertexIdMessages<IntWritable, FloatWritable> messages) throws
-      IOException {
+      VertexIdMessages<IntWritable, FloatWritable> messages) {
     IntWritable reusableVertexId = new IntWritable();
     FloatWritable reusableMessage = new FloatWritable();
     FloatWritable reusableCurrentMessage = new FloatWritable();
@@ -128,7 +127,7 @@ public class IntFloatMessageStore
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.get(partitionId).clear();
   }
 
@@ -145,7 +144,7 @@ public class IntFloatMessageStore
 
   @Override
   public Iterable<FloatWritable> getVertexMessages(
-      IntWritable vertexId) throws IOException {
+      IntWritable vertexId) {
     Int2FloatOpenHashMap partitionMap = getPartitionMap(vertexId);
     if (!partitionMap.containsKey(vertexId.get())) {
       return EmptyIterable.get();
@@ -156,12 +155,12 @@ public class IntFloatMessageStore
   }
 
   @Override
-  public void clearVertexMessages(IntWritable vertexId) throws IOException {
+  public void clearVertexMessages(IntWritable vertexId) {
     getPartitionMap(vertexId).remove(vertexId.get());
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     map.clear();
   }
 

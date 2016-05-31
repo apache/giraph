@@ -157,7 +157,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     ConcurrentMap<I, T> partitionMap = map.get(getPartitionId(vertexId));
     if (partitionMap == null) {
       return Collections.<M>emptyList();
@@ -197,7 +197,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
+  public void clearVertexMessages(I vertexId) {
     ConcurrentMap<I, ?> partitionMap =
         map.get(getPartitionId(vertexId));
     if (partitionMap != null) {
@@ -206,7 +206,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.remove(partitionId);
   }
 
@@ -217,7 +217,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     map.clear();
   }
 }

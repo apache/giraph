@@ -962,28 +962,6 @@ public interface GiraphConstants {
           "This directory has/stores the available checkpoint files in HDFS.");
 
   /**
-   * Comma-separated list of directories in the local file system for
-   * out-of-core messages.
-   */
-  StrConfOption MESSAGES_DIRECTORY =
-      new StrConfOption("giraph.messagesDirectory", "_bsp/_messages/",
-          "Comma-separated list of directories in the local file system for " +
-          "out-of-core messages.");
-
-  /**
-   * If using out-of-core messaging, it tells how much messages do we keep
-   * in memory.
-   */
-  IntConfOption MAX_MESSAGES_IN_MEMORY =
-      new IntConfOption("giraph.maxMessagesInMemory", 1000000,
-          "If using out-of-core messaging, it tells how much messages do we " +
-          "keep in memory.");
-  /** Size of buffer when reading and writing messages out-of-core. */
-  IntConfOption MESSAGES_BUFFER_SIZE =
-      new IntConfOption("giraph.messagesBufferSize", 8 * ONE_KB,
-          "Size of buffer when reading and writing messages out-of-core.");
-
-  /**
    * Comma-separated list of directories in the local filesystem for
    * out-of-core partitions.
    */

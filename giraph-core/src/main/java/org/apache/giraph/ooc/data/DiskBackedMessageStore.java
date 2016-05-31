@@ -106,17 +106,17 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     return messageStore.getVertexMessages(vertexId);
   }
 
   @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
+  public void clearVertexMessages(I vertexId) {
     messageStore.clearVertexMessages(vertexId);
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() {
     messageStore.clearAll();
   }
 
@@ -132,7 +132,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
 
   @Override
   public void addPartitionMessages(
-      int partitionId, VertexIdMessages<I, M> messages) throws IOException {
+      int partitionId, VertexIdMessages<I, M> messages) {
     if (useMessageCombiner) {
       messageStore.addPartitionMessages(partitionId, messages);
     } else {
@@ -193,7 +193,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     messageStore.clearPartition(partitionId);
   }
 
@@ -302,11 +302,6 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   protected void addEntryToImMemoryPartitionData(int partitionId,
                                                  VertexIdMessages<I, M>
                                                      messages) {
-    try {
-      messageStore.addPartitionMessages(partitionId, messages);
-    } catch (IOException e) {
-      throw new IllegalStateException("Caught IOException while adding a new " +
-          "message to in-memory message store");
-    }
+    messageStore.addPartitionMessages(partitionId, messages);
   }
 }
