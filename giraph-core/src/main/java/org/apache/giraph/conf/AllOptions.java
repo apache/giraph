@@ -19,15 +19,14 @@ package org.apache.giraph.conf;
 
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
 
 /**
  * Tracks all of the Giraph options
@@ -36,37 +35,24 @@ public class AllOptions {
   /**  logger object */
   private static final Logger LOG = Logger.getLogger(AllOptions.class);
 
-  /** Configuration options */
-  private static final List<AbstractConfOption> CONF_OPTIONS =
-      Lists.newArrayList();
-
   /** page name for the HTML page generation */
   private static final String PAGE_NAME = "Giraph Options";
 
   /** Don't construct */
   private AllOptions() { }
 
-  /**
-   * Add an option. Subclasses of {@link AbstractConfOption} should call this
-   * at the end of their constructor.
-   *
-   * @param confOption option
-   */
-  public static void add(AbstractConfOption confOption) {
-    CONF_OPTIONS.add(confOption);
-  }
 
   /**
    * String representation of all of the options stored
-   *
+   * @param options List of loaded options
    * @return string
    */
-  public static String allOptionsString() {
-    Collections.sort(CONF_OPTIONS);
-    StringBuilder sb = new StringBuilder(CONF_OPTIONS.size() * 30);
+  private static String allOptionsString(List<AbstractConfOption> options) {
+    Collections.sort(options);
+    StringBuilder sb = new StringBuilder(options.size() * 30);
     sb.append("All Options:\n");
     ConfOptionType lastType = null;
-    for (AbstractConfOption confOption : CONF_OPTIONS) {
+    for (AbstractConfOption confOption : options) {
       if (!confOption.getType().equals(lastType)) {
         sb.append(confOption.getType().toString().toLowerCase()).append(":\n");
         lastType = confOption.getType();
@@ -78,11 +64,12 @@ public class AllOptions {
 
   /**
    * HTML String representation of all the options stored
+   * @param options List of loaded options
    * @return String the HTML representation of the registered options
    */
-  public static String allOptionsHTMLString() {
-    Collections.sort(CONF_OPTIONS);
-    StringBuilder sb = new StringBuilder(CONF_OPTIONS.size() * 30);
+  private static String allOptionsHTMLString(List<AbstractConfOption> options) {
+    Collections.sort(options);
+    StringBuilder sb = new StringBuilder(options.size() * 30);
 
     sb.append("<?xml version='1.0' encoding='UTF-8'?>\n" +
               "<!--\n" +
@@ -123,7 +110,7 @@ public class AllOptions {
               "        <th>description</th>\n" +
               "       </tr>\n");
 
-    for (AbstractConfOption confOption : CONF_OPTIONS) {
+    for (AbstractConfOption confOption : options) {
       String type = confOption.getType().toString().toLowerCase();
 
       sb.append("       <tr>\n");
@@ -147,15 +134,21 @@ public class AllOptions {
    *
    * @param args cmdline args
    */
-  public static void main(String[] args) {
-    // This is necessary to trigger the static constants in GiraphConstants to
-    // get loaded. Without it we get no output.
-    COMPUTATION_CLASS.toString();
+  public static void main(String[] args) throws IllegalAccessException {
+
+    List<Field> fields = Arrays.asList(GiraphConstants.class.getFields());
+    List<AbstractConfOption> options = new ArrayList<>();
+    for (Field field : fields) {
+      if (AbstractConfOption.class.isAssignableFrom(field.getType())) {
+        AbstractConfOption option = (AbstractConfOption) field.get(null);
+        options.add(option);
+      }
+    }
 
     // in case an options was specified, this option is treated as the output
     // file in which to write the HTML version of the list of available options
     if (args.length == 1) {
-      String html = allOptionsHTMLString();
+      String html = allOptionsHTMLString(options);
 
       try {
         FileWriter     fs  = new FileWriter(args[0]);
@@ -169,6 +162,6 @@ public class AllOptions {
       }
     }
 
-    LOG.info(allOptionsString());
+    LOG.info(allOptionsString(options));
   }
 }

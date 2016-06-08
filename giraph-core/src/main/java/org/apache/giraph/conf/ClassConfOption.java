@@ -50,7 +50,6 @@ public class ClassConfOption<C> extends AbstractConfOption {
     super(key, description);
     this.defaultClass = defaultClass;
     this.interfaceClass = interfaceClass;
-    AllOptions.add(this);
   }
 
   /**

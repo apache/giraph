@@ -41,7 +41,6 @@ public class StrConfOption extends AbstractConfOption {
   public StrConfOption(String key, String defaultValue, String description) {
     super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public String getDefaultValue() {

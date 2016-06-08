@@ -171,7 +171,7 @@ public class CreditBasedFlowControl implements FlowControl {
    * worker is important so we can determine if a received response is for a
    * resume signal or not.
    */
-  private final Map<Integer, Set<Long>> resumeRequestsId =
+  private final ConcurrentMap<Integer, Set<Long>> resumeRequestsId =
       Maps.newConcurrentMap();
   /**
    * Semaphore to control number of cached unsent requests. Maximum number of

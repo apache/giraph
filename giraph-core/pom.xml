@@ -119,25 +119,21 @@ under the License.
         <artifactId>apache-rat-plugin</artifactId>
       </plugin>
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.6</version>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
         <executions>
           <execution>
             <phase>compile</phase>
             <goals>
-              <goal>run</goal>
+              <goal>java</goal>
             </goals>
             <configuration>
-              <target>
-                <java classname="org.apache.giraph.conf.AllOptions">
-                  <classpath>
-                    <pathelement location="${project.jar}"/>
-                    <pathelement path="${maven.dependency.org.apache.hadoop.hadoop-common.jar.path}"/>
-                    <pathelement path="${maven.dependency.org.apache.hadoop.hadoop-core.jar.path}"/>
-                  </classpath>
-                  <arg value="${top.dir}/src/site/xdoc/options.xml" />
-                </java>
-              </target>
+              <mainClass>org.apache.giraph.conf.AllOptions</mainClass>
+              <arguments>
+                <argument>${top.dir}/src/site/xdoc/options.xml</argument>
+              </arguments>
+              <classpathScope>compile</classpathScope>
             </configuration>
           </execution>
         </executions>

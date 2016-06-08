@@ -36,7 +36,6 @@ public class FloatConfOption extends AbstractConfOption {
   public FloatConfOption(String key, float defaultValue, String description) {
     super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public float getDefaultValue() {

@@ -45,7 +45,6 @@ public class EnumConfOption<T extends Enum<T>> extends AbstractConfOption {
     super(key, description);
     this.klass = klass;
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   /**

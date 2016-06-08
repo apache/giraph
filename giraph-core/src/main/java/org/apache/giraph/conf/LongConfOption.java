@@ -36,7 +36,6 @@ public class LongConfOption extends AbstractConfOption {
   public LongConfOption(String key, long defaultValue, String description) {
     super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public long getDefaultValue() {

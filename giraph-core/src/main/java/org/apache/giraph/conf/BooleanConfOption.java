@@ -37,7 +37,6 @@ public class BooleanConfOption extends AbstractConfOption {
       String description) {
     super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   /**
