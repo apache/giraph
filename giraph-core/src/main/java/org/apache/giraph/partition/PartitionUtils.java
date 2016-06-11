@@ -64,7 +64,7 @@ public class PartitionUtils {
     @Override
     public int compare(Entry<WorkerInfo, VertexEdgeCount> worker1,
         Entry<WorkerInfo, VertexEdgeCount> worker2) {
-      return (int) (worker1.getValue().getEdgeCount() -
+      return Long.compare(worker1.getValue().getEdgeCount(),
         worker2.getValue().getEdgeCount());
     }
   }
@@ -81,7 +81,7 @@ public class PartitionUtils {
     @Override
     public int compare(Entry<WorkerInfo, VertexEdgeCount> worker1,
         Entry<WorkerInfo, VertexEdgeCount> worker2) {
-      return (int) (worker1.getValue().getVertexCount() -
+      return Long.compare(worker1.getValue().getVertexCount(),
         worker2.getValue().getVertexCount());
     }
   }
