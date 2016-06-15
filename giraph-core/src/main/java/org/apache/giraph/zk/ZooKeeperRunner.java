@@ -30,9 +30,10 @@ public interface ZooKeeperRunner extends ImmutableClassesGiraphConfigurable {
    * Starts zookeeper service in specified working directory with
    * specified config file.
    * @param zkDir working directory
-   * @param configFilePath path to the config file
+   * @param config zookeeper configuration
+   * @return port zookeeper runs on
    */
-  void start(String zkDir, String configFilePath);
+  int start(String zkDir, ZookeeperConfig config);
 
   /**
    * Stops zookeeper.

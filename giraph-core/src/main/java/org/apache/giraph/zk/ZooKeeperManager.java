@@ -18,8 +18,6 @@
 
 package org.apache.giraph.zk;
 
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.conf.GiraphConstants;
@@ -34,19 +32,15 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.giraph.conf.GiraphConstants.BASE_ZNODE_KEY;
 import static org.apache.giraph.conf.GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY;
 
@@ -85,8 +79,6 @@ public class ZooKeeperManager {
   private final Path myClosedPath;
   /** Polling msecs timeout */
   private final int pollMsecs;
-  /** Server count */
-  private final int serverCount;
   /** File system */
   private final FileSystem fs;
   /** Zookeeper wrapper */
@@ -94,22 +86,19 @@ public class ZooKeeperManager {
   /** ZooKeeper local file system directory */
   private final String zkDir;
   /** ZooKeeper config file path */
-  private final String configFilePath;
-  /** ZooKeeper server list */
-  private final Map<String, Integer> zkServerPortMap = Maps.newTreeMap();
+  private final ZookeeperConfig config;
+  /** ZooKeeper server host */
+  private String zkServerHost;
+  /** ZooKeeper server task */
+  private int zkServerTask;
   /** ZooKeeper base port */
-  private final int zkBasePort;
+  private int zkBasePort;
   /** Final ZooKeeper server port list (for clients) */
   private String zkServerPortString;
   /** My hostname */
   private String myHostname = null;
   /** Job id, to ensure uniqueness */
   private final String jobId;
-  /**
-   * Default local ZooKeeper prefix directory to use (where ZooKeeper server
-   * files will go)
-   */
-  private final String zkDirDefault;
   /** Time object for tracking timeouts */
   private final Time time = SystemTime.get();
 
@@ -145,8 +134,8 @@ public class ZooKeeperManager {
     myClosedPath = new Path(taskDirectory,
         (new ComputationDoneName(taskPartition)).getName());
     pollMsecs = GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS.get(conf);
-    serverCount = GiraphConstants.ZOOKEEPER_SERVER_COUNT.get(conf);
     String jobLocalDir = conf.get("job.local.dir");
+    String zkDirDefault;
     if (jobLocalDir != null) { // for non-local jobs
       zkDirDefault = jobLocalDir +
           "/_bspZooKeeper";
@@ -155,7 +144,7 @@ public class ZooKeeperManager {
               ZOOKEEPER_MANAGER_DIRECTORY.getDefaultValue();
     }
     zkDir = conf.get(GiraphConstants.ZOOKEEPER_DIR, zkDirDefault);
-    configFilePath = zkDir + "/zoo.cfg";
+    config = new ZookeeperConfig();
     zkBasePort = GiraphConstants.ZOOKEEPER_SERVER_PORT.get(conf);
 
     myHostname = conf.getLocalHostname();
@@ -315,58 +304,32 @@ public class ZooKeeperManager {
    */
   private void createZooKeeperServerList() throws IOException,
       InterruptedException {
-    int candidateRetrievalAttempt = 0;
-    Map<String, Integer> hostnameTaskMap = Maps.newTreeMap();
-    while (true) {
+    String host = null;
+    int port = 0;
+    while (host == null) {
       FileStatus [] fileStatusArray = fs.listStatus(taskDirectory);
-      hostnameTaskMap.clear();
       if (fileStatusArray.length > 0) {
-        for (FileStatus fileStatus : fileStatusArray) {
-          String[] hostnameTaskArray =
-              fileStatus.getPath().getName().split(
-                  HOSTNAME_TASK_SEPARATOR);
-          if (hostnameTaskArray.length != 2) {
-            throw new RuntimeException(
-                "getZooKeeperServerList: Task 0 failed " +
-                    "to parse " +
-                    fileStatus.getPath().getName());
-          }
-          if (!hostnameTaskMap.containsKey(hostnameTaskArray[0])) {
-            hostnameTaskMap.put(hostnameTaskArray[0],
-                Integer.valueOf(hostnameTaskArray[1]));
-          }
-        }
-        if (LOG.isInfoEnabled()) {
-          LOG.info("getZooKeeperServerList: Got " +
-              hostnameTaskMap.keySet() + " " +
-              hostnameTaskMap.size() + " hosts from " +
-              fileStatusArray.length + " candidates when " +
-              serverCount + " required (polling period is " +
-              pollMsecs + ") on attempt " +
-              candidateRetrievalAttempt);
-        }
-
-        if (hostnameTaskMap.size() >= serverCount) {
-          break;
-        }
-        ++candidateRetrievalAttempt;
+        checkState(fileStatusArray.length == 1,
+            "createZooKeeperServerList: too many " +
+            "status files found " + Arrays.toString(fileStatusArray));
+        FileStatus fileStatus = fileStatusArray[0];
+        String[] hostnameTaskArray =
+            fileStatus.getPath().getName().split(
+                HOSTNAME_TASK_SEPARATOR);
+        checkState(hostnameTaskArray.length == 2,
+            "createZooKeeperServerList: Task 0 failed " +
+            "to parse " + fileStatus.getPath().getName());
+        host = hostnameTaskArray[0];
+        port = Integer.parseInt(hostnameTaskArray[1]);
         Thread.sleep(pollMsecs);
       }
     }
-    StringBuffer serverListFile =
-        new StringBuffer(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
-    int numServers = 0;
-    for (Map.Entry<String, Integer> hostnameTask :
-      hostnameTaskMap.entrySet()) {
-      serverListFile.append(hostnameTask.getKey() +
-          HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() +
-          HOSTNAME_TASK_SEPARATOR);
-      if (++numServers == serverCount) {
-        break;
-      }
-    }
+    String serverListFile =
+        ZOOKEEPER_SERVER_LIST_FILE_PREFIX + host +
+        HOSTNAME_TASK_SEPARATOR + port +
+        HOSTNAME_TASK_SEPARATOR;
     Path serverListPath =
-        new Path(baseDirectory, serverListFile.toString());
+        new Path(baseDirectory, serverListFile);
     if (LOG.isInfoEnabled()) {
       LOG.info("createZooKeeperServerList: Creating the final " +
           "ZooKeeper file '" + serverListPath + "'");
@@ -432,33 +395,25 @@ public class ZooKeeperManager {
 
     }
 
-    List<String> serverHostList = Arrays.asList(serverListFile.substring(
+    String[] serverHostList = serverListFile.substring(
         ZOOKEEPER_SERVER_LIST_FILE_PREFIX.length()).split(
-            HOSTNAME_TASK_SEPARATOR));
+            HOSTNAME_TASK_SEPARATOR);
     if (LOG.isInfoEnabled()) {
-      LOG.info("getZooKeeperServerList: Found " + serverHostList + " " +
-          serverHostList.size() +
+      LOG.info("getZooKeeperServerList: Found " +
+          Arrays.toString(serverHostList) +
           " hosts in filename '" + serverListFile + "'");
     }
-    if (serverHostList.size() != serverCount * 2) {
-      throw new IllegalStateException(
-          "getZooKeeperServerList: Impossible " +
-              " that " + serverHostList.size() +
-              " != 2 * " +
-              serverCount + " asked for.");
-    }
 
-    for (int i = 0; i < serverHostList.size(); i += 2) {
-      zkServerPortMap.put(serverHostList.get(i),
-        Integer.parseInt(serverHostList.get(i + 1)));
-    }
-    zkServerPortString = "";
-    for (String server : zkServerPortMap.keySet()) {
-      if (zkServerPortString.length() > 0) {
-        zkServerPortString += ",";
-      }
-      zkServerPortString += server + ":" + zkBasePort;
-    }
+    zkServerHost = serverHostList[0];
+    zkServerTask = Integer.parseInt(serverHostList[1]);
+    updateZkPortString();
+  }
+
+  /**
+   * Update zookeeper host:port string.
+   */
+  private void updateZkPortString() {
+    zkServerPortString = zkServerHost + ":" + zkBasePort;
   }
 
   /**
@@ -473,96 +428,32 @@ public class ZooKeeperManager {
    * Whoever is elected to be a ZooKeeper server must generate a config file
    * locally.
    *
-   * @param serverList List of ZooKeeper servers.
    */
-  private void generateZooKeeperConfigFile(List<String> serverList) {
+  private void generateZooKeeperConfig() {
     if (LOG.isInfoEnabled()) {
-      LOG.info("generateZooKeeperConfigFile: Creating file " +
-          configFilePath + " in " + zkDir + " with base port " +
+      LOG.info("generateZooKeeperConfig: with base port " +
           zkBasePort);
     }
-    try {
-      File zkDirFile = new File(this.zkDir);
-      boolean mkDirRet = zkDirFile.mkdirs();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("generateZooKeeperConfigFile: Make directory of " +
-            zkDirFile.getName() + " = " + mkDirRet);
-      }
-      File configFile = new File(configFilePath);
-      boolean deletedRet = configFile.delete();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("generateZooKeeperConfigFile: Delete of " +
-            configFile.getName() + " = " + deletedRet);
-      }
-      if (!configFile.createNewFile()) {
-        throw new IllegalStateException(
-            "generateZooKeeperConfigFile: Failed to " +
-                "create config file " + configFile.getName());
-      }
-      // Make writable by everybody
-      if (!configFile.setWritable(true, false)) {
-        throw new IllegalStateException(
-            "generateZooKeeperConfigFile: Failed to make writable " +
-                configFile.getName());
-      }
-
-      Writer writer = null;
-      try {
-        writer = new FileWriter(configFilePath);
-        writer.write("tickTime=" +
-            GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
-        writer.write("dataDir=" + this.zkDir + "\n");
-        writer.write("clientPort=" + zkBasePort + "\n");
-        writer.write("maxClientCnxns=" +
-            GiraphConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +
-            "\n");
-        writer.write("minSessionTimeout=" +
-            conf.getZooKeeperMinSessionTimeout() + "\n");
-        writer.write("maxSessionTimeout=" +
-            conf.getZooKeeperMaxSessionTimeout() + "\n");
-        writer.write("initLimit=" +
-            GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
-        writer.write("syncLimit=" +
-            GiraphConstants.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
-        writer.write("snapCount=" +
-            GiraphConstants.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
-        writer.write("forceSync=" +
-            (conf.getZooKeeperForceSync() ? "yes" : "no") + "\n");
-        writer.write("skipACL=" +
-            (conf.getZooKeeperSkipAcl() ? "yes" : "no") + "\n");
-        if (serverList.size() != 1) {
-          writer.write("electionAlg=0\n");
-          for (int i = 0; i < serverList.size(); ++i) {
-            writer.write("server." + i + "=" + serverList.get(i) +
-                ":" + (zkBasePort + 1) +
-                ":" + (zkBasePort + 2) + "\n");
-            if (myHostname.equals(serverList.get(i))) {
-              Writer myidWriter = null;
-              try {
-                myidWriter = new FileWriter(zkDir + "/myid");
-                myidWriter.write(i + "\n");
-              } finally {
-                Closeables.close(myidWriter, true);
-              }
-            }
-          }
-        }
-      } finally {
-        Closeables.close(writer, true);
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "generateZooKeeperConfigFile: Failed to write file", e);
+    File zkDirFile = new File(this.zkDir);
+    boolean mkDirRet = zkDirFile.mkdirs();
+    if (LOG.isInfoEnabled()) {
+      LOG.info("generateZooKeeperConfigFile: Make directory of " +
+          zkDirFile.getName() + " = " + mkDirRet);
     }
+
+    config.setDataDir(zkDir);
+    config.setDataLogDir(zkDir);
+    config.setClientPortAddress(new InetSocketAddress(zkBasePort));
+    config.setMinSessionTimeout(conf.getZooKeeperMinSessionTimeout());
+    config.setMaxSessionTimeout(conf.getZooKeeperMaxSessionTimeout());
   }
 
   /**
    * If this task has been selected, online a ZooKeeper server.  Otherwise,
    * wait until this task knows that the ZooKeeper servers have been onlined.
    */
-  public void onlineZooKeeperServers() {
-    Integer taskId = zkServerPortMap.get(myHostname);
-    if ((taskId != null) && (taskId == taskPartition)) {
+  public void onlineZooKeeperServer() {
+    if (zkServerTask == taskPartition) {
       File zkDirFile = new File(this.zkDir);
       try {
         if (LOG.isInfoEnabled()) {
@@ -574,10 +465,14 @@ public class ZooKeeperManager {
         LOG.warn("onlineZooKeeperServers: Failed to delete " +
             "directory " + this.zkDir, e);
       }
-      generateZooKeeperConfigFile(new ArrayList<>(zkServerPortMap.keySet()));
+      generateZooKeeperConfig();
       synchronized (this) {
         zkRunner = createRunner();
-        zkRunner.start(zkDir, configFilePath);
+        int port = zkRunner.start(zkDir, config);
+        if (port > 0) {
+          zkBasePort = port;
+          updateZkPortString();
+        }
       }
 
       // Once the server is up and running, notify that this server is up
@@ -630,7 +525,8 @@ public class ZooKeeperManager {
       }
       Path myReadyPath = new Path(
           serverDirectory, myHostname +
-          HOSTNAME_TASK_SEPARATOR + taskPartition);
+          HOSTNAME_TASK_SEPARATOR + taskPartition +
+          HOSTNAME_TASK_SEPARATOR + zkBasePort);
       try {
         if (LOG.isInfoEnabled()) {
           LOG.info("onlineZooKeeperServers: Creating my filestamp " +
@@ -642,39 +538,37 @@ public class ZooKeeperManager {
             "task failed) to create filestamp " + myReadyPath, e);
       }
     } else {
-      List<String> foundList = new ArrayList<>();
       int readyRetrievalAttempt = 0;
+      String foundServer = null;
       while (true) {
         try {
           FileStatus [] fileStatusArray =
               fs.listStatus(serverDirectory);
-          foundList.clear();
           if ((fileStatusArray != null) &&
               (fileStatusArray.length > 0)) {
             for (int i = 0; i < fileStatusArray.length; ++i) {
               String[] hostnameTaskArray =
                   fileStatusArray[i].getPath().getName().split(
                       HOSTNAME_TASK_SEPARATOR);
-              if (hostnameTaskArray.length != 2) {
+              if (hostnameTaskArray.length != 3) {
                 throw new RuntimeException(
                     "getZooKeeperServerList: Task 0 failed " +
                         "to parse " +
                         fileStatusArray[i].getPath().getName());
               }
-              foundList.add(hostnameTaskArray[0]);
+              foundServer = hostnameTaskArray[0];
+              zkBasePort = Integer.parseInt(hostnameTaskArray[2]);
+              updateZkPortString();
             }
             if (LOG.isInfoEnabled()) {
               LOG.info("onlineZooKeeperServers: Got " +
-                  foundList + " " +
-                  foundList.size() + " hosts from " +
-                  fileStatusArray.length +
-                  " ready servers when " +
-                  serverCount +
-                  " required (polling period is " +
+                  foundServer + " on port " +
+                  zkBasePort +
+                  " (polling period is " +
                   pollMsecs + ") on attempt " +
                   readyRetrievalAttempt);
             }
-            if (foundList.containsAll(zkServerPortMap.keySet())) {
+            if (zkServerHost.equals(foundServer)) {
               break;
             }
           } else {
@@ -808,12 +702,7 @@ public class ZooKeeperManager {
    * @return either in process or out of process wrapper.
    */
   private ZooKeeperRunner createRunner() {
-    ZooKeeperRunner runner;
-    if (GiraphConstants.ZOOKEEEPER_RUNS_IN_PROCESS.get(conf)) {
-      runner = new InProcessZooKeeperRunner();
-    } else {
-      runner = new OutOfProcessZooKeeperRunner();
-    }
+    ZooKeeperRunner runner = new InProcessZooKeeperRunner();
     runner.setConf(conf);
     return runner;
   }

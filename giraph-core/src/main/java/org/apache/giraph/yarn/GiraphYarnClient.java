@@ -444,19 +444,6 @@ public class GiraphYarnClient {
   }
 
   /**
-   * Check if the job's configuration is for a local run. These can all be
-   * removed as we expand the functionality of the "pure YARN" Giraph profile.
-   */
-  private void checkJobLocalZooKeeperSupported() {
-    final boolean isZkExternal = giraphConf.isZookeeperExternal();
-    final String checkZkList = giraphConf.getZookeeperList();
-    if (!isZkExternal || checkZkList.isEmpty()) {
-      throw new IllegalArgumentException("Giraph on YARN does not currently" +
-          "support Giraph-managed ZK instances: use a standalone ZooKeeper.");
-    }
-  }
-
-  /**
    * Register all local jar files from GiraphConstants.GIRAPH_YARN_LIBJARS
    * in the LocalResources map, copy to HDFS on that same registered path.
    * @param map the LocalResources list to populate.

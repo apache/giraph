@@ -256,11 +256,6 @@ end[PURE_YARN]*/
     context
         .setStatus("setup: Connected to Zookeeper service " + serverPortList);
     this.graphFunctions = determineGraphFunctions(conf, zkManager);
-    // Sometimes it takes a while to get multiple ZooKeeper servers up
-    if (conf.getZooKeeperServerCount() > 1) {
-      Thread.sleep(GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT *
-        GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME);
-    }
     try {
       instantiateBspService();
     } catch (IOException e) {
@@ -447,7 +442,7 @@ end[PURE_YARN]*/
       done = true;
       return true;
     }
-    zkManager.onlineZooKeeperServers();
+    zkManager.onlineZooKeeperServer();
     String serverPortList = zkManager.getZooKeeperServerPortString();
     conf.setZookeeperList(serverPortList);
     createZooKeeperCounter(serverPortList);
@@ -597,8 +592,7 @@ end[PURE_YARN]*/
       }
     } else {
       if (zkAlreadyProvided) {
-        int masterCount = conf.getZooKeeperServerCount();
-        if (taskPartition < masterCount) {
+        if (taskPartition == 0) {
           functions = GraphFunctions.MASTER_ONLY;
         } else {
           functions = GraphFunctions.WORKER_ONLY;
@@ -1061,6 +1055,21 @@ end[PURE_YARN]*/
    */
   public long getSuperstepGCTime() {
     return gcTimeMetric.count();
+  }
+
+  /**
+   * Returns a list of zookeeper servers to connect to.
+   * If the port is set to 0 and Giraph is starting a single
+   * ZooKeeper server, then Zookeeper will pick its own port.
+   * Otherwise, the ZooKeeper port set by the user will be used.
+   * @return host:port,host:port for each zookeeper
+   */
+  public String getZookeeperList() {
+    if (zkManager != null) {
+      return zkManager.getZooKeeperServerPortString();
+    } else {
+      return conf.getZookeeperList();
+    }
   }
 
   /**

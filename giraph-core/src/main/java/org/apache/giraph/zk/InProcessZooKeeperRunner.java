@@ -18,15 +18,17 @@
 package org.apache.giraph.zk;
 
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.DatadirCleanupManager;
-import org.apache.zookeeper.server.ServerConfig;
-import org.apache.zookeeper.server.ZooKeeperServerMain;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
+import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
 
 import javax.management.JMException;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -45,21 +47,13 @@ public class InProcessZooKeeperRunner
   private QuorumRunner quorumRunner = new QuorumRunner();
 
   @Override
-  public void start(String zkDir, final String configFilePath) {
-    Thread zkThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          quorumRunner.start(configFilePath);
-        } catch (IOException e) {
-          LOG.error("Unable to start zookeeper", e);
-        } catch (QuorumPeerConfig.ConfigException e) {
-          LOG.error("Invalid config, zookeeper failed", e);
-        }
-      }
-    });
-    zkThread.setDaemon(true);
-    zkThread.start();
+  public int start(String zkDir, final ZookeeperConfig config) {
+    try {
+      return quorumRunner.start(config);
+    } catch (IOException e) {
+      LOG.error("Unable to start zookeeper", e);
+    }
+    return -1;
   }
 
   @Override
@@ -89,30 +83,21 @@ public class InProcessZooKeeperRunner
 
     /**
      * Starts quorum and/or zookeeper service.
-     * @param configFilePath quorum and zookeeper configuration
-     * @throws IOException
-     * @throws QuorumPeerConfig.ConfigException if config
-     * is not formatted properly
+     * @param config quorum and zookeeper configuration
+     * @return zookeeper port
+     * @throws IOException if can't start zookeeper
      */
-    public void start(String configFilePath) throws IOException,
-        QuorumPeerConfig.ConfigException {
-      QuorumPeerConfig quorumPeerConfig = new QuorumPeerConfig();
-      quorumPeerConfig.parse(configFilePath);
+    public int start(ZookeeperConfig config) throws IOException {
       // Start and schedule the the purge task
       DatadirCleanupManager purgeMgr = new DatadirCleanupManager(
-          quorumPeerConfig
-          .getDataDir(), quorumPeerConfig.getDataLogDir(), quorumPeerConfig
-          .getSnapRetainCount(), quorumPeerConfig.getPurgeInterval());
+          config
+          .getDataDir(), config.getDataLogDir(),
+          GiraphConstants.ZOOKEEPER_SNAP_RETAIN_COUNT,
+          GiraphConstants.ZOOKEEPER_PURGE_INTERVAL);
       purgeMgr.start();
 
-      if (quorumPeerConfig.getServers().size() > 0) {
-        runFromConfig(quorumPeerConfig);
-      } else {
-        serverRunner = new ZooKeeperServerRunner();
-        serverRunner.start(configFilePath);
-      }
-
-      LOG.info("Initialization ended");
+      serverRunner = new ZooKeeperServerRunner();
+      return serverRunner.start(config);
     }
 
     /**
@@ -134,35 +119,89 @@ public class InProcessZooKeeperRunner
   /**
    * Wrapper around zookeeper service.
    */
-  private static class ZooKeeperServerRunner extends ZooKeeperServerMain {
+  public static class ZooKeeperServerRunner  {
+    /**
+     * Reference to zookeeper factory.
+     */
+    private ServerCnxnFactory cnxnFactory;
+    /**
+     * Reference to zookeeper server.
+     */
+    private ZooKeeperServer zkServer;
 
     /**
      * Start zookeeper service.
-     * @param configFilePath zookeeper configuration file
-     * @throws QuorumPeerConfig.ConfigException if config file is not
+     * @param config zookeeper configuration
      * formatted properly
+     * @return the port zookeeper has started on.
      * @throws IOException
      */
-    public void start(String configFilePath) throws
-        QuorumPeerConfig.ConfigException, IOException {
-      LOG.warn("Either no config or no quorum defined in config, running " +
-          " in standalone mode");
+    public int start(ZookeeperConfig config) throws IOException {
+      LOG.warn("Either no config or no quorum defined in config, " +
+          "running in process");
       try {
         ManagedUtil.registerLog4jMBeans();
       } catch (JMException e) {
         LOG.warn("Unable to register log4j JMX control", e);
       }
 
-      ServerConfig serverConfig = new ServerConfig();
-      serverConfig.parse(configFilePath);
-      runFromConfig(serverConfig);
+      runFromConfig(config);
+      Thread zkThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            cnxnFactory.join();
+            if (zkServer.isRunning()) {
+              zkServer.shutdown();
+            }
+          } catch (InterruptedException e) {
+            LOG.error(e.getMessage(), e);
+          }
+
+        }
+      });
+      zkThread.setDaemon(true);
+      zkThread.start();
+      return zkServer.getClientPort();
     }
+
+
+    /**
+     * Run from a ServerConfig.
+     * @param config ServerConfig to use.
+     * @throws IOException
+     */
+    public void runFromConfig(ZookeeperConfig config) throws IOException {
+      LOG.info("Starting server");
+      try {
+        // Note that this thread isn't going to be doing anything else,
+        // so rather than spawning another thread, we will just call
+        // run() in this thread.
+        // create a file logger url from the command line args
+        zkServer = new ZooKeeperServer();
+
+        FileTxnSnapLog ftxn = new FileTxnSnapLog(new
+            File(config.getDataLogDir()), new File(config.getDataDir()));
+        zkServer.setTxnLogFactory(ftxn);
+        zkServer.setTickTime(GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME);
+        zkServer.setMinSessionTimeout(config.getMinSessionTimeout());
+        zkServer.setMaxSessionTimeout(config.getMaxSessionTimeout());
+        cnxnFactory = ServerCnxnFactory.createFactory();
+        cnxnFactory.configure(config.getClientPortAddress(),
+            GiraphConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS);
+        cnxnFactory.startup(zkServer);
+      } catch (InterruptedException e) {
+        // warn, but generally this is ok
+        LOG.warn("Server interrupted", e);
+      }
+    }
+
 
     /**
      * Stop zookeeper service.
      */
     public void stop() {
-      shutdown();
+      cnxnFactory.shutdown();
     }
   }
 }

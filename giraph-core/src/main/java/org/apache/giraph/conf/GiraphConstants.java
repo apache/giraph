@@ -533,11 +533,6 @@ public interface GiraphConstants {
       new IntConfOption("giraph.zkServerlistPollMsecs", SECONDS.toMillis(3),
           "Polling interval to check for the ZooKeeper server data");
 
-  /** Number of nodes (not tasks) to run Zookeeper on */
-  IntConfOption ZOOKEEPER_SERVER_COUNT =
-      new IntConfOption("giraph.zkServerCount", 1,
-          "Number of nodes (not tasks) to run Zookeeper on");
-
   /** ZooKeeper port to use */
   IntConfOption ZOOKEEPER_SERVER_PORT =
       new IntConfOption("giraph.zkServerPort", 22181, "ZooKeeper port to use");
@@ -557,15 +552,6 @@ public interface GiraphConstants {
       new IntConfOption("giraph.zkOpsRetryWaitMsecs", SECONDS.toMillis(5),
           "Msecs to wait before retrying a failed ZooKeeper op due to " +
           "connection loss.");
-
-  /**
-   * Should start zookeeper inside master java process or separately?
-   * In process by default.
-   */
-  BooleanConfOption ZOOKEEEPER_RUNS_IN_PROCESS = new BooleanConfOption(
-      "giraph.zkRunsInProcess",
-      true, "If true run zookeeper in master process, if false starts " +
-      "separate process for zookeeper");
 
   /** TCP backlog (defaults to number of workers) */
   IntConfOption TCP_BACKLOG = new IntConfOption("giraph.tcpBacklog", 1,
@@ -898,13 +884,6 @@ public interface GiraphConstants {
    */
   String PARTITION_VERTEX_KEY_SPACE_SIZE = "giraph.vertexKeySpaceSize";
 
-  /** Java opts passed to ZooKeeper startup */
-  StrConfOption ZOOKEEPER_JAVA_OPTS =
-      new StrConfOption("giraph.zkJavaOpts",
-          "-Xmx512m -XX:ParallelGCThreads=4 -XX:+UseConcMarkSweepGC " +
-          "-XX:CMSInitiatingOccupancyFraction=70 -XX:MaxGCPauseMillis=100",
-          "Java opts passed to ZooKeeper startup");
-
   /**
    *  How often to checkpoint (i.e. 0, means no checkpoint,
    *  1 means every superstep, 2 is every two supersteps, etc.).
@@ -1004,14 +983,12 @@ public interface GiraphConstants {
 
   /** Default ZooKeeper tick time. */
   int DEFAULT_ZOOKEEPER_TICK_TIME = 6000;
-  /** Default ZooKeeper init limit (in ticks). */
-  int DEFAULT_ZOOKEEPER_INIT_LIMIT = 10;
-  /** Default ZooKeeper sync limit (in ticks). */
-  int DEFAULT_ZOOKEEPER_SYNC_LIMIT = 5;
-  /** Default ZooKeeper snap count. */
-  int DEFAULT_ZOOKEEPER_SNAP_COUNT = 50000;
   /** Default ZooKeeper maximum client connections. */
   int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
+  /** Number of snapshots to be retained after purge */
+  int ZOOKEEPER_SNAP_RETAIN_COUNT = 3;
+  /** Zookeeper purge interval in hours */
+  int ZOOKEEPER_PURGE_INTERVAL = 1;
   /** ZooKeeper minimum session timeout */
   IntConfOption ZOOKEEPER_MIN_SESSION_TIMEOUT =
       new IntConfOption("giraph.zKMinSessionTimeout", MINUTES.toMillis(10),
@@ -1020,13 +997,6 @@ public interface GiraphConstants {
   IntConfOption ZOOKEEPER_MAX_SESSION_TIMEOUT =
       new IntConfOption("giraph.zkMaxSessionTimeout", MINUTES.toMillis(15),
           "ZooKeeper maximum session timeout");
-  /** ZooKeeper force sync */
-  BooleanConfOption ZOOKEEPER_FORCE_SYNC =
-      new BooleanConfOption("giraph.zKForceSync", false,
-          "ZooKeeper force sync");
-  /** ZooKeeper skip ACLs */
-  BooleanConfOption ZOOKEEPER_SKIP_ACL =
-      new BooleanConfOption("giraph.ZkSkipAcl", true, "ZooKeeper skip ACLs");
 
   /**
    * Whether to use SASL with DIGEST and Hadoop Job Tokens to authenticate

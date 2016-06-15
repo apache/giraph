@@ -89,9 +89,6 @@ public abstract class BspService<I extends WritableComparable,
   public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
   /** Superstep scope */
   public static final String SUPERSTEP_DIR = "/_superstepDir";
-  /** Where the merged aggregators are located */
-  public static final String MERGED_AGGREGATOR_DIR =
-      "/_mergedAggregatorDir";
   /** Healthy workers register here. */
   public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
   /** Unhealthy workers register here. */
@@ -275,7 +272,7 @@ public abstract class BspService<I extends WritableComparable,
         getCheckpointBasePath(getConfiguration(), getJobId());
 
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
-    String serverPortList = conf.getZookeeperList();
+    String serverPortList = graphTaskManager.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
     memoryObserverPath = basePath + MEMORY_OBSERVER_DIR;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,

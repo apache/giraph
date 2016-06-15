@@ -26,23 +26,18 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.InMemoryVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.zk.InProcessZooKeeperRunner;
+import org.apache.giraph.zk.ZookeeperConfig;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.server.ServerConfig;
-import org.apache.zookeeper.server.ZooKeeperServerMain;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.net.InetSocketAddress;
 
 /**
  * A base class for running internal tests on a vertex
@@ -56,10 +51,6 @@ import java.util.concurrent.TimeUnit;
  */
 @SuppressWarnings("unchecked")
 public class InternalVertexRunner {
-  /** Range of ZooKeeper ports to use for tests */
-  public static final int LOCAL_ZOOKEEPER_PORT_FROM = 22182;
-  /** Range of ZooKeeper ports to use for tests */
-  public static final int LOCAL_ZOOKEEPER_PORT_TO = 65535;
 
   /** Logger */
   private static final Logger LOG =
@@ -85,42 +76,30 @@ public class InternalVertexRunner {
   }
 
   /**
-   * Run the standalone ZooKeeper process and the job.
+   * Run the ZooKeeper in-process and the job.
    *
-   * @param quorumPeerConfig Quorum peer configuration
+   * @param zookeeperConfig Quorum peer configuration
    * @param giraphJob Giraph job to run
    * @return True if successful, false otherwise
    */
-  private static boolean runZooKeeperAndJob(QuorumPeerConfig quorumPeerConfig,
-                                            GiraphJob giraphJob) {
-    final InternalZooKeeper zookeeper = new InternalZooKeeper();
-    final ServerConfig zkConfig = new ServerConfig();
-    zkConfig.readFrom(quorumPeerConfig);
+  private static boolean runZooKeeperAndJob(
+      final ZookeeperConfig zookeeperConfig,
+      GiraphJob giraphJob) throws IOException {
+    final InProcessZooKeeperRunner.ZooKeeperServerRunner zookeeper =
+        new InProcessZooKeeperRunner.ZooKeeperServerRunner();
 
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
-    executorService.execute(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          zookeeper.runFromConfig(zkConfig);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    });
+    int port = zookeeper.start(zookeeperConfig);
+
+    LOG.info("Started test zookeeper on port " + port);
+    GiraphConstants.ZOOKEEPER_LIST.set(giraphJob.getConfiguration(),
+        "localhost:" + port);
     try {
       return giraphJob.run(true);
     } catch (InterruptedException |
         ClassNotFoundException | IOException e) {
       LOG.error("runZooKeeperAndJob: Got exception on running", e);
     } finally {
-      zookeeper.end();
-      executorService.shutdown();
-      try {
-        executorService.awaitTermination(1, TimeUnit.MINUTES);
-      } catch (InterruptedException e) {
-        LOG.error("runZooKeeperAndJob: Interrupted on waiting", e);
-      }
+      zookeeper.stop();
     }
 
     return false;
@@ -192,13 +171,9 @@ public class InternalVertexRunner {
       FileUtils.writeLines(edgeInputFile, edgeInputData);
     }
 
-    int localZookeeperPort = findAvailablePort();
-
     conf.setWorkerConfiguration(1, 1, 100.0f);
     GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
-    conf.setZookeeperList("localhost:" +
-          String.valueOf(localZookeeperPort));
 
     conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
     GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
@@ -226,10 +201,7 @@ public class InternalVertexRunner {
         new Path(outputDir.toString()));
 
     // Configure a local zookeeper instance
-    Properties zkProperties = configLocalZooKeeper(zkDir, localZookeeperPort);
-
-    QuorumPeerConfig qpConfig = new QuorumPeerConfig();
-    qpConfig.parseProperties(zkProperties);
+    ZookeeperConfig qpConfig = configLocalZooKeeper(zkDir);
 
     boolean success = runZooKeeperAndJob(qpConfig, job);
     if (!success) {
@@ -308,27 +280,17 @@ public class InternalVertexRunner {
 
     InMemoryVertexInputFormat.setGraph(graph);
 
-    int localZookeeperPort = findAvailablePort();
-
     conf.setWorkerConfiguration(1, 1, 100.0f);
     GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
-    GiraphConstants.ZOOKEEPER_LIST.set(conf, "localhost:" +
-          String.valueOf(localZookeeperPort));
+    GiraphConstants.ZOOKEEPER_SERVER_PORT.set(conf, 0);
 
     conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
     GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
         zkMgrDir.toString());
     GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir);
 
-    // Configure a local zookeeper instance
-    Properties zkProperties = configLocalZooKeeper(zkDir, localZookeeperPort);
-
-    QuorumPeerConfig qpConfig = new QuorumPeerConfig();
-    qpConfig.parseProperties(zkProperties);
-
-    runZooKeeperAndJob(qpConfig, job);
-
+    runZooKeeperAndJob(configLocalZooKeeper(zkDir), job);
   }
 
   /**
@@ -391,66 +353,15 @@ public class InternalVertexRunner {
    * Configuration options for running local ZK.
    *
    * @param zkDir directory for ZK to hold files in.
-   * @param zookeeperPort port zookeeper will listen on
-   * @return Properties configured for local ZK.
+   * @return zookeeper configuration object
    */
-  private static Properties configLocalZooKeeper(File zkDir,
-                                                 int zookeeperPort) {
-    Properties zkProperties = new Properties();
-    zkProperties.setProperty("tickTime", "2000");
-    zkProperties.setProperty("dataDir", zkDir.getAbsolutePath());
-    zkProperties.setProperty("clientPort",
-        String.valueOf(zookeeperPort));
-    zkProperties.setProperty("maxClientCnxns", "10000");
-    zkProperties.setProperty("minSessionTimeout", "10000");
-    zkProperties.setProperty("maxSessionTimeout", "100000");
-    zkProperties.setProperty("initLimit", "10");
-    zkProperties.setProperty("syncLimit", "5");
-    zkProperties.setProperty("snapCount", "50000");
-    return zkProperties;
+  private static ZookeeperConfig configLocalZooKeeper(File zkDir) {
+    ZookeeperConfig config = new ZookeeperConfig();
+    config.setMaxSessionTimeout(100000);
+    config.setMinSessionTimeout(10000);
+    config.setClientPortAddress(new InetSocketAddress("localhost", 0));
+    config.setDataDir(zkDir.getAbsolutePath());
+    return config;
   }
 
-  /**
-   * Scans for available port. Returns first port where
-   * we can open server socket.
-   * Note: if another process opened port with SO_REUSEPORT then this
-   * function may return port that is in use. It actually happens
-   * with NetCat on Mac.
-   * @return available port
-   */
-  private static int findAvailablePort() {
-    for (int port = LOCAL_ZOOKEEPER_PORT_FROM;
-         port < LOCAL_ZOOKEEPER_PORT_TO; port++) {
-      ServerSocket ss = null;
-      try {
-        ss = new ServerSocket(port);
-        ss.setReuseAddress(true);
-        return port;
-      } catch (IOException e) {
-        LOG.info("findAvailablePort: port " + port + " is in use.");
-      } finally {
-        if (ss != null && !ss.isClosed()) {
-          try {
-            ss.close();
-          } catch (IOException e) {
-            LOG.info("findAvailablePort: can't close test socket", e);
-          }
-        }
-      }
-    }
-    throw new RuntimeException("No port found in the range [ " +
-        LOCAL_ZOOKEEPER_PORT_FROM + ", " + LOCAL_ZOOKEEPER_PORT_TO + ")");
-  }
-
-  /**
-   * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown
-   */
-  private static class InternalZooKeeper extends ZooKeeperServerMain {
-    /**
-     * Shutdown the ZooKeeper instance.
-     */
-    void end() {
-      shutdown();
-    }
-  }
 }

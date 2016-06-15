@@ -834,16 +834,6 @@ public class GiraphConfiguration extends Configuration
     LOCAL_TEST_MODE.set(this, flag);
   }
 
-  /**
-   * The number of server tasks in our ZK quorum for
-   * this job run.
-   *
-   * @return the number of ZK servers in the quorum
-   */
-  public int getZooKeeperServerCount() {
-    return ZOOKEEPER_SERVER_COUNT.get(this);
-  }
-
   public int getZooKeeperSessionTimeout() {
     return ZOOKEEPER_SESSION_TIMEOUT.get(this);
   }
@@ -911,14 +901,6 @@ public class GiraphConfiguration extends Configuration
 
   public int getZooKeeperMaxSessionTimeout() {
     return ZOOKEEPER_MAX_SESSION_TIMEOUT.get(this);
-  }
-
-  public boolean getZooKeeperForceSync() {
-    return ZOOKEEPER_FORCE_SYNC.get(this);
-  }
-
-  public boolean getZooKeeperSkipAcl() {
-    return ZOOKEEPER_SKIP_ACL.get(this);
   }
 
   /**
