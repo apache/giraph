@@ -17,9 +17,11 @@
  */
 package org.apache.giraph.utils;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.UTFDataFormatException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -70,21 +72,42 @@ public class TestUnsafeByteArrayOutputStream {
 
     @Test
     public void testWriteUTF() throws IOException {
-        UnsafeByteArrayOutputStream os = new UnsafeByteArrayOutputStream();
-        int length = os.getByteArray().length;
-
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < 20; i++) {
             sb.append("\u06ea");
         }
 
         String s = sb.toString();
+
+        assertEquals(s, writeAndReadUTF(s));
+    }
+
+    @Test
+    public void testWriteLongUTF() throws IOException {
+        int maxLength = 65535;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < maxLength; i++) {
+            sb.append("a");
+        }
+
+        String s = sb.toString();
+
+        assertEquals(s, writeAndReadUTF(s));
+
+        s = sb.append("a").toString();
+        try {
+            writeAndReadUTF(s);
+            throw new IllegalStateException("Exception expected");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof UTFDataFormatException);
+        }
+    }
+
+    private String writeAndReadUTF(String s) throws IOException {
+        UnsafeByteArrayOutputStream os = new UnsafeByteArrayOutputStream();
         os.writeUTF(s);
-
-        UnsafeByteArrayInputStream is = new UnsafeByteArrayInputStream(os.getByteArray());
-
-        assertEquals(s, is.readUTF());
-
         os.close();
+        UnsafeByteArrayInputStream is = new UnsafeByteArrayInputStream(os.getByteArray());
+        return is.readUTF();
     }
 }
