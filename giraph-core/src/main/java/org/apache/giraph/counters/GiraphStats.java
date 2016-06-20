@@ -62,6 +62,9 @@ public class GiraphStats extends HadoopCountersBase {
   /** aggregate bytes stored to local disks in out-of-core */
   public static final String OOC_BYTES_STORED_NAME =
       "Aggregate bytes stored to local disks (out-of-core)";
+  /** lowest percentage of graph in memory throughout the execution */
+  public static final String LOWEST_GRAPH_PERCENTAGE_IN_MEMORY_NAME =
+      "Lowest percentage of graph in memory so far (out-of-core)";
 
   /** Singleton instance for everyone to use */
   private static GiraphStats INSTANCE;
@@ -92,8 +95,10 @@ public class GiraphStats extends HadoopCountersBase {
   private static final int OOC_BYTES_LOADED = 11;
   /** Aggregate OOC stored bytes counter */
   private static final int OOC_BYTES_STORED = 12;
+  /** Lowest percentage of graph in memory over time */
+  private static final int LOWEST_GRAPH_PERCENTAGE_IN_MEMORY = 13;
   /** Number of counters in this class */
-  private static final int NUM_COUNTERS = 13;
+  private static final int NUM_COUNTERS = 14;
 
   /** All the counters stored */
   private final GiraphHadoopCounter[] counters;
@@ -123,6 +128,9 @@ public class GiraphStats extends HadoopCountersBase {
         getCounter(AGGREGATE_SENT_MESSAGE_BYTES_NAME);
     counters[OOC_BYTES_LOADED] = getCounter(OOC_BYTES_LOADED_NAME);
     counters[OOC_BYTES_STORED] = getCounter(OOC_BYTES_STORED_NAME);
+    counters[LOWEST_GRAPH_PERCENTAGE_IN_MEMORY] =
+        getCounter(LOWEST_GRAPH_PERCENTAGE_IN_MEMORY_NAME);
+    counters[LOWEST_GRAPH_PERCENTAGE_IN_MEMORY].setValue(100);
   }
 
   /**
@@ -258,6 +266,10 @@ public class GiraphStats extends HadoopCountersBase {
    */
   public GiraphHadoopCounter getAggregateOOCBytesStored() {
     return counters[OOC_BYTES_STORED];
+  }
+
+  public GiraphHadoopCounter getLowestGraphPercentageInMemory() {
+    return counters[LOWEST_GRAPH_PERCENTAGE_IN_MEMORY];
   }
 
   @Override

@@ -46,6 +46,8 @@ public class GlobalStats implements Writable {
   private long oocStoreBytesCount = 0;
   /** Bytes of data loaded to disk in the last superstep */
   private long oocLoadBytesCount = 0;
+  /** Lowest percentage of graph in memory throughout the execution */
+  private int lowestGraphPercentageInMemory = 100;
   /**
    * Master's decision on whether we should checkpoint and
    * what to do next.
@@ -108,6 +110,15 @@ public class GlobalStats implements Writable {
     this.checkpointStatus = checkpointStatus;
   }
 
+  public int getLowestGraphPercentageInMemory() {
+    return lowestGraphPercentageInMemory;
+  }
+
+  public void setLowestGraphPercentageInMemory(
+      int lowestGraphPercentageInMemory) {
+    this.lowestGraphPercentageInMemory = lowestGraphPercentageInMemory;
+  }
+
   /**
    * Add bytes loaded to the global stats.
    *
@@ -151,6 +162,9 @@ public class GlobalStats implements Writable {
     edgeCount = input.readLong();
     messageCount = input.readLong();
     messageBytesCount = input.readLong();
+    oocLoadBytesCount = input.readLong();
+    oocStoreBytesCount = input.readLong();
+    lowestGraphPercentageInMemory = input.readInt();
     haltComputation = input.readBoolean();
     if (input.readBoolean()) {
       checkpointStatus = CheckpointStatus.values()[input.readInt()];
@@ -166,6 +180,9 @@ public class GlobalStats implements Writable {
     output.writeLong(edgeCount);
     output.writeLong(messageCount);
     output.writeLong(messageBytesCount);
+    output.writeLong(oocLoadBytesCount);
+    output.writeLong(oocStoreBytesCount);
+    output.writeInt(lowestGraphPercentageInMemory);
     output.writeBoolean(haltComputation);
     output.writeBoolean(checkpointStatus != null);
     if (checkpointStatus != null) {

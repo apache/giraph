@@ -181,6 +181,17 @@ public final class WorkerProgress extends WorkerProgressStats {
     freeMemoryFraction = MemoryUtils.freeMemoryFraction();
   }
 
+  /**
+   * Update lowest percentage of graph which stayed in memory so far in the
+   * execution
+   *
+   * @param fraction the fraction of graph in memory so far in this superstep
+   */
+  public synchronized void updateLowestGraphPercentageInMemory(int fraction) {
+    lowestGraphPercentageInMemory =
+        Math.min(lowestGraphPercentageInMemory, fraction);
+  }
+
   @ThriftField(1)
   public synchronized long getCurrentSuperstep() {
     return currentSuperstep;
@@ -279,6 +290,11 @@ public final class WorkerProgress extends WorkerProgressStats {
   @ThriftField(20)
   public synchronized double getFreeMemoryFraction() {
     return freeMemoryFraction;
+  }
+
+  @ThriftField(21)
+  public synchronized int getLowestGraphPercentageInMemory() {
+    return lowestGraphPercentageInMemory;
   }
 
   public synchronized boolean isInputSuperstep() {
@@ -391,5 +407,11 @@ public final class WorkerProgress extends WorkerProgressStats {
   @ThriftField
   public synchronized void setTaskId(int taskId) {
     this.taskId = taskId;
+  }
+
+  @ThriftField
+  public synchronized void setLowestGraphPercentageInMemory(
+      int lowestGraphPercentageInMemory) {
+    this.lowestGraphPercentageInMemory = lowestGraphPercentageInMemory;
   }
 }

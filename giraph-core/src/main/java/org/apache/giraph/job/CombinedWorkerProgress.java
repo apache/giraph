@@ -64,6 +64,13 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
   private int workerWithMinFreeMemory;
   /** Minimum fraction of free memory on a worker */
   private double minFreeMemoryFraction = Double.MAX_VALUE;
+  /**
+   * Minimum percentage of graph in memory in any worker so far in the
+   * computation
+   */
+  private int minGraphPercentageInMemory = 100;
+  /** Id of the worker with min percentage of graph in memory */
+  private int workerWithMinGraphPercentageInMemory = -1;
 
   /**
    * Constructor
@@ -116,6 +123,11 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
       minFreeMemoryFraction = Math.min(minFreeMemoryFraction,
           workerProgress.getFreeMemoryFraction());
       freeMemoryMB += workerProgress.getFreeMemoryMB();
+      int percentage = workerProgress.getLowestGraphPercentageInMemory();
+      if (percentage < minGraphPercentageInMemory) {
+        minGraphPercentageInMemory = percentage;
+        workerWithMinGraphPercentageInMemory = workerProgress.getTaskId();
+      }
     }
     if (!Iterables.isEmpty(workerProgresses)) {
       freeMemoryMB /= Iterables.size(workerProgresses);
@@ -163,6 +175,12 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
         DECIMAL_FORMAT.format(freeMemoryMB)).append("MB");
     if (minFreeMemoryFraction < normalFreeMemoryFraction) {
       sb.append(", ******* YOUR JOB IS RUNNING LOW ON MEMORY *******");
+    }
+    if (minGraphPercentageInMemory < 100) {
+      sb.append(" Spilling ")
+          .append(100 - minGraphPercentageInMemory)
+          .append("% of data to external storage on worker ")
+          .append(workerWithMinGraphPercentageInMemory);
     }
     return sb.toString();
   }

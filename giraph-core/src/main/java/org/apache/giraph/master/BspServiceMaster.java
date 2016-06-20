@@ -946,6 +946,12 @@ public class BspServiceMaster<I extends WritableComparable,
               workerMetrics.getBytesLoadedFromDisk());
           globalStats.addOocStoreBytesCount(
               workerMetrics.getBytesStoredOnDisk());
+          // Find the lowest percentage of graph in memory across all workers
+          // for one superstep
+          globalStats.setLowestGraphPercentageInMemory(
+              Math.min(globalStats.getLowestGraphPercentageInMemory(),
+                  (int) Math.round(
+                      workerMetrics.getGraphPercentageInMemory())));
           aggregatedMetrics.add(workerMetrics, hostnamePartitionId);
         }
       } catch (JSONException e) {
@@ -2058,5 +2064,10 @@ public class BspServiceMaster<I extends WritableComparable,
       .increment(globalStats.getOocLoadBytesCount());
     gs.getAggregateOOCBytesStored()
       .increment(globalStats.getOocStoreBytesCount());
+    // Updating the lowest percentage of graph in memory throughout the
+    // execution across all the supersteps
+    int percentage = (int) gs.getLowestGraphPercentageInMemory().getValue();
+    gs.getLowestGraphPercentageInMemory().setValue(
+        Math.min(percentage, globalStats.getLowestGraphPercentageInMemory()));
   }
 }

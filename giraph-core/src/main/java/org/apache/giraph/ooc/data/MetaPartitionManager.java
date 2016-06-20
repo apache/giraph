@@ -20,9 +20,11 @@ package org.apache.giraph.ooc.data;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.worker.BspServiceWorker;
+import org.apache.giraph.worker.WorkerProgress;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -87,6 +89,16 @@ public class MetaPartitionManager {
    * processing
    */
   private final Random randomGenerator;
+  /**
+   * What is the lowest fraction of partitions in memory, relative to the total
+   * number of available partitions? This is an indirect estimation of the
+   * amount of graph in memory, which can be used to estimate how many more
+   * machines needed to avoid out-of-core execution. At the beginning all the
+   * graph is in memory, so the fraction is 1. This fraction is calculated per
+   * superstep.
+   */
+  private final AtomicDouble lowestGraphFractionInMemory =
+      new AtomicDouble(1);
 
   /**
    * Constructor
@@ -123,6 +135,24 @@ public class MetaPartitionManager {
    */
   public int getNumPartitions() {
     return partitions.size();
+  }
+
+  public double getLowestGraphFractionInMemory() {
+    return lowestGraphFractionInMemory.get();
+  }
+
+  /**
+   * Update the lowest fraction of graph in memory so to have a more accurate
+   * information in one of the counters.
+   */
+  private synchronized void updateGraphFractionInMemory() {
+    double graphInMemory =
+        (double) getNumInMemoryPartitions() / getNumPartitions();
+    if (graphInMemory < lowestGraphFractionInMemory.get()) {
+      lowestGraphFractionInMemory.set(graphInMemory);
+      WorkerProgress.get().updateLowestGraphPercentageInMemory(
+          (int) (graphInMemory * 100));
+    }
   }
 
   /**
@@ -592,6 +622,7 @@ public class MetaPartitionManager {
    */
   public void doneOffloadingPartition(int partitionId) {
     numInMemoryPartitions.getAndDecrement();
+    updateGraphFractionInMemory();
     MetaPartition meta = partitions.get(partitionId);
     int owner = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
     synchronized (meta) {
@@ -618,6 +649,8 @@ public class MetaPartitionManager {
       dictionary.reset();
     }
     numPartitionsProcessed.set(0);
+    lowestGraphFractionInMemory.set((double) getNumInMemoryPartitions() /
+        getNumPartitions());
   }
 
   /**

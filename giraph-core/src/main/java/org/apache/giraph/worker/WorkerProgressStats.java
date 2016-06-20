@@ -72,6 +72,9 @@ public class WorkerProgressStats {
   /** Fraction of memory that's free */
   protected double freeMemoryFraction;
 
+  /** Lowest percentage of graph in memory throughout the execution so far */
+  protected int lowestGraphPercentageInMemory = 100;
+
   public boolean isInputSuperstep() {
     return currentSuperstep == -1;
   }

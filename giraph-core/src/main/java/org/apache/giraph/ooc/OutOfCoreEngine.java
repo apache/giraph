@@ -19,7 +19,7 @@
 package org.apache.giraph.ooc;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
-import com.yammer.metrics.util.PercentGauge;
+import com.yammer.metrics.core.Gauge;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
@@ -485,15 +485,10 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    superstepMetrics.getGauge(GRAPH_PERCENTAGE_IN_MEMORY, new PercentGauge() {
+    superstepMetrics.getGauge(GRAPH_PERCENTAGE_IN_MEMORY, new Gauge<Double>() {
       @Override
-      protected double getNumerator() {
-        return metaPartitionManager.getNumInMemoryPartitions();
-      }
-
-      @Override
-      protected double getDenominator() {
-        return metaPartitionManager.getNumPartitions();
+      public Double value() {
+        return metaPartitionManager.getLowestGraphFractionInMemory() * 100;
       }
     });
   }

@@ -68,7 +68,7 @@ public class WorkerSuperstepMetrics implements Writable {
     superstepGCTimer.setTimeUnit(TimeUnit.MILLISECONDS);
     bytesLoadedFromDisk = 0;
     bytesStoredOnDisk = 0;
-    graphPercentageInMemory = 0;
+    graphPercentageInMemory = 100;
   }
 
   /**
@@ -93,8 +93,6 @@ public class WorkerSuperstepMetrics implements Writable {
         registry.getExistingGauge(OutOfCoreEngine.GRAPH_PERCENTAGE_IN_MEMORY);
     if (gauge != null) {
       graphPercentageInMemory = gauge.value();
-    } else {
-      graphPercentageInMemory = 100;
     }
     return this;
   }
