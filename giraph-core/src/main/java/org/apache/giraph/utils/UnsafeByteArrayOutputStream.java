@@ -290,9 +290,10 @@ public class UnsafeByteArrayOutputStream extends OutputStream
       }
     }
 
-    if (utflen > 65535)
+    if (utflen > 65535) {
       throw new UTFDataFormatException(
           "encoded string too long: " + utflen + " bytes");
+    }
 
     ensureSize(utflen + SIZE_OF_SHORT);
     writeShort(utflen);
