@@ -88,16 +88,22 @@ public class InProcessZooKeeperRunner
      * @throws IOException if can't start zookeeper
      */
     public int start(ZookeeperConfig config) throws IOException {
+      serverRunner = new ZooKeeperServerRunner();
+      //Make sure zookeeper starts first and purge manager last
+      //This is important because zookeeper creates a folder
+      //strucutre on the local disk. Purge manager also tries
+      //to create it but from a different thread and can run into
+      //race condition. See FileTxnSnapLog source code for details.
+      int port = serverRunner.start(config);
       // Start and schedule the the purge task
       DatadirCleanupManager purgeMgr = new DatadirCleanupManager(
           config
-          .getDataDir(), config.getDataLogDir(),
+              .getDataDir(), config.getDataLogDir(),
           GiraphConstants.ZOOKEEPER_SNAP_RETAIN_COUNT,
           GiraphConstants.ZOOKEEPER_PURGE_INTERVAL);
       purgeMgr.start();
 
-      serverRunner = new ZooKeeperServerRunner();
-      return serverRunner.start(config);
+      return port;
     }
 
     /**
