@@ -38,6 +38,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.function.Predicate;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.utils.PipelineUtils;
@@ -930,6 +931,27 @@ public class NettyClient {
         System.currentTimeMillis())) {
       return;
     }
+    resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
+      @Override
+      public boolean apply(RequestInfo requestInfo) {
+        ChannelFuture writeFuture = requestInfo.getWriteFuture();
+        // If not connected anymore, request failed, or the request is taking
+        // too long, re-establish and resend
+        return !writeFuture.channel().isActive() ||
+          (writeFuture.isDone() && !writeFuture.isSuccess()) ||
+          (requestInfo.getElapsedMsecs() > maxRequestMilliseconds);
+      }
+    });
+  }
+
+  /**
+   * Resend requests which satisfy predicate
+   *
+   * @param shouldResendRequestPredicate Predicate to use to check whether
+   *                                     request should be resent
+   */
+  private void resendRequestsWhenNeeded(
+      Predicate<RequestInfo> shouldResendRequestPredicate) {
     // Check if there are open requests which have been sent a long time ago,
     // and if so, resend them.
     List<ClientRequestId> addedRequestIds = Lists.newArrayList();
@@ -943,11 +965,8 @@ public class NettyClient {
       if (writeFuture == null) {
         continue;
       }
-      // If not connected anymore, request failed, or the request is taking
-      // too long, re-establish and resend
-      if (!writeFuture.channel().isActive() ||
-          (writeFuture.isDone() && !writeFuture.isSuccess()) ||
-          (requestInfo.getElapsedMsecs() > maxRequestMilliseconds)) {
+      // If request should be resent
+      if (shouldResendRequestPredicate.apply(requestInfo)) {
         LOG.warn("checkRequestsForProblems: Problem with request id " +
             entry.getKey() + " connected = " +
             writeFuture.channel().isActive() +
@@ -1044,16 +1063,31 @@ public class NettyClient {
   }
 
   /**
+   * Resend requests related to channel which failed
+   *
+   * @param future ChannelFuture of the failed channel
+   */
+  private void checkRequestsAfterChannelFailure(final ChannelFuture future) {
+    resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
+      @Override
+      public boolean apply(RequestInfo requestInfo) {
+        return requestInfo.getWriteFuture() == future;
+      }
+    });
+  }
+
+  /**
    * This listener class just dumps exception stack traces if
    * something happens.
    */
-  private static class LogOnErrorChannelFutureListener
+  private class LogOnErrorChannelFutureListener
       implements ChannelFutureListener {
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
       if (future.isDone() && !future.isSuccess()) {
         LOG.error("Request failed", future.cause());
+        checkRequestsAfterChannelFailure(future);
       }
     }
   }
