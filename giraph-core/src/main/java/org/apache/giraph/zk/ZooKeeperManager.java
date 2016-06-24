@@ -304,14 +304,11 @@ public class ZooKeeperManager {
    */
   private void createZooKeeperServerList() throws IOException,
       InterruptedException {
-    String host = null;
-    int port = 0;
-    while (host == null) {
+    String host;
+    String task;
+    while (true) {
       FileStatus [] fileStatusArray = fs.listStatus(taskDirectory);
       if (fileStatusArray.length > 0) {
-        checkState(fileStatusArray.length == 1,
-            "createZooKeeperServerList: too many " +
-            "status files found " + Arrays.toString(fileStatusArray));
         FileStatus fileStatus = fileStatusArray[0];
         String[] hostnameTaskArray =
             fileStatus.getPath().getName().split(
@@ -320,14 +317,14 @@ public class ZooKeeperManager {
             "createZooKeeperServerList: Task 0 failed " +
             "to parse " + fileStatus.getPath().getName());
         host = hostnameTaskArray[0];
-        port = Integer.parseInt(hostnameTaskArray[1]);
-        Thread.sleep(pollMsecs);
+        task = hostnameTaskArray[1];
+        break;
       }
+      Thread.sleep(pollMsecs);
     }
     String serverListFile =
         ZOOKEEPER_SERVER_LIST_FILE_PREFIX + host +
-        HOSTNAME_TASK_SEPARATOR + port +
-        HOSTNAME_TASK_SEPARATOR;
+        HOSTNAME_TASK_SEPARATOR + task;
     Path serverListPath =
         new Path(baseDirectory, serverListFile);
     if (LOG.isInfoEnabled()) {
@@ -573,7 +570,7 @@ public class ZooKeeperManager {
             }
           } else {
             if (LOG.isInfoEnabled()) {
-              LOG.info("onlineZooKeeperSErvers: Empty " +
+              LOG.info("onlineZooKeeperServers: Empty " +
                   "directory " + serverDirectory +
                   ", waiting " + pollMsecs + " msecs.");
             }
