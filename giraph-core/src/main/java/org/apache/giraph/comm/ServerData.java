@@ -150,7 +150,7 @@ public class ServerData<I extends WritableComparable,
       oocEngine = new OutOfCoreEngine(conf, service);
       partitionStore =
           new DiskBackedPartitionStore<I, V, E>(inMemoryPartitionStore,
-              conf, context, service, oocEngine);
+              conf, context, oocEngine);
       edgeStore =
           new DiskBackedEdgeStore<I, V, E>(inMemoryEdgeStore, conf, oocEngine);
     } else {
@@ -268,7 +268,7 @@ public class ServerData<I extends WritableComparable,
         nextCurrentMessageStore = messageStore;
       } else {
         nextCurrentMessageStore = new DiskBackedMessageStore<>(
-            conf, messageStore,
+            conf, oocEngine, messageStore,
             conf.getIncomingMessageClasses().useMessageCombiner(),
             serviceWorker.getSuperstep());
       }
@@ -280,7 +280,7 @@ public class ServerData<I extends WritableComparable,
       nextIncomingMessageStore = messageStore;
     } else {
       nextIncomingMessageStore = new DiskBackedMessageStore<>(
-          conf, messageStore,
+          conf, oocEngine, messageStore,
           conf.getOutgoingMessageClasses().useMessageCombiner(),
           serviceWorker.getSuperstep() + 1);
     }

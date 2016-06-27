@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;
 
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.data.DiskBackedEdgeStore;
@@ -54,7 +54,7 @@ public class StoreDataBufferIOCommand extends IOCommand {
   }
 
   @Override
-  public boolean execute(String basePath) throws IOException {
+  public boolean execute() throws IOException {
     boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingBuffer(partitionId)) {
@@ -64,17 +64,17 @@ public class StoreDataBufferIOCommand extends IOCommand {
             (DiskBackedPartitionStore)
                 oocEngine.getServerData().getPartitionStore();
         numBytesTransferred +=
-            partitionStore.offloadBuffers(partitionId, basePath);
+            partitionStore.offloadBuffers(partitionId);
         DiskBackedEdgeStore edgeStore =
             (DiskBackedEdgeStore) oocEngine.getServerData().getEdgeStore();
-        numBytesTransferred += edgeStore.offloadBuffers(partitionId, basePath);
+        numBytesTransferred += edgeStore.offloadBuffers(partitionId);
         break;
       case MESSAGE:
         DiskBackedMessageStore messageStore =
             (DiskBackedMessageStore)
                 oocEngine.getServerData().getIncomingMessageStore();
         numBytesTransferred +=
-            messageStore.offloadBuffers(partitionId, basePath);
+            messageStore.offloadBuffers(partitionId);
         break;
       default:
         throw new IllegalStateException("execute: requested data buffer type " +

@@ -20,11 +20,12 @@ package org.apache.giraph.ooc.data;
 
 import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.BspService;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.persistence.DataIndex;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.ExtendedDataOutput;
@@ -35,25 +36,17 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Implementation of a partition-store used for out-of-core mechanism.
  * Partition store is responsible for partition data, as well as data buffers in
- * INPUT_SUPERSTEP ("raw data buffer" -- defined in OutOfCoreDataManager --
+ * INPUT_SUPERSTEP ("raw data buffer" -- defined in DiskBackedDataStore --
  * refers to vertex buffers in INPUT_SUPERSTEP).
  *
  * @param <I> Vertex id
@@ -62,7 +55,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class DiskBackedPartitionStore<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends OutOfCoreDataManager<ExtendedDataOutput>
+    extends DiskBackedDataStore<ExtendedDataOutput>
     implements PartitionStore<I, V, E> {
   /** Class logger. */
   private static final Logger LOG =
@@ -71,10 +64,6 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Job context (for progress) */
   private final Mapper<?, ?, ?, ?>.Context context;
-  /** Service worker */
-  private final CentralizedServiceWorker<I, V, E> serviceWorker;
-  /** Out-of-core engine */
-  private final OutOfCoreEngine oocEngine;
   /** In-memory partition store */
   private final PartitionStore<I, V, E> partitionStore;
   /**
@@ -99,21 +88,17 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    *                       partition store would be a wrapper
    * @param conf Configuration
    * @param context Job context
-   * @param serviceWorker Service worker
    * @param oocEngine Out-of-core engine
    */
   public DiskBackedPartitionStore(
       PartitionStore<I, V, E> partitionStore,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context,
-      CentralizedServiceWorker<I, V, E> serviceWorker,
       OutOfCoreEngine oocEngine) {
-    super(conf);
+    super(conf, oocEngine);
     this.partitionStore = partitionStore;
     this.conf = conf;
     this.context = context;
-    this.serviceWorker = serviceWorker;
-    this.oocEngine = oocEngine;
   }
 
   @Override
@@ -222,36 +207,6 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Gets the path that should be used specifically for partition data.
-   *
-   * @param basePath path prefix to build the actual path from
-   * @return path to files specific for partition data
-   */
-  private static String getPath(String basePath) {
-    return basePath + "_partition";
-  }
-
-  /**
-   * Get the path to the file where vertices are stored.
-   *
-   * @param basePath path prefix to build the actual path from
-   * @return The path to the vertices file
-   */
-  private static String getVerticesPath(String basePath) {
-    return basePath + "_vertices";
-  }
-
-  /**
-   * Get the path to the file where edges are stored.
-   *
-   * @param basePath path prefix to build the actual path from
-   * @return The path to the edges file
-   */
-  private static String getEdgesPath(String basePath) {
-    return basePath + "_edges";
-  }
-
-  /**
    * Read vertex data from an input and initialize the vertex.
    *
    * @param in     The input stream
@@ -295,54 +250,42 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  protected long loadInMemoryPartitionData(int partitionId, String path)
-      throws IOException {
+  protected long loadInMemoryPartitionData(int partitionId, int ioThreadId,
+                                           DataIndex index) throws IOException {
     long numBytes = 0;
     // Load vertices
-    File file = new File(getVerticesPath(path));
-    if (file.exists()) {
+    if (hasPartitionDataOnFile.remove(partitionId)) {
       Partition<I, V, E> partition = conf.createPartition(partitionId, context);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loadInMemoryPartitionData: loading partition vertices " +
-            partitionId + " from " + file.getAbsolutePath());
-      }
-
-      FileInputStream fis = new FileInputStream(file);
-      BufferedInputStream bis = new BufferedInputStream(fis);
-      DataInputStream inputStream = new DataInputStream(bis);
-      long numVertices = inputStream.readLong();
+      OutOfCoreDataAccessor dataAccessor = oocEngine.getDataAccessor();
+      index.addIndex(DataIndex.TypeIndexEntry.PARTITION_VERTICES);
+      OutOfCoreDataAccessor.DataInputWrapper inputWrapper =
+          dataAccessor.prepareInput(ioThreadId, index.copy());
+      DataInput dataInput = inputWrapper.getDataInput();
+      long numVertices = dataInput.readLong();
       for (long i = 0; i < numVertices; ++i) {
         Vertex<I, V, E> vertex = conf.createVertex();
-        readVertexData(inputStream, vertex);
+        readVertexData(dataInput, vertex);
         partition.putVertex(vertex);
       }
-      inputStream.close();
-      numBytes += file.length();
-      checkState(file.delete(), "loadInMemoryPartitionData: failed to delete " +
-          "%s", file.getAbsolutePath());
+      numBytes += inputWrapper.finalizeInput(true);
 
       // Load edges
-      file = new File(getEdgesPath(path));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loadInMemoryPartitionData: loading partition edges " +
-            partitionId + " from " + file.getAbsolutePath());
-      }
-
-      fis = new FileInputStream(file);
-      bis = new BufferedInputStream(fis);
-      inputStream = new DataInputStream(bis);
+      index.removeLastIndex()
+          .addIndex(DataIndex.TypeIndexEntry.PARTITION_EDGES);
+      inputWrapper = dataAccessor.prepareInput(ioThreadId, index.copy());
+      dataInput = inputWrapper.getDataInput();
       for (int i = 0; i < numVertices; ++i) {
-        readOutEdges(inputStream, partition);
+        readOutEdges(dataInput, partition);
       }
-      inputStream.close();
-      numBytes += file.length();
       // If the graph is static and it is not INPUT_SUPERSTEP, keep the file
       // around.
+      boolean shouldDeleteEdges = false;
       if (!conf.isStaticGraph() ||
           oocEngine.getSuperstep() == BspService.INPUT_SUPERSTEP) {
-        checkState(file.delete(), "loadPartition: failed to delete %s",
-            file.getAbsolutePath());
+        shouldDeleteEdges = true;
       }
+      numBytes += inputWrapper.finalizeInput(shouldDeleteEdges);
+      index.removeLastIndex();
       partitionStore.addPartition(partition);
     }
     return numBytes;
@@ -354,7 +297,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  protected void addEntryToImMemoryPartitionData(int partitionId,
+  protected void addEntryToInMemoryPartitionData(int partitionId,
                                                  ExtendedDataOutput vertices) {
     if (!partitionStore.hasPartition(partitionId)) {
       oocEngine.getMetaPartitionManager().addPartition(partitionId);
@@ -363,15 +306,17 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public long loadPartitionData(int partitionId, String basePath)
+  public long loadPartitionData(int partitionId)
       throws IOException {
-    return super.loadPartitionData(partitionId, getPath(basePath));
+    return loadPartitionDataProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.PARTITION));
   }
 
   @Override
-  public long offloadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId)
       throws IOException {
-    return super.offloadPartitionData(partitionId, getPath(basePath));
+    return offloadPartitionDataProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.PARTITION));
   }
 
   /**
@@ -409,61 +354,44 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  protected long offloadInMemoryPartitionData(int partitionId, String path)
-      throws IOException {
+  protected long offloadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException {
     long numBytes = 0;
     if (partitionStore.hasPartition(partitionId)) {
+      OutOfCoreDataAccessor dataAccessor = oocEngine.getDataAccessor();
       partitionVertexCount.put(partitionId,
           partitionStore.getPartitionVertexCount(partitionId));
       partitionEdgeCount.put(partitionId,
           partitionStore.getPartitionEdgeCount(partitionId));
       Partition<I, V, E> partition =
           partitionStore.removePartition(partitionId);
-      File file = new File(getVerticesPath(path));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("offloadInMemoryPartitionData: writing partition vertices " +
-            partitionId + " to " + file.getAbsolutePath());
-      }
-      checkState(!file.exists(), "offloadInMemoryPartitionData: partition " +
-          "store file %s already exist", file.getAbsoluteFile());
-      checkState(file.createNewFile(),
-          "offloadInMemoryPartitionData: file %s already exists.",
-          file.getAbsolutePath());
-
-      FileOutputStream fileout = new FileOutputStream(file);
-      BufferedOutputStream bufferout = new BufferedOutputStream(fileout);
-      DataOutputStream outputStream = new DataOutputStream(bufferout);
-      outputStream.writeLong(partition.getVertexCount());
+      index.addIndex(DataIndex.TypeIndexEntry.PARTITION_VERTICES);
+      OutOfCoreDataAccessor.DataOutputWrapper outputWrapper =
+          dataAccessor.prepareOutput(ioThreadId, index.copy(), false);
+      DataOutput dataOutput = outputWrapper.getDataOutput();
+      dataOutput.writeLong(partition.getVertexCount());
       for (Vertex<I, V, E> vertex : partition) {
-        writeVertexData(outputStream, vertex);
+        writeVertexData(dataOutput, vertex);
       }
-      outputStream.close();
-      numBytes += outputStream.size();
-
+      numBytes += outputWrapper.finalizeOutput();
+      index.removeLastIndex();
       // Avoid writing back edges if we have already written them once and
       // the graph is not changing.
       // If we are in the input superstep, we need to write the files
       // at least the first time, even though the graph is static.
-      file = new File(getEdgesPath(path));
+      index.addIndex(DataIndex.TypeIndexEntry.PARTITION_EDGES);
       if (oocEngine.getSuperstep() == BspServiceWorker.INPUT_SUPERSTEP ||
-          partitionVertexCount.get(partitionId) == null ||
-          partitionVertexCount.get(partitionId) != partition.getVertexCount() ||
-          !conf.isStaticGraph() || !file.exists()) {
-        checkState(file.createNewFile(), "offloadInMemoryPartitionData: file " +
-            "%s already exists.", file.getAbsolutePath());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("offloadInMemoryPartitionData: writing partition edges " +
-              partitionId + " to " + file.getAbsolutePath());
-        }
-        fileout = new FileOutputStream(file);
-        bufferout = new BufferedOutputStream(fileout);
-        outputStream = new DataOutputStream(bufferout);
+          !conf.isStaticGraph() ||
+          !dataAccessor.dataExist(ioThreadId, index)) {
+        outputWrapper = dataAccessor.prepareOutput(ioThreadId, index.copy(),
+            false);
         for (Vertex<I, V, E> vertex : partition) {
-          writeOutEdges(outputStream, vertex);
+          writeOutEdges(outputWrapper.getDataOutput(), vertex);
         }
-        outputStream.close();
-        numBytes += outputStream.size();
+        numBytes += outputWrapper.finalizeOutput();
       }
+      index.removeLastIndex();
+      hasPartitionDataOnFile.add(partitionId);
     }
     return numBytes;
   }
@@ -475,9 +403,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public long offloadBuffers(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId)
       throws IOException {
-    return super.offloadBuffers(partitionId, getPath(basePath));
+    return offloadBuffersProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.PARTITION));
   }
 
   @Override

@@ -186,7 +186,7 @@ public class RexsterVertexOutputFormat<I extends WritableComparable,
       String id = context.getTaskAttemptID().toString();
       String zkBasePath = ZooKeeperManager.getBasePath(getConf()) +
         BspService.BASE_DIR + "/" +
-        getConf().get("mapred.job.id", "Unknown Job");
+        getConf().getJobId();
       prepareBarrier(zkBasePath);
       enterBarrier(zkBasePath, id);
       checkBarrier(zkBasePath, context);

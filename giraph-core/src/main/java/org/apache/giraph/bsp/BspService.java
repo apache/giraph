@@ -241,7 +241,7 @@ public abstract class BspService<I extends WritableComparable,
     this.context = context;
     this.graphTaskManager = graphTaskManager;
     this.conf = graphTaskManager.getConf();
-    this.jobId = conf.get("mapred.job.id", "Unknown Job");
+    this.jobId = conf.getJobId();
     this.taskPartition = conf.getTaskPartition();
     this.restartedSuperstep = conf.getLong(
         GiraphConstants.RESTART_SUPERSTEP, UNSET_SUPERSTEP);

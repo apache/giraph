@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of classes related to IO operations in out-of-core mechanism
+ * Package of classes related to IO commands in out-of-core mechanism
  */
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;

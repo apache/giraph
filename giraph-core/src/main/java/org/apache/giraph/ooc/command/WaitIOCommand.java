@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;
 
 import org.apache.giraph.ooc.OutOfCoreEngine;
 
@@ -42,7 +42,7 @@ public class WaitIOCommand extends IOCommand {
   }
 
   @Override
-  public boolean execute(String basePath) throws IOException {
+  public boolean execute() throws IOException {
     try {
       TimeUnit.MILLISECONDS.sleep(waitDuration);
     } catch (InterruptedException e) {

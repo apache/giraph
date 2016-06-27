@@ -21,6 +21,10 @@ package org.apache.giraph.ooc.data;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.persistence.DataIndex;
+import org.apache.giraph.ooc.persistence.DataIndex.NumericIndexEntry;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
 import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -28,18 +32,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Implementation of a message store used for out-of-core mechanism.
@@ -48,7 +43,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @param <M> Message data
  */
 public class DiskBackedMessageStore<I extends WritableComparable,
-    M extends Writable> extends OutOfCoreDataManager<VertexIdMessages<I, M>>
+    M extends Writable> extends DiskBackedDataStore<VertexIdMessages<I, M>>
     implements MessageStore<I, M> {
   /** Class logger. */
   private static final Logger LOG =
@@ -82,6 +77,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    * Constructor
    *
    * @param config Configuration
+   * @param oocEngine Out-of-core engine
    * @param messageStore In-memory message store for which out-of-core message
    *                     store would be wrapper
    * @param useMessageCombiner Whether message combiner is used for this message
@@ -90,9 +86,10 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    */
   public DiskBackedMessageStore(ImmutableClassesGiraphConfiguration<I, ?, ?>
                                     config,
+                                OutOfCoreEngine oocEngine,
                                 MessageStore<I, M> messageStore,
                                 boolean useMessageCombiner, long superstep) {
-    super(config);
+    super(config, oocEngine);
     this.config = config;
     this.messageStore = messageStore;
     this.useMessageCombiner = useMessageCombiner;
@@ -140,43 +137,38 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     }
   }
 
-  /**
-   * Gets the path that should be used specifically for message data.
-   *
-   * @param basePath path prefix to build the actual path from
-   * @param superstep superstep for which message data should be stored
-   * @return path to files specific for message data
-   */
-  private static String getPath(String basePath, long superstep) {
-    return basePath + "_messages-S" + superstep;
-  }
 
   @Override
-  public long loadPartitionData(int partitionId, String basePath)
+  public long loadPartitionData(int partitionId)
       throws IOException {
     if (!useMessageCombiner) {
-      return super.loadPartitionData(partitionId, getPath(basePath, superstep));
+      return loadPartitionDataProxy(partitionId,
+          new DataIndex().addIndex(DataIndex.TypeIndexEntry.MESSAGE)
+              .addIndex(NumericIndexEntry.createSuperstepEntry(superstep)));
     } else {
       return 0;
     }
   }
 
   @Override
-  public long offloadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId)
       throws IOException {
     if (!useMessageCombiner) {
-      return
-          super.offloadPartitionData(partitionId, getPath(basePath, superstep));
+      return offloadPartitionDataProxy(partitionId,
+          new DataIndex().addIndex(DataIndex.TypeIndexEntry.MESSAGE)
+              .addIndex(NumericIndexEntry.createSuperstepEntry(superstep)));
     } else {
       return 0;
     }
   }
 
   @Override
-  public long offloadBuffers(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId)
       throws IOException {
     if (!useMessageCombiner) {
-      return super.offloadBuffers(partitionId, getPath(basePath, superstep));
+      return offloadBuffersProxy(partitionId,
+          new DataIndex().addIndex(DataIndex.TypeIndexEntry.MESSAGE)
+              .addIndex(NumericIndexEntry.createSuperstepEntry(superstep)));
     } else {
       return 0;
     }
@@ -250,45 +242,31 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  protected long loadInMemoryPartitionData(int partitionId, String basePath)
-      throws IOException {
+  protected long loadInMemoryPartitionData(int partitionId, int ioThreadId,
+                                           DataIndex index) throws IOException {
     long numBytes = 0;
-    File file = new File(basePath);
-    if (file.exists()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loadInMemoryPartitionData: loading message data for " +
-            "partition " + partitionId + " from " + file.getAbsolutePath());
-      }
-      FileInputStream fis = new FileInputStream(file);
-      BufferedInputStream bis = new BufferedInputStream(fis);
-      DataInputStream dis = new DataInputStream(bis);
-      messageStore.readFieldsForPartition(dis, partitionId);
-      dis.close();
-      numBytes = file.length();
-      checkState(file.delete(), "loadInMemoryPartitionData: failed to delete " +
-          "%s.", file.getAbsoluteFile());
+    if (hasPartitionDataOnFile.remove(partitionId)) {
+      OutOfCoreDataAccessor.DataInputWrapper inputWrapper =
+          oocEngine.getDataAccessor().prepareInput(ioThreadId, index.copy());
+      messageStore.readFieldsForPartition(inputWrapper.getDataInput(),
+          partitionId);
+      numBytes = inputWrapper.finalizeInput(true);
     }
     return numBytes;
   }
 
   @Override
-  protected long offloadInMemoryPartitionData(int partitionId, String basePath)
-      throws IOException {
+  protected long offloadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException {
     long numBytes = 0;
     if (messageStore.hasMessagesForPartition(partitionId)) {
-      File file = new File(basePath);
-      checkState(!file.exists(), "offloadInMemoryPartitionData: message store" +
-          " file %s already exist", file.getAbsoluteFile());
-      checkState(file.createNewFile(),
-          "offloadInMemoryPartitionData: cannot create message store file %s",
-          file.getAbsoluteFile());
-      FileOutputStream fileout = new FileOutputStream(file);
-      BufferedOutputStream bufferout = new BufferedOutputStream(fileout);
-      DataOutputStream outputStream = new DataOutputStream(bufferout);
-      messageStore.writePartition(outputStream, partitionId);
+      OutOfCoreDataAccessor.DataOutputWrapper outputWrapper =
+          oocEngine.getDataAccessor().prepareOutput(ioThreadId, index.copy(),
+              false);
+      messageStore.writePartition(outputWrapper.getDataOutput(), partitionId);
       messageStore.clearPartition(partitionId);
-      outputStream.close();
-      numBytes += outputStream.size();
+      numBytes = outputWrapper.finalizeOutput();
+      hasPartitionDataOnFile.add(partitionId);
     }
     return numBytes;
   }
@@ -299,7 +277,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
-  protected void addEntryToImMemoryPartitionData(int partitionId,
+  protected void addEntryToInMemoryPartitionData(int partitionId,
                                                  VertexIdMessages<I, M>
                                                      messages) {
     messageStore.addPartitionMessages(partitionId, messages);

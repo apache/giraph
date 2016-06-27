@@ -7,7 +7,7 @@
 # Build files:
 *.class
 target
-Unknown Job*
+UnknownJob*
 failed-profile.txt
 
 # IntelliJ IDEA files:

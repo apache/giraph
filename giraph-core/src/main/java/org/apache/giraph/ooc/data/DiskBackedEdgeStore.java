@@ -21,24 +21,17 @@ package org.apache.giraph.ooc.data;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeStore;
 import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.persistence.DataIndex;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Implementation of an edge-store used for out-of-core mechanism.
@@ -49,7 +42,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class DiskBackedEdgeStore<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends OutOfCoreDataManager<VertexIdEdges<I, E>>
+    extends DiskBackedDataStore<VertexIdEdges<I, E>>
     implements EdgeStore<I, V, E> {
   /** Class logger. */
   private static final Logger LOG = Logger.getLogger(DiskBackedEdgeStore.class);
@@ -57,8 +50,6 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
   private final EdgeStore<I, V, E> edgeStore;
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
-  /** Out-of-core engine */
-  private final OutOfCoreEngine oocEngine;
 
   /**
    * Constructor
@@ -72,10 +63,9 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
       EdgeStore<I, V, E> edgeStore,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
       OutOfCoreEngine oocEngine) {
-    super(conf);
+    super(conf, oocEngine);
     this.edgeStore = edgeStore;
     this.conf = conf;
-    this.oocEngine = oocEngine;
   }
 
   @Override
@@ -114,32 +104,25 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
         "should not be called for DiskBackedEdgeStore!");
   }
 
-  /**
-   * Gets the path that should be used specifically for edge data.
-   *
-   * @param basePath path prefix to build the actual path from
-   * @return path to files specific for edge data
-   */
-  private static String getPath(String basePath) {
-    return basePath + "_edge_store";
+  @Override
+  public long loadPartitionData(int partitionId)
+      throws IOException {
+    return loadPartitionDataProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.EDGE_STORE));
   }
 
   @Override
-  public long loadPartitionData(int partitionId, String basePath)
+  public long offloadPartitionData(int partitionId)
       throws IOException {
-    return super.loadPartitionData(partitionId, getPath(basePath));
+    return offloadPartitionDataProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.EDGE_STORE));
   }
 
   @Override
-  public long offloadPartitionData(int partitionId, String basePath)
+  public long offloadBuffers(int partitionId)
       throws IOException {
-    return super.offloadPartitionData(partitionId, getPath(basePath));
-  }
-
-  @Override
-  public long offloadBuffers(int partitionId, String basePath)
-      throws IOException {
-    return super.offloadBuffers(partitionId, getPath(basePath));
+    return offloadBuffersProxy(partitionId,
+        new DataIndex().addIndex(DataIndex.TypeIndexEntry.EDGE_STORE));
   }
 
   @Override
@@ -157,44 +140,31 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
   }
 
   @Override
-  protected long loadInMemoryPartitionData(int partitionId, String path)
-      throws IOException {
+  protected long loadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException {
     long numBytes = 0;
-    File file = new File(path);
-    if (file.exists()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loadInMemoryPartitionData: loading edge data for " +
-            "partition " + partitionId + " from " + file.getAbsolutePath());
-      }
-      FileInputStream fis = new FileInputStream(file);
-      BufferedInputStream bis = new BufferedInputStream(fis);
-      DataInputStream dis = new DataInputStream(bis);
-      edgeStore.readPartitionEdgeStore(partitionId, dis);
-      dis.close();
-      numBytes = file.length();
-      checkState(file.delete(), "loadInMemoryPartitionData: failed to delete " +
-          "%s.", file.getAbsoluteFile());
+    if (hasPartitionDataOnFile.remove(partitionId)) {
+      OutOfCoreDataAccessor.DataInputWrapper inputWrapper =
+          oocEngine.getDataAccessor().prepareInput(ioThreadId, index.copy());
+      edgeStore.readPartitionEdgeStore(partitionId,
+          inputWrapper.getDataInput());
+      numBytes = inputWrapper.finalizeInput(true);
     }
     return numBytes;
   }
 
   @Override
-  protected long offloadInMemoryPartitionData(int partitionId, String path)
-      throws IOException {
+  protected long offloadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException {
     long numBytes = 0;
     if (edgeStore.hasEdgesForPartition(partitionId)) {
-      File file = new File(path);
-      checkState(!file.exists(), "offloadInMemoryPartitionData: edge store " +
-          "file %s already exist", file.getAbsoluteFile());
-      checkState(file.createNewFile(),
-          "offloadInMemoryPartitionData: cannot create edge store file %s",
-          file.getAbsoluteFile());
-      FileOutputStream fos = new FileOutputStream(file);
-      BufferedOutputStream bos = new BufferedOutputStream(fos);
-      DataOutputStream dos = new DataOutputStream(bos);
-      edgeStore.writePartitionEdgeStore(partitionId, dos);
-      dos.close();
-      numBytes = dos.size();
+      OutOfCoreDataAccessor.DataOutputWrapper outputWrapper =
+          oocEngine.getDataAccessor().prepareOutput(ioThreadId, index.copy(),
+              false);
+      edgeStore.writePartitionEdgeStore(partitionId,
+          outputWrapper.getDataOutput());
+      numBytes = outputWrapper.finalizeOutput();
+      hasPartitionDataOnFile.add(partitionId);
     }
     return numBytes;
   }
@@ -205,7 +175,7 @@ public class DiskBackedEdgeStore<I extends WritableComparable,
   }
 
   @Override
-  protected void addEntryToImMemoryPartitionData(int partitionId,
+  protected void addEntryToInMemoryPartitionData(int partitionId,
                                                  VertexIdEdges<I, E> edges) {
     oocEngine.getMetaPartitionManager().addPartition(partitionId);
     edgeStore.addPartitionEdges(partitionId, edges);

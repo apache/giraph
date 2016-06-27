@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;
 
 import org.apache.giraph.ooc.OutOfCoreEngine;
 
@@ -80,12 +80,10 @@ public abstract class IOCommand {
    * appropriately based on the data loaded/stored. Return true iff the command
    * is actually executed (resulted in loading or storing data).
    *
-   * @param basePath the base path (prefix) to the files/folders IO command
-   *                 should read/write data from/to
    * @return whether the command is actually executed
    * @throws IOException
    */
-  public abstract boolean execute(String basePath) throws IOException;
+  public abstract boolean execute() throws IOException;
 
   /**
    * Get the type of the command.

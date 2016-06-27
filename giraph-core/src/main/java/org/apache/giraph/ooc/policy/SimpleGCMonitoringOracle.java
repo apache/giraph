@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc;
+package org.apache.giraph.ooc.policy;
 
 import com.google.common.collect.Maps;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.ooc.io.IOCommand;
-import org.apache.giraph.ooc.io.LoadPartitionIOCommand;
-import org.apache.giraph.ooc.io.WaitIOCommand;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.OutOfCoreIOStatistics;
+import org.apache.giraph.ooc.command.IOCommand;
+import org.apache.giraph.ooc.command.LoadPartitionIOCommand;
+import org.apache.giraph.ooc.command.WaitIOCommand;
 import org.apache.log4j.Logger;
 
 import java.lang.management.MemoryUsage;

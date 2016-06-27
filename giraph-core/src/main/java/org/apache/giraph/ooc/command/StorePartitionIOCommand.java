@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;
 
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.comm.messages.MessageStore;
@@ -44,7 +44,7 @@ public class StorePartitionIOCommand extends IOCommand {
   }
 
   @Override
-  public boolean execute(String basePath) throws IOException {
+  public boolean execute() throws IOException {
     boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingPartition(partitionId)) {
@@ -52,20 +52,20 @@ public class StorePartitionIOCommand extends IOCommand {
           (DiskBackedPartitionStore)
               oocEngine.getServerData().getPartitionStore();
       numBytesTransferred +=
-          partitionStore.offloadPartitionData(partitionId, basePath);
+          partitionStore.offloadPartitionData(partitionId);
       if (oocEngine.getSuperstep() != BspService.INPUT_SUPERSTEP) {
         MessageStore messageStore =
             oocEngine.getServerData().getCurrentMessageStore();
         if (messageStore != null) {
           numBytesTransferred += ((DiskBackedMessageStore) messageStore)
-              .offloadPartitionData(partitionId, basePath);
+              .offloadPartitionData(partitionId);
         }
       } else {
         DiskBackedEdgeStore edgeStore =
             (DiskBackedEdgeStore)
                 oocEngine.getServerData().getEdgeStore();
         numBytesTransferred +=
-            edgeStore.offloadPartitionData(partitionId, basePath);
+            edgeStore.offloadPartitionData(partitionId);
       }
       oocEngine.getMetaPartitionManager().doneOffloadingPartition(partitionId);
       executed = true;

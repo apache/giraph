@@ -30,6 +30,7 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.BasicComputation;
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullTextVertexInputFormat;
@@ -166,6 +167,9 @@ public class TestPartitionStores {
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = new GraphTaskManager<>(context);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         partitionStore =
@@ -192,6 +196,9 @@ public class TestPartitionStores {
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = new GraphTaskManager<>(context);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         partitionStore =
@@ -307,6 +314,9 @@ public class TestPartitionStores {
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = new GraphTaskManager<>(context);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         store =

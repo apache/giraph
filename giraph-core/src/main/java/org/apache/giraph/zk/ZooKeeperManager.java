@@ -123,7 +123,7 @@ public class ZooKeeperManager {
     this.context = context;
     this.conf = configuration;
     taskPartition = conf.getTaskPartition();
-    jobId = conf.get("mapred.job.id", "Unknown Job");
+    jobId = conf.getJobId();
     baseDirectory =
         new Path(ZOOKEEPER_MANAGER_DIRECTORY.getWithDefault(conf,
             getFinalZooKeeperPath()));

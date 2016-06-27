@@ -18,13 +18,11 @@
 
 package org.apache.giraph.ooc;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -34,9 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import static com.google.common.base.Preconditions.checkState;
-import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
 
 /**
  * Factory class to create IO threads for out-of-core engine.
@@ -49,37 +44,22 @@ public class OutOfCoreIOCallableFactory {
   private final OutOfCoreEngine oocEngine;
   /** Result of IO threads at the end of the computation */
   private final List<Future> results;
-  /** How many disks (i.e. IO threads) do we have? */
-  private int numDisks;
-  /** Path prefix for different disks */
-  private final String[] basePaths;
+  /** Number of threads used for IO operations */
+  private final int numIOThreads;
   /** Executor service for IO threads */
   private ExecutorService outOfCoreIOExecutor;
+
   /**
    * Constructor
    *
-   * @param conf Configuration
    * @param oocEngine Out-of-core engine
+   * @param numIOThreads Number of IO threads used
    */
-  public OutOfCoreIOCallableFactory(
-      ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
-      OutOfCoreEngine oocEngine) {
+  public OutOfCoreIOCallableFactory(OutOfCoreEngine oocEngine,
+                                    int numIOThreads) {
     this.oocEngine = oocEngine;
-    this.results = new ArrayList<>();
-    // Take advantage of multiple disks
-    String[] userPaths = PARTITIONS_DIRECTORY.getArray(conf);
-    this.numDisks = userPaths.length;
-    this.basePaths = new String[numDisks];
-    int ptr = 0;
-    for (String path : userPaths) {
-      File file = new File(path);
-      if (!file.exists()) {
-        checkState(file.mkdirs(), "OutOfCoreIOCallableFactory: cannot create " +
-            "directory " + file.getAbsolutePath());
-      }
-      basePaths[ptr] = path + "/" + conf.get("mapred.job.id", "Unknown Job");
-      ptr++;
-    }
+    this.numIOThreads = numIOThreads;
+    this.results = new ArrayList<>(numIOThreads);
   }
 
   /**
@@ -90,11 +70,10 @@ public class OutOfCoreIOCallableFactory {
       new CallableFactory<Void>() {
         @Override
         public Callable<Void> newCallable(int callableId) {
-          return new OutOfCoreIOCallable(oocEngine, basePaths[callableId],
-              callableId);
+          return new OutOfCoreIOCallable(oocEngine, callableId);
         }
       };
-    outOfCoreIOExecutor = new ThreadPoolExecutor(numDisks, numDisks, 0L,
+    outOfCoreIOExecutor = new ThreadPoolExecutor(numIOThreads, numIOThreads, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
         ThreadUtils.createThreadFactory("ooc-io-%d")) {
       @Override
@@ -120,7 +99,7 @@ public class OutOfCoreIOCallableFactory {
       }
     };
 
-    for (int i = 0; i < numDisks; ++i) {
+    for (int i = 0; i < numIOThreads; ++i) {
       Future<Void> future = outOfCoreIOExecutor.submit(
           new LogStacktraceCallable<>(
               outOfCoreIOCallableFactory.newCallable(i)));
@@ -128,15 +107,6 @@ public class OutOfCoreIOCallableFactory {
     }
     // Notify executor to not accept any more tasks
     outOfCoreIOExecutor.shutdown();
-  }
-
-  /**
-   * How many disks do we have?
-   *
-   * @return number of disks (IO threads)
-   */
-  public int getNumDisks() {
-    return numDisks;
   }
 
   /**
@@ -156,7 +126,7 @@ public class OutOfCoreIOCallableFactory {
             "InterruptedException while waiting for IO threads to finish");
       }
     }
-    for (int i = 0; i < numDisks; ++i) {
+    for (int i = 0; i < numIOThreads; ++i) {
       try {
         // Check whether the tread terminated gracefully
         results.get(i).get();
@@ -169,16 +139,6 @@ public class OutOfCoreIOCallableFactory {
             "its execution");
         throw new IllegalStateException(e);
       }
-    }
-    for (String path : basePaths) {
-      File file = new File(path).getParentFile();
-      for (String subFileName : file.list()) {
-        File subFile = new File(file.getPath(), subFileName);
-        checkState(subFile.delete(), "shutdown: cannot delete file %s",
-            subFile.getAbsoluteFile());
-      }
-      checkState(file.delete(), "shutdown: cannot delete directory %s",
-          file.getAbsoluteFile());
     }
   }
 }

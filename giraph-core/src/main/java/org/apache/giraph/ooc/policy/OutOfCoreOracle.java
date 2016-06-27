@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc;
+package org.apache.giraph.ooc.policy;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
-import org.apache.giraph.ooc.io.IOCommand;
+import org.apache.giraph.ooc.command.IOCommand;
 
 /**
  * Interface for any out-of-core oracle. An out-of-core oracle is the brain of
  * the out-of-core mechanism, determining/deciding on out-of-core actions (load
  * or store) that should happen.
+ * Note: any class implementing this interface should have one and only one
+ *       constructor taking only two arguments of types
+ *       <code>ImmutableClassesGiraphConfiguration</code> and
+ *       <code>OutOfCoreEngine</code>
  */
 public interface OutOfCoreOracle {
   /**

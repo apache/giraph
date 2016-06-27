@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.ooc.io;
+package org.apache.giraph.ooc.command;
 
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.data.DiskBackedMessageStore;
@@ -41,7 +41,7 @@ public class StoreIncomingMessageIOCommand extends IOCommand {
   }
 
   @Override
-  public boolean execute(String basePath) throws IOException {
+  public boolean execute() throws IOException {
     boolean executed = false;
     if (oocEngine.getMetaPartitionManager()
         .startOffloadingMessages(partitionId)) {
@@ -50,7 +50,7 @@ public class StoreIncomingMessageIOCommand extends IOCommand {
               oocEngine.getServerData().getIncomingMessageStore();
       checkState(messageStore != null);
       numBytesTransferred +=
-          messageStore.offloadPartitionData(partitionId, basePath);
+          messageStore.offloadPartitionData(partitionId);
       oocEngine.getMetaPartitionManager().doneOffloadingMessages(partitionId);
       executed = true;
     }

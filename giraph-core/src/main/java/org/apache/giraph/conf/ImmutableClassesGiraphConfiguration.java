@@ -128,6 +128,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * extended data input/output classes for messages
    */
   private final boolean useBigDataIOForMessages;
+  /** Is the graph static (meaning there is no mutation)? */
+  private final boolean isStaticGraph;
 
   /**
    * Constructor.  Takes the configuration and then gets the classes out of
@@ -144,6 +146,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         GiraphConstants.GRAPH_TYPE_LANGUAGES, conf);
     valueNeedsWrappers = PerGraphTypeBoolean.readFromConf(
         GiraphConstants.GRAPH_TYPES_NEEDS_WRAPPERS, conf);
+    isStaticGraph = GiraphConstants.STATIC_GRAPH.get(this);
     valueFactories = new ValueFactories<I, V, E>(this);
   }
 
@@ -1325,5 +1328,21 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     default:
       return null;
     }
+  }
+
+  /**
+   * Whether the application with change or not the graph topology.
+   *
+   * @return true if the graph is static, false otherwise.
+   */
+  public boolean isStaticGraph() {
+    return isStaticGraph;
+  }
+
+  /**
+   * @return job id
+   */
+  public String getJobId() {
+    return get("mapred.job.id", "UnknownJob");
   }
 }

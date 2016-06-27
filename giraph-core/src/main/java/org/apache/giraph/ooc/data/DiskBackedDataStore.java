@@ -24,17 +24,14 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.persistence.DataIndex;
+import org.apache.giraph.ooc.persistence.DataIndex.NumericIndexEntry;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -71,7 +68,7 @@ import static org.apache.giraph.conf.GiraphConstants.ONE_MB;
  *
  * @param <T> raw data format of the data store subclassing this class
  */
-public abstract class OutOfCoreDataManager<T> {
+public abstract class DiskBackedDataStore<T> {
   /**
    * Minimum size of a buffer (in bytes) to flush to disk. This is used to
    * decide whether vertex/edge buffers are large enough to flush to disk.
@@ -82,7 +79,30 @@ public abstract class OutOfCoreDataManager<T> {
 
   /** Class logger. */
   private static final Logger LOG = Logger.getLogger(
-      OutOfCoreDataManager.class);
+      DiskBackedDataStore.class);
+  /** Out-of-core engine */
+  protected final OutOfCoreEngine oocEngine;
+  /**
+   * Set containing ids of all partitions where the partition data is in some
+   * file on disk.
+   * Note that the out-of-core mechanism may decide to put the data for a
+   * partition on disk, while the partition data is empty. For instance, at the
+   * beginning of a superstep, out-of-core mechanism may decide to put incoming
+   * messages of a partition on disk, while the partition has not received any
+   * messages. In such scenarios, the "out-of-core mechanism" thinks that the
+   * partition data is on disk, while disk-backed data stores may want to
+   * optimize for IO/metadata accesses and decide not to create/write anything
+   * on files on disk.
+   * In summary, there is a subtle difference between this field and
+   * `hasPartitionOnDisk` field. Basically, this field is used for optimizing
+   * IO (mainly metadata) accesses by disk-backed stores, while
+   * `hasPartitionDataOnDisk` is the view that out-of-core mechanism has
+   * regarding partition storage statuses. Since out-of-core mechanism does not
+   * know about the actual data for a partition, these two fields have to be
+   * separate.
+   */
+  protected final Set<Integer> hasPartitionDataOnFile =
+      Sets.newConcurrentHashSet();
   /** Cached value for MINIMUM_BUFFER_SIZE_TO_FLUSH */
   private final int minBufferSizeToOffload;
   /** Set containing ids of all out-of-core partitions */
@@ -117,9 +137,12 @@ public abstract class OutOfCoreDataManager<T> {
    * Constructor.
    *
    * @param conf Configuration
+   * @param oocEngine Out-of-core engine
    */
-  OutOfCoreDataManager(ImmutableClassesGiraphConfiguration conf) {
+  DiskBackedDataStore(ImmutableClassesGiraphConfiguration conf,
+                      OutOfCoreEngine oocEngine) {
     this.minBufferSizeToOffload = MINIMUM_BUFFER_SIZE_TO_FLUSH.get(conf);
+    this.oocEngine = oocEngine;
   }
 
   /**
@@ -174,7 +197,7 @@ public abstract class OutOfCoreDataManager<T> {
         }
       }
     } else {
-      addEntryToImMemoryPartitionData(partitionId, entry);
+      addEntryToInMemoryPartitionData(partitionId, entry);
     }
     rwLock.readLock().unlock();
   }
@@ -184,48 +207,53 @@ public abstract class OutOfCoreDataManager<T> {
    * data store. Returns the number of bytes transferred from disk to memory in
    * the loading process.
    *
-   * @param partitionId id of the partition to load ana assemble all data for
-   * @param basePath path to load the data from
+   * @param partitionId id of the partition to load and assemble all data for
    * @return number of bytes loaded from disk to memory
    * @throws IOException
    */
-  public long loadPartitionData(int partitionId, String basePath)
+  public abstract long loadPartitionData(int partitionId) throws IOException;
+
+  /**
+   * The proxy method that does the actual operation for `loadPartitionData`,
+   * but uses the data index given by the caller.
+   *
+   * @param partitionId id of the partition to load and assemble all data for
+   * @param index data index chain for the data to load
+   * @return number of bytes loaded from disk to memory
+   * @throws IOException
+   */
+  protected long loadPartitionDataProxy(int partitionId, DataIndex index)
       throws IOException {
     long numBytes = 0;
     ReadWriteLock rwLock = getPartitionLock(partitionId);
     rwLock.writeLock().lock();
     if (hasPartitionDataOnDisk.contains(partitionId)) {
-      numBytes += loadInMemoryPartitionData(partitionId,
-          getPath(basePath, partitionId));
+      int ioThreadId =
+          oocEngine.getMetaPartitionManager().getOwnerThreadId(partitionId);
+      numBytes += loadInMemoryPartitionData(partitionId, ioThreadId,
+          index.addIndex(NumericIndexEntry.createPartitionEntry(partitionId)));
       hasPartitionDataOnDisk.remove(partitionId);
       // Loading raw data buffers from disk if there is any and applying those
       // to already loaded in-memory data.
       Integer numBuffers = numDataBuffersOnDisk.remove(partitionId);
       if (numBuffers != null) {
         checkState(numBuffers > 0);
-        File file = new File(getBuffersPath(basePath, partitionId));
-        checkState(file.exists());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("loadPartitionData: loading " + numBuffers + " buffers of" +
-              " partition " + partitionId + " from " + file.getAbsolutePath());
-        }
-        FileInputStream fis = new FileInputStream(file);
-        BufferedInputStream bis = new BufferedInputStream(fis);
-        DataInputStream dis = new DataInputStream(bis);
+        index.addIndex(DataIndex.TypeIndexEntry.BUFFER);
+        OutOfCoreDataAccessor.DataInputWrapper inputWrapper =
+            oocEngine.getDataAccessor().prepareInput(ioThreadId, index.copy());
         for (int i = 0; i < numBuffers; ++i) {
-          T entry = readNextEntry(dis);
-          addEntryToImMemoryPartitionData(partitionId, entry);
+          T entry = readNextEntry(inputWrapper.getDataInput());
+          addEntryToInMemoryPartitionData(partitionId, entry);
         }
-        dis.close();
-        numBytes +=  file.length();
-        checkState(file.delete(), "loadPartitionData: failed to delete %s.",
-            file.getAbsoluteFile());
+        numBytes += inputWrapper.finalizeInput(true);
+        index.removeLastIndex();
       }
+      index.removeLastIndex();
       // Applying in-memory raw data buffers to in-memory partition data.
       Pair<Integer, List<T>> pair = dataBuffers.remove(partitionId);
       if (pair != null) {
         for (T entry : pair.getValue()) {
-          addEntryToImMemoryPartitionData(partitionId, entry);
+          addEntryToInMemoryPartitionData(partitionId, entry);
         }
       }
     }
@@ -238,20 +266,34 @@ public abstract class OutOfCoreDataManager<T> {
    * returns the number of bytes offloaded from memory to disk.
    *
    * @param partitionId id of the partition to offload its data
-   * @param basePath path to offload the data to
+   * @return number of bytes offloaded from memory to disk
+   * @throws IOException
+   */
+  public abstract long offloadPartitionData(int partitionId) throws IOException;
+
+  /**
+   * The proxy method that does the actual operation for `offloadPartitionData`,
+   * but uses the data index given by the caller.
+   *
+   * @param partitionId id of the partition to offload its data
+   * @param index data index chain for the data to offload
    * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       "UL_UNRELEASED_LOCK_EXCEPTION_PATH")
-  public long offloadPartitionData(int partitionId, String basePath)
-      throws IOException {
+  protected long offloadPartitionDataProxy(
+      int partitionId, DataIndex index) throws IOException {
     ReadWriteLock rwLock = getPartitionLock(partitionId);
     rwLock.writeLock().lock();
     hasPartitionDataOnDisk.add(partitionId);
     rwLock.writeLock().unlock();
-    return offloadInMemoryPartitionData(partitionId,
-        getPath(basePath, partitionId));
+    int ioThreadId =
+        oocEngine.getMetaPartitionManager().getOwnerThreadId(partitionId);
+    long numBytes = offloadInMemoryPartitionData(partitionId, ioThreadId,
+        index.addIndex(NumericIndexEntry.createPartitionEntry(partitionId)));
+    index.removeLastIndex();
+    return numBytes;
   }
 
   /**
@@ -259,11 +301,21 @@ public abstract class OutOfCoreDataManager<T> {
    * number of bytes offloaded from memory to disk.
    *
    * @param partitionId id of the partition to offload its raw data buffers
-   * @param basePath path to offload the data to
    * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
-  public long offloadBuffers(int partitionId, String basePath)
+  public abstract long offloadBuffers(int partitionId) throws IOException;
+
+  /**
+   * The proxy method that does the actual operation for `offloadBuffers`,
+   * but uses the data index given by the caller.
+   *
+   * @param partitionId id of the partition to offload its raw data buffers
+   * @param index data index chain for the data to offload its buffers
+   * @return number of bytes offloaded from memory to disk
+   * @throws IOException
+   */
+  protected long offloadBuffersProxy(int partitionId, DataIndex index)
       throws IOException {
     Pair<Integer, List<T>> pair = dataBuffers.get(partitionId);
     if (pair == null || pair.getLeft() < minBufferSizeToOffload) {
@@ -275,15 +327,18 @@ public abstract class OutOfCoreDataManager<T> {
     rwLock.writeLock().unlock();
     checkNotNull(pair);
     checkState(!pair.getRight().isEmpty());
-    File file = new File(getBuffersPath(basePath, partitionId));
-    FileOutputStream fos = new FileOutputStream(file, true);
-    BufferedOutputStream bos = new BufferedOutputStream(fos);
-    DataOutputStream dos = new DataOutputStream(bos);
+    int ioThreadId =
+        oocEngine.getMetaPartitionManager().getOwnerThreadId(partitionId);
+    index.addIndex(NumericIndexEntry.createPartitionEntry(partitionId))
+        .addIndex(DataIndex.TypeIndexEntry.BUFFER);
+    OutOfCoreDataAccessor.DataOutputWrapper outputWrapper =
+        oocEngine.getDataAccessor().prepareOutput(ioThreadId, index.copy(),
+            true);
     for (T entry : pair.getRight()) {
-      writeEntry(entry, dos);
+      writeEntry(entry, outputWrapper.getDataOutput());
     }
-    dos.close();
-    long numBytes = dos.size();
+    long numBytes = outputWrapper.finalizeOutput();
+    index.removeLastIndex().removeLastIndex();
     int numBuffers = pair.getRight().size();
     Integer oldNumBuffersOnDisk =
         numDataBuffersOnDisk.putIfAbsent(partitionId, numBuffers);
@@ -315,30 +370,6 @@ public abstract class OutOfCoreDataManager<T> {
   }
 
   /**
-   * Creates the path to read/write partition data from/to for a given
-   * partition.
-   *
-   * @param basePath path prefix to create the actual path from
-   * @param partitionId id of the partition
-   * @return path to read/write data from/to
-   */
-  private static String getPath(String basePath, int partitionId) {
-    return basePath + "-P" + partitionId;
-  }
-
-  /**
-   * Creates the path to read/write raw data buffers of a given partition
-   * from/to.
-   *
-   * @param basePath path prefix to create the actual path from
-   * @param partitionId id of the partition
-   * @return path to read/write raw data buffer to/from
-   */
-  private static String getBuffersPath(String basePath, int partitionId) {
-    return getPath(basePath, partitionId) + "_buffers";
-  }
-
-  /**
    * Writes a single raw entry to a given output stream.
    *
    * @param entry entry to write to output
@@ -361,26 +392,26 @@ public abstract class OutOfCoreDataManager<T> {
    * Loads data of a partition into data store. Returns number of bytes loaded.
    *
    * @param partitionId id of the partition to load its data
-   * @param path path from which data should be loaded
+   * @param ioThreadId id of the IO thread performing the load
+   * @param index data index chain for the data to load
    * @return number of bytes loaded from disk to memory
    * @throws IOException
    */
-  protected abstract long loadInMemoryPartitionData(int partitionId,
-                                                    String path)
-      throws IOException;
+  protected abstract long loadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException;
 
   /**
    * Offloads data of a partition in data store to disk. Returns the number of
    * bytes offloaded to disk
    *
    * @param partitionId id of the partition to offload to disk
-   * @param path path to which data should be offloaded
+   * @param ioThreadId id of the IO thread performing the offload
+   * @param index data index chain for the data to offload
    * @return number of bytes offloaded from memory to disk
    * @throws IOException
    */
-  protected abstract long offloadInMemoryPartitionData(int partitionId,
-                                                       String path)
-      throws IOException;
+  protected abstract long offloadInMemoryPartitionData(
+      int partitionId, int ioThreadId, DataIndex index) throws IOException;
 
   /**
    * Gets the size of a given entry in bytes.
@@ -396,6 +427,6 @@ public abstract class OutOfCoreDataManager<T> {
    * @param partitionId id of the partition to add the data to
    * @param entry input entry to add to the data store
    */
-  protected abstract void addEntryToImMemoryPartitionData(int partitionId,
+  protected abstract void addEntryToInMemoryPartitionData(int partitionId,
                                                           T entry);
 }

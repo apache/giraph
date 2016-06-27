@@ -99,6 +99,21 @@ public class MetaPartitionManager {
    */
   private final AtomicDouble lowestGraphFractionInMemory =
       new AtomicDouble(1);
+  /**
+   * Map of partition ids to their indices. index of a partition is the order
+   * with which the partition has been inserted. Partitions are indexed as 0, 1,
+   * 2, etc. This indexing is later used to find the id of the IO thread who is
+   * responsible for handling a partition. Partitions are assigned to IO threads
+   * in a round-robin fashion based on their indices.
+   */
+  private final ConcurrentMap<Integer, Integer> partitionIndex =
+      Maps.newConcurrentMap();
+  /**
+   * Sequential counter used to assign indices to partitions as they are added
+   */
+  private final AtomicInteger indexCounter = new AtomicInteger(0);
+  /** How many disks (i.e. IO threads) do we have? */
+  private final int numIOThreads;
 
   /**
    * Constructor
@@ -117,6 +132,7 @@ public class MetaPartitionManager {
     }
     this.oocEngine = oocEngine;
     this.randomGenerator = new Random();
+    this.numIOThreads = numIOThreads;
   }
 
   /**
@@ -131,7 +147,7 @@ public class MetaPartitionManager {
   /**
    * Get total number of partitions
    *
-   * @return total number of partition
+   * @return total number of partitions
    */
   public int getNumPartitions() {
     return partitions.size();
@@ -175,6 +191,18 @@ public class MetaPartitionManager {
   }
 
   /**
+   * Get the thread id that is responsible for a particular partition
+   *
+   * @param partitionId id of the given partition
+   * @return id of the thread responsible for the given partition
+   */
+  public int getOwnerThreadId(int partitionId) {
+    Integer index = partitionIndex.get(partitionId);
+    checkState(index != null);
+    return index % numIOThreads;
+  }
+
+  /**
    * Add a partition
    *
    * @param partitionId id of a partition to add
@@ -184,8 +212,9 @@ public class MetaPartitionManager {
     MetaPartition temp = partitions.putIfAbsent(partitionId, meta);
     // Check if the given partition is new
     if (temp == null) {
-      int ownerThread = oocEngine.getIOScheduler()
-          .getOwnerThreadId(partitionId);
+      int index = indexCounter.getAndIncrement();
+      checkState(partitionIndex.putIfAbsent(partitionId, index) == null);
+      int ownerThread = getOwnerThreadId(partitionId);
       perThreadPartitionDictionary.get(ownerThread).addPartition(meta);
       numInMemoryPartitions.getAndIncrement();
     }
@@ -199,7 +228,7 @@ public class MetaPartitionManager {
    */
   public void removePartition(Integer partitionId) {
     MetaPartition meta = partitions.remove(partitionId);
-    int ownerThread = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int ownerThread = getOwnerThreadId(partitionId);
     perThreadPartitionDictionary.get(ownerThread).removePartition(meta);
     checkState(!meta.isOnDisk());
     numInMemoryPartitions.getAndDecrement();
@@ -424,7 +453,7 @@ public class MetaPartitionManager {
    */
   public void markPartitionAsInProcess(int partitionId) {
     MetaPartition meta = partitions.get(partitionId);
-    int ownerThread = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int ownerThread = getOwnerThreadId(partitionId);
     synchronized (meta) {
       perThreadPartitionDictionary.get(ownerThread).removePartition(meta);
       meta.setProcessingState(ProcessingState.IN_PROCESS);
@@ -468,7 +497,7 @@ public class MetaPartitionManager {
    */
   public void setPartitionIsProcessed(int partitionId) {
     MetaPartition meta = partitions.get(partitionId);
-    int ownerThread = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int ownerThread = getOwnerThreadId(partitionId);
     synchronized (meta) {
       perThreadPartitionDictionary.get(ownerThread).removePartition(meta);
       meta.setProcessingState(ProcessingState.PROCESSED);
@@ -508,7 +537,7 @@ public class MetaPartitionManager {
   public void doneLoadingPartition(int partitionId, long superstep) {
     MetaPartition meta = partitions.get(partitionId);
     numInMemoryPartitions.getAndIncrement();
-    int owner = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int owner = getOwnerThreadId(partitionId);
     synchronized (meta) {
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.setPartitionState(StorageState.IN_MEM);
@@ -535,8 +564,7 @@ public class MetaPartitionManager {
    */
   public boolean startOffloadingMessages(int partitionId) {
     MetaPartition meta = partitions.get(partitionId);
-    int ownerThread =
-        oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int ownerThread = getOwnerThreadId(partitionId);
     synchronized (meta) {
       if (meta.getIncomingMessagesState() == StorageState.IN_MEM) {
         perThreadPartitionDictionary.get(ownerThread).removePartition(meta);
@@ -558,8 +586,7 @@ public class MetaPartitionManager {
    */
   public void doneOffloadingMessages(int partitionId) {
     MetaPartition meta = partitions.get(partitionId);
-    int ownerThread =
-        oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int ownerThread = getOwnerThreadId(partitionId);
     synchronized (meta) {
       perThreadPartitionDictionary.get(ownerThread).removePartition(meta);
       meta.setIncomingMessagesState(StorageState.ON_DISK);
@@ -598,7 +625,7 @@ public class MetaPartitionManager {
    */
   public boolean startOffloadingPartition(int partitionId) {
     MetaPartition meta = partitions.get(partitionId);
-    int owner = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int owner = getOwnerThreadId(partitionId);
     synchronized (meta) {
       if (meta.getProcessingState() != ProcessingState.IN_PROCESS &&
           (meta.getPartitionState() == StorageState.IN_MEM ||
@@ -624,7 +651,7 @@ public class MetaPartitionManager {
     numInMemoryPartitions.getAndDecrement();
     updateGraphFractionInMemory();
     MetaPartition meta = partitions.get(partitionId);
-    int owner = oocEngine.getIOScheduler().getOwnerThreadId(partitionId);
+    int owner = getOwnerThreadId(partitionId);
     synchronized (meta) {
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.setPartitionState(StorageState.ON_DISK);
@@ -639,8 +666,7 @@ public class MetaPartitionManager {
    */
   public void resetPartitions() {
     for (MetaPartition meta : partitions.values()) {
-      int owner =
-          oocEngine.getIOScheduler().getOwnerThreadId(meta.getPartitionId());
+      int owner = getOwnerThreadId(meta.getPartitionId());
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.resetPartition();
       perThreadPartitionDictionary.get(owner).addPartition(meta);
@@ -659,8 +685,7 @@ public class MetaPartitionManager {
    */
   public void resetMessages() {
     for (MetaPartition meta : partitions.values()) {
-      int owner =
-          oocEngine.getIOScheduler().getOwnerThreadId(meta.getPartitionId());
+      int owner = getOwnerThreadId(meta.getPartitionId());
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.resetMessages();
       if (meta.getPartitionState() == StorageState.IN_MEM &&

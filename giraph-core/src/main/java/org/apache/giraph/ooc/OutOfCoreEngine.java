@@ -30,8 +30,11 @@ import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.ooc.data.MetaPartitionManager;
-import org.apache.giraph.ooc.io.IOCommand;
-import org.apache.giraph.ooc.io.LoadPartitionIOCommand;
+import org.apache.giraph.ooc.command.IOCommand;
+import org.apache.giraph.ooc.command.LoadPartitionIOCommand;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
+import org.apache.giraph.ooc.policy.FixedPartitionsOracle;
+import org.apache.giraph.ooc.policy.OutOfCoreOracle;
 import org.apache.giraph.utils.AdjustableSemaphore;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.log4j.Logger;
@@ -87,6 +90,8 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
    * with out-of-core operations (actual IO operations).
    */
   private final ReadWriteLock superstepLock = new ReentrantReadWriteLock();
+  /** Data accessor object (DAO) used as persistence layer in out-of-core */
+  private final OutOfCoreDataAccessor dataAccessor;
   /** Callable factory for IO threads */
   private final OutOfCoreIOCallableFactory oocIOCallableFactory;
   /**
@@ -149,9 +154,20 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   public OutOfCoreEngine(ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
                          CentralizedServiceWorker<?, ?, ?> service) {
     this.service = service;
-    this.oocIOCallableFactory = new OutOfCoreIOCallableFactory(conf, this);
-    /* How many disk (i.e. IO threads) do we have? */
-    int numIOThreads = oocIOCallableFactory.getNumDisks();
+    Class<? extends OutOfCoreDataAccessor> accessorClass =
+        GiraphConstants.OUT_OF_CORE_DATA_ACCESSOR.get(conf);
+    try {
+      Constructor<?> constructor = accessorClass.getConstructor(
+          ImmutableClassesGiraphConfiguration.class);
+      this.dataAccessor = (OutOfCoreDataAccessor) constructor.newInstance(conf);
+    } catch (NoSuchMethodException | InstantiationException |
+        InvocationTargetException | IllegalAccessException e) {
+      throw new IllegalStateException("OutOfCoreEngine: caught exception " +
+          "while creating the data accessor instance!", e);
+    }
+    int numIOThreads = dataAccessor.getNumAccessorThreads();
+    this.oocIOCallableFactory =
+        new OutOfCoreIOCallableFactory(this, numIOThreads);
     this.ioScheduler = new OutOfCoreIOScheduler(conf, this, numIOThreads);
     this.metaPartitionManager = new MetaPartitionManager(numIOThreads, this);
     this.statistics = new OutOfCoreIOStatistics(conf, numIOThreads);
@@ -188,6 +204,7 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
    * Initialize/Start the out-of-core engine.
    */
   public void initialize() {
+    dataAccessor.initialize();
     oocIOCallableFactory.createCallable();
   }
 
@@ -201,6 +218,7 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
     }
     ioScheduler.shutdown();
     oocIOCallableFactory.shutdown();
+    dataAccessor.shutdown();
   }
 
   /**
@@ -499,5 +517,9 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
 
   public void setFlowControl(FlowControl flowControl) {
     this.flowControl = flowControl;
+  }
+
+  public OutOfCoreDataAccessor getDataAccessor() {
+    return dataAccessor;
   }
 }

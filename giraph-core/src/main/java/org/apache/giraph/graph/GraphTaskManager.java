@@ -1054,7 +1054,7 @@ end[PURE_YARN]*/
    * @return Time spent in GC recorder by the GC listener
    */
   public long getSuperstepGCTime() {
-    return gcTimeMetric.count();
+    return (gcTimeMetric == null) ? 0 : gcTimeMetric.count();
   }
 
   /**

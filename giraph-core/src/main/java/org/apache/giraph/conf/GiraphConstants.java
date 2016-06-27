@@ -71,8 +71,10 @@ import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
-import org.apache.giraph.ooc.OutOfCoreOracle;
-import org.apache.giraph.ooc.ThresholdBasedOracle;
+import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
+import org.apache.giraph.ooc.persistence.LocalDiskDataAccessor;
+import org.apache.giraph.ooc.policy.OutOfCoreOracle;
+import org.apache.giraph.ooc.policy.ThresholdBasedOracle;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
@@ -949,10 +951,31 @@ public interface GiraphConstants {
           "Comma-separated list of directories in the local filesystem for " +
           "out-of-core partitions.");
 
+  /**
+   * Number of IO threads used in out-of-core mechanism. If local disk is used
+   * for spilling data to and reading data from, this number should be equal to
+   * the number of available disks on each machine. In such case, one should
+   * use giraph.partitionsDirectory to specify directories mounted on different
+   * disks.
+   */
+  IntConfOption NUM_OUT_OF_CORE_THREADS =
+      new IntConfOption("giraph.numOutOfCoreThreads", 1, "Number of IO " +
+          "threads used in out-of-core mechanism. If using local disk to " +
+          "spill data, this should be equal to the number of available " +
+          "disks. In such case, use giraph.partitionsDirectory to specify " +
+          "mount points on different disks.");
+
   /** Enable out-of-core graph. */
   BooleanConfOption USE_OUT_OF_CORE_GRAPH =
       new BooleanConfOption("giraph.useOutOfCoreGraph", false,
           "Enable out-of-core graph.");
+
+  /** Data accessor resource/object */
+  ClassConfOption<OutOfCoreDataAccessor> OUT_OF_CORE_DATA_ACCESSOR =
+      ClassConfOption.create("giraph.outOfCoreDataAccessor",
+          LocalDiskDataAccessor.class, OutOfCoreDataAccessor.class,
+          "Data accessor used in out-of-core computation (local-disk, " +
+              "in-memory, HDFS, etc.)");
 
   /**
    * Out-of-core oracle that is to be used for adaptive out-of-core engine. If

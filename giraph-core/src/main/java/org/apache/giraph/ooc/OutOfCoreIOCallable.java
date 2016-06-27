@@ -23,9 +23,9 @@ import com.yammer.metrics.core.Histogram;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.ooc.io.IOCommand;
-import org.apache.giraph.ooc.io.LoadPartitionIOCommand;
-import org.apache.giraph.ooc.io.WaitIOCommand;
+import org.apache.giraph.ooc.command.IOCommand;
+import org.apache.giraph.ooc.command.LoadPartitionIOCommand;
+import org.apache.giraph.ooc.command.WaitIOCommand;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.Callable;
@@ -47,8 +47,6 @@ public class OutOfCoreIOCallable implements Callable<Void>,
   private static final Logger LOG = Logger.getLogger(OutOfCoreIOCallable.class);
   /** Out-of-core engine */
   private final OutOfCoreEngine oocEngine;
-  /** Base path that this thread will write to/read from */
-  private final String basePath;
   /** Thread id/Disk id */
   private final int diskId;
   /** How many bytes of data is read from disk */
@@ -64,13 +62,10 @@ public class OutOfCoreIOCallable implements Callable<Void>,
    * Constructor
    *
    * @param oocEngine out-of-core engine
-   * @param basePath base path this thread will be using
    * @param diskId thread id/disk id
    */
-  public OutOfCoreIOCallable(OutOfCoreEngine oocEngine, String basePath,
-                             int diskId) {
+  public OutOfCoreIOCallable(OutOfCoreEngine oocEngine, int diskId) {
     this.oocEngine = oocEngine;
-    this.basePath = basePath;
     this.diskId = diskId;
     newSuperstep(GiraphMetrics.get().perSuperstep());
     GiraphMetrics.get().addSuperstepResetObserver(this);
@@ -98,15 +93,23 @@ public class OutOfCoreIOCallable implements Callable<Void>,
       long bytes;
       // CHECKSTYLE: stop IllegalCatch
       try {
+        long timeInGC = oocEngine.getServiceWorker().getGraphTaskManager()
+            .getSuperstepGCTime();
         long startTime = System.currentTimeMillis();
-        commandExecuted = command.execute(basePath);
+        commandExecuted = command.execute();
         duration = System.currentTimeMillis() - startTime;
+        timeInGC = oocEngine.getServiceWorker().getGraphTaskManager()
+            .getSuperstepGCTime() - timeInGC;
         bytes = command.bytesTransferred();
         if (LOG.isInfoEnabled()) {
           LOG.info("call: thread " + diskId + "'s command " + command +
               " completed: bytes= " + bytes + ", duration=" + duration + ", " +
               "bandwidth=" + String.format("%.2f", (double) bytes / duration *
-              1000 / 1024 / 1024));
+              1000 / 1024 / 1024) +
+              ((command instanceof WaitIOCommand) ? "" :
+                  (", bandwidth (excluding GC time)=" + String.format("%.2f",
+                      (double) bytes / (duration - timeInGC) *
+                          1000 / 1024 / 1024))));
         }
       } catch (Exception e) {
         oocEngine.failTheJob();

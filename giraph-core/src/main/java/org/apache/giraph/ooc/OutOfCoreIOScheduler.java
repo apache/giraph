@@ -18,15 +18,15 @@
 
 package org.apache.giraph.ooc;
 
-import com.google.common.hash.Hashing;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
-import org.apache.giraph.ooc.io.IOCommand;
-import org.apache.giraph.ooc.io.LoadPartitionIOCommand;
-import org.apache.giraph.ooc.io.StoreDataBufferIOCommand;
-import org.apache.giraph.ooc.io.StoreIncomingMessageIOCommand;
-import org.apache.giraph.ooc.io.StorePartitionIOCommand;
-import org.apache.giraph.ooc.io.WaitIOCommand;
+import org.apache.giraph.ooc.command.IOCommand;
+import org.apache.giraph.ooc.command.LoadPartitionIOCommand;
+import org.apache.giraph.ooc.command.StoreDataBufferIOCommand;
+import org.apache.giraph.ooc.command.StoreIncomingMessageIOCommand;
+import org.apache.giraph.ooc.command.StorePartitionIOCommand;
+import org.apache.giraph.ooc.command.WaitIOCommand;
+import org.apache.giraph.ooc.policy.OutOfCoreOracle;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -57,8 +57,6 @@ public class OutOfCoreIOScheduler {
   private final OutOfCoreEngine oocEngine;
   /** How much an IO thread should wait if there is no IO command */
   private final int waitInterval;
-  /** How many disks (i.e. IO threads) do we have? */
-  private final int numDisks;
   /**
    * Queue of IO commands for loading partitions to memory. Load commands are
    * urgent and should be done once loading data is a viable IO command.
@@ -77,7 +75,6 @@ public class OutOfCoreIOScheduler {
   OutOfCoreIOScheduler(final ImmutableClassesGiraphConfiguration conf,
                        OutOfCoreEngine oocEngine, int numDisks) {
     this.oocEngine = oocEngine;
-    this.numDisks = numDisks;
     this.waitInterval = OOC_WAIT_INTERVAL.get(conf);
     threadLoadCommandQueue = new ArrayList<>(numDisks);
     for (int i = 0; i < numDisks; ++i) {
@@ -85,17 +82,6 @@ public class OutOfCoreIOScheduler {
           new ConcurrentLinkedQueue<IOCommand>());
     }
     shouldTerminate = false;
-  }
-
-  /**
-   * Get the thread id that is responsible for a particular partition
-   *
-   * @param partitionId id of the given partition
-   * @return id of the thread responsible for the given partition
-   */
-  public int getOwnerThreadId(int partitionId) {
-    int result = Hashing.murmur3_32().hashInt(partitionId).asInt() % numDisks;
-    return (result >= 0) ? result : (result + numDisks);
   }
 
   /**
@@ -254,8 +240,9 @@ public class OutOfCoreIOScheduler {
    * @param ioCommand IO command to add to the scheduler
    */
   public void addIOCommand(IOCommand ioCommand) {
-    int ownerThread = getOwnerThreadId(ioCommand.getPartitionId());
     if (ioCommand instanceof LoadPartitionIOCommand) {
+      int ownerThread = oocEngine.getMetaPartitionManager()
+          .getOwnerThreadId(ioCommand.getPartitionId());
       threadLoadCommandQueue.get(ownerThread).offer(ioCommand);
     } else {
       throw new IllegalStateException("addIOCommand: IO command type is not " +
