@@ -29,6 +29,7 @@ import org.apache.giraph.block_app.framework.piece.PieceWithWorkerContext;
 import org.apache.giraph.block_app.test_setup.NumericTestGraph;
 import org.apache.giraph.block_app.test_setup.TestGraphModifier;
 import org.apache.giraph.block_app.test_setup.TestGraphUtils;
+import org.apache.giraph.conf.BulkConfigurator;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.types.NoMessage;
 import org.apache.giraph.utils.TestGraph;

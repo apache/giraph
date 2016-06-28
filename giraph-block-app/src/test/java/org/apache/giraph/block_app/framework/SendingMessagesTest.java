@@ -25,6 +25,7 @@ import org.apache.giraph.block_app.test_setup.NumericTestGraph;
 import org.apache.giraph.block_app.test_setup.TestGraphChecker;
 import org.apache.giraph.block_app.test_setup.TestGraphModifier;
 import org.apache.giraph.block_app.test_setup.TestGraphUtils;
+import org.apache.giraph.conf.BulkConfigurator;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;

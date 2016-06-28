@@ -18,7 +18,7 @@
 package org.apache.giraph.block_app.test_setup;
 
 import org.apache.giraph.block_app.framework.BlockUtils;
-import org.apache.giraph.block_app.framework.BulkConfigurator;
+import org.apache.giraph.conf.BulkConfigurator;
 import org.apache.giraph.block_app.framework.api.local.LocalBlockRunner;
 import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.GiraphConfiguration;

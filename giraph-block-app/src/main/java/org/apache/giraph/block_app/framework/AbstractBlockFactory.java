@@ -20,6 +20,7 @@ package org.apache.giraph.block_app.framework;
 import java.util.List;
 
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
+import org.apache.giraph.conf.BulkConfigurator;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.StrConfOption;

@@ -15,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.block_app.framework;
-
-import org.apache.giraph.conf.GiraphConfiguration;
+package org.apache.giraph.conf;
 
 /**
  * Function that modifies configuration.
@@ -27,6 +25,8 @@ import org.apache.giraph.conf.GiraphConfiguration;
 public interface BulkConfigurator {
   /**
    * Modify given configuration.
+   *
+   * @param conf Configuration to configure
    */
   void configure(GiraphConfiguration conf);
 }
