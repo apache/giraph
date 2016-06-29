@@ -354,16 +354,21 @@ public abstract class DiskBackedDataStore<T> {
    * offloaded to disk), and sees if any of them has enough raw data buffer in
    * memory. If so, puts that partition in a list to return.
    *
+   * @param ioThreadId Id of the IO thread who would offload the buffers
    * @return Set of partition ids of all partition raw buffers where the
    *         aggregate size of buffers are large enough and it is worth flushing
    *         those buffers to disk
    */
-  public Set<Integer> getCandidateBuffersToOffload() {
+  public Set<Integer> getCandidateBuffersToOffload(int ioThreadId) {
     Set<Integer> result = new HashSet<>();
     for (Map.Entry<Integer, Pair<Integer, List<T>>> entry :
         dataBuffers.entrySet()) {
-      if (entry.getValue().getLeft() > minBufferSizeToOffload) {
-        result.add(entry.getKey());
+      int partitionId = entry.getKey();
+      long aggregateBufferSize = entry.getValue().getLeft();
+      if (aggregateBufferSize > minBufferSizeToOffload &&
+          oocEngine.getMetaPartitionManager().getOwnerThreadId(partitionId) ==
+              ioThreadId) {
+        result.add(partitionId);
       }
     }
     return result;

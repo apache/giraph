@@ -332,12 +332,12 @@ public class MetaPartitionManager {
             (DiskBackedPartitionStore<?, ?, ?>) (oocEngine.getServerData()
                 .getPartitionStore());
         perThreadVertexEdgeBuffers.get(threadId)
-            .addAll(partitionStore.getCandidateBuffersToOffload());
+            .addAll(partitionStore.getCandidateBuffersToOffload(threadId));
         DiskBackedEdgeStore<?, ?, ?> edgeStore =
             (DiskBackedEdgeStore<?, ?, ?>) (oocEngine.getServerData())
                 .getEdgeStore();
         perThreadVertexEdgeBuffers.get(threadId)
-            .addAll(edgeStore.getCandidateBuffersToOffload());
+            .addAll(edgeStore.getCandidateBuffersToOffload(threadId));
         partitionId = popFromSet(perThreadVertexEdgeBuffers.get(threadId));
       }
       return partitionId;
@@ -361,7 +361,7 @@ public class MetaPartitionManager {
                 .getIncomingMessageStore());
         if (messageStore != null) {
           perThreadMessageBuffers.get(threadId)
-              .addAll(messageStore.getCandidateBuffersToOffload());
+              .addAll(messageStore.getCandidateBuffersToOffload(threadId));
           partitionId = popFromSet(perThreadMessageBuffers.get(threadId));
         }
       }
