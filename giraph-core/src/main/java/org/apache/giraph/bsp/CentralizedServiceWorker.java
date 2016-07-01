@@ -20,6 +20,7 @@ package org.apache.giraph.bsp;
 
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphTaskManager;
@@ -245,4 +246,12 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @return Input splits handler
    */
   WorkerInputSplitsHandler getInputSplitsHandler();
+
+  /**
+   * Received addresses and partitions assignments from master.
+   *
+   * @param addressesAndPartitions Addresses and partitions assignment
+   */
+  void addressesAndPartitionsReceived(
+      AddressesAndPartitionsWritable addressesAndPartitions);
 }

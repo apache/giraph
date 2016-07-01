@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -129,6 +130,26 @@ public class ProgressableUtils {
   public static void awaitChannelFuture(ChannelFuture future,
       Progressable progressable) {
     waitForever(new ChannelFutureWaitable(future), progressable);
+  }
+
+  /**
+   * Wait to acquire enough permits from {@link Semaphore}, while periodically
+   * reporting progress.
+   *
+   * @param semaphore    Semaphore
+   * @param permits      How many permits to acquire
+   * @param progressable Progressable for reporting progress (Job context)
+   */
+  public static void awaitSemaphorePermits(final Semaphore semaphore,
+      int permits, Progressable progressable) {
+    while (true) {
+      waitForever(new SemaphoreWaitable(semaphore, permits), progressable);
+      // Verify permits were not taken by another thread,
+      // if they were keep looping
+      if (semaphore.tryAcquire(permits)) {
+        return;
+      }
+    }
   }
 
   /**
@@ -443,6 +464,43 @@ public class ProgressableUtils {
     @Override
     public boolean isFinished() {
       return future.isDone();
+    }
+  }
+
+  /**
+   * {@link Waitable} for waiting on required number of permits in a
+   * {@link Semaphore} to become available.
+   */
+  private static class SemaphoreWaitable extends WaitableWithoutResult {
+    /** Semaphore to wait on */
+    private final Semaphore semaphore;
+    /** How many permits to wait on */
+    private final int permits;
+
+    /**
+     * Constructor
+     *
+     * @param semaphore Semaphore to wait on
+     * @param permits How many permits to wait on
+     */
+    public SemaphoreWaitable(Semaphore semaphore, int permits) {
+      this.semaphore = semaphore;
+      this.permits = permits;
+    }
+
+    @Override
+    public void waitFor(int msecs) throws InterruptedException {
+      boolean acquired =
+          semaphore.tryAcquire(permits, msecs, TimeUnit.MILLISECONDS);
+      // Return permits if we managed to acquire them
+      if (acquired) {
+        semaphore.release(permits);
+      }
+    }
+
+    @Override
+    public boolean isFinished() {
+      return semaphore.availablePermits() >= permits;
     }
   }
 }

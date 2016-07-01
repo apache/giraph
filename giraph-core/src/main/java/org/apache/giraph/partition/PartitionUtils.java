@@ -209,49 +209,6 @@ public class PartitionUtils {
       LOG.info("computePartitionCount: Creating " +
           partitionCount + " partitions.");
     }
-    int maxPartitions = getMaxPartitions(conf);
-    if (partitionCount > maxPartitions) {
-      // try to keep partitionCount divisible by number of workers
-      // in order to keep the balance
-      int reducedPartitions = (maxPartitions / availableWorkerCount) *
-          availableWorkerCount;
-      if (reducedPartitions == 0) {
-        reducedPartitions = maxPartitions;
-      }
-      if (LOG.isInfoEnabled()) {
-        LOG.info("computePartitionCount: " +
-            "Reducing the partitionCount to " + reducedPartitions +
-            " from " + partitionCount + " because of " + maxPartitions +
-            " limit");
-      }
-      partitionCount = reducedPartitions;
-    }
-
     return partitionCount;
-  }
-
-  /**
-   * Get the maximum number of partitions supported by Giraph.
-   *
-   * ZooKeeper has a limit of the data in a single znode of 1 MB,
-   * and we write all partition descriptions to the same znode.
-   *
-   * If we are not using checkpointing, each partition owner is serialized
-   * as 4 ints (16B), and we need some space to write the list of workers
-   * there. 50k partitions is conservative enough.
-   *
-   * When checkpointing is used, we need enough space to write all the
-   * checkpoint file paths.
-   *
-   * @param conf Configuration.
-   * @return Maximum number of partitions allowed
-   */
-  private static int getMaxPartitions(
-      ImmutableClassesGiraphConfiguration conf) {
-    if (conf.useCheckpointing()) {
-      return 5000;
-    } else {
-      return 50000;
-    }
   }
 }

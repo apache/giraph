@@ -19,8 +19,15 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.master.input.MasterInputSplitsHandler;
+import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.utils.BlockingElementsSet;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progressable;
+
+import com.google.common.collect.Iterables;
+
+import java.util.List;
 
 /**
  * Handler for all master communications
@@ -30,6 +37,9 @@ public class MasterGlobalCommHandler implements MasterGlobalCommUsage {
   private final MasterAggregatorHandler aggregatorHandler;
   /** Input splits handler*/
   private final MasterInputSplitsHandler inputSplitsHandler;
+  /** Partition stats received from workers */
+  private final BlockingElementsSet<List<PartitionStats>> partitionStats =
+      new BlockingElementsSet<>();
 
   /**
    * Constructor
@@ -72,5 +82,27 @@ public class MasterGlobalCommHandler implements MasterGlobalCommUsage {
   @Override
   public void broadcast(String name, Writable value) {
     aggregatorHandler.broadcast(name, value);
+  }
+
+  /**
+   * Received partition stats from a worker
+   *
+   * @param partitionStats Partition stats
+   */
+  public void receivedPartitionStats(List<PartitionStats> partitionStats) {
+    this.partitionStats.offer(partitionStats);
+  }
+
+  /**
+   * Get all partition stats. Blocks until all workers have sent their stats
+   *
+   * @param numWorkers Number of workers to wait for
+   * @param progressable Progressable to report progress to
+   * @return All partition stats
+   */
+  public Iterable<PartitionStats> getAllPartitionStats(int numWorkers,
+      Progressable progressable) {
+    return Iterables.concat(
+        partitionStats.getElements(numWorkers, progressable));
   }
 }

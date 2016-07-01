@@ -50,6 +50,7 @@ import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterServer;
 import org.apache.giraph.comm.netty.NettyMasterClient;
 import org.apache.giraph.comm.netty.NettyMasterServer;
+import org.apache.giraph.comm.requests.AddressesAndPartitionsRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -888,8 +889,6 @@ public class BspServiceMaster<I extends WritableComparable,
   private GlobalStats aggregateWorkerStats(long superstep) {
     ImmutableClassesGiraphConfiguration conf = getConfiguration();
 
-    Class<? extends PartitionStats> partitionStatsClass =
-        masterGraphPartitioner.createPartitionStats().getClass();
     GlobalStats globalStats = new GlobalStats();
     // Get the stats from the all the worker selected nodes
     String workerFinishedPath =
@@ -909,7 +908,6 @@ public class BspServiceMaster<I extends WritableComparable,
 
     AggregatedMetrics aggregatedMetrics = new AggregatedMetrics();
 
-    allPartitionStatsList.clear();
     for (String finishedPath : workerFinishedPathList) {
       String hostnamePartitionId = FilenameUtils.getName(finishedPath);
       JSONObject workerFinishedInfoObj = null;
@@ -918,16 +916,6 @@ public class BspServiceMaster<I extends WritableComparable,
             getZkExt().getData(finishedPath, false, null);
         workerFinishedInfoObj = new JSONObject(new String(zkData,
             Charset.defaultCharset()));
-        List<PartitionStats> statsList =
-            WritableUtils.readListFieldsFromByteArray(
-                Base64.decode(workerFinishedInfoObj.getString(
-                    JSONOBJ_PARTITION_STATS_KEY)),
-                    partitionStatsClass,
-                    conf);
-        for (PartitionStats partitionStats : statsList) {
-          globalStats.addPartitionStats(partitionStats);
-          allPartitionStatsList.add(partitionStats);
-        }
         globalStats.addMessageCount(
             workerFinishedInfoObj.getLong(
                 JSONOBJ_NUM_MESSAGES_KEY));
@@ -967,6 +955,14 @@ public class BspServiceMaster<I extends WritableComparable,
         throw new IllegalStateException(
             "aggregateWorkerStats: IOException", e);
       }
+    }
+
+    allPartitionStatsList.clear();
+    Iterable<PartitionStats> statsList = globalCommHandler.getAllPartitionStats(
+        workerFinishedPathList.size(), getContext());
+    for (PartitionStats partitionStats : statsList) {
+      globalStats.addPartitionStats(partitionStats);
+      allPartitionStatsList.add(partitionStats);
     }
 
     if (conf.metricsEnabled()) {
@@ -1141,18 +1137,16 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
-    // Workers are waiting for these assignments
     AddressesAndPartitionsWritable addressesAndPartitions =
         new AddressesAndPartitionsWritable(masterInfo, chosenWorkerInfoList,
             partitionOwners);
-    String addressesAndPartitionsPath =
-        getAddressesAndPartitionsPath(getApplicationAttempt(),
-            getSuperstep());
-    WritableUtils.writeToZnode(
-        getZkExt(),
-        addressesAndPartitionsPath,
-        -1,
-        addressesAndPartitions);
+    // Send assignments to every worker
+    // TODO for very large number of partitions we might want to split this
+    // across multiple requests
+    for (WorkerInfo workerInfo : chosenWorkerInfoList) {
+      masterClient.sendWritableRequest(workerInfo.getTaskId(),
+          new AddressesAndPartitionsRequest(addressesAndPartitions));
+    }
   }
 
   /**

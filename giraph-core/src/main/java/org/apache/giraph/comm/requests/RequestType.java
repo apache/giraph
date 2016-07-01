@@ -66,7 +66,11 @@ else[HADOOP_NON_SECURE]*/
   /** Send request with granted input split from master to workers */
   REPLY_WITH_INPUT_SPLIT_REQUEST(ReplyWithInputSplitRequest.class),
   /** Send request to resume sending messages (used in flow-control) */
-  SEND_RESUME_REQUEST(SendResumeRequest.class);
+  SEND_RESUME_REQUEST(SendResumeRequest.class),
+  /** Send addresses and partitions assignments from master to workers */
+  ADDRESSES_AND_PARTITIONS_REQUEST(AddressesAndPartitionsRequest.class),
+  /** Send partition stats from worker to master */
+  PARTITION_STATS_REQUEST(PartitionStatsRequest.class);
 
   /** Class of request which this type corresponds to */
   private final Class<? extends WritableRequest> requestClass;

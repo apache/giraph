@@ -98,9 +98,6 @@ public abstract class BspService<I extends WritableComparable,
       "/_workerWroteCheckpointDir";
   /** Finished workers notify here */
   public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
-  /** Where the master and worker addresses and partition assignments are set */
-  public static final String ADDRESSES_AND_PARTITIONS_DIR =
-      "/_addressesAndPartitions";
   /** Helps coordinate the partition exchnages */
   public static final String PARTITION_EXCHANGE_DIR =
       "/_partitionExchangeDir";
@@ -114,9 +111,6 @@ public abstract class BspService<I extends WritableComparable,
   public static final String FORCE_CHECKPOINT_USER_FLAG = "/_checkpointAndStop";
   /** Denotes which workers have been cleaned up */
   public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
-  /** JSON partition stats key */
-  public static final String JSONOBJ_PARTITION_STATS_KEY =
-      "_partitionStatsKey";
   /** JSON message count key */
   public static final String JSONOBJ_NUM_MESSAGES_KEY = "_numMsgsKey";
   /** JSON message bytes count key */
@@ -167,8 +161,6 @@ public abstract class BspService<I extends WritableComparable,
   private final BspEvent connectedEvent;
   /** Has worker registration changed (either healthy or unhealthy) */
   private final BspEvent workerHealthRegistrationChanged;
-  /** Are the addresses and partition assignments to workers ready? */
-  private final BspEvent addressesAndPartitionsReadyChanged;
   /** Application attempt changed */
   private final BspEvent applicationAttemptChanged;
   /** Input splits worker done */
@@ -220,7 +212,6 @@ public abstract class BspService<I extends WritableComparable,
       GraphTaskManager<I, V, E> graphTaskManager) {
     this.connectedEvent = new PredicateLock(context);
     this.workerHealthRegistrationChanged = new PredicateLock(context);
-    this.addressesAndPartitionsReadyChanged = new PredicateLock(context);
     this.applicationAttemptChanged = new PredicateLock(context);
     this.inputSplitsWorkerDoneEvent = new PredicateLock(context);
     this.inputSplitsAllDoneEvent = new PredicateLock(context);
@@ -232,7 +223,6 @@ public abstract class BspService<I extends WritableComparable,
     registerBspEvent(workerHealthRegistrationChanged);
     registerBspEvent(inputSplitsWorkerDoneEvent);
     registerBspEvent(inputSplitsAllDoneEvent);
-    registerBspEvent(addressesAndPartitionsReadyChanged);
     registerBspEvent(applicationAttemptChanged);
     registerBspEvent(superstepFinished);
     registerBspEvent(masterElectionChildrenChanged);
@@ -427,19 +417,6 @@ public abstract class BspService<I extends WritableComparable,
   }
 
   /**
-   * Generate the "addresses and partitions" directory path for a superstep
-   *
-   * @param attempt application attempt number
-   * @param superstep superstep to use
-   * @return directory path based on the a superstep
-   */
-  public final String getAddressesAndPartitionsPath(long attempt,
-      long superstep) {
-    return applicationAttemptsPath + "/" + attempt +
-        SUPERSTEP_DIR + "/" + superstep + ADDRESSES_AND_PARTITIONS_DIR;
-  }
-
-  /**
    * Generate the "partition exchange" directory path for a superstep
    *
    * @param attempt application attempt number
@@ -566,11 +543,6 @@ public abstract class BspService<I extends WritableComparable,
   public final BspEvent getWorkerHealthRegistrationChangedEvent() {
     return workerHealthRegistrationChanged;
   }
-
-  public final BspEvent getAddressesAndPartitionsReadyChangedEvent() {
-    return addressesAndPartitionsReadyChanged;
-  }
-
 
   public final BspEvent getApplicationAttemptChangedEvent() {
     return applicationAttemptChanged;
@@ -894,14 +866,6 @@ public abstract class BspService<I extends WritableComparable,
         LOG.debug("process: worker done reading input splits");
       }
       inputSplitsWorkerDoneEvent.signal();
-      eventProcessed = true;
-    } else if (event.getPath().contains(ADDRESSES_AND_PARTITIONS_DIR) &&
-        event.getType() == EventType.NodeCreated) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("process: partitionAssignmentsReadyChanged " +
-            "(partitions are assigned)");
-      }
-      addressesAndPartitionsReadyChanged.signal();
       eventProcessed = true;
     } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
         event.getType() == EventType.NodeCreated) {

@@ -52,6 +52,7 @@ import org.apache.giraph.comm.netty.NettyWorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerServer;
+import org.apache.giraph.comm.requests.PartitionStatsRequest;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
@@ -82,6 +83,7 @@ import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.WorkerGraphPartitioner;
+import org.apache.giraph.utils.BlockingElementsSet;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.utils.JMapHistoDumper;
@@ -155,6 +157,10 @@ public class BspServiceWorker<I extends WritableComparable,
   private List<WorkerInfo> workerInfoList = Lists.newArrayList();
   /** Have the partition exchange children (workers) changed? */
   private final BspEvent partitionExchangeChildrenChanged;
+
+  /** Addresses and partitions transfer */
+  private BlockingElementsSet<AddressesAndPartitionsWritable>
+      addressesAndPartitionsHolder = new BlockingElementsSet<>();
 
   /** Worker Context */
   private final WorkerContext workerContext;
@@ -702,31 +708,8 @@ else[HADOOP_NON_SECURE]*/
 
     registerHealth(getSuperstep());
 
-    String addressesAndPartitionsPath =
-        getAddressesAndPartitionsPath(getApplicationAttempt(),
-            getSuperstep());
     AddressesAndPartitionsWritable addressesAndPartitions =
-        new AddressesAndPartitionsWritable(
-            workerGraphPartitioner.createPartitionOwner().getClass());
-    try {
-      while (getZkExt().exists(addressesAndPartitionsPath, true) ==
-          null) {
-        getAddressesAndPartitionsReadyChangedEvent().waitForever();
-        getAddressesAndPartitionsReadyChangedEvent().reset();
-      }
-      WritableUtils.readFieldsFromZnode(
-          getZkExt(),
-          addressesAndPartitionsPath,
-          false,
-          null,
-          addressesAndPartitions);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "startSuperstep: KeeperException getting assignments", e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "startSuperstep: InterruptedException getting assignments", e);
-    }
+        addressesAndPartitionsHolder.getElement(getContext());
 
     workerInfoList.clear();
     workerInfoList = addressesAndPartitions.getWorkerInfos();
@@ -734,10 +717,6 @@ else[HADOOP_NON_SECURE]*/
 
     if (LOG.isInfoEnabled()) {
       LOG.info("startSuperstep: " + masterInfo);
-      LOG.info("startSuperstep: Ready for computation on superstep " +
-          getSuperstep() + " since worker " +
-          "selection and vertex range assignments are done in " +
-          addressesAndPartitionsPath);
     }
 
     getContext().setStatus("startSuperstep: " +
@@ -916,18 +895,14 @@ else[HADOOP_NON_SECURE]*/
     Collection<PartitionStats> finalizedPartitionStats =
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, getPartitionStore());
-    List<PartitionStats> finalizedPartitionStatsList =
-        new ArrayList<PartitionStats>(finalizedPartitionStats);
-    byte[] partitionStatsBytes =
-        WritableUtils.writeListToByteArray(finalizedPartitionStatsList);
+    workerClient.sendWritableRequest(masterInfo.getTaskId(),
+        new PartitionStatsRequest(finalizedPartitionStats));
     WorkerSuperstepMetrics metrics = new WorkerSuperstepMetrics();
     metrics.readFromRegistry();
     byte[] metricsBytes = WritableUtils.writeToByteArray(metrics);
 
     JSONObject workerFinishedInfoObj = new JSONObject();
     try {
-      workerFinishedInfoObj.put(JSONOBJ_PARTITION_STATS_KEY,
-          Base64.encodeBytes(partitionStatsBytes));
       workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY, workerSentMessages);
       workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGE_BYTES_KEY,
         workerSentMessageBytes);
@@ -1848,5 +1823,11 @@ else[HADOOP_NON_SECURE]*/
   @Override
   public WorkerInputSplitsHandler getInputSplitsHandler() {
     return inputSplitsHandler;
+  }
+
+  @Override
+  public void addressesAndPartitionsReceived(
+      AddressesAndPartitionsWritable addressesAndPartitions) {
+    addressesAndPartitionsHolder.offer(addressesAndPartitions);
   }
 }
