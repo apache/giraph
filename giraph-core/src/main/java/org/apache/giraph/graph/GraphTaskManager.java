@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.yammer.metrics.core.Counter;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -1043,7 +1045,7 @@ end[PURE_YARN]*/
   public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler() {
     return new OverrideExceptionHandler(
         CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS.newInstance(
-            getConf()));
+            getConf()), getJobProgressTracker());
   }
 
   public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
@@ -1079,16 +1081,21 @@ end[PURE_YARN]*/
   class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
     /** Checker if worker should fail after a thread gets an exception */
     private final CheckerIfWorkerShouldFailAfterException checker;
+    /** JobProgressTracker to log problems to */
+    private final JobProgressTracker jobProgressTracker;
 
     /**
      * Constructor
      *
      * @param checker Checker if worker should fail after a thread gets an
      *                exception
+     * @param jobProgressTracker JobProgressTracker to log problems to
      */
     public OverrideExceptionHandler(
-        CheckerIfWorkerShouldFailAfterException checker) {
+        CheckerIfWorkerShouldFailAfterException checker,
+        JobProgressTracker jobProgressTracker) {
       this.checker = checker;
+      this.jobProgressTracker = jobProgressTracker;
     }
 
     @Override
@@ -1100,6 +1107,7 @@ end[PURE_YARN]*/
         LOG.fatal(
             "uncaughtException: OverrideExceptionHandler on thread " +
                 t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
+        jobProgressTracker.logError(ExceptionUtils.getStackTrace(e));
 
         zooKeeperCleanup();
         workerFailureCleanup();

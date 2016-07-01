@@ -19,6 +19,9 @@ package org.apache.giraph.utils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -61,5 +64,26 @@ public class ThreadUtils {
    */
   public static ThreadFactory createThreadFactory(String nameFormat) {
     return createThreadFactory(nameFormat, null);
+  }
+
+  /**
+   * Submit a callable to executor service, ensuring any exceptions are
+   * caught with provided exception handler.
+   *
+   * When using submit(), UncaughtExceptionHandler which is set on ThreadFactory
+   * isn't used, so we need this utility.
+   *
+   * @param executorService Executor service to submit callable to
+   * @param callable Callable to submit
+   * @param uncaughtExceptionHandler Handler for uncaught exceptions in callable
+   * @param <T> Type of callable result
+   * @return Future for callable
+   */
+  public static <T> Future<T> submitToExecutor(
+      ExecutorService executorService,
+      Callable<T> callable,
+      Thread.UncaughtExceptionHandler uncaughtExceptionHandler) {
+    return executorService.submit(
+        new LogStacktraceCallable<>(callable, uncaughtExceptionHandler));
   }
 }

@@ -112,9 +112,8 @@ public class OutOfCoreIOCallable implements Callable<Void>,
                           1000 / 1024 / 1024))));
         }
       } catch (Exception e) {
-        oocEngine.failTheJob();
-        LOG.error("call: execution of IO command " + command + " failed!");
-        throw new RuntimeException(e);
+        throw new RuntimeException(
+            "call: execution of IO command " + command + " failed!", e);
       }
       // CHECKSTYLE: resume IllegalCatch
       if (!(command instanceof WaitIOCommand)) {

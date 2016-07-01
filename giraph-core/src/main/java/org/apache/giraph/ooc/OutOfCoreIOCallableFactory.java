@@ -19,7 +19,6 @@
 package org.apache.giraph.ooc;
 
 import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
@@ -46,20 +45,24 @@ public class OutOfCoreIOCallableFactory {
   private final List<Future> results;
   /** Number of threads used for IO operations */
   private final int numIOThreads;
+  /** Thread UncaughtExceptionHandler to use */
+  private final Thread.UncaughtExceptionHandler uncaughtExceptionHandler;
   /** Executor service for IO threads */
   private ExecutorService outOfCoreIOExecutor;
 
   /**
    * Constructor
-   *
    * @param oocEngine Out-of-core engine
    * @param numIOThreads Number of IO threads used
+   * @param uncaughtExceptionHandler Thread UncaughtExceptionHandler to use
    */
   public OutOfCoreIOCallableFactory(OutOfCoreEngine oocEngine,
-                                    int numIOThreads) {
+      int numIOThreads,
+      Thread.UncaughtExceptionHandler uncaughtExceptionHandler) {
     this.oocEngine = oocEngine;
     this.numIOThreads = numIOThreads;
     this.results = new ArrayList<>(numIOThreads);
+    this.uncaughtExceptionHandler = uncaughtExceptionHandler;
   }
 
   /**
@@ -75,34 +78,11 @@ public class OutOfCoreIOCallableFactory {
       };
     outOfCoreIOExecutor = new ThreadPoolExecutor(numIOThreads, numIOThreads, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
-        ThreadUtils.createThreadFactory("ooc-io-%d")) {
-      @Override
-      protected void afterExecute(Runnable r, Throwable t) {
-        super.afterExecute(r, t);
-        if (t == null && r instanceof Future<?>) {
-          try {
-            Future<?> future = (Future<?>) r;
-            if (future.isDone()) {
-              future.get();
-            }
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-          } catch (ExecutionException e) {
-            t = e;
-          }
-          if (t != null) {
-            LOG.info("afterExecute: an out-of-core thread terminated " +
-                "unexpectedly with " + t);
-            oocEngine.failTheJob();
-          }
-        }
-      }
-    };
+        ThreadUtils.createThreadFactory("ooc-io-%d"));
 
     for (int i = 0; i < numIOThreads; ++i) {
-      Future<Void> future = outOfCoreIOExecutor.submit(
-          new LogStacktraceCallable<>(
-              outOfCoreIOCallableFactory.newCallable(i)));
+      Future<Void> future = ThreadUtils.submitToExecutor(outOfCoreIOExecutor,
+          outOfCoreIOCallableFactory.newCallable(i), uncaughtExceptionHandler);
       results.add(future);
     }
     // Notify executor to not accept any more tasks

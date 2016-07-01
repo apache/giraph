@@ -77,11 +77,6 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   private final MetaPartitionManager metaPartitionManager;
   /** Out-of-core oracle (brain of out-of-core mechanism) */
   private final OutOfCoreOracle oracle;
-  /**
-   * Whether the job should fail due to IO threads terminating because of
-   * exceptions
-   */
-  private volatile boolean jobFailed = false;
   /** IO statistics collector */
   private final OutOfCoreIOStatistics statistics;
   /**
@@ -167,7 +162,8 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
     }
     int numIOThreads = dataAccessor.getNumAccessorThreads();
     this.oocIOCallableFactory =
-        new OutOfCoreIOCallableFactory(this, numIOThreads);
+        new OutOfCoreIOCallableFactory(this, numIOThreads,
+            service.getGraphTaskManager().createUncaughtExceptionHandler());
     this.ioScheduler = new OutOfCoreIOScheduler(conf, this, numIOThreads);
     this.metaPartitionManager = new MetaPartitionManager(numIOThreads, this);
     this.statistics = new OutOfCoreIOStatistics(conf, numIOThreads);
@@ -307,10 +303,6 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
               "InterruptedException while waiting to retrieve a partition to " +
               "process");
         }
-        if (jobFailed) {
-          throw new RuntimeException("Job Failed due to a failure in an " +
-              "out-of-core IO thread!");
-        }
       }
       if (partitionId == MetaPartitionManager.NO_PARTITION_TO_PROCESS) {
         partitionAvailable.notifyAll();
@@ -407,13 +399,6 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
         partitionAvailable.notifyAll();
       }
     }
-  }
-
-  /**
-   * Set a flag to fail the job.
-   */
-  public void failTheJob() {
-    jobFailed = true;
   }
 
   /**
