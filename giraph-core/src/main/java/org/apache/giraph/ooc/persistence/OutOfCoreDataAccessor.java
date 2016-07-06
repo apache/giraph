@@ -82,7 +82,8 @@ public interface OutOfCoreDataAccessor {
   /** Interface to wrap <code>DataInput</code> */
   interface DataInputWrapper {
     /**
-     * @return the <code>DataInput</code>
+     * @return the <code>DataInput</code>, should return the same instance
+     * every time it's called (not start from the beginning)
      */
     DataInput getDataInput();
 

@@ -125,6 +125,21 @@ public class BigDataOutput implements DataOutput, Writable {
     return conf;
   }
 
+  /**
+   * Get number of bytes written to this data output
+   *
+   * @return Size in bytes
+   */
+  public long getSize() {
+    long size = currentDataOutput.getPos();
+    if (dataOutputs != null) {
+      for (ExtendedDataOutput dataOutput : dataOutputs) {
+        size += dataOutput.getPos();
+      }
+    }
+    return size;
+  }
+
   @Override
   public void write(int b) throws IOException {
     getDataOutputToWriteTo().write(b);

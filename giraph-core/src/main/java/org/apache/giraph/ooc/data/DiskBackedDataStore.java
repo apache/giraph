@@ -241,8 +241,9 @@ public abstract class DiskBackedDataStore<T> {
         index.addIndex(DataIndex.TypeIndexEntry.BUFFER);
         OutOfCoreDataAccessor.DataInputWrapper inputWrapper =
             oocEngine.getDataAccessor().prepareInput(ioThreadId, index.copy());
+        DataInput dataInput = inputWrapper.getDataInput();
         for (int i = 0; i < numBuffers; ++i) {
-          T entry = readNextEntry(inputWrapper.getDataInput());
+          T entry = readNextEntry(dataInput);
           addEntryToInMemoryPartitionData(partitionId, entry);
         }
         numBytes += inputWrapper.finalizeInput(true);
