@@ -50,11 +50,11 @@ public class BigDataOutput implements DataOutput, Writable {
   private static final int SIZE_DELTA = 100;
 
   /** Data output which we are currently writing to */
-  private ExtendedDataOutput currentDataOutput;
+  protected ExtendedDataOutput currentDataOutput;
   /** List of filled outputs, will be null until we get a lot of data */
-  private List<ExtendedDataOutput> dataOutputs;
+  protected List<ExtendedDataOutput> dataOutputs;
   /** Configuration */
-  private final ImmutableClassesGiraphConfiguration conf;
+  protected final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
@@ -75,7 +75,26 @@ public class BigDataOutput implements DataOutput, Writable {
       ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
     dataOutputs = null;
-    currentDataOutput = conf.createExtendedDataOutput(initialSize);
+    currentDataOutput = createOutput(initialSize);
+  }
+
+  /**
+   * Get max size for single data output
+   *
+   * @return Max size for single data output
+   */
+  protected int getMaxSize() {
+    return MAX_SIZE;
+  }
+
+  /**
+   * Create next data output
+   *
+   * @param size Size of data output to create
+   * @return Created data output
+   */
+  protected ExtendedDataOutput createOutput(int size) {
+    return conf.createExtendedDataOutput(size);
   }
 
   /**
@@ -85,16 +104,25 @@ public class BigDataOutput implements DataOutput, Writable {
    * @return DataOutput which data should be written to
    */
   private ExtendedDataOutput getDataOutputToWriteTo() {
-    if (currentDataOutput.getPos() + SIZE_DELTA < MAX_SIZE) {
-      return currentDataOutput;
-    } else {
+    return getDataOutputToWriteTo(SIZE_DELTA);
+  }
+
+  /**
+   * Get DataOutput which data should be written to. If current DataOutput is
+   * full it will create a new one.
+   *
+   * @param additionalSize How many additional bytes we need space for
+   * @return DataOutput which data should be written to
+   */
+  private ExtendedDataOutput getDataOutputToWriteTo(int additionalSize) {
+    if (currentDataOutput.getPos() + additionalSize >= getMaxSize()) {
       if (dataOutputs == null) {
-        dataOutputs = new ArrayList<ExtendedDataOutput>(1);
+        dataOutputs = new ArrayList<>(1);
       }
       dataOutputs.add(currentDataOutput);
-      currentDataOutput = conf.createExtendedDataOutput(MAX_SIZE);
-      return currentDataOutput;
+      currentDataOutput = createOutput(getMaxSize());
     }
+    return currentDataOutput;
   }
 
   /**
@@ -147,12 +175,12 @@ public class BigDataOutput implements DataOutput, Writable {
 
   @Override
   public void write(byte[] b) throws IOException {
-    getDataOutputToWriteTo().write(b);
+    getDataOutputToWriteTo(b.length + SIZE_DELTA).write(b);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
-    getDataOutputToWriteTo().write(b, off, len);
+    getDataOutputToWriteTo(len + SIZE_DELTA).write(b, off, len);
   }
 
   @Override
