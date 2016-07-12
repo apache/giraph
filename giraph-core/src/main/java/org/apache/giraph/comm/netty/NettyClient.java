@@ -69,6 +69,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -374,6 +375,14 @@ public class NettyClient {
 /*if_not[HADOOP_NON_SECURE]*/
             }
 /*end[HADOOP_NON_SECURE]*/
+          }
+
+          @Override
+          public void channelUnregistered(ChannelHandlerContext ctx) throws
+              Exception {
+            super.channelUnregistered(ctx);
+            LOG.error("Channel failed " + ctx.channel());
+            checkRequestsAfterChannelFailure(ctx.channel());
           }
         });
   }
@@ -1065,13 +1074,14 @@ public class NettyClient {
   /**
    * Resend requests related to channel which failed
    *
-   * @param future ChannelFuture of the failed channel
+   * @param channel Channel which failed
    */
-  private void checkRequestsAfterChannelFailure(final ChannelFuture future) {
+  private void checkRequestsAfterChannelFailure(final Channel channel) {
     resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
       @Override
       public boolean apply(RequestInfo requestInfo) {
-        return requestInfo.getWriteFuture() == future;
+        return requestInfo.getWriteFuture().channel().remoteAddress().equals(
+            channel.remoteAddress());
       }
     });
   }
@@ -1087,7 +1097,7 @@ public class NettyClient {
     public void operationComplete(ChannelFuture future) throws Exception {
       if (future.isDone() && !future.isSuccess()) {
         LOG.error("Request failed", future.cause());
-        checkRequestsAfterChannelFailure(future);
+        checkRequestsAfterChannelFailure(future.channel());
       }
     }
   }
