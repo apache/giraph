@@ -491,7 +491,7 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
     superstepMetrics.getGauge(GRAPH_PERCENTAGE_IN_MEMORY, new Gauge<Double>() {
       @Override
       public Double value() {
-        return metaPartitionManager.getLowestGraphFractionInMemory() * 100;
+        return metaPartitionManager.getGraphFractionInMemory() * 100;
       }
     });
   }

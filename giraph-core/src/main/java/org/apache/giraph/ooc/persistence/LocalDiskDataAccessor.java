@@ -168,8 +168,6 @@ public class LocalDiskDataAccessor implements OutOfCoreDataAccessor {
     LocalDiskDataInputWrapper(String fileName, byte[] buffer)
         throws IOException {
       file = new File(fileName);
-      LOG.info("LocalDiskDataInputWrapper: obtaining a data input from local " +
-          "file " + file.getAbsolutePath());
       if (LOG.isDebugEnabled()) {
         LOG.debug("LocalDiskDataInputWrapper: obtaining a data input from " +
             "local file " + file.getAbsolutePath());
@@ -216,8 +214,6 @@ public class LocalDiskDataAccessor implements OutOfCoreDataAccessor {
     LocalDiskDataOutputWrapper(String fileName, boolean shouldAppend,
                                byte[] buffer) throws IOException {
       file = new File(fileName);
-      LOG.info("LocalDiskDataOutputWrapper: obtaining a data output from " +
-          "local file " + file.getAbsolutePath());
       if (LOG.isDebugEnabled()) {
         LOG.debug("LocalDiskDataOutputWrapper: obtaining a data output from " +
             "local file " + file.getAbsolutePath());

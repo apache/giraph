@@ -54,13 +54,31 @@ public class MetaPartitionManager {
   /** Different storage states for data */
   private enum StorageState { IN_MEM, ON_DISK, IN_TRANSIT };
   /**
+   * Different storage states for a partition as a whole (i.e. the partition
+   * and its current messages)
+   */
+  private enum PartitionStorageState
+    /**
+     * Either both partition and its current messages are in memory, or both
+     * are on disk, or one part is on disk and the other part is in memory.
+     */
+  { FULLY_IN_MEM, PARTIALLY_IN_MEM, FULLY_ON_DISK };
+  /**
    * Different processing states for partitions. Processing states are reset
    * at the beginning of each iteration cycle over partitions.
    */
   private enum ProcessingState { PROCESSED, UNPROCESSED, IN_PROCESS };
 
-  /** Number of in-memory partitions */
+  /**
+   * Number of partitions in-memory (partition and current messages in memory)
+   */
   private final AtomicInteger numInMemoryPartitions = new AtomicInteger(0);
+  /**
+   * Number of partitions that are partially in-memory (either partition or its
+   * current messages is in memory and the other part is not)
+   */
+  private final AtomicInteger numPartiallyInMemoryPartitions =
+      new AtomicInteger(0);
   /** Map (dictionary) of partitions to their meta information */
   private final ConcurrentMap<Integer, MetaPartition> partitions =
       Maps.newConcurrentMap();
@@ -136,12 +154,17 @@ public class MetaPartitionManager {
   }
 
   /**
-   * Get number of partitions in memory
-   *
    * @return number of partitions in memory
    */
   public int getNumInMemoryPartitions() {
     return numInMemoryPartitions.get();
+  }
+
+  /**
+   * @return number of partitions that are partially in memory
+   */
+  public int getNumPartiallyInMemoryPartitions() {
+    return numPartiallyInMemoryPartitions.get();
   }
 
   /**
@@ -153,8 +176,16 @@ public class MetaPartitionManager {
     return partitions.size();
   }
 
-  public double getLowestGraphFractionInMemory() {
-    return lowestGraphFractionInMemory.get();
+  /**
+   * Since the statistics are based on estimates, we assume each partial
+   * partition is taking about half of the full partition in terms of memory
+   * footprint.
+   *
+   * @return estimate of fraction of graph in memory
+   */
+  public double getGraphFractionInMemory() {
+    return (getNumInMemoryPartitions() +
+        getNumPartiallyInMemoryPartitions() / 2.0) / getNumPartitions();
   }
 
   /**
@@ -162,13 +193,32 @@ public class MetaPartitionManager {
    * information in one of the counters.
    */
   private synchronized void updateGraphFractionInMemory() {
-    double graphInMemory =
-        (double) getNumInMemoryPartitions() / getNumPartitions();
+    double graphInMemory = getGraphFractionInMemory();
     if (graphInMemory < lowestGraphFractionInMemory.get()) {
       lowestGraphFractionInMemory.set(graphInMemory);
       WorkerProgress.get().updateLowestGraphPercentageInMemory(
           (int) (graphInMemory * 100));
     }
+  }
+
+  /**
+   * Update the book-keeping about number of in-memory partitions and partially
+   * in-memory partitions with regard to the storage status of the partition and
+   * its current messages before and after an update to its status.
+   *
+   * @param stateBefore the storage state of the partition and its current
+   *                    messages before an update
+   * @param stateAfter the storage state of the partition and its current
+   *                   messages after an update
+   */
+  private void updateCounters(PartitionStorageState stateBefore,
+                              PartitionStorageState stateAfter) {
+    numInMemoryPartitions.getAndAdd(
+        ((stateAfter == PartitionStorageState.FULLY_IN_MEM) ? 1 : 0) -
+            ((stateBefore == PartitionStorageState.FULLY_IN_MEM) ? 1 : 0));
+    numPartiallyInMemoryPartitions.getAndAdd(
+        ((stateAfter == PartitionStorageState.PARTIALLY_IN_MEM) ? 1 : 0) -
+            ((stateBefore == PartitionStorageState.PARTIALLY_IN_MEM) ? 1 : 0));
   }
 
   /**
@@ -266,49 +316,63 @@ public class MetaPartitionManager {
   }
 
   /**
-   * Get id of a partition to offload on disk
+   * Get id of a partition to offload to disk. Prioritize offloading processed
+   * partitions over unprocessed partition. Also, prioritize offloading
+   * partitions partially in memory over partitions fully in memory.
    *
    * @param threadId id of the thread who is going to store the partition on
    *                 disk
    * @return id of the partition to offload on disk
    */
   public Integer getOffloadPartitionId(int threadId) {
+    // First, look for a processed partition partially on disk
     MetaPartition meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
         StorageState.IN_MEM,
-        StorageState.IN_MEM,
+        StorageState.ON_DISK,
         null);
     if (meta != null) {
       return meta.getPartitionId();
     }
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
+        StorageState.ON_DISK,
         StorageState.IN_MEM,
-        null,
         null);
     if (meta != null) {
       return meta.getPartitionId();
     }
+    // Second, look for a processed partition entirely in memory
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
-        null,
+        StorageState.IN_MEM,
         StorageState.IN_MEM,
         null);
     if (meta != null) {
       return meta.getPartitionId();
     }
 
+    // Third, look for an unprocessed partition partially on disk
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.UNPROCESSED,
         StorageState.IN_MEM,
-        null,
+        StorageState.ON_DISK,
         null);
     if (meta != null) {
       return meta.getPartitionId();
     }
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.UNPROCESSED,
-        null,
+        StorageState.ON_DISK,
+        StorageState.IN_MEM,
+        null);
+    if (meta != null) {
+      return meta.getPartitionId();
+    }
+    // Forth, look for an unprocessed partition entirely in memory
+    meta = perThreadPartitionDictionary.get(threadId).lookup(
+        ProcessingState.UNPROCESSED,
+        StorageState.IN_MEM,
         StorageState.IN_MEM,
         null);
     if (meta != null) {
@@ -371,7 +435,11 @@ public class MetaPartitionManager {
   }
 
   /**
-   * Get id of a partition to offload its incoming message on disk
+   * Get id of a partition to offload its incoming message on disk. Prioritize
+   * offloading messages of partitions already on disk, and then partitions
+   * in-transit, over partitions in-memory. Also, prioritize processed
+   * partitions over unprocessed (processed partitions would go on disk with
+   * more chances that unprocessed partitions)
    *
    * @param threadId id of the thread who is going to store the incoming
    *                 messages on disk
@@ -389,10 +457,25 @@ public class MetaPartitionManager {
     if (meta != null) {
       return meta.getPartitionId();
     }
-
+    meta = perThreadPartitionDictionary.get(threadId).lookup(
+        ProcessingState.PROCESSED,
+        StorageState.IN_TRANSIT,
+        null,
+        StorageState.IN_MEM);
+    if (meta != null) {
+      return meta.getPartitionId();
+    }
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.UNPROCESSED,
         StorageState.ON_DISK,
+        null,
+        StorageState.IN_MEM);
+    if (meta != null) {
+      return meta.getPartitionId();
+    }
+    meta = perThreadPartitionDictionary.get(threadId).lookup(
+        ProcessingState.UNPROCESSED,
+        StorageState.IN_TRANSIT,
         null,
         StorageState.IN_MEM);
     if (meta != null) {
@@ -402,12 +485,15 @@ public class MetaPartitionManager {
   }
 
   /**
-   * Get id of a partition to load its data to memory
+   * Get id of a partition to load its data to memory. Prioritize loading an
+   * unprocessed partition over loading processed partition. Also, prioritize
+   * loading a partition partially in memory over partitions entirely on disk.
    *
    * @param threadId id of the thread who is going to load the partition data
    * @return id of the partition to load its data to memory
    */
   public Integer getLoadPartitionId(int threadId) {
+    // First, look for an unprocessed partition partially in memory
     MetaPartition meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.UNPROCESSED,
         StorageState.IN_MEM,
@@ -420,7 +506,27 @@ public class MetaPartitionManager {
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.UNPROCESSED,
         StorageState.ON_DISK,
-        null,
+        StorageState.IN_MEM,
+        null);
+    if (meta != null) {
+      return meta.getPartitionId();
+    }
+
+    // Second, look for an unprocessed partition entirely on disk
+    meta = perThreadPartitionDictionary.get(threadId).lookup(
+        ProcessingState.UNPROCESSED,
+        StorageState.ON_DISK,
+        StorageState.ON_DISK,
+        null);
+    if (meta != null) {
+      return meta.getPartitionId();
+    }
+
+    // Third, look for a processed partition partially in memory
+    meta = perThreadPartitionDictionary.get(threadId).lookup(
+        ProcessingState.PROCESSED,
+        StorageState.IN_MEM,
+        StorageState.ON_DISK,
         null);
     if (meta != null) {
       return meta.getPartitionId();
@@ -429,20 +535,22 @@ public class MetaPartitionManager {
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
         StorageState.ON_DISK,
-        null,
+        StorageState.IN_MEM,
         null);
     if (meta != null) {
-      meta.getPartitionId();
+      return meta.getPartitionId();
     }
 
+    // Forth, look for a processed partition entirely on disk
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
-        null,
+        StorageState.ON_DISK,
         StorageState.ON_DISK,
         null);
     if (meta != null) {
-      meta.getPartitionId();
+      return meta.getPartitionId();
     }
+
     return null;
   }
 
@@ -536,9 +644,9 @@ public class MetaPartitionManager {
    */
   public void doneLoadingPartition(int partitionId, long superstep) {
     MetaPartition meta = partitions.get(partitionId);
-    numInMemoryPartitions.getAndIncrement();
     int owner = getOwnerThreadId(partitionId);
     synchronized (meta) {
+      PartitionStorageState stateBefore = meta.getPartitionStorageState();
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.setPartitionState(StorageState.IN_MEM);
       if (superstep == oocEngine.getSuperstep()) {
@@ -546,6 +654,8 @@ public class MetaPartitionManager {
       } else {
         meta.setIncomingMessagesState(StorageState.IN_MEM);
       }
+      PartitionStorageState stateAfter = meta.getPartitionStorageState();
+      updateCounters(stateBefore, stateAfter);
       // Check whether load was to prefetch a partition from disk to memory for
       // the next superstep
       if (meta.getProcessingState() == ProcessingState.PROCESSED) {
@@ -553,6 +663,7 @@ public class MetaPartitionManager {
       }
       perThreadPartitionDictionary.get(owner).addPartition(meta);
     }
+    updateGraphFractionInMemory();
   }
 
   /**
@@ -631,8 +742,16 @@ public class MetaPartitionManager {
           (meta.getPartitionState() == StorageState.IN_MEM ||
           meta.getCurrentMessagesState() == StorageState.IN_MEM)) {
         perThreadPartitionDictionary.get(owner).removePartition(meta);
-        meta.setPartitionState(StorageState.IN_TRANSIT);
-        meta.setCurrentMessagesState(StorageState.IN_TRANSIT);
+        // We may only need to offload either partition or current messages of
+        // that partition to disk. So, if either of the components (partition
+        // or its current messages) is already on disk, we should not update its
+        // metadata.
+        if (meta.getPartitionState() != StorageState.ON_DISK) {
+          meta.setPartitionState(StorageState.IN_TRANSIT);
+        }
+        if (meta.getCurrentMessagesState() != StorageState.ON_DISK) {
+          meta.setCurrentMessagesState(StorageState.IN_TRANSIT);
+        }
         perThreadPartitionDictionary.get(owner).addPartition(meta);
         return true;
       } else {
@@ -648,16 +767,23 @@ public class MetaPartitionManager {
    * @param partitionId id of the partition that its data is offloaded
    */
   public void doneOffloadingPartition(int partitionId) {
-    numInMemoryPartitions.getAndDecrement();
-    updateGraphFractionInMemory();
     MetaPartition meta = partitions.get(partitionId);
     int owner = getOwnerThreadId(partitionId);
     synchronized (meta) {
+      // We either offload both partition and its messages to disk, or we only
+      // offload one of the components.
+      if (meta.getCurrentMessagesState() == StorageState.IN_TRANSIT &&
+          meta.getPartitionState() == StorageState.IN_TRANSIT) {
+        numInMemoryPartitions.getAndDecrement();
+      } else {
+        numPartiallyInMemoryPartitions.getAndDecrement();
+      }
       perThreadPartitionDictionary.get(owner).removePartition(meta);
       meta.setPartitionState(StorageState.ON_DISK);
       meta.setCurrentMessagesState(StorageState.ON_DISK);
       perThreadPartitionDictionary.get(owner).addPartition(meta);
     }
+    updateGraphFractionInMemory();
   }
 
   /**
@@ -675,8 +801,6 @@ public class MetaPartitionManager {
       dictionary.reset();
     }
     numPartitionsProcessed.set(0);
-    lowestGraphFractionInMemory.set((double) getNumInMemoryPartitions() /
-        getNumPartitions());
   }
 
   /**
@@ -687,11 +811,10 @@ public class MetaPartitionManager {
     for (MetaPartition meta : partitions.values()) {
       int owner = getOwnerThreadId(meta.getPartitionId());
       perThreadPartitionDictionary.get(owner).removePartition(meta);
+      PartitionStorageState stateBefore = meta.getPartitionStorageState();
       meta.resetMessages();
-      if (meta.getPartitionState() == StorageState.IN_MEM &&
-          meta.getCurrentMessagesState() == StorageState.ON_DISK) {
-        numInMemoryPartitions.getAndDecrement();
-      }
+      PartitionStorageState stateAfter = meta.getPartitionStorageState();
+      updateCounters(stateBefore, stateAfter);
       perThreadPartitionDictionary.get(owner).addPartition(meta);
     }
   }
@@ -862,6 +985,21 @@ public class MetaPartitionManager {
     public void resetMessages() {
       currentMessagesState = incomingMessagesState;
       incomingMessagesState = StorageState.IN_MEM;
+    }
+
+    /**
+     * @return the state of the partition and its current messages as a whole
+     */
+    public PartitionStorageState getPartitionStorageState() {
+      if (partitionState == StorageState.ON_DISK &&
+          currentMessagesState == StorageState.ON_DISK) {
+        return PartitionStorageState.FULLY_ON_DISK;
+      } else if (partitionState == StorageState.IN_MEM &&
+          currentMessagesState == StorageState.IN_MEM) {
+        return PartitionStorageState.FULLY_IN_MEM;
+      } else {
+        return PartitionStorageState.PARTIALLY_IN_MEM;
+      }
     }
   }
 

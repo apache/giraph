@@ -164,12 +164,12 @@ public class TestPartitionStores {
       serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = Mockito.mock(GraphTaskManager.class);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
-    GraphTaskManager<IntWritable, IntWritable, NullWritable>
-        graphTaskManager = new GraphTaskManager<>(context);
-    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         partitionStore =
@@ -193,12 +193,12 @@ public class TestPartitionStores {
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = Mockito.mock(GraphTaskManager.class);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
-    GraphTaskManager<IntWritable, IntWritable, NullWritable>
-        graphTaskManager = new GraphTaskManager<>(context);
-    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         partitionStore =
@@ -311,12 +311,12 @@ public class TestPartitionStores {
 
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
+    GraphTaskManager<IntWritable, IntWritable, NullWritable>
+        graphTaskManager = Mockito.mock(GraphTaskManager.class);
+    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
         serverData = new ServerData<>(serviceWorker, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
-    GraphTaskManager<IntWritable, IntWritable, NullWritable>
-        graphTaskManager = new GraphTaskManager<>(context);
-    Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
         store =

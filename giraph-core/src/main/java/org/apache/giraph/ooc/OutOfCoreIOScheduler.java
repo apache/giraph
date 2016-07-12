@@ -102,8 +102,8 @@ public class OutOfCoreIOScheduler {
       }
       OutOfCoreOracle.IOAction[] actions =
           oocEngine.getOracle().getNextIOActions();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("getNextIOCommand: actions are " + Arrays.toString(actions));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("getNextIOCommand: actions are " + Arrays.toString(actions));
       }
       // Check whether there are any urgent outstanding load requests
       if (!threadLoadCommandQueue.get(threadId).isEmpty()) {

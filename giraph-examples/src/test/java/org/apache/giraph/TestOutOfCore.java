@@ -27,6 +27,9 @@ import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertex
 import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexOutputFormat;
 
 import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.ooc.OutOfCoreIOScheduler;
+import org.apache.giraph.ooc.persistence.InMemoryDataAccessor;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,24 +41,17 @@ import static org.junit.Assert.assertTrue;
  * Unit test for out-of-core mechanism
  */
 public class TestOutOfCore extends BspCase {
-  final static int NUM_PARTITIONS = 32;
-  final static int NUM_PARTITIONS_IN_MEMORY = 16;
+  private final static int NUM_PARTITIONS = 400;
+  private final static int NUM_PARTITIONS_IN_MEMORY = 8;
+  private GiraphConfiguration conf;
 
   public TestOutOfCore() {
       super(TestOutOfCore.class.getName());
   }
 
-  /**
-   * Run a job that tests the fixed out-of-core mechanism
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testOutOfCore()
-          throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphConfiguration conf = new GiraphConfiguration();
+  @Before
+  public void prepareTest() {
+    conf = new GiraphConfiguration();
     conf.setComputationClass(SimplePageRankComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
@@ -66,12 +62,37 @@ public class TestOutOfCore extends BspCase {
     GiraphConstants.METRICS_ENABLE.set(conf, true);
     GiraphConstants.USER_PARTITION_COUNT.set(conf, NUM_PARTITIONS);
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
-    NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.set(conf, true);
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
+    OutOfCoreIOScheduler.OOC_WAIT_INTERVAL.set(conf, 10);
     GiraphConstants.NUM_COMPUTE_THREADS.set(conf, 8);
     GiraphConstants.NUM_INPUT_THREADS.set(conf, 8);
     GiraphConstants.NUM_OUTPUT_THREADS.set(conf, 8);
+  }
+
+  @Test
+  public void testOutOfCoreInMemoryAccessor()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphConstants.OUT_OF_CORE_DATA_ACCESSOR.set(conf, InMemoryDataAccessor.class);
+    GiraphConstants.NUM_OUT_OF_CORE_THREADS.set(conf, 8);
+    runTest();
+  }
+
+  @Test
+  public void testOutOfCoreLocalDiskAccessor()
+    throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConstants.PARTITIONS_DIRECTORY.set(conf, "disk0,disk1,disk2");
+    runTest();
+  }
+
+  /**
+   * Run a job with fixed out-of-core policy and verify the result
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws ClassNotFoundException
+   */
+  private void runTest()
+      throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
     // Overwrite the number of vertices set in BspCase

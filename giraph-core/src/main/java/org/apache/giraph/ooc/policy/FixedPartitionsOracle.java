@@ -29,6 +29,8 @@ import org.apache.log4j.Logger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /** Oracle for fixed out-of-core mechanism */
 public class FixedPartitionsOracle implements OutOfCoreOracle {
   /** Class logger */
@@ -63,11 +65,16 @@ public class FixedPartitionsOracle implements OutOfCoreOracle {
   public IOAction[] getNextIOActions() {
     int numPartitionsInMemory =
         oocEngine.getMetaPartitionManager().getNumInMemoryPartitions();
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getNextIOActions: calling with " + numPartitionsInMemory +
-          " partitions in memory, " + deltaNumPartitionsInMemory.get() +
-          " to be loaded");
+    int numPartialPartitionsInMemory =
+        oocEngine.getMetaPartitionManager().getNumPartiallyInMemoryPartitions();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getNextIOActions: calling with " + numPartitionsInMemory +
+          " partitions entirely in memory and " + numPartialPartitionsInMemory +
+          " partitions partially in memory, " +
+          deltaNumPartitionsInMemory.get() + " to be loaded");
     }
+    checkState(numPartitionsInMemory >= 0);
+    checkState(numPartialPartitionsInMemory >= 0);
     int numPartitions =
         numPartitionsInMemory + deltaNumPartitionsInMemory.get();
     // Fixed out-of-core policy:
