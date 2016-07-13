@@ -38,9 +38,11 @@ import static org.junit.Assert.assertEquals;
 /** Test {@link org.apache.giraph.partition.SimpleLongRangePartitionerFactory}. */
 public class SimpleRangePartitionFactoryTest {
 
-  private void testRange(int numWorkers, int keySpaceSize, int allowedWorkerDiff, boolean emptyWorkers) {
+  private void testRange(int numWorkers, int numPartitions, int keySpaceSize,
+      int allowedWorkerDiff, boolean emptyWorkers) {
     Configuration conf = new Configuration();
     conf.setLong(GiraphConstants.PARTITION_VERTEX_KEY_SPACE_SIZE, keySpaceSize);
+    GiraphConstants.USER_PARTITION_COUNT.set(conf, numPartitions);
     SimpleLongRangePartitionerFactory<Writable, Writable> factory =
         new SimpleLongRangePartitionerFactory<Writable, Writable>();
     factory.setConf(new ImmutableClassesGiraphConfiguration(conf));
@@ -106,14 +108,14 @@ public class SimpleRangePartitionFactoryTest {
   @Test
   public void testLongRangePartitionerFactory() {
     // perfect distribution
-    testRange(10, 100000, 0, false);
-    testRange(1000, 100000, 0, false);
+    testRange(10, 1000, 100000, 0, false);
+    testRange(1000, 50000, 100000, 0, false);
 
     // perfect distribution even when max is hit, and max is not divisible by #workers
-    testRange(8949, 100023, 0, false);
-    testRange(1949, 211111, 0, false);
+    testRange(8949, (50000 / 8949) * 8949, 100023, 0, false);
+    testRange(1949, (50000 / 1949) * 1949, 211111, 0, false);
 
     // imperfect distribution - because there are more workers than max partitions.
-    testRange(194942, 211111, 1, true);
+    testRange(194942, 50000, 211111, 1, true);
   }
 }
