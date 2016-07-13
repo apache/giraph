@@ -53,6 +53,7 @@ public class TestCollections {
   }
 
   @Test
+  @Ignore("this test requires 1G to run")
   public void testLargeBasicList() {
     int capacity = 123456789;
     WArrayList<LongWritable> longSet = LongTypeOps.INSTANCE.createArrayList(capacity);
