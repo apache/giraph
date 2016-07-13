@@ -94,7 +94,7 @@ public class InMemoryDataAccessor implements OutOfCoreDataAccessor {
   /**
    * {@link DataOutputWrapper} implementation for {@link InMemoryDataAccessor}
    */
-  public class InMemoryDataOutputWrapper implements DataOutputWrapper {
+  public static class InMemoryDataOutputWrapper implements DataOutputWrapper {
     /** Output to write data to */
     private final BigDataOutput output;
     /** Size of output at the moment it was created */
