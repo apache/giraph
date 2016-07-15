@@ -437,12 +437,20 @@ public class ZooKeeperManager {
       LOG.info("generateZooKeeperConfigFile: Make directory of " +
           zkDirFile.getName() + " = " + mkDirRet);
     }
+    /** Set zookeeper system properties */
+    System.setProperty("zookeeper.snapCount",
+        Integer.toString(GiraphConstants.DEFAULT_ZOOKEEPER_SNAP_COUNT));
+    System.setProperty("zookeeper.forceSync",
+        GiraphConstants.ZOOKEEPER_FORCE_SYNC.get(conf) ? "yes" : "no");
+    System.setProperty("zookeeper.skipACL",
+        GiraphConstants.ZOOKEEPER_SKIP_ACL.get(conf) ? "yes" : "no");
 
     config.setDataDir(zkDir);
     config.setDataLogDir(zkDir);
     config.setClientPortAddress(new InetSocketAddress(zkBasePort));
     config.setMinSessionTimeout(conf.getZooKeeperMinSessionTimeout());
     config.setMaxSessionTimeout(conf.getZooKeeperMaxSessionTimeout());
+
   }
 
   /**
