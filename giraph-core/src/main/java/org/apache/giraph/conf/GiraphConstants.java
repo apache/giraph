@@ -1003,7 +1003,8 @@ public interface GiraphConstants {
   BooleanConfOption KEEP_ZOOKEEPER_DATA =
       new BooleanConfOption("giraph.keepZooKeeperData", false,
           "Keep the zookeeper output for debugging? Default is to remove it.");
-
+  /** Default ZooKeeper snap count. */
+  int DEFAULT_ZOOKEEPER_SNAP_COUNT = 50000;
   /** Default ZooKeeper tick time. */
   int DEFAULT_ZOOKEEPER_TICK_TIME = 6000;
   /** Default ZooKeeper maximum client connections. */
@@ -1020,6 +1021,15 @@ public interface GiraphConstants {
   IntConfOption ZOOKEEPER_MAX_SESSION_TIMEOUT =
       new IntConfOption("giraph.zkMaxSessionTimeout", MINUTES.toMillis(15),
           "ZooKeeper maximum session timeout");
+
+  /** ZooKeeper force sync */
+  BooleanConfOption ZOOKEEPER_FORCE_SYNC =
+      new BooleanConfOption("giraph.zKForceSync", false,
+          "ZooKeeper force sync");
+
+  /** ZooKeeper skip ACLs */
+  BooleanConfOption ZOOKEEPER_SKIP_ACL =
+      new BooleanConfOption("giraph.ZkSkipAcl", true, "ZooKeeper skip ACLs");
 
   /**
    * Whether to use SASL with DIGEST and Hadoop Job Tokens to authenticate
