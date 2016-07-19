@@ -18,7 +18,6 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
@@ -59,7 +58,6 @@ public class TestOutOfCore extends BspCase {
         SimplePageRankComputation.SimplePageRankWorkerContext.class);
     conf.setMasterComputeClass(
         SimplePageRankComputation.SimplePageRankMasterCompute.class);
-    GiraphConstants.METRICS_ENABLE.set(conf, true);
     GiraphConstants.USER_PARTITION_COUNT.set(conf, NUM_PARTITIONS);
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, NUM_PARTITIONS_IN_MEMORY);
@@ -97,7 +95,7 @@ public class TestOutOfCore extends BspCase {
         getTempPath(getCallingMethodName()));
     // Overwrite the number of vertices set in BspCase
     GeneratedVertexReader.READER_VERTICES.set(conf, 200);
-    assertTrue(job.run(true));
+    assertTrue(job.run(false));
     if (!runningInDistributedMode()) {
       double maxPageRank =
           SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMax();
