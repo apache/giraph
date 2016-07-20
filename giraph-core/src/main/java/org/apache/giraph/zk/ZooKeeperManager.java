@@ -457,7 +457,7 @@ public class ZooKeeperManager {
    * If this task has been selected, online a ZooKeeper server.  Otherwise,
    * wait until this task knows that the ZooKeeper servers have been onlined.
    */
-  public void onlineZooKeeperServer() {
+  public void onlineZooKeeperServer() throws IOException {
     if (zkServerTask == taskPartition) {
       File zkDirFile = new File(this.zkDir);
       try {

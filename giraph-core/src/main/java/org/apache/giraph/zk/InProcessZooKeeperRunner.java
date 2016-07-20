@@ -47,13 +47,8 @@ public class InProcessZooKeeperRunner
   private QuorumRunner quorumRunner = new QuorumRunner();
 
   @Override
-  public int start(String zkDir, final ZookeeperConfig config) {
-    try {
-      return quorumRunner.start(config);
-    } catch (IOException e) {
-      LOG.error("Unable to start zookeeper", e);
-    }
-    return -1;
+  public int start(String zkDir, ZookeeperConfig config) throws IOException {
+    return quorumRunner.start(config);
   }
 
   @Override
