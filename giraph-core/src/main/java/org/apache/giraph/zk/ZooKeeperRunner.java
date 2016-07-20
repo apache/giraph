@@ -19,6 +19,8 @@ package org.apache.giraph.zk;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 
+import java.io.IOException;
+
 /**
  * ZooKeeper wrapper interface.
  * Implementation should provide a way to start, stop and cleanup
@@ -33,7 +35,7 @@ public interface ZooKeeperRunner extends ImmutableClassesGiraphConfigurable {
    * @param config zookeeper configuration
    * @return port zookeeper runs on
    */
-  int start(String zkDir, ZookeeperConfig config);
+  int start(String zkDir, ZookeeperConfig config) throws IOException;
 
   /**
    * Stops zookeeper.
