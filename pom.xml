@@ -218,6 +218,38 @@ under the License.
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
+    <developer>
+      <id>edunov</id>
+      <name>Sergey Edunov</name>
+      <email>edunov@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>pavanka</id>
+      <name>Pavan Kumar</name>
+      <email>pavanka@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>ikabiljo</id>
+      <name>Igor Kabiljo</name>
+      <email>ikabiljo@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>heslami</id>
+      <name>Hassan Eslami</name>
+      <email>heslami@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook, UIUC</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
