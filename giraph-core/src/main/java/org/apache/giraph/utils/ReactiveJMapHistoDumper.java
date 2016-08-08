@@ -89,26 +89,19 @@ public class ReactiveJMapHistoDumper extends
   public void startSupervisorThread() {
     stop = false;
     final Runtime runtime = Runtime.getRuntime();
-    thread = new Thread(new Runnable() {
+    thread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
-        try {
-          while (!stop) {
-            long potentialMemory = (runtime.maxMemory() -
-                runtime.totalMemory()) + runtime.freeMemory();
-            if (potentialMemory / MB < minFreeMemory) {
-              JMap.heapHistogramDump(linesToPrint);
-            }
-            Thread.sleep(sleepMillis);
+        while (!stop) {
+          long potentialMemory = (runtime.maxMemory() -
+              runtime.totalMemory()) + runtime.freeMemory();
+          if (potentialMemory / MB < minFreeMemory) {
+            JMap.heapHistogramDump(linesToPrint);
           }
-        } catch (InterruptedException e) {
-          LOG.warn("JMap histogram sleep interrupted", e);
+          ThreadUtils.trySleep(sleepMillis);
         }
       }
-    });
-    thread.setName("ReactiveJMapHistoDumperSupervisorThread");
-    thread.setDaemon(true);
-    thread.start();
+    }, "ReactiveJMapHistoDumperSupervisorThread");
   }
 
   @Override

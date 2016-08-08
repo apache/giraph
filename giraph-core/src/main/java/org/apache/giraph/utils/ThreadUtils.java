@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.utils;
 
+import org.apache.log4j.Logger;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.util.concurrent.Callable;
@@ -28,6 +30,8 @@ import java.util.concurrent.ThreadFactory;
  * Utility class for thread related functions.
  */
 public class ThreadUtils {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(ThreadUtils.class);
 
   /**
    * Utility class. Do not inherit or create objects.
@@ -85,5 +89,38 @@ public class ThreadUtils {
       Thread.UncaughtExceptionHandler uncaughtExceptionHandler) {
     return executorService.submit(
         new LogStacktraceCallable<>(callable, uncaughtExceptionHandler));
+  }
+
+  /**
+   * Start thread with specified name and runnable, and make it daemon
+   *
+   * @param threadName Name of the thread
+   * @param runnable Runnable to execute
+   * @return Thread
+   */
+  public static Thread startThread(Runnable runnable, String threadName) {
+    Thread thread = new Thread(runnable, threadName);
+    thread.setDaemon(true);
+    thread.start();
+    return thread;
+  }
+
+  /**
+   * Sleep for specified milliseconds, logging and ignoring interrupted
+   * exceptions
+   *
+   * @param millis How long to sleep for
+   * @return Whether the sleep was successful or the thread was interrupted
+   */
+  public static boolean trySleep(long millis) {
+    try {
+      Thread.sleep(millis);
+      return true;
+    } catch (InterruptedException e) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Thread interrupted");
+      }
+      return false;
+    }
   }
 }

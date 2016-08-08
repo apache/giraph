@@ -82,21 +82,15 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
    */
   public void startJMapThread() {
     stop = false;
-    thread = new Thread(new Runnable() {
+    thread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (!stop) {
           JMap.heapHistogramDump(linesToPrint, liveObjectsOnly);
-          try {
-            Thread.sleep(sleepMillis);
-          } catch (InterruptedException e) {
-            LOG.info("JMap histogram sleep interrupted", e);
-          }
+          ThreadUtils.trySleep(sleepMillis);
         }
       }
-    });
-    thread.setDaemon(true);
-    thread.start();
+    }, "jmap-dumper");
   }
 
   @Override

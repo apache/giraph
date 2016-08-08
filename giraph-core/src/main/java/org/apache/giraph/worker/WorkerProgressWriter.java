@@ -19,6 +19,7 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.job.JobProgressTracker;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
 /**
@@ -46,25 +47,19 @@ public class WorkerProgressWriter {
    */
   public WorkerProgressWriter(JobProgressTracker jobProgressTracker) {
     this.jobProgressTracker = jobProgressTracker;
-    writerThread = new Thread(new Runnable() {
+    writerThread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
-        try {
-          while (!finished) {
-            updateAndSendProgress();
-            double factor = 1 + Math.random();
-            Thread.sleep((long) (WRITE_UPDATE_PERIOD_MILLISECONDS * factor));
-          }
-        } catch (InterruptedException e) {
-          // Thread is interrupted when stop is called, we can just log this
-          if (LOG.isInfoEnabled()) {
-            LOG.info("run: WorkerProgressWriter interrupted");
+        while (!finished) {
+          updateAndSendProgress();
+          double factor = 1 + Math.random();
+          if (!ThreadUtils.trySleep(
+              (long) (WRITE_UPDATE_PERIOD_MILLISECONDS * factor))) {
+            break;
           }
         }
       }
     }, "workerProgressThread");
-    writerThread.setDaemon(true);
-    writerThread.start();
   }
 
   /**

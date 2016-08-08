@@ -20,6 +20,7 @@ package org.apache.giraph.job;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
@@ -72,7 +73,7 @@ public class DefaultJobProgressTrackerService
    * Start the thread which writes progress periodically
    */
   private void startWriterThread() {
-    writerThread = new Thread(new Runnable() {
+    writerThread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (!finished) {
@@ -89,19 +90,12 @@ public class DefaultJobProgressTrackerService
               break;
             }
           }
-          try {
-            Thread.sleep(UPDATE_MILLISECONDS);
-          } catch (InterruptedException e) {
-            if (LOG.isInfoEnabled()) {
-              LOG.info("Progress thread interrupted");
-            }
+          if (!ThreadUtils.trySleep(UPDATE_MILLISECONDS)) {
             break;
           }
         }
       }
-    });
-    writerThread.setDaemon(true);
-    writerThread.start();
+    }, "progress-writer");
   }
 
   @Override
@@ -119,11 +113,10 @@ public class DefaultJobProgressTrackerService
         GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf);
     if (maxAllowedJobTimeMs > 0) {
       // Start a thread which will kill the job if running for too long
-      Thread killThread = new Thread(new Runnable() {
+      ThreadUtils.startThread(new Runnable() {
         @Override
         public void run() {
-          try {
-            Thread.sleep(maxAllowedJobTimeMs);
+          if (ThreadUtils.trySleep(maxAllowedJobTimeMs)) {
             try {
               LOG.warn("Killing job because it took longer than " +
                   maxAllowedJobTimeMs + " milliseconds");
@@ -131,16 +124,9 @@ public class DefaultJobProgressTrackerService
             } catch (IOException e) {
               LOG.warn("Failed to kill job", e);
             }
-          } catch (InterruptedException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Thread checking for jobs max allowed time " +
-                  "interrupted");
-            }
           }
         }
-      });
-      killThread.setDaemon(true);
-      killThread.start();
+      }, "job-runtime-observer");
     }
   }
 

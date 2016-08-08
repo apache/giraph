@@ -19,6 +19,7 @@ package org.apache.giraph.zk;
 
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.DatadirCleanupManager;
@@ -147,7 +148,7 @@ public class InProcessZooKeeperRunner
       }
 
       runFromConfig(config);
-      Thread zkThread = new Thread(new Runnable() {
+      ThreadUtils.startThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -160,9 +161,7 @@ public class InProcessZooKeeperRunner
           }
 
         }
-      });
-      zkThread.setDaemon(true);
-      zkThread.start();
+      }, "zk-thread");
       return zkServer.getClientPort();
     }
 

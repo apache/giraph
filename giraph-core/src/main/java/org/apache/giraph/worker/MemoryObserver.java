@@ -23,6 +23,7 @@ import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -91,7 +92,7 @@ public class MemoryObserver {
 
     final float freeMemoryFractionForGc =
         FREE_MEMORY_FRACTION_FOR_GC.get(conf);
-    Thread thread = new Thread(new Runnable() {
+    ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
 
@@ -115,18 +116,12 @@ public class MemoryObserver {
               LOG.warn("Exception occurred", e);
             }
           }
-          try {
-            Thread.sleep(MEMORY_OBSERVER_SLEEP_MS);
-          } catch (InterruptedException e) {
-            LOG.warn("Exception occurred", e);
+          if (!ThreadUtils.trySleep(MEMORY_OBSERVER_SLEEP_MS)) {
             return;
           }
         }
       }
-    });
-    thread.setName("memory-observer");
-    thread.setDaemon(true);
-    thread.start();
+    }, "memory-observer");
   }
 
   /** Set watcher on memory observer folder */
