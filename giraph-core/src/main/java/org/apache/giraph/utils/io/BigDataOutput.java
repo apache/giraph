@@ -115,7 +115,7 @@ public class BigDataOutput implements DataOutput, Writable {
    * @return DataOutput which data should be written to
    */
   private ExtendedDataOutput getDataOutputToWriteTo(int additionalSize) {
-    if (currentDataOutput.getPos() + additionalSize >= getMaxSize()) {
+    if (currentDataOutput.getPos() + additionalSize > getMaxSize()) {
       if (dataOutputs == null) {
         dataOutputs = new ArrayList<>(1);
       }
@@ -175,12 +175,23 @@ public class BigDataOutput implements DataOutput, Writable {
 
   @Override
   public void write(byte[] b) throws IOException {
-    getDataOutputToWriteTo(b.length + SIZE_DELTA).write(b);
+    write(b, 0, b.length);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
-    getDataOutputToWriteTo(len + SIZE_DELTA).write(b, off, len);
+    if (len <= getMaxSize()) {
+      getDataOutputToWriteTo(len).write(b, off, len);
+    } else {
+      // When we try to write more bytes than the biggest size of single data
+      // output, we need to split up the byte array into multiple chunks
+      while (len > 0) {
+        int toWrite = Math.min(getMaxSize(), len);
+        write(b, off, toWrite);
+        len -= toWrite;
+        off += toWrite;
+      }
+    }
   }
 
   @Override

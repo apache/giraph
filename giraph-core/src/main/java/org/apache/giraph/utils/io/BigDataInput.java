@@ -83,14 +83,21 @@ public class BigDataInput implements ExtendedDataInput {
 
   @Override
   public void readFully(byte[] b) throws IOException {
-    checkIfShouldMoveToNextDataInput();
-    currentInput.readFully(b);
+    readFully(b, 0, b.length);
   }
 
   @Override
   public void readFully(byte[] b, int off, int len) throws IOException {
     checkIfShouldMoveToNextDataInput();
-    currentInput.readFully(b, off, len);
+    int available = currentInput.available();
+    if (len <= available) {
+      currentInput.readFully(b, off, len);
+    } else {
+      // When we are trying to read more bytes than there are in single chunk
+      // we need to read part by part
+      currentInput.readFully(b, off, available);
+      readFully(b, off + available, len - available);
+    }
   }
 
   @Override
