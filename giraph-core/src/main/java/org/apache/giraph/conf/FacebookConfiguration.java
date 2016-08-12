@@ -130,7 +130,7 @@ public class FacebookConfiguration implements BulkConfigurator {
 
     // Limit number of open requests to 2000
     NettyClient.LIMIT_NUMBER_OF_OPEN_REQUESTS.setIfUnset(conf, true);
-    StaticFlowControl.MAX_NUMBER_OF_OPEN_REQUESTS.setIfUnset(conf, 2000);
+    StaticFlowControl.MAX_NUMBER_OF_OPEN_REQUESTS.setIfUnset(conf, 100);
     // Pooled allocator in netty is faster
     GiraphConstants.NETTY_USE_POOLED_ALLOCATOR.setIfUnset(conf, true);
     // Turning off auto read is faster
