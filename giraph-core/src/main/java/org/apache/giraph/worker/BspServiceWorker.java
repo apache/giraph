@@ -241,7 +241,7 @@ public class BspServiceWorker<I extends WritableComparable,
     if (conf.isReactiveJmapHistogramDumpEnabled()) {
       conf.addWorkerObserverClass(ReactiveJMapHistoDumper.class);
     }
-    observers = conf.createWorkerObservers();
+    observers = conf.createWorkerObservers(context);
 
     WorkerProgress.get().setTaskId(getTaskPartition());
     workerProgressWriter = conf.trackJobProgressOnClient() ?

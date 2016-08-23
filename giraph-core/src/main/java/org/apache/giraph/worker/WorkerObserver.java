@@ -24,6 +24,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
  * Observer for worker. The user can subclass and register an observer with the
  * Giraph framework. The framework will execute methods of the observer at
  * designated moments of computation on each worker.
+ * It can implement ContextSettable if it needs to access job counters.
  */
 public interface WorkerObserver extends ImmutableClassesGiraphConfigurable {
   /**

@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 /**
  * Mapper observer
+ * It can implement ContextSettable if it needs to access job counters.
  */
 public interface MapperObserver {
   /**

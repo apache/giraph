@@ -20,7 +20,9 @@ package org.apache.giraph.utils;
 
 import java.lang.reflect.Modifier;
 
+import org.apache.giraph.conf.ContextSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.jodah.typetools.TypeResolver;
 
 /**
@@ -111,6 +113,28 @@ public class ReflectionUtils {
           "newInstance: Illegal access " + theClass.getName(), e);
     }
     ConfigurationUtils.configureIfPossible(result, configuration);
+    return result;
+  }
+
+  /**
+   * Instantiate classes that are ImmutableClassesGiraphConfigurable,
+   * and optionally set context on them if they are ContextSettable
+   *
+   * @param theClass Class to instantiate
+   * @param configuration Giraph configuration, may be null
+   * @param context Mapper context
+   * @param <T> Type to instantiate
+   * @return Newly instantiated object with configuration and context set if
+   * possible
+   */
+  public static <T> T newInstance(
+      Class<T> theClass,
+      ImmutableClassesGiraphConfiguration configuration,
+      Mapper<?, ?, ?, ?>.Context context) {
+    T result = newInstance(theClass, configuration);
+    if (result instanceof ContextSettable) {
+      ((ContextSettable) result).setContext(context);
+    }
     return result;
   }
 

@@ -16,43 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.master;
+package org.apache.giraph.conf;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * Observer for Master.
- * It can implement ContextSettable if it needs to access job counters.
+ * Worker/Master/Mapper observer can implement this to get context set, to allow
+ * them to access job counters
  */
-public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
+public interface ContextSettable {
   /**
-   * Before application begins.
-   */
-  void preApplication();
-
-  /**
-   * After application ends.
-   */
-  void postApplication();
-
-  /**
-   * If there is an error during the application.
+   * Set context
    *
-   * @param e Exception that caused failure. May be null.
+   * @param context Mapper context
    */
-  void applicationFailed(Exception e);
-
-  /**
-   * Before each superstep starts.
-   *
-   * @param superstep The superstep number
-   */
-  void preSuperstep(long superstep);
-
-  /**
-   * After each superstep ends.
-   *
-   * @param superstep The superstep number
-   */
-  void postSuperstep(long superstep);
+  void setContext(Mapper<?, ?, ?, ?>.Context context);
 }

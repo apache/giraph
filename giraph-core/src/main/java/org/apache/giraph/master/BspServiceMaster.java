@@ -223,7 +223,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (conf.isReactiveJmapHistogramDumpEnabled()) {
       conf.addMasterObserverClass(ReactiveJMapHistoDumper.class);
     }
-    observers = conf.createMasterObservers();
+    observers = conf.createMasterObservers(context);
 
     this.checkpointFrequency = conf.getCheckpointFrequency();
     this.checkpointStatus = CheckpointStatus.NONE;

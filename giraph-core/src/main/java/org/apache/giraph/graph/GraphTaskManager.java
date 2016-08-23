@@ -930,7 +930,7 @@ end[PURE_YARN]*/
    * Setup mapper observers
    */
   public void setupMapperObservers() {
-    mapperObservers = conf.createMapperObservers();
+    mapperObservers = conf.createMapperObservers(context);
     for (MapperObserver mapperObserver : mapperObservers) {
       mapperObserver.setup();
     }

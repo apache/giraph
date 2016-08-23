@@ -734,13 +734,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /**
    * Create array of MasterObservers.
    *
+   * @param context Mapper context
    * @return Instantiated array of MasterObservers.
    */
-  public MasterObserver[] createMasterObservers() {
+  public MasterObserver[] createMasterObservers(
+      Mapper<?, ?, ?, ?>.Context context) {
     Class<? extends MasterObserver>[] klasses = getMasterObserverClasses();
     MasterObserver[] objects = new MasterObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
-      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this, context);
     }
     return objects;
   }
@@ -748,13 +750,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /**
    * Create array of WorkerObservers.
    *
+   * @param context Mapper context
    * @return Instantiated array of WorkerObservers.
    */
-  public WorkerObserver[] createWorkerObservers() {
+  public WorkerObserver[] createWorkerObservers(
+      Mapper<?, ?, ?, ?>.Context context) {
     Class<? extends WorkerObserver>[] klasses = getWorkerObserverClasses();
     WorkerObserver[] objects = new WorkerObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
-      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this, context);
     }
     return objects;
   }
@@ -762,13 +766,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /**
    * Create array of MapperObservers.
    *
+   * @param context Mapper context
    * @return Instantiated array of MapperObservers.
    */
-  public MapperObserver[] createMapperObservers() {
+  public MapperObserver[] createMapperObservers(
+      Mapper<?, ?, ?, ?>.Context context) {
     Class<? extends MapperObserver>[] klasses = getMapperObserverClasses();
     MapperObserver[] objects = new MapperObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
-      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this, context);
     }
     return objects;
   }
