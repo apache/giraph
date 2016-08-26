@@ -665,6 +665,7 @@ end[PURE_YARN]*/
                   info.getGcInfo().getDuration() + "ms");
             }
             gcTimeMetric.inc(info.getGcInfo().getDuration());
+            GiraphMetrics.get().getGcTracker().gcOccurred(info.getGcInfo());
             if (oocEngine != null) {
               oocEngine.gcCompleted(info);
             }

@@ -18,6 +18,7 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.utils.GcTracker;
 
 import com.google.common.collect.Lists;
 
@@ -42,6 +43,9 @@ public class GiraphMetrics {
   /** registry for required per-job metrics */
   private final GiraphMetricsRegistry perJobRequired;
 
+  /** Garbage collection tracker */
+  private final GcTracker gcTracker;
+
   /** observer for per-superstep metrics re-initialization */
   private final List<ResetSuperstepMetricsObserver> observers =
       Lists.newArrayList();
@@ -53,6 +57,7 @@ public class GiraphMetrics {
     perJobOptional = GiraphMetricsRegistry.createFake();
     perSuperstep = SuperstepMetricsRegistry.createFake();
     perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
+    gcTracker = new GcTracker();
   }
 
   /**
@@ -64,6 +69,7 @@ public class GiraphMetrics {
     perJobOptional = GiraphMetricsRegistry.create(conf, "giraph", "job");
     perSuperstep = SuperstepMetricsRegistry.create(conf, INPUT_SUPERSTEP);
     perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
+    gcTracker = new GcTracker(conf);
   }
 
   /**
@@ -109,6 +115,15 @@ public class GiraphMetrics {
    */
   public SuperstepMetricsRegistry perSuperstep() {
     return perSuperstep;
+  }
+
+  /**
+   * Get GC tracker
+   *
+   * @return Gc tracker
+   */
+  public GcTracker getGcTracker() {
+    return gcTracker;
   }
 
   /**
