@@ -76,8 +76,8 @@ public class OutOfCoreIOCallable implements Callable<Void>,
     while (true) {
       oocEngine.getSuperstepLock().readLock().lock();
       IOCommand command = oocEngine.getIOScheduler().getNextIOCommand(diskId);
-      if (LOG.isInfoEnabled() && !(command instanceof WaitIOCommand)) {
-        LOG.info("call: thread " + diskId + "'s next IO command is: " +
+      if (LOG.isDebugEnabled() && !(command instanceof WaitIOCommand)) {
+        LOG.debug("call: thread " + diskId + "'s next IO command is: " +
             command);
       }
       if (command == null) {
@@ -101,8 +101,8 @@ public class OutOfCoreIOCallable implements Callable<Void>,
         timeInGC = oocEngine.getServiceWorker().getGraphTaskManager()
             .getSuperstepGCTime() - timeInGC;
         bytes = command.bytesTransferred();
-        if (LOG.isInfoEnabled() && !(command instanceof WaitIOCommand)) {
-          LOG.info("call: thread " + diskId + "'s command " + command +
+        if (LOG.isDebugEnabled() && !(command instanceof WaitIOCommand)) {
+          LOG.debug("call: thread " + diskId + "'s command " + command +
               " completed: bytes= " + bytes + ", duration=" + duration + ", " +
               "bandwidth=" + String.format("%.2f", (double) bytes / duration *
               1000 / 1024 / 1024) +

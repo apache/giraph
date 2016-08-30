@@ -285,8 +285,8 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
   @Override
   public IOAction[] getNextIOActions() {
     double usedMemoryFraction = 1 - MemoryUtils.freeMemoryFraction();
-    if (LOG.isInfoEnabled()) {
-      LOG.info(String.format("getNextIOActions: usedMemoryFraction = %.2f",
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("getNextIOActions: usedMemoryFraction = %.2f",
           usedMemoryFraction));
     }
     if (usedMemoryFraction > highMemoryPressure) {
