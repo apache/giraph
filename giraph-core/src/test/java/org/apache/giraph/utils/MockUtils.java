@@ -166,7 +166,7 @@ public class MockUtils {
       numOfPartitions) {
     CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> service =
         Mockito.mock(CentralizedServiceWorker.class);
-    Answer<PartitionOwner> answer = new Answer<PartitionOwner>() {
+    Answer<PartitionOwner> answerOwner = new Answer<PartitionOwner>() {
       @Override
       public PartitionOwner answer(InvocationOnMock invocation) throws
           Throwable {
@@ -175,7 +175,18 @@ public class MockUtils {
       }
     };
     Mockito.when(service.getVertexPartitionOwner(
-        Mockito.any(IntWritable.class))).thenAnswer(answer);
+      Mockito.any(IntWritable.class))).thenAnswer(answerOwner);
+
+    Answer<Integer> answerId = new Answer<Integer>() {
+      @Override
+      public Integer answer(InvocationOnMock invocation) throws
+          Throwable {
+        IntWritable vertexId = (IntWritable) invocation.getArguments()[0];
+        return vertexId.get() % numOfPartitions;
+      }
+    };
+    Mockito.when(service.getPartitionId(
+      Mockito.any(IntWritable.class))).thenAnswer(answerId);
     return service;
   }
 

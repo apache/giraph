@@ -101,7 +101,7 @@ public class NumericTestGraph<I extends WritableComparable,
    * Get number of vertices in the graph
    */
   public int getVertexCount() {
-    return testGraph.getVertices().size();
+    return testGraph.getVertexCount();
   }
 
   /**

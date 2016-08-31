@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.MessageClasses;
 import org.apache.hadoop.io.Writable;
@@ -45,9 +44,9 @@ public interface MessageStoreFactory<I extends WritableComparable,
    * Implementation class should use this method of initialization
    * of any required internal state.
    *
-   * @param service Service to get partition mappings
+   * @param partitionInfo Partition split info
    * @param conf Configuration
    */
-  void initialize(CentralizedServiceWorker<I, ?, ?> service,
+  void initialize(PartitionSplitInfo<I> partitionInfo,
       ImmutableClassesGiraphConfiguration<I, ?, ?> conf);
 }

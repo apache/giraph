@@ -19,12 +19,6 @@ package org.apache.giraph.comm.messages.queue;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.utils.ThreadUtils;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -34,6 +28,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.utils.ThreadUtils;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 
 /**
  * This class decouples message receiving and processing
@@ -154,6 +155,12 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    // TODO: implement if LocalBlockRunner needs async message store
+    throw new UnsupportedOperationException();
   }
 
   @Override

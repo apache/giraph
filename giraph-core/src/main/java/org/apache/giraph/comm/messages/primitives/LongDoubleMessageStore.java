@@ -30,15 +30,14 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 
 import com.google.common.collect.Lists;
 
@@ -56,26 +55,25 @@ public class LongDoubleMessageStore
   private final
   MessageCombiner<? super LongWritable, DoubleWritable> messageCombiner;
   /** Service worker */
-  private final CentralizedServiceWorker<LongWritable, ?, ?> service;
+  private final PartitionSplitInfo<LongWritable> partitionInfo;
 
   /**
    * Constructor
    *
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param messageCombiner Message messageCombiner
    */
   public LongDoubleMessageStore(
-      CentralizedServiceWorker<LongWritable, Writable, Writable> service,
-      MessageCombiner<? super LongWritable, DoubleWritable> messageCombiner) {
-    this.service = service;
-    this.messageCombiner =
-        messageCombiner;
+    PartitionSplitInfo<LongWritable> partitionInfo,
+    MessageCombiner<? super LongWritable, DoubleWritable> messageCombiner
+  ) {
+    this.partitionInfo = partitionInfo;
+    this.messageCombiner = messageCombiner;
 
     map = new Int2ObjectOpenHashMap<Long2DoubleOpenHashMap>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
       Long2DoubleOpenHashMap partitionMap = new Long2DoubleOpenHashMap(
-          (int) service.getPartitionStore()
-              .getPartitionVertexCount(partitionId));
+          (int) partitionInfo.getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
     }
   }
@@ -92,7 +90,7 @@ public class LongDoubleMessageStore
    * @return Map which holds messages for partition which vertex belongs to.
    */
   private Long2DoubleOpenHashMap getPartitionMap(LongWritable vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+    return map.get(partitionInfo.getPartitionId(vertexId));
   }
 
   @Override
@@ -118,8 +116,23 @@ public class LongDoubleMessageStore
               reusableMessage);
           message = reusableCurrentMessage.get();
         }
+        // FIXME: messageCombiner should create an initial message instead
         partitionMap.put(vertexId, message);
       }
+    }
+  }
+
+  @Override
+  public void addMessage(
+    LongWritable vertexId,
+    DoubleWritable message
+  ) throws IOException {
+    Long2DoubleOpenHashMap partitionMap = getPartitionMap(vertexId);
+    synchronized (partitionMap) {
+      double originalValue = partitionMap.get(vertexId.get());
+      DoubleWritable originalMessage = new DoubleWritable(originalValue);
+      messageCombiner.combine(vertexId, originalMessage, message);
+      partitionMap.put(vertexId.get(), originalMessage.get());
     }
   }
 

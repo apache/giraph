@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.comm.messages.primitives;
 
+import com.google.common.collect.Lists;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.DataInput;
@@ -25,9 +27,9 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessagesIterable;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
@@ -42,8 +44,6 @@ import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Lists;
 
 /**
  * Special message store to be used when IDs are primitive and no combiner is
@@ -60,8 +60,8 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
   protected final MessageValueFactory<M> messageValueFactory;
   /** Map from partition id to map from vertex id to message */
   private final Int2ObjectOpenHashMap<Basic2ObjectMap<I, DataInputOutput>> map;
-  /** Service worker */
-  private final CentralizedServiceWorker<I, ?, ?> service;
+  /** Partition split info */
+  private final PartitionSplitInfo<I> partitionInfo;
   /** Giraph configuration */
   private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
   /** Vertex id TypeOps */
@@ -87,26 +87,27 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Factory for creating message values
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param config Hadoop configuration
    */
   public IdByteArrayMessageStore(MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    PartitionSplitInfo<I> partitionInfo,
+    ImmutableClassesGiraphConfiguration<I, ?, ?> config
+  ) {
     this.messageValueFactory = messageValueFactory;
-    this.service = service;
+    this.partitionInfo = partitionInfo;
     this.config = config;
 
     idTypeOps = TypeOpsUtils.getPrimitiveIdTypeOps(config.getVertexIdClass());
 
     map = new Int2ObjectOpenHashMap<Basic2ObjectMap<I, DataInputOutput>>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
+      int capacity = Math.max(10,
+        (int) partitionInfo.getPartitionVertexCount(partitionId));
       Basic2ObjectMap<I, DataInputOutput> partitionMap =
-          idTypeOps.create2ObjectOpenHashMap(
-              Math.max(10,
-                  (int) service.getPartitionStore()
-                      .getPartitionVertexCount(partitionId)),
-              dataInputOutputWriter);
+        idTypeOps.create2ObjectOpenHashMap(
+          capacity,
+          dataInputOutputWriter);
 
       map.put(partitionId, partitionMap);
     }
@@ -119,7 +120,7 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
    * @return Map which holds messages for partition which vertex belongs to.
    */
   private Basic2ObjectMap<I, DataInputOutput> getPartitionMap(I vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+    return map.get(partitionInfo.getPartitionId(vertexId));
   }
 
   /**
@@ -177,6 +178,25 @@ public class IdByteArrayMessageStore<I extends WritableComparable,
               " adding message for a partition: " + e);
         }
       }
+    }
+  }
+
+  /**
+   * Adds a message for a particular vertex
+   *
+   * @param vertexId Id of target vertex
+   * @param message  A message to send
+   * @throws IOException
+   */
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    Basic2ObjectMap<I, DataInputOutput> partitionMap =
+      getPartitionMap(vertexId);
+    synchronized (partitionMap) {
+      DataInputOutput dataInputOutput = getDataInputOutput(
+        partitionMap, vertexId);
+      VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
+        vertexId, message, dataInputOutput.getDataOutput());
     }
   }
 

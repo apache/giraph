@@ -25,7 +25,7 @@ import junit.framework.Assert;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.DoubleSumMessageCombiner;
-import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
+import org.apache.giraph.comm.messages.primitives.IdByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -68,8 +68,10 @@ public class TestLongDoublePrimitiveMessageStores {
     );
     PartitionStore partitionStore = Mockito.mock(PartitionStore.class);
     Mockito.when(service.getPartitionStore()).thenReturn(partitionStore);
+    Mockito.when(service.getPartitionIds()).thenReturn(
+      Lists.newArrayList(0, 1));
     Mockito.when(partitionStore.getPartitionIds()).thenReturn(
-        Lists.newArrayList(0, 1));
+      Lists.newArrayList(0, 1));
     Partition partition = Mockito.mock(Partition.class);
     Mockito.when(partition.getVertexCount()).thenReturn(Long.valueOf(1));
     Mockito.when(partitionStore.getNextPartition()).thenReturn(partition);
@@ -145,8 +147,8 @@ public class TestLongDoublePrimitiveMessageStores {
 
   @Test
   public void testLongByteArrayMessageStore() {
-    LongByteArrayMessageStore<DoubleWritable> messageStore =
-        new LongByteArrayMessageStore<DoubleWritable>(
+    IdByteArrayMessageStore<LongWritable, DoubleWritable> messageStore =
+        new IdByteArrayMessageStore<>(
             new TestMessageValueFactory<DoubleWritable>(DoubleWritable.class),
             service, createLongDoubleConf());
     insertLongDoubleMessages(messageStore);

@@ -19,22 +19,21 @@
 package org.apache.giraph.comm.messages;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.VertexIdMessageIterator;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.apache.giraph.utils.ExtendedByteArrayOutputBuffer.IndexAndDataOut;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer;
+import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer.IndexAndDataOut;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
@@ -54,14 +53,15 @@ public class PointerListPerVertexStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Message class held in the store
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param config Hadoop configuration
    */
   public PointerListPerVertexStore(
-      MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageValueFactory, service, config);
+    MessageValueFactory<M> messageValueFactory,
+    PartitionSplitInfo<I> partitionInfo,
+    ImmutableClassesGiraphConfiguration<I, ?, ?> config
+  ) {
+    super(messageValueFactory, partitionInfo, config);
     bytesBuffer = new ExtendedByteArrayOutputBuffer(config);
   }
 
@@ -102,6 +102,21 @@ public class PointerListPerVertexStore<I extends WritableComparable,
     } catch (IOException e) {
       throw new RuntimeException("addPartitionMessages: IOException while" +
           " adding messages for a partition: " + e);
+    }
+  }
+
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    LongArrayList list = getOrCreateList(vertexId);
+    IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
+    long pointer = indexAndDataOut.getIndex();
+    pointer <<= 32;
+    ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
+    pointer += dataOutput.getPos();
+    message.write(dataOutput);
+
+    synchronized (list) {
+      list.add(pointer);
     }
   }
 

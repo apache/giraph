@@ -19,24 +19,24 @@
 package org.apache.giraph.comm.messages.primitives.long_id;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.PointerListMessagesIterable;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.EmptyIterable;
-import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.VertexIdMessageIterator;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import static org.apache.giraph.utils.ExtendedByteArrayOutputBuffer.IndexAndDataOut;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
+import org.apache.giraph.comm.messages.PointerListMessagesIterable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer;
+import org.apache.giraph.utils.ExtendedByteArrayOutputBuffer.IndexAndDataOut;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * This stores messages in
@@ -45,8 +45,8 @@ import static org.apache.giraph.utils.ExtendedByteArrayOutputBuffer.IndexAndData
  *
  * @param <M> message type
  */
-public class LongPointerListMessageStore<M extends Writable>
-  extends LongAbstractListMessageStore<M, LongArrayList>
+public class LongPointerListPerVertexStore<M extends Writable>
+  extends LongAbstractListStore<M, LongArrayList>
   implements MessageStore<LongWritable, M> {
 
   /** Buffers of byte array outputs used to store messages - thread safe */
@@ -56,15 +56,15 @@ public class LongPointerListMessageStore<M extends Writable>
    * Constructor
    *
    * @param messageValueFactory Factory for creating message values
-   * @param service             Service worker
+   * @param partitionInfo       Partition split info
    * @param config              Hadoop configuration
    */
-  public LongPointerListMessageStore(
+  public LongPointerListPerVertexStore(
     MessageValueFactory<M> messageValueFactory,
-    CentralizedServiceWorker<LongWritable, Writable, Writable> service,
+    PartitionSplitInfo<LongWritable> partitionInfo,
     ImmutableClassesGiraphConfiguration<LongWritable,
     Writable, Writable> config) {
-    super(messageValueFactory, service, config);
+    super(messageValueFactory, partitionInfo, config);
     bytesBuffer = new ExtendedByteArrayOutputBuffer(config);
   }
 
@@ -79,8 +79,10 @@ public class LongPointerListMessageStore<M extends Writable>
   }
 
   @Override
-  public void addPartitionMessages(int partitionId,
-    VertexIdMessages<LongWritable, M> messages) {
+  public void addPartitionMessages(
+    int partitionId,
+    VertexIdMessages<LongWritable, M> messages
+  ) {
     try {
       VertexIdMessageIterator<LongWritable, M> iterator =
           messages.getVertexIdMessageIterator();
@@ -89,7 +91,8 @@ public class LongPointerListMessageStore<M extends Writable>
       while (iterator.hasNext()) {
         iterator.next();
         M msg = iterator.getCurrentMessage();
-        list = getList(iterator);
+        list = getList(iterator.getCurrentVertexId());
+
         if (iterator.isNewMessage()) {
           IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
           pointer = indexAndDataOut.getIndex();
@@ -109,8 +112,22 @@ public class LongPointerListMessageStore<M extends Writable>
   }
 
   @Override
-  public Iterable<M> getVertexMessages(
-    LongWritable vertexId) {
+  public void addMessage(LongWritable vertexId, M message) throws IOException {
+    LongArrayList list = getList(vertexId);
+    IndexAndDataOut indexAndDataOut = bytesBuffer.getIndexAndDataOut();
+    long pointer = indexAndDataOut.getIndex();
+    pointer <<= 32;
+    ExtendedDataOutput dataOutput = indexAndDataOut.getDataOutput();
+    pointer += dataOutput.getPos();
+    message.write(dataOutput);
+
+    synchronized (list) {
+      list.add(pointer);
+    }
+  }
+
+  @Override
+  public Iterable<M> getVertexMessages(LongWritable vertexId) {
     LongArrayList list = getPartitionMap(vertexId).get(
         vertexId.get());
     if (list == null) {

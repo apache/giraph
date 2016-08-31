@@ -21,6 +21,7 @@ package org.apache.giraph.comm.messages;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -87,6 +88,17 @@ public interface MessageStore<I extends WritableComparable,
    */
   void addPartitionMessages(
       int partitionId, VertexIdMessages<I, M> messages);
+
+  /**
+   * Adds a message for a particular vertex
+   * The method is used by InternalMessageStore to send local messages; for
+   * the general case, use a more efficient addPartitionMessages
+   *
+   * @param vertexId Id of target vertex
+   * @param message  A message to send
+   * @throws IOException
+   */
+  void addMessage(I vertexId, M message) throws IOException;
 
   /**
    * Called before start of computation in bspworker

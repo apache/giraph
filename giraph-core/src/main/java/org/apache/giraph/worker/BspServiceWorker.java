@@ -183,7 +183,7 @@ public class BspServiceWorker<I extends WritableComparable,
   private GiraphTimer waitRequestsTimer;
 
   /** InputSplit handlers used in INPUT_SUPERSTEP */
-  private WorkerInputSplitsHandler inputSplitsHandler;
+  private final WorkerInputSplitsHandler inputSplitsHandler;
 
   /** Memory observer */
   private final MemoryObserver memoryObserver;
@@ -1781,6 +1781,31 @@ else[HADOOP_NON_SECURE]*/
   @Override
   public boolean hasPartition(Integer partitionId) {
     return getPartitionStore().hasPartition(partitionId);
+  }
+
+  @Override
+  public Iterable<Integer> getPartitionIds() {
+    return getPartitionStore().getPartitionIds();
+  }
+
+  @Override
+  public long getPartitionVertexCount(Integer partitionId) {
+    return getPartitionStore().getPartitionVertexCount(partitionId);
+  }
+
+  @Override
+  public void startIteration() {
+    getPartitionStore().startIteration();
+  }
+
+  @Override
+  public Partition getNextPartition() {
+    return getPartitionStore().getNextPartition();
+  }
+
+  @Override
+  public void putPartition(Partition partition) {
+    getPartitionStore().putPartition(partition);
   }
 
   @Override

@@ -31,6 +31,7 @@ import org.apache.giraph.conf.MessageClasses;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -49,16 +50,17 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
 
   /**
    * @param messageValueFactory Message class held in the store
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param messageCombiner MessageCombiner for messages
    * @param config Hadoop configuration
    */
   public OneMessagePerVertexStore(
-      MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
-      MessageCombiner<? super I, M> messageCombiner,
-      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageValueFactory, service, config);
+    MessageValueFactory<M> messageValueFactory,
+    PartitionSplitInfo<I> partitionInfo,
+    MessageCombiner<? super I, M> messageCombiner,
+    ImmutableClassesGiraphConfiguration<I, ?, ?> config
+  ) {
+    super(messageValueFactory, partitionInfo, config);
     this.messageCombiner =
         messageCombiner;
   }
@@ -95,6 +97,25 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
         messageCombiner.combine(vertexId, currentMessage,
             vertexIdMessageIterator.getCurrentMessage());
       }
+    }
+  }
+
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    ConcurrentMap<I, M> partitionMap =
+      getOrCreatePartitionMap(getPartitionId(vertexId));
+    M currentMessage = partitionMap.get(vertexId);
+    if (currentMessage == null) {
+      M newMessage = messageCombiner.createInitialMessage();
+      // need a copy as vertexId might be reusable
+      I copyId = WritableUtils.createCopy(vertexId);
+      currentMessage = partitionMap.putIfAbsent(copyId, newMessage);
+      if (currentMessage == null) {
+        currentMessage = newMessage;
+      }
+    }
+    synchronized (currentMessage) {
+      messageCombiner.combine(vertexId, currentMessage, message);
     }
   }
 
@@ -147,17 +168,19 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       M extends Writable>
       implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
-    private CentralizedServiceWorker<I, ?, ?> service;
+    private PartitionSplitInfo<I> partitionInfo;
     /** Hadoop configuration */
     private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
     /**
-     * @param service Worker service
+     * @param partitionInfo Partition split info
      * @param config  Hadoop configuration
      */
-    public Factory(CentralizedServiceWorker<I, ?, ?> service,
-        ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-      this.service = service;
+    public Factory(
+      PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config
+    ) {
+      this.partitionInfo = partitionInfo;
       this.config = config;
     }
 
@@ -165,14 +188,14 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     public MessageStore<I, M> newStore(
         MessageClasses<I, M> messageClasses) {
       return new OneMessagePerVertexStore<I, M>(
-          messageClasses.createMessageValueFactory(config), service,
+          messageClasses.createMessageValueFactory(config), partitionInfo,
           messageClasses.createMessageCombiner(config), config);
     }
 
     @Override
-    public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+    public void initialize(PartitionSplitInfo<I> partitionInfo,
         ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
-      this.service = service;
+      this.partitionInfo = partitionInfo;
       this.config = conf;
     }
   }

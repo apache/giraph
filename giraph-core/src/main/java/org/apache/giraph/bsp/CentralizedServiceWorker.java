@@ -18,8 +18,13 @@
 
 package org.apache.giraph.bsp;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GlobalStats;
@@ -30,17 +35,13 @@ import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
-import org.apache.giraph.worker.WorkerInputSplitsHandler;
 import org.apache.giraph.worker.WorkerAggregatorHandler;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.worker.WorkerInputSplitsHandler;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * All workers should have access to this centralized service to
@@ -53,7 +54,7 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceWorker<I extends WritableComparable,
   V extends Writable, E extends Writable>
-  extends CentralizedService<I, V, E> {
+  extends CentralizedService<I, V, E>, PartitionSplitInfo<I> {
   /**
    * Setup (must be called prior to any other function)
    *
@@ -146,6 +147,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @param vertexId Vertex id
    * @return Partition id
    */
+  @Override
   int getPartitionId(I vertexId);
 
   /**

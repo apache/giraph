@@ -18,17 +18,16 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.VertexIdIterator;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Abstract Implementation of {@link SimpleMessageStore} where
@@ -46,14 +45,14 @@ public abstract class AbstractListPerVertexStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Message class held in the store
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param config Hadoop configuration
    */
   public AbstractListPerVertexStore(
     MessageValueFactory<M> messageValueFactory,
-    CentralizedServiceWorker<I, ?, ?> service,
+    PartitionSplitInfo<I> partitionInfo,
     ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageValueFactory, service, config);
+    super(messageValueFactory, partitionInfo, config);
   }
 
   /**
@@ -71,15 +70,38 @@ public abstract class AbstractListPerVertexStore<I extends WritableComparable,
    * @return pointer list
    */
   protected L getOrCreateList(VertexIdIterator<I> iterator) {
-    PartitionOwner owner =
-        service.getVertexPartitionOwner(iterator.getCurrentVertexId());
-    int partitionId = owner.getPartitionId();
+    int partitionId = getPartitionId(iterator.getCurrentVertexId());
     ConcurrentMap<I, L> partitionMap = getOrCreatePartitionMap(partitionId);
     L list = partitionMap.get(iterator.getCurrentVertexId());
     if (list == null) {
       L newList = createList();
       list = partitionMap.putIfAbsent(
-          iterator.releaseCurrentVertexId(), newList);
+        iterator.releaseCurrentVertexId(), newList);
+      if (list == null) {
+        list = newList;
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Get the list of pointers for a vertex
+   * Each pointer has information of how to access an encoded message
+   * for this vertex
+   * This method will take ownership of the vertex id from the
+   * iterator if necessary (when used in the partition map entry)
+   *
+   * @param vertexId vertex id
+   * @return pointer list
+   */
+  protected L getOrCreateList(I vertexId) {
+    int partitionId = getPartitionId(vertexId);
+    ConcurrentMap<I, L> partitionMap = getOrCreatePartitionMap(partitionId);
+    L list = partitionMap.get(vertexId);
+    if (list == null) {
+      L newList = createList();
+      I copyId = WritableUtils.createCopy(vertexId);
+      list = partitionMap.putIfAbsent(copyId, newList);
       if (list == null) {
         list = newList;
       }

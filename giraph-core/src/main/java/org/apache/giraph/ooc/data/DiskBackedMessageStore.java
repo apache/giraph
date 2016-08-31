@@ -18,6 +18,10 @@
 
 package org.apache.giraph.ooc.data;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
@@ -32,9 +36,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 /**
  * Implementation of a message store used for out-of-core mechanism.
@@ -137,6 +138,26 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     }
   }
 
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    if (useMessageCombiner) {
+      messageStore.addMessage(vertexId, message);
+    } else {
+      // TODO: implement if LocalBlockRunner needs this message store
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  /**
+   * Gets the path that should be used specifically for message data.
+   *
+   * @param basePath path prefix to build the actual path from
+   * @param superstep superstep for which message data should be stored
+   * @return path to files specific for message data
+   */
+  private static String getPath(String basePath, long superstep) {
+    return basePath + "_messages-S" + superstep;
+  }
 
   @Override
   public long loadPartitionData(int partitionId)

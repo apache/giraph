@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.messages;
 
+import com.google.common.collect.Iterators;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -33,11 +35,10 @@ import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.giraph.utils.VertexIdMessageBytesIterator;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Iterators;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
@@ -53,14 +54,14 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Message class held in the store
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param config Hadoop configuration
    */
   public ByteArrayMessagesPerVertexStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
+      PartitionSplitInfo<I> partitionInfo,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageValueFactory, service, config);
+    super(messageValueFactory, partitionInfo, config);
   }
 
   @Override
@@ -138,6 +139,26 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   }
 
   @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    ConcurrentMap<I, DataInputOutput> partitionMap =
+      getOrCreatePartitionMap(getPartitionId(vertexId));
+    DataInputOutput dataInputOutput = partitionMap.get(vertexId);
+    if (dataInputOutput == null) {
+      DataInputOutput newDataOutput = config.createMessagesInputOutput();
+      I copyId = WritableUtils.createCopy(vertexId);
+      dataInputOutput = partitionMap.putIfAbsent(copyId, newDataOutput);
+      if (dataInputOutput == null) {
+        dataInputOutput = newDataOutput;
+      }
+    }
+
+    synchronized (dataInputOutput) {
+      VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
+        vertexId, message, dataInputOutput.getDataOutput());
+    }
+  }
+
+  @Override
   protected Iterable<M> getMessagesAsIterable(
       DataInputOutput dataInputOutput) {
     return new MessagesIterable<M>(dataInputOutput, messageValueFactory);
@@ -199,7 +220,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   public static class Factory<I extends WritableComparable, M extends Writable>
     implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
-    private CentralizedServiceWorker<I, ?, ?> service;
+    private PartitionSplitInfo<I> partitionInfo;
     /** Hadoop configuration */
     private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
@@ -207,12 +228,14 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     public Factory() { }
 
     /**
-     * @param service Worker service
+     * @param partitionInfo Partition split info
      * @param config  Hadoop configuration
      */
-    public Factory(CentralizedServiceWorker<I, ?, ?> service,
-        ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-      this.service = service;
+    public Factory(
+      PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config
+    ) {
+      this.partitionInfo = partitionInfo;
       this.config = config;
     }
 
@@ -221,14 +244,15 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         MessageClasses<I, M> messageClasses) {
       return new ByteArrayMessagesPerVertexStore<I, M>(
           messageClasses.createMessageValueFactory(config),
-          service, config);
+          partitionInfo, config);
     }
 
     @Override
-    public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+    public void initialize(PartitionSplitInfo<I> partitionInfo,
         ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
-      this.service = service;
+      this.partitionInfo = partitionInfo;
       this.config = conf;
     }
   }
+
 }

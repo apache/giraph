@@ -18,15 +18,12 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.primitives.IdByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IdOneMessagePerVertexStore;
-import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
-import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
-import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
+import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListPerVertexStore;
 import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -59,8 +56,8 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
   private static final Logger LOG =
       Logger.getLogger(InMemoryMessageStoreFactory.class);
 
-  /** Service worker */
-  protected CentralizedServiceWorker<I, ?, ?> service;
+  /** Partition info */
+  protected PartitionSplitInfo<I> partitionInfo;
   /** Hadoop configuration */
   protected ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
 
@@ -87,24 +84,22 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
     if (vertexIdClass.equals(IntWritable.class) &&
         messageClass.equals(FloatWritable.class)) {
       messageStore = new IntFloatMessageStore(
-          (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
+          (PartitionSplitInfo<IntWritable>) partitionInfo,
           (MessageCombiner<IntWritable, FloatWritable>) messageCombiner);
     } else if (vertexIdClass.equals(LongWritable.class) &&
         messageClass.equals(DoubleWritable.class)) {
       messageStore = new LongDoubleMessageStore(
-          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
+          (PartitionSplitInfo<LongWritable>) partitionInfo,
           (MessageCombiner<LongWritable, DoubleWritable>) messageCombiner);
     } else {
       PrimitiveIdTypeOps<I> idTypeOps =
           TypeOpsUtils.getPrimitiveIdTypeOpsOrNull(vertexIdClass);
       if (idTypeOps != null) {
         messageStore = new IdOneMessagePerVertexStore<>(
-            messageValueFactory, service, messageCombiner,
-            conf);
+          messageValueFactory, partitionInfo, messageCombiner, conf);
       } else {
-        messageStore =
-            new OneMessagePerVertexStore<I, M>(messageValueFactory, service,
-                messageCombiner, conf);
+        messageStore = new OneMessagePerVertexStore<I, M>(
+          messageValueFactory, partitionInfo, messageCombiner, conf);
       }
     }
     return messageStore;
@@ -124,21 +119,11 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       MessageEncodeAndStoreType encodeAndStore) {
     MessageStore messageStore = null;
     Class<I> vertexIdClass = conf.getVertexIdClass();
-    if (vertexIdClass.equals(IntWritable.class)) { // INT
-      messageStore = new IntByteArrayMessageStore(messageValueFactory,
-          service, conf);
-    } else if (vertexIdClass.equals(LongWritable.class)) { // LONG
-      if (encodeAndStore.equals(
-          MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION) ||
-          encodeAndStore.equals(
-            MessageEncodeAndStoreType.EXTRACT_BYTEARRAY_PER_PARTITION)) {
-        messageStore = new LongByteArrayMessageStore(messageValueFactory,
-            service, conf);
-      } else if (encodeAndStore.equals(
-          MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
-        messageStore = new LongPointerListMessageStore(messageValueFactory,
-            service, conf);
-      }
+    // a special case for LongWritable with POINTER_LIST_PER_VERTEX
+    if (vertexIdClass.equals(LongWritable.class) && encodeAndStore.equals(
+        MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
+      messageStore = new LongPointerListPerVertexStore(
+        messageValueFactory, partitionInfo, conf);
     } else { // GENERAL
       if (encodeAndStore.equals(
           MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION) ||
@@ -148,15 +133,15 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
             TypeOpsUtils.getPrimitiveIdTypeOpsOrNull(vertexIdClass);
         if (idTypeOps != null) {
           messageStore = new IdByteArrayMessageStore<>(
-              messageValueFactory, service, conf);
+              messageValueFactory, partitionInfo, conf);
         } else {
           messageStore = new ByteArrayMessagesPerVertexStore<>(
-              messageValueFactory, service, conf);
+              messageValueFactory, partitionInfo, conf);
         }
       } else if (encodeAndStore.equals(
           MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
-        messageStore = new PointerListPerVertexStore<>(messageValueFactory,
-            service, conf);
+        messageStore = new PointerListPerVertexStore<>(
+          messageValueFactory, partitionInfo, conf);
       }
     }
     return messageStore;
@@ -193,7 +178,7 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
     if (asyncMessageStoreThreads > 0) {
       messageStore = new AsyncMessageStoreWrapper(
           messageStore,
-          service.getPartitionStore().getPartitionIds(),
+          partitionInfo.getPartitionIds(),
           asyncMessageStoreThreads);
     }
 
@@ -201,9 +186,9 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
   }
 
   @Override
-  public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+  public void initialize(PartitionSplitInfo<I> partitionInfo,
       ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
-    this.service = service;
+    this.partitionInfo = partitionInfo;
     this.conf = conf;
   }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.comm.messages.primitives;
 
+import com.google.common.collect.Lists;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.DataInput;
@@ -26,9 +28,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
@@ -40,8 +42,6 @@ import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Lists;
 
 /**
  * Special message store to be used when IDs are primitive and message doesn't
@@ -62,8 +62,8 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
   private final MessageValueFactory<M> messageValueFactory;
   /** Message messageCombiner */
   private final MessageCombiner<? super I, M> messageCombiner;
-  /** Service worker */
-  private final CentralizedServiceWorker<I, ?, ?> service;
+  /** Partition split info */
+  private final PartitionSplitInfo<I> partitionInfo;
   /** Giraph configuration */
   private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
   /** Vertex id TypeOps */
@@ -87,16 +87,16 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Message value factory
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param messageCombiner Message messageCombiner
    * @param config Config
    */
   public IdOneMessagePerVertexStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
+      PartitionSplitInfo<I> partitionInfo,
       MessageCombiner<? super I, M> messageCombiner,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    this.service = service;
+    this.partitionInfo = partitionInfo;
     this.config = config;
     this.messageValueFactory = messageValueFactory;
     this.messageCombiner = messageCombiner;
@@ -104,10 +104,11 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
     idTypeOps = TypeOpsUtils.getPrimitiveIdTypeOps(config.getVertexIdClass());
 
     map = new Int2ObjectOpenHashMap<>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
       Basic2ObjectMap<I, M> partitionMap = idTypeOps.create2ObjectOpenHashMap(
-          Math.max(10, (int) service.getPartitionStore()
-              .getPartitionVertexCount(partitionId)), messageWriter);
+        Math.max(10, (int) partitionInfo.getPartitionVertexCount(partitionId)),
+        messageWriter
+      );
       map.put(partitionId, partitionMap);
     }
   }
@@ -119,7 +120,7 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
    * @return Map which holds messages for partition which vertex belongs to.
    */
   private Basic2ObjectMap<I, M> getPartitionMap(I vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+    return map.get(partitionInfo.getPartitionId(vertexId));
   }
 
   @Override
@@ -148,6 +149,29 @@ public class IdOneMessagePerVertexStore<I extends WritableComparable,
         messageCombiner.combine(vertexId, currentMessage,
           iterator.getCurrentMessage());
       }
+    }
+  }
+
+  /**
+   * Adds a message for a particular vertex
+   *
+   * @param vertexId Id of target vertex
+   * @param message  A message to send
+   * @throws IOException
+   */
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    Basic2ObjectMap<I, M> partitionMap = getPartitionMap(vertexId);
+    synchronized (partitionMap) {
+      M currentMessage = partitionMap.get(vertexId);
+      if (currentMessage == null) {
+        M newMessage = messageCombiner.createInitialMessage();
+        currentMessage = partitionMap.put(vertexId, newMessage);
+        if (currentMessage == null) {
+          currentMessage = newMessage;
+        }
+      }
+      messageCombiner.combine(vertexId, currentMessage, message);
     }
   }
 

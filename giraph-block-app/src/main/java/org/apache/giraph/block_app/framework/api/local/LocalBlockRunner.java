@@ -63,6 +63,9 @@ public class LocalBlockRunner {
   /** Number of threads to use */
   public static final IntConfOption NUM_THREADS = new IntConfOption(
       "test.LocalBlockRunner.NUM_THREADS", 3, "");
+  /** Number of vertex partitions */
+  public static final IntConfOption NUM_PARTITIONS = new IntConfOption(
+      "test.LocalBlockRunner.NUM_PARTITIONS", 16, "");
   /**
    * Whether to run all supported checks. Disable if you are running this
    * not within a unit test, and on a large graph, where performance matters.
@@ -148,7 +151,8 @@ public class LocalBlockRunner {
     Preconditions.checkNotNull(block);
     Preconditions.checkNotNull(graph);
     ImmutableClassesGiraphConfiguration<I, V, E> conf = graph.getConf();
-    int numPartitions = NUM_THREADS.get(conf);
+    int numThreads = NUM_THREADS.get(conf);
+    int numPartitions = NUM_PARTITIONS.get(conf);
     boolean runAllChecks = RUN_ALL_CHECKS.get(conf);
     boolean serializeMaster = SERIALIZE_MASTER.get(conf);
     final boolean doOutputDuringComputation = conf.doOutputDuringComputation();
@@ -171,7 +175,7 @@ public class LocalBlockRunner {
           }
         }));
 
-    ExecutorService executor = Executors.newFixedThreadPool(numPartitions);
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
     if (runAllChecks) {
       for (Vertex<I, V, E> vertex : graph) {

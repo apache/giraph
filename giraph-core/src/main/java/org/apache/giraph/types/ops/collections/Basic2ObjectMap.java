@@ -23,23 +23,29 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.giraph.types.ops.IntTypeOps;
 import org.apache.giraph.types.ops.LongTypeOps;
 import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Basic2ObjectMap with only basic set of operations.
- * All operations that return object T are returning reusable object,
+ * All operations that return object K are returning reusable object,
  * which is modified after calling any other function.
  *
  * @param <K> Key type
@@ -81,13 +87,11 @@ public abstract class Basic2ObjectMap<K, V> implements Writable {
    * @return the old value, or null if no value was present for the given key.
    */
   public abstract V remove(K key);
-
   /**
    * TypeOps for type of keys this object holds
    * @return TypeOps
    */
   public abstract PrimitiveIdTypeOps<K> getKeyTypeOps();
-
   /**
    * Fast iterator over keys within this map, which doesn't allocate new
    * element for each returned element.
@@ -98,6 +102,20 @@ public abstract class Basic2ObjectMap<K, V> implements Writable {
    * @return Iterator
    */
   public abstract Iterator<K> fastKeyIterator();
+
+  /**
+   * Iterator over map values.
+   *
+   * @return Iterator
+   */
+  public abstract Iterator<V> valueIterator();
+
+  /**
+   * A collection of all values.
+   *
+   * @return Iterator
+   */
+  public abstract Collection<V> values();
 
   /**
    * Iterator that reuses key object.
@@ -212,6 +230,16 @@ public abstract class Basic2ObjectMap<K, V> implements Writable {
     }
 
     @Override
+    public Iterator<V> valueIterator() {
+      return map.values().iterator();
+    }
+
+    @Override
+    public Collection<V> values() {
+      return map.values();
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(map.size());
       ObjectIterator<Int2ObjectMap.Entry<V>> iterator =
@@ -319,7 +347,22 @@ public abstract class Basic2ObjectMap<K, V> implements Writable {
     }
 
     @Override
+    public Iterator<V> valueIterator() {
+      return map.values().iterator();
+    }
+
+    @Override
+    public Collection<V> values() {
+      return map.values();
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
+      Preconditions.checkState(
+        valueWriter != null,
+        "valueWriter is not provided"
+      );
+
       out.writeInt(map.size());
       ObjectIterator<Long2ObjectMap.Entry<V>> iterator =
           map.long2ObjectEntrySet().fastIterator();
@@ -332,11 +375,153 @@ public abstract class Basic2ObjectMap<K, V> implements Writable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
+      Preconditions.checkState(
+        valueWriter != null,
+        "valueWriter is not provided"
+      );
+
       int size = in.readInt();
       map.clear();
       map.trim(size);
       while (size-- > 0) {
         long key = in.readLong();
+        V value = valueWriter.readFields(in);
+        map.put(key, value);
+      }
+    }
+  }
+
+  /** Writable implementation of Basic2ObjectMap */
+  public static final class BasicObject2ObjectOpenHashMap<K extends Writable, V>
+      extends Basic2ObjectMap<K, V> {
+    /** Map */
+    private final Object2ObjectOpenHashMap<K, V> map;
+    /** Key writer */
+    private final WritableWriter<K> keyWriter;
+    /** Value writer */
+    private final WritableWriter<V> valueWriter;
+
+    /**
+     * Constructor
+     *
+     * @param keyWriter Writer of keys
+     * @param valueWriter Writer of values
+     */
+    public BasicObject2ObjectOpenHashMap(
+      WritableWriter<K> keyWriter,
+      WritableWriter<V> valueWriter
+    ) {
+      this.map = new Object2ObjectOpenHashMap<>();
+      this.keyWriter = keyWriter;
+      this.valueWriter = valueWriter;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param capacity Map capacity
+     * @param keyWriter Writer of keys
+     * @param valueWriter Writer of values
+     */
+    public BasicObject2ObjectOpenHashMap(
+      int capacity,
+      WritableWriter<K> keyWriter,
+      WritableWriter<V> valueWriter
+    ) {
+      this.map = new Object2ObjectOpenHashMap<>(capacity);
+      this.keyWriter = keyWriter;
+      this.valueWriter = valueWriter;
+    }
+
+    @Override
+    public void clear() {
+      map.clear();
+    }
+
+    @Override
+    public int size() {
+      return map.size();
+    }
+
+    @Override
+    public boolean containsKey(K key) {
+      return map.containsKey(key);
+    }
+
+    @Override
+    public V put(K key, V value) {
+      // we need a copy since the key object is mutable
+      K copyKey = WritableUtils.createCopy(key);
+      return map.put(copyKey, value);
+    }
+
+    @Override
+    public V get(K key) {
+      return map.get(key);
+    }
+
+    @Override
+    public V remove(K key) {
+      return map.remove(key);
+    }
+
+    @Override
+    public PrimitiveIdTypeOps<K> getKeyTypeOps() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Iterator<K> fastKeyIterator() {
+      return map.keySet().iterator();
+    }
+
+    @Override
+    public Iterator<V> valueIterator() {
+      return map.values().iterator();
+    }
+
+    @Override
+    public Collection<V> values() {
+      return map.values();
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      Preconditions.checkState(
+        keyWriter != null,
+        "keyWriter is not provided"
+      );
+      Preconditions.checkState(
+        valueWriter != null,
+        "valueWriter is not provided"
+      );
+
+      out.writeInt(map.size());
+      ObjectIterator<Object2ObjectMap.Entry<K, V>> iterator =
+          map.object2ObjectEntrySet().fastIterator();
+      while (iterator.hasNext()) {
+        Object2ObjectMap.Entry<K, V> entry = iterator.next();
+        keyWriter.write(out, entry.getKey());
+        valueWriter.write(out, entry.getValue());
+      }
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      Preconditions.checkState(
+        keyWriter != null,
+        "keyWriter is not provided"
+      );
+      Preconditions.checkState(
+        valueWriter != null,
+        "valueWriter is not provided"
+      );
+
+      int size = in.readInt();
+      map.clear();
+      map.trim(size);
+      while (size-- > 0) {
+        K key = keyWriter.readFields(in);
         V value = valueWriter.readFields(in);
         map.put(key, value);
       }

@@ -56,7 +56,7 @@ public class TestSwitchClasses {
     graph.addVertex(id2, new StatusValue());
     graph = InternalVertexRunner.runWithInMemoryOutput(conf, graph);
 
-    Assert.assertEquals(2, graph.getVertices().size());
+    Assert.assertEquals(2, graph.getVertexCount());
   }
 
   private static void checkVerticesOnFinalSuperstep(

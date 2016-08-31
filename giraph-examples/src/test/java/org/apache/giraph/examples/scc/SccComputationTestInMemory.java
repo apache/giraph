@@ -54,7 +54,7 @@ public class SccComputationTestInMemory {
   /**
    * Connects the {@outgoingVertices} to the given vertex id
    * with null-valued edges.
-   * 
+   *
    * @param graph
    * @param id
    * @param outgoingVertices
@@ -110,9 +110,7 @@ public class SccComputationTestInMemory {
   private Map<Long, List<Long>> parse(
       TestGraph<LongWritable, SccVertexValue, NullWritable> g) {
     Map<Long, List<Long>> scc = new HashMap<Long, List<Long>>();
-    for (LongWritable v : g.getVertices().keySet()) {
-      Vertex<LongWritable, SccVertexValue, NullWritable> vertex = g
-          .getVertex(v);
+    for (Vertex<LongWritable, SccVertexValue, NullWritable> vertex : g) {
       long sccId = vertex.getValue().get();
       List<Long> verticesIds = scc.get(sccId);
       if (verticesIds == null) {// New SCC

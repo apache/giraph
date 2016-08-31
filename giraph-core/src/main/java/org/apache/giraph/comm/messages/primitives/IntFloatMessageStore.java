@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.messages.primitives;
 
+import com.google.common.collect.Lists;
+
 import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -30,17 +32,14 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
-
-import com.google.common.collect.Lists;
 
 /**
  * Special message store to be used when ids are IntWritable and messages
@@ -55,26 +54,26 @@ public class IntFloatMessageStore
   /** Message messageCombiner */
   private final
   MessageCombiner<? super IntWritable, FloatWritable> messageCombiner;
-  /** Service worker */
-  private final CentralizedServiceWorker<IntWritable, ?, ?> service;
+  /** Partition split info */
+  private final PartitionSplitInfo<IntWritable> partitionInfo;
 
   /**
    * Constructor
    *
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param messageCombiner Message messageCombiner
    */
   public IntFloatMessageStore(
-      CentralizedServiceWorker<IntWritable, Writable, Writable> service,
-      MessageCombiner<? super IntWritable, FloatWritable> messageCombiner) {
-    this.service = service;
+    PartitionSplitInfo<IntWritable> partitionInfo,
+    MessageCombiner<? super IntWritable, FloatWritable> messageCombiner
+  ) {
+    this.partitionInfo = partitionInfo;
     this.messageCombiner = messageCombiner;
 
     map = new Int2ObjectOpenHashMap<Int2FloatOpenHashMap>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
       Int2FloatOpenHashMap partitionMap = new Int2FloatOpenHashMap(
-          (int) service.getPartitionStore()
-              .getPartitionVertexCount(partitionId));
+          (int) partitionInfo.getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
     }
   }
@@ -91,7 +90,7 @@ public class IntFloatMessageStore
    * @return Map which holds messages for partition which vertex belongs to.
    */
   private Int2FloatOpenHashMap getPartitionMap(IntWritable vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+    return map.get(partitionInfo.getPartitionId(vertexId));
   }
 
   @Override
@@ -117,8 +116,23 @@ public class IntFloatMessageStore
               reusableMessage);
           message = reusableCurrentMessage.get();
         }
+        // FIXME: messageCombiner should create an initial message instead
         partitionMap.put(vertexId, message);
       }
+    }
+  }
+
+  @Override
+  public void addMessage(
+    IntWritable vertexId,
+    FloatWritable message
+  ) throws IOException {
+    Int2FloatOpenHashMap partitionMap = getPartitionMap(vertexId);
+    synchronized (partitionMap) {
+      float originalValue = partitionMap.get(vertexId.get());
+      FloatWritable originalMessage = new FloatWritable(originalValue);
+      messageCombiner.combine(vertexId, originalMessage, message);
+      partitionMap.put(vertexId.get(), originalMessage.get());
     }
   }
 

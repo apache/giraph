@@ -20,14 +20,15 @@ package org.apache.giraph.comm.messages;
 
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -46,8 +47,8 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
     M extends Writable, T> implements MessageStore<I, M>  {
   /** Message class */
   protected final MessageValueFactory<M> messageValueFactory;
-  /** Service worker */
-  protected final CentralizedServiceWorker<I, ?, ?> service;
+  /** Partition split info */
+  protected final PartitionSplitInfo<I> partitionInfo;
   /** Map from partition id to map from vertex id to messages for that vertex */
   protected final ConcurrentMap<Integer, ConcurrentMap<I, T>> map;
   /** Giraph configuration */
@@ -57,15 +58,15 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
    * Constructor
    *
    * @param messageValueFactory Message class held in the store
-   * @param service Service worker
+   * @param partitionInfo Partition split info
    * @param config Giraph configuration
    */
   public SimpleMessageStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<I, ?, ?> service,
+      PartitionSplitInfo<I> partitionInfo,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     this.messageValueFactory = messageValueFactory;
-    this.service = service;
+    this.partitionInfo = partitionInfo;
     this.config = config;
     map = new MapMaker().concurrencyLevel(
         config.getNettyServerExecutionConcurrency()).makeMap();
@@ -114,7 +115,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
    * @return Id of partiton
    */
   protected int getPartitionId(I vertexId) {
-    return service.getVertexPartitionOwner(vertexId).getPartitionId();
+    return partitionInfo.getPartitionId(vertexId);
   }
 
   /**

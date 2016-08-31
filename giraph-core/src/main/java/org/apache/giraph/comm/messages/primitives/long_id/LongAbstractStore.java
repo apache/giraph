@@ -19,17 +19,19 @@
 package org.apache.giraph.comm.messages.primitives.long_id;
 
 import com.google.common.collect.Lists;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
+
+import java.util.List;
+
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-
-import java.util.List;
 
 /**
  * Special message store to be used when ids are LongWritable and no combiner
@@ -40,7 +42,7 @@ import java.util.List;
  * @param <M> message type
  * @param <T> datastructure used to hold messages
  */
-public abstract class LongAbstractMessageStore<M extends Writable, T>
+public abstract class LongAbstractStore<M extends Writable, T>
   implements MessageStore<LongWritable, M> {
   /** Message value factory */
   protected final MessageValueFactory<M> messageValueFactory;
@@ -48,7 +50,7 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
   protected final
   Int2ObjectOpenHashMap<Long2ObjectOpenHashMap<T>> map;
   /** Service worker */
-  protected final CentralizedServiceWorker<LongWritable, ?, ?> service;
+  protected final PartitionSplitInfo<LongWritable> partitionInfo;
   /** Giraph configuration */
   protected final ImmutableClassesGiraphConfiguration<LongWritable, ?, ?>
   config;
@@ -57,23 +59,22 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
    * Constructor
    *
    * @param messageValueFactory Factory for creating message values
-   * @param service      Service worker
-   * @param config       Hadoop configuration
+   * @param partitionInfo       Partition split info
+   * @param config              Hadoop configuration
    */
-  public LongAbstractMessageStore(
+  public LongAbstractStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<LongWritable, Writable, Writable> service,
+      PartitionSplitInfo<LongWritable> partitionInfo,
       ImmutableClassesGiraphConfiguration<LongWritable, Writable, Writable>
           config) {
     this.messageValueFactory = messageValueFactory;
-    this.service = service;
+    this.partitionInfo = partitionInfo;
     this.config = config;
 
     map = new Int2ObjectOpenHashMap<>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
       Long2ObjectOpenHashMap<T> partitionMap = new Long2ObjectOpenHashMap<T>(
-          (int) service.getPartitionStore()
-              .getPartitionVertexCount(partitionId));
+          (int) partitionInfo.getPartitionVertexCount(partitionId));
       map.put(partitionId, partitionMap);
     }
   }
@@ -86,7 +87,7 @@ public abstract class LongAbstractMessageStore<M extends Writable, T>
    */
   protected Long2ObjectOpenHashMap<T> getPartitionMap(
       LongWritable vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+    return map.get(partitionInfo.getPartitionId(vertexId));
   }
 
   @Override

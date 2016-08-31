@@ -18,6 +18,14 @@
 
 package org.apache.giraph.comm.messages.queue;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Arrays;
+
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.factories.TestMessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -25,14 +33,6 @@ import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Arrays;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Test case for AsyncMessageStoreWrapper
@@ -68,6 +68,10 @@ public class AsyncMessageStoreWrapperTest {
     public void addPartitionMessages(int partition, VertexIdMessages messages) {
       assertNotNull(messages);
       counters[partition]++;
+    }
+
+    @Override
+    public void addMessage(LongWritable vertexId, IntWritable message) throws IOException {
     }
 
     @Override
@@ -124,5 +128,6 @@ public class AsyncMessageStoreWrapperTest {
     public void readFieldsForPartition(DataInput in, int partitionId) throws IOException {
 
     }
+
   }
 }

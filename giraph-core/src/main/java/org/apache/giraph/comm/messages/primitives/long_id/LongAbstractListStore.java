@@ -20,17 +20,16 @@ package org.apache.giraph.comm.messages.primitives.long_id;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
+
+import java.util.List;
+
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-
-import java.util.List;
 
 /**
  * Special message store to be used when ids are LongWritable and no combiner
@@ -41,8 +40,8 @@ import java.util.List;
  * @param <M> message type
  * @param <L> list type
  */
-public abstract class LongAbstractListMessageStore<M extends Writable,
-  L extends List> extends LongAbstractMessageStore<M, L> {
+public abstract class LongAbstractListStore<M extends Writable,
+  L extends List> extends LongAbstractStore<M, L> {
   /**
    * Map used to store messages for nascent vertices i.e., ones
    * that did not exist at the start of current superstep but will get
@@ -55,20 +54,20 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
    * Constructor
    *
    * @param messageValueFactory Factory for creating message values
-   * @param service             Service worker
+   * @param partitionInfo       Partition split info
    * @param config              Hadoop configuration
    */
-  public LongAbstractListMessageStore(
+  public LongAbstractListStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<LongWritable, Writable, Writable> service,
+      PartitionSplitInfo<LongWritable> partitionInfo,
       ImmutableClassesGiraphConfiguration<LongWritable,
           Writable, Writable> config) {
-    super(messageValueFactory, service, config);
+    super(messageValueFactory, partitionInfo, config);
     populateMap();
 
     // create map for vertex ids (i.e., nascent vertices) not known yet
     nascentMap = new Int2ObjectOpenHashMap<>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
+    for (int partitionId : partitionInfo.getPartitionIds()) {
       nascentMap.put(partitionId, new Long2ObjectOpenHashMap<L>());
     }
   }
@@ -78,9 +77,9 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
    */
   private void populateMap() { // TODO - can parallelize?
     // populate with vertex ids already known
-    service.getPartitionStore().startIteration();
+    partitionInfo.startIteration();
     while (true) {
-      Partition partition = service.getPartitionStore().getNextPartition();
+      Partition partition = partitionInfo.getNextPartition();
       if (partition == null) {
         break;
       }
@@ -90,7 +89,7 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
         LongWritable vertexId = (LongWritable) vertex.getId();
         partitionMap.put(vertexId.get(), createList());
       }
-      service.getPartitionStore().putPartition(partition);
+      partitionInfo.putPartition(partition);
     }
   }
 
@@ -103,29 +102,29 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
   /**
    * Get list for the current vertexId
    *
-   * @param iterator vertexId iterator
+   * @param vertexId vertex id
    * @return list for current vertexId
    */
-  protected L getList(
-    VertexIdIterator<LongWritable> iterator) {
-    PartitionOwner owner =
-        service.getVertexPartitionOwner(iterator.getCurrentVertexId());
-    long vertexId = iterator.getCurrentVertexId().get();
-    int partitionId = owner.getPartitionId();
+  protected L getList(LongWritable vertexId) {
+    long id = vertexId.get();
+    int partitionId = partitionInfo.getPartitionId(vertexId);
     Long2ObjectOpenHashMap<L> partitionMap = map.get(partitionId);
-    if (!partitionMap.containsKey(vertexId)) {
-      synchronized (nascentMap) {
-        // assumption: not many nascent vertices are created
-        // so overall synchronization is negligible
-        Long2ObjectOpenHashMap<L> nascentPartitionMap =
-          nascentMap.get(partitionId);
-        if (nascentPartitionMap.get(vertexId) == null) {
-          nascentPartitionMap.put(vertexId, createList());
+    L list = partitionMap.get(id);
+    if (list == null) {
+      Long2ObjectOpenHashMap<L> nascentPartitionMap =
+        nascentMap.get(partitionId);
+      // assumption: not many nascent vertices are created
+      // so overall synchronization is negligible
+      synchronized (nascentPartitionMap) {
+        list = nascentPartitionMap.get(id);
+        if (list == null) {
+          list = createList();
+          nascentPartitionMap.put(id, list);
         }
-        return nascentPartitionMap.get(vertexId);
+        return list;
       }
     }
-    return partitionMap.get(vertexId);
+    return list;
   }
 
   @Override
@@ -135,6 +134,19 @@ public abstract class LongAbstractListMessageStore<M extends Writable,
       map.get(partitionId).putAll(nascentMap.get(partitionId));
     }
     nascentMap.clear();
+  }
+
+  @Override
+  public boolean hasMessagesForVertex(LongWritable vertexId) {
+    int partitionId = partitionInfo.getPartitionId(vertexId);
+    Long2ObjectOpenHashMap<L> partitionMap = map.get(partitionId);
+    L list = partitionMap.get(vertexId.get());
+    if (list != null && !list.isEmpty()) {
+      return true;
+    }
+    Long2ObjectOpenHashMap<L> nascentMessages = nascentMap.get(partitionId);
+    return nascentMessages != null &&
+           nascentMessages.containsKey(vertexId.get());
   }
 
   // TODO - discussion
