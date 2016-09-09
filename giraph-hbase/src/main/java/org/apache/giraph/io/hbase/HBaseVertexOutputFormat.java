@@ -21,6 +21,7 @@ package org.apache.giraph.io.hbase;
 import java.io.IOException;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
 import org.apache.hadoop.io.Writable;
@@ -81,7 +82,7 @@ public abstract class HBaseVertexOutputFormat<
     /** Context */
     private TaskAttemptContext context;
     /** Record writer instance */
-    private RecordWriter<ImmutableBytesWritable, Writable> recordWriter;
+    private RecordWriter<ImmutableBytesWritable, Mutation> recordWriter;
 
    /**
     * Sets up base table output format and creates a record writer.
@@ -122,7 +123,7 @@ public abstract class HBaseVertexOutputFormat<
      * @return Record writer to be used for writing.
      */
     public RecordWriter<ImmutableBytesWritable,
-            Writable> getRecordWriter() {
+        Mutation> getRecordWriter() {
       return recordWriter;
     }
 
