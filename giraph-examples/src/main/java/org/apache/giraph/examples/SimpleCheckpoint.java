@@ -27,6 +27,7 @@ import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.io.formats.FileOutputFormatUtil;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.job.GiraphJob;
@@ -38,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -248,7 +248,7 @@ public class SimpleCheckpoint implements Tool {
     bspJob.getConfiguration().setWorkerConfiguration(
         minWorkers, maxWorkers, 100.0f);
 
-    FileOutputFormat.setOutputPath(bspJob.getInternalJob(),
+    FileOutputFormatUtil.setOutputPath(bspJob.getInternalJob(),
                                    new Path(cmd.getOptionValue('o')));
     boolean verbose = false;
     if (cmd.hasOption('v')) {

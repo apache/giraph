@@ -20,6 +20,7 @@ package org.apache.giraph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.io.formats.FileOutputFormatUtil;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.utils.FileUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -29,7 +30,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
@@ -339,7 +339,7 @@ public class BspCase implements Watcher {
   public static void removeAndSetOutput(GiraphJob job,
       Path outputPath) throws IOException {
     FileUtils.deletePath(job.getConfiguration(), outputPath);
-    FileOutputFormat.setOutputPath(job.getInternalJob(), outputPath);
+    FileOutputFormatUtil.setOutputPath(job.getInternalJob(), outputPath);
   }
 
   public static String getCallingMethodName() {

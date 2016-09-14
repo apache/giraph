@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.io.formats.FileOutputFormatUtil;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.InMemoryVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
@@ -32,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -197,7 +197,7 @@ public class InternalVertexRunner {
       GiraphFileInputFormat.setEdgeInputPath(internalJob.getConfiguration(),
           new Path(edgeInputFile.toString()));
     }
-    FileOutputFormat.setOutputPath(job.getInternalJob(),
+    FileOutputFormatUtil.setOutputPath(job.getInternalJob(),
         new Path(outputDir.toString()));
 
     // Configure a local zookeeper instance

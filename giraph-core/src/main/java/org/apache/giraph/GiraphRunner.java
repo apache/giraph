@@ -18,6 +18,7 @@
 package org.apache.giraph;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.giraph.io.formats.FileOutputFormatUtil;
 import org.apache.giraph.utils.ConfigurationUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
@@ -27,7 +28,6 @@ end[PURE_YARN]*/
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -104,7 +104,7 @@ else[PURE_YARN]*/
     throws Exception {
     if (cmd.hasOption("vof") || cmd.hasOption("eof")) {
       if (cmd.hasOption("op")) {
-        FileOutputFormat.setOutputPath(job.getInternalJob(),
+        FileOutputFormatUtil.setOutputPath(job.getInternalJob(),
           new Path(cmd.getOptionValue("op")));
       }
     }
