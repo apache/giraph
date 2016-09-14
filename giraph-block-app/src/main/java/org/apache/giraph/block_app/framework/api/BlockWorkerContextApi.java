@@ -29,5 +29,5 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public interface BlockWorkerContextApi<I extends WritableComparable>
-    extends AggregatorUsage, BlockApi, WorkerIndexUsage<I> {
+    extends AggregatorUsage, BlockApi, WorkerIndexUsage<I>, StatusReporter {
 }

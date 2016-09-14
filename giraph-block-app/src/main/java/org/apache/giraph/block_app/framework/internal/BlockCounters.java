@@ -19,8 +19,11 @@ package org.apache.giraph.block_app.framework.internal;
 
 import java.lang.reflect.Field;
 
+import org.apache.giraph.block_app.framework.api.Counter;
 import org.apache.giraph.block_app.framework.api.StatusReporter;
 import org.apache.giraph.block_app.framework.internal.BlockMasterLogic.TimeStatsPerEvent;
+
+import org.apache.hadoop.mapreduce.Mapper;
 
 /** Utility class for Blocks Framework related counters */
 public class BlockCounters {
@@ -82,5 +85,32 @@ public class BlockCounters {
         String.format("In %6d %s (s)", superstep, name)
     ).setValue(millis / 1000);
     timeStats.inc(name, millis);
+  }
+
+  public static Counter getCounter(
+      Mapper.Context context, String group, String name) {
+    final org.apache.hadoop.mapreduce.Counter counter =
+        context.getCounter(group, name);
+    return new Counter() {
+      @Override
+      public void increment(long incr) {
+        counter.increment(incr);
+      }
+
+      @Override
+      public void setValue(long value) {
+        counter.setValue(value);
+      }
+    };
+  }
+
+  public static Counter getNoOpCounter() {
+    return new Counter() {
+      @Override
+      public void setValue(long value) { }
+
+      @Override
+      public void increment(long incr) { }
+    };
   }
 }

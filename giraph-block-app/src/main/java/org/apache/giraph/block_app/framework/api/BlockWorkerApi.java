@@ -30,7 +30,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public interface BlockWorkerApi<I extends WritableComparable>
-    extends BlockApi, BlockOutputApi, AggregatorUsage, WorkerIndexUsage<I> {
+    extends BlockApi, BlockOutputApi, AggregatorUsage, WorkerIndexUsage<I>,
+    StatusReporter {
   @Override
   ImmutableClassesGiraphConfiguration<I, ?, ?> getConf();
 }

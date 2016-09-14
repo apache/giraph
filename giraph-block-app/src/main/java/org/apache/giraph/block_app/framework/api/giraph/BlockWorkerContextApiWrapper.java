@@ -19,6 +19,8 @@ package org.apache.giraph.block_app.framework.api.giraph;
 
 import org.apache.giraph.block_app.framework.api.BlockWorkerContextReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
+import org.apache.giraph.block_app.framework.api.Counter;
+import org.apache.giraph.block_app.framework.internal.BlockCounters;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
@@ -88,5 +90,20 @@ final class BlockWorkerContextApiWrapper
   @Override
   public long getTotalNumVertices() {
     return workerContext.getTotalNumVertices();
+  }
+
+  @Override
+  public Counter getCounter(String group, String name) {
+    return BlockCounters.getCounter(workerContext.getContext(), group, name);
+  }
+
+  @Override
+  public void progress() {
+    workerContext.getContext().progress();
+  }
+
+  @Override
+  public void setStatus(String status) {
+    workerContext.getContext().setStatus(status);
   }
 }

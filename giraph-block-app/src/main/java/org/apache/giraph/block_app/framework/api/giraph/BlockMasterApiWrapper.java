@@ -22,6 +22,7 @@ import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.api.BlockOutputApi;
 import org.apache.giraph.block_app.framework.api.BlockOutputHandleAccessor;
 import org.apache.giraph.block_app.framework.api.Counter;
+import org.apache.giraph.block_app.framework.internal.BlockCounters;
 import org.apache.giraph.block_app.framework.output.BlockOutputDesc;
 import org.apache.giraph.block_app.framework.output.BlockOutputHandle;
 import org.apache.giraph.block_app.framework.output.BlockOutputWriter;
@@ -64,19 +65,7 @@ final class BlockMasterApiWrapper implements BlockMasterApi,
 
   @Override
   public Counter getCounter(String group, String name) {
-    final org.apache.hadoop.mapreduce.Counter counter =
-        master.getContext().getCounter(group, name);
-    return new Counter() {
-      @Override
-      public void increment(long incr) {
-        counter.increment(incr);
-      }
-
-      @Override
-      public void setValue(long value) {
-        counter.setValue(value);
-      }
-    };
+    return BlockCounters.getCounter(master.getContext(), group, name);
   }
 
   @Override

@@ -24,6 +24,8 @@ import org.apache.giraph.block_app.framework.api.BlockOutputApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerValueAccessor;
+import org.apache.giraph.block_app.framework.api.Counter;
+import org.apache.giraph.block_app.framework.internal.BlockCounters;
 import org.apache.giraph.block_app.framework.output.BlockOutputDesc;
 import org.apache.giraph.block_app.framework.output.BlockOutputWriter;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -191,5 +193,20 @@ final class BlockWorkerApiWrapper<I extends WritableComparable,
   @Override
   public int getWorkerForVertex(I vertexId) {
     return worker.getWorkerForVertex(vertexId);
+  }
+
+  @Override
+  public Counter getCounter(String group, String name) {
+    return BlockCounters.getCounter(worker.getContext(), group, name);
+  }
+
+  @Override
+  public void progress() {
+    worker.getContext().progress();
+  }
+
+  @Override
+  public void setStatus(String status) {
+    worker.getContext().setStatus(status);
   }
 }

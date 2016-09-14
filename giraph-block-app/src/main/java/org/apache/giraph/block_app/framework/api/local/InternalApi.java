@@ -45,6 +45,7 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerValueAccessor;
 import org.apache.giraph.block_app.framework.api.Counter;
 import org.apache.giraph.block_app.framework.api.local.InternalMessageStore.InternalChecksMessageStore;
 import org.apache.giraph.block_app.framework.api.local.InternalMessageStore.InternalWrappedMessageStore;
+import org.apache.giraph.block_app.framework.internal.BlockCounters;
 import org.apache.giraph.block_app.framework.internal.BlockWorkerContextLogic;
 import org.apache.giraph.block_app.framework.internal.BlockWorkerPieces;
 import org.apache.giraph.block_app.framework.output.BlockOutputDesc;
@@ -243,6 +244,19 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     public <OW extends BlockOutputWriter> OW getWriter(String confOption) {
       return workerContextLogic.getOutputHandle().getWriter(confOption);
     }
+
+    @Override
+    public void setStatus(String status) {
+    }
+
+    @Override
+    public void progress() {
+    }
+
+    @Override
+    public Counter getCounter(final String group, final String name) {
+      return BlockCounters.getNoOpCounter();
+    }
   }
 
   @Override
@@ -316,14 +330,7 @@ class InternalApi<I extends WritableComparable, V extends Writable,
 
   @Override
   public Counter getCounter(final String group, final String name) {
-    return new Counter() {
-      @Override
-      public void increment(long incr) {
-      }
-      @Override
-      public void setValue(long value) {
-      }
-    };
+    return BlockCounters.getNoOpCounter();
   }
 
   private VertexMutations<I, V, E> getMutationFor(I vertexId) {
