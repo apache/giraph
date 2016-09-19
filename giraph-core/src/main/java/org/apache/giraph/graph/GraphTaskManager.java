@@ -224,6 +224,8 @@ end[PURE_YARN]*/
     context.setStatus("setup: Beginning worker setup.");
     Configuration hadoopConf = context.getConfiguration();
     conf = new ImmutableClassesGiraphConfiguration<I, V, E>(hadoopConf);
+    // Setting the default handler for uncaught exceptions.
+    Thread.setDefaultUncaughtExceptionHandler(createUncaughtExceptionHandler());
     setupMapperObservers();
     initializeJobProgressTracker();
     // Write user's graph types (I,V,E,M) back to configuration parameters so
