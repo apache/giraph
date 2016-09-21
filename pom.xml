@@ -1044,7 +1044,6 @@ under the License.
       <id>hadoop_1</id>
       <modules>
         <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-gora</module>
         <module>giraph-rexster</module>
