@@ -16,7 +16,7 @@
     <parent>
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-parent</artifactId>
-        <version>1.2.0-RC0</version>
+        <version>1.2.0</version>
     </parent>
     <artifactId>giraph-gora</artifactId>
     <packaging>jar</packaging>
