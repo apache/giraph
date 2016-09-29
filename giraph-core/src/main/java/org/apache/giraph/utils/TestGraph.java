@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.CreateSourceVertexCallback;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
@@ -54,6 +56,8 @@ public class TestGraph<I extends WritableComparable,
   protected Basic2ObjectMap<I, Vertex<I, V, E>> vertices;
   /** The configuration */
   protected ImmutableClassesGiraphConfiguration<I, V, E> conf;
+  /** Callback that makes a decision on whether vertex should be created */
+  private CreateSourceVertexCallback<I> createSourceVertexCallback;
 
   /**
    * Constructor requiring classes
@@ -62,6 +66,9 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph(GiraphConfiguration conf) {
     this.conf = new ImmutableClassesGiraphConfiguration<>(conf);
+    createSourceVertexCallback =
+        GiraphConstants.CREATE_EDGE_SOURCE_VERTICES_CALLBACK
+            .newInstance(this.conf);
     vertexValueCombiner = this.conf.createVertexValueCombiner();
     vertices = BasicCollectionsUtils.create2ObjectMap(
       this.conf.getVertexIdClass()
@@ -147,21 +154,13 @@ public class TestGraph<I extends WritableComparable,
 
   /**
    * Add an edge to an existing vertex
-   *
+   *`
    * @param vertexId Edge origin
    * @param edgePair The edge
    * @return this
    */
   public TestGraph<I, V, E> addEdge(I vertexId, Entry<I, E> edgePair) {
-    if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E> v = conf.createVertex();
-      v.initialize(vertexId, conf.createVertexValue());
-      vertices.put(vertexId, v);
-    }
-    vertices.get(vertexId)
-      .addEdge(EdgeFactory.create(edgePair.getKey(),
-                                               edgePair.getValue()));
-    return this;
+    return addEdge(vertexId, edgePair.getKey(), edgePair.getValue());
   }
 
   /**
@@ -174,12 +173,16 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph<I, V, E> addEdge(I vertexId, I toVertex, E edgeValue) {
     if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E> v = conf.createVertex();
-      v.initialize(vertexId, conf.createVertexValue());
-      vertices.put(vertexId, v);
+      if (createSourceVertexCallback.shouldCreateSourceVertex(vertexId)) {
+        Vertex<I, V, E> v = conf.createVertex();
+        v.initialize(vertexId, conf.createVertexValue());
+        vertices.put(vertexId, v);
+      }
     }
-    vertices.get(vertexId)
-      .addEdge(EdgeFactory.create(toVertex, edgeValue));
+    Vertex<I, V, E> v = vertices.get(vertexId);
+    if (v != null) {
+      v.addEdge(EdgeFactory.create(toVertex, edgeValue));
+    }
     return this;
   }
 

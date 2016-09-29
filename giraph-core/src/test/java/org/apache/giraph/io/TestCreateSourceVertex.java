@@ -20,13 +20,16 @@ package org.apache.giraph.io;
 
 import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.DefaultCreateSourceVertexCallback;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullTextVertexInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.utils.ComputationCountEdges;
 import org.apache.giraph.utils.IntIntNullNoOpComputation;
 import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.hadoop.io.IntWritable;
 import org.junit.Test;
 
 import java.util.Map;
@@ -132,6 +135,68 @@ public class TestCreateSourceVertex {
     assertEquals(1, (int) values.get(6));
     assertEquals(1, (int) values.get(7));
   }
+
+  @Test
+  public void testCustomCreateSourceVertex() throws Exception {
+    String [] vertices = new String[] {
+        "1 0",
+        "2 0",
+        "3 0",
+        "4 0",
+    };
+    String [] edges = new String[] {
+        "1 2",
+        "1 5",
+        "2 4",
+        "2 1",
+        "3 4",
+        "4 1",
+        "4 5",
+        "6 2",
+        "7 8",
+        "4 8",
+    };
+
+    GiraphConfiguration conf = getConf();
+    GiraphConstants.CREATE_EDGE_SOURCE_VERTICES_CALLBACK.set(conf,
+        CreateEvenSourceVerticesCallback.class);
+
+    Iterable<String> results = InternalVertexRunner.run(conf, vertices, edges);
+    Map<Integer, Integer> values = parseResults(results);
+
+    // Check that only vertices from vertex input are present in output graph
+    assertEquals(5, values.size());
+    // Check that the ids of vertices in output graph exactly match vertex input
+    assertTrue(values.containsKey(1));
+    assertTrue(values.containsKey(2));
+    assertTrue(values.containsKey(3));
+    assertTrue(values.containsKey(4));
+    assertTrue(values.containsKey(6));
+
+    conf.setComputationClass(ComputationCountEdges.class);
+    results = InternalVertexRunner.run(conf, vertices, edges);
+    values = parseResults(results);
+
+    // Check the number of edges of each vertex
+    assertEquals(2, (int) values.get(1));
+    assertEquals(2, (int) values.get(2));
+    assertEquals(1, (int) values.get(3));
+    assertEquals(3, (int) values.get(4));
+    assertEquals(1, (int) values.get(6));
+  }
+
+  /**
+   * Only allows to create vertices with even ids.
+   */
+  public static class CreateEvenSourceVerticesCallback extends
+      DefaultCreateSourceVertexCallback<IntWritable> {
+
+    @Override
+    public boolean shouldCreateSourceVertex(IntWritable vertexId) {
+      return vertexId.get()  % 2 == 0;
+    }
+  }
+
 
   private GiraphConfiguration getConf() {
     GiraphConfiguration conf = new GiraphConfiguration();

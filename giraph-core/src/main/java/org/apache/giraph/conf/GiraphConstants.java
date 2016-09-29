@@ -27,6 +27,8 @@ import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.DefaultCreateSourceVertexCallback;
+import org.apache.giraph.edge.CreateSourceVertexCallback;
 import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.edge.InMemoryEdgeStoreFactory;
 import org.apache.giraph.edge.OutEdges;
@@ -1116,6 +1118,18 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.createEdgeSourceVertices", true,
           "Create a source vertex if present in edge input but not " +
           "necessarily in vertex input");
+
+  /**
+   * Defines a call back that can be used to make decisions on
+   * whether the vertex should be created or not in the runtime.
+   */
+  ClassConfOption<CreateSourceVertexCallback>
+      CREATE_EDGE_SOURCE_VERTICES_CALLBACK =
+      ClassConfOption.create("giraph.createEdgeSourceVerticesCallback",
+          DefaultCreateSourceVertexCallback.class,
+          CreateSourceVertexCallback.class,
+          "Decide whether we should create a source vertex when id is " +
+              "present in the edge input but not in vertex input");
 
   /**
    * This counter group will contain one counter whose name is the ZooKeeper

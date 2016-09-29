@@ -21,6 +21,7 @@ package org.apache.giraph.edge;
 import com.google.common.collect.MapMaker;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.ooc.OutOfCoreEngine;
@@ -81,6 +82,8 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   protected boolean useInputOutEdges;
   /** Whether we spilled edges on disk */
   private boolean hasEdgesOnDisk = false;
+  /** Create source vertices */
+  private CreateSourceVertexCallback<I> createSourceVertexCallback;
 
   /**
    * Constructor.
@@ -100,6 +103,9 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
       configuration.getNettyServerExecutionConcurrency()).makeMap();
     reuseEdgeObjects = configuration.reuseEdgeObjects();
     useInputOutEdges = configuration.useInputOutEdges();
+    createSourceVertexCallback =
+        GiraphConstants.CREATE_EDGE_SOURCE_VERTICES_CALLBACK
+            .newInstance(configuration);
   }
 
   /**
@@ -247,7 +253,6 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
 
   @Override
   public void moveEdgesToVertices() {
-    final boolean createSourceVertex = configuration.getCreateSourceVertex();
     if (transientEdges.isEmpty() && !hasEdgesOnDisk) {
       if (LOG.isInfoEnabled()) {
         LOG.info("moveEdgesToVertices: No edges to move");
@@ -256,7 +261,8 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("moveEdgesToVertices: Moving incoming edges to vertices.");
+      LOG.info("moveEdgesToVertices: Moving incoming edges to " +
+          "vertices. Using " + createSourceVertexCallback);
     }
 
     service.getPartitionStore().startIteration();
@@ -307,7 +313,8 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
                 // If the source vertex doesn't exist, create it. Otherwise,
                 // just set the edges.
                 if (vertex == null) {
-                  if (createSourceVertex) {
+                  if (createSourceVertexCallback
+                      .shouldCreateSourceVertex(vertexId)) {
                     // createVertex only if it is allowed by configuration
                     vertex = configuration.createVertex();
                     vertex.initialize(createVertexId(entry),
