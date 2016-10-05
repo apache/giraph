@@ -26,7 +26,9 @@ import static org.apache.giraph.io.gora.constants.GiraphGoraConstants.GIRAPH_GOR
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.giraph.conf.GiraphConfiguration;
@@ -92,14 +94,12 @@ public class TestGoraVertexInputFormat {
     results = InternalVertexRunner.run(conf, new String[0], new String[0]);
     Assert.assertNotNull(results);
     Assert.assertEquals(3, ((ArrayList<?>)results).size());
-    if (results instanceof Collection<?>
-    & (((Collection<?>)results).size() == 3)) {
-      Assert.assertEquals("10\t0.0",
-          ((ArrayList<?>)results).get(0).toString());
-      Assert.assertEquals("1\t0.0",
-          ((ArrayList<?>)results).get(1).toString());
-      Assert.assertEquals("100\t0.0",
-          ((ArrayList<?>)results).get(2).toString());
+    Collections.sort((ArrayList)results);
+    String[] correct = new String[] {"1\t0.0", "10\t0.0", "100\t0.0"};
+    Arrays.sort(correct);
+    for (int i = 0; i < correct.length; i++) {
+      Assert.assertEquals(correct[i],
+          ((ArrayList<?>) results).get(i).toString());
     }
   }
 
