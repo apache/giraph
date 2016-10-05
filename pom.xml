@@ -1046,7 +1046,6 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hcatalog</module>
         <module>giraph-gora</module>
-        <module>giraph-rexster</module>
         <module>giraph-dist</module>
       </modules>
       <activation>
@@ -1360,7 +1359,6 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-gora</module>
-        <module>giraph-rexster</module>
         <module>giraph-dist</module>
       </modules>
        <properties>
