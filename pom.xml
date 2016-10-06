@@ -1087,6 +1087,10 @@ under the License.
               <groupId>tomcat</groupId>
               <artifactId>jasper-runtime</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-json</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
       </dependencies>
