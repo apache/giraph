@@ -71,6 +71,13 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>findbugs-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <basedir>${project.basedir}/..</basedir>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
