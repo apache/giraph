@@ -782,14 +782,18 @@ under the License.
                 <exclude>.idea/**</exclude>
                 <exclude>**/*.iml</exclude>
                 <exclude>**/*.ipr</exclude>
+                <exclude>**/*.json</exclude>
                 <!-- test resources (for Giraph on YARN profile) -->
                 <exclude>**/test/resources/**</exclude>
                 <!-- Gora configs -->
-                <exclude>giraph-gora/conf/*</exclude>
+                <exclude>giraph-gora/conf/**</exclude>
                 <!-- Rexster resource -->
                 <exclude>giraph-rexster/giraph-kibble/src/main/resources/META-INF/services/com.tinkerpop.rexster.extension.RexsterExtension</exclude> 
                 <!-- site images -->
-                <exclude>src/site/resources/images/*.svg</exclude> 
+                <exclude>src/site/resources/images/*.svg</exclude>
+                <exclude>giraph-debugger/src/main/resources/org/apache/giraph/debugger/mock/*.vm</exclude>
+                <exclude>giraph-debugger/src/main/protobuf/*.proto</exclude> 
+                <exclude>giraph-debugger/gui</exclude>
               </excludes>
           </configuration>
         </plugin>
