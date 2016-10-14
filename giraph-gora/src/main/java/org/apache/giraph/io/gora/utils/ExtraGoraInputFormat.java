@@ -87,7 +87,7 @@ public class ExtraGoraInputFormat<K, T extends PersistentBase>
   /**
    * Gets splits.
    * @param context for the job.
-   * @return List<InputSplit> splits found
+   * @return splits found
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException,
@@ -146,7 +146,7 @@ public class ExtraGoraInputFormat<K, T extends PersistentBase>
   /**
    * Gets the partitioned query from the conf object passed.
    * @param conf Configuration object.
-   * @return Query<K, T> passed inside the configuration object
+   * @return passed inside the configuration object
    * @throws IOException Exception that might be thrown.
    */
   public Query<K, T> getQuery(Configuration conf) throws IOException {

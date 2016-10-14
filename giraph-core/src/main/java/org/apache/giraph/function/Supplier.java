@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * () -> T
+ * () -&gt; T
  * <br>
  * Specialization of com.google.common.base.Supplier, that is also
  * Serializable.

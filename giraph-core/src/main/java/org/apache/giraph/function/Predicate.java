@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * (T) -> boolean
+ * (T) -&gt; boolean
  * <br>
  * Specialization of com.google.common.base.Predicate, that is also
  * Serializable.

@@ -70,8 +70,8 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
     WM extends Writable, S> extends AbstractPiece<I, V, E, M, WV, WM, S> {
   // TODO move to GiraphConstants
   /**
-   * This option will tell which message encode & store enum to force, when
-   * combining is not enabled.
+   * This option will tell which message encode &amp; store enum to force,
+   * when combining is not enabled.
    *
    * MESSAGE_ENCODE_AND_STORE_TYPE and this property are basically upper
    * and lower bound on message store type, when looking them in order from
@@ -106,15 +106,11 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
    * Override to register any potential reducers used by this piece,
    * through calls to {@code reduceApi}, which will return reducer handles
    * for simple.
-   * <br/>
    * Tip: Without defining a field, first write here name of the field and what
    * you want to reduce, like:
-   * <br/>
    * {@code totalSum = reduceApi.createLocalReducer(SumReduce.DOUBLE); }
-   * <br/>
    * and then use tools your IDE provides to generate field signature itself,
    * which might be slightly complex:
-   * <br/>
    * {@code ReducerHandle<DoubleWritable, DoubleWritable> totalSum; }
    */
   public void registerReducers(CreateReducersApi reduceApi, S executionStage) {

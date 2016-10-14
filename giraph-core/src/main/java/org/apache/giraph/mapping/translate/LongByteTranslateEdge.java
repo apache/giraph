@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Basic implementation of Translate Edge
- * where I = LongWritable & B = ByteWritable
+ * where I = LongWritable &amp; B = ByteWritable
  *
  * @param <E> edge value type
  */

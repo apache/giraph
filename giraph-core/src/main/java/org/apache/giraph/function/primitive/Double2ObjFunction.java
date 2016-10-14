@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (double) -> T
+ * (double) -&gt; T
  *
  * @param <T> Result type
  */

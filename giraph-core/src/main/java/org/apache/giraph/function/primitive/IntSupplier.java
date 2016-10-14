@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * () -> int
+ * () -&gt; int
  */
 public interface IntSupplier extends Serializable {
   /**

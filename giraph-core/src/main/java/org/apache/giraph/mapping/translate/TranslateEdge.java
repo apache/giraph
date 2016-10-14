@@ -40,7 +40,7 @@ public interface TranslateEdge<I extends WritableComparable, E extends Writable>
   void initialize(BspServiceWorker<I, ? extends Writable, E> service);
 
   /**
-   * Translate Id & return a new instance
+   * Translate Id &amp; return a new instance
    *
    * @param targetId edge target Id
    * @return a new translated Id instance

@@ -30,7 +30,8 @@ import java.io.IOException;
  * OutputFormat to write out the graph nodes as text, value-separated (by
  * tabs, by default).  With the default delimiter, a vertex is written out as:
  *
- * <VertexId><tab><Vertex Value><tab>[<EdgeId><tab><EdgeValue>]+
+ * &lt;VertexId&gt;&lt;tab&gt;&lt;Vertex Value&gt;&lt;tab&gt;
+ * [&lt;EdgeId&gt;&lt;tab&gt;&lt;EdgeValue&gt;]+
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value

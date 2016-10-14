@@ -25,12 +25,12 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Function:
- * (vertex) -> T
+ * (vertex) -&gt; T
  *
  * A class that can supply objects of a single type, when given a vertex.
  *
- * (doesn't extend Function<Vertex<I, V, E>, T>, because of different
- * method names)
+ * (doesn't extend Function&lt;Vertex&lt;I, V, E&gt;, T&gt;,
+ * because of different method names)
  *
  * @param <I> Vertex id type
  * @param <V> Vertex value type

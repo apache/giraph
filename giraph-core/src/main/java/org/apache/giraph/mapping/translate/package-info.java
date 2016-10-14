@@ -17,6 +17,6 @@
  */
 
 /**
- * Definitions & sample implementations of edge translation logic
+ * Definitions &amp; sample implementations of edge translation logic
  */
 package org.apache.giraph.mapping.translate;

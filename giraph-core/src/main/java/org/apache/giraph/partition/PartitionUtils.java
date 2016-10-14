@@ -54,7 +54,7 @@ public class PartitionUtils {
   private PartitionUtils() { }
 
   /**
-   * Compare edge counts for Entry<WorkerInfo, VertexEdgeCount> objects.
+   * Compare edge counts for Entry&lt;WorkerInfo, VertexEdgeCount&gt; objects.
    */
   private static class EdgeCountComparator implements
       Comparator<Entry<WorkerInfo, VertexEdgeCount>>, Serializable {

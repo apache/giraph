@@ -117,8 +117,6 @@ public interface PrimitiveRefs {
   /**
    * Convenience class holding object values,
    * for use when lambdas need to mutate capturing object local variable.
-   *
-   * <O> object
    */
   public class ObjRef<O> {
     /** value */

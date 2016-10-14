@@ -86,7 +86,7 @@ public abstract class ArrayListWritable<M extends Writable> extends ArrayList<M>
 
   /**
    * Subclasses must set the class type appropriately and can use
-   * setClass(Class<M> refClass) to do it.
+   * setClass(Class&lt;M&gt; refClass) to do it.
    */
   public abstract void setClass();
 

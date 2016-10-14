@@ -23,7 +23,7 @@ ${generated_message}
 
 /**
  * Primitive specialization of Function:
- * (${type.lower}) -> boolean
+ * (${type.lower}) -&gt; boolean
  */
 public interface ${type.camel}Predicate extends Serializable {
   /**

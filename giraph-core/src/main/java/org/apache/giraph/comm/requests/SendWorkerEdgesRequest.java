@@ -45,7 +45,7 @@ public class SendWorkerEdgesRequest<I extends WritableComparable,
   /**
    * Constructor used to send request.
    *
-   * @param partVertEdges Map of remote partitions =>
+   * @param partVertEdges Map of remote partitions =&gt;
    *                     ByteArrayVertexIdEdges
    */
   public SendWorkerEdgesRequest(

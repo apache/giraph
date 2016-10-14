@@ -1104,7 +1104,7 @@ public class GiraphConfiguration extends Configuration
    * Get the local hostname on the given interface.
    *
    * @return The local hostname
-   * @throws UnknownHostException
+   * @throws UnknownHostException IP address of a host could not be determined
    */
   public String getLocalHostname() throws UnknownHostException {
     return DNS.getDefaultHost(
@@ -1116,7 +1116,7 @@ public class GiraphConfiguration extends Configuration
    * Return local host name by default. Or local host IP if preferIP
    * option is set.
    * @return local host name or IP
-   * @throws UnknownHostException
+   * @throws UnknownHostException IP address of a host could not be determined
    */
   public String getLocalHostOrIp() throws UnknownHostException {
     if (GiraphConstants.PREFER_IP_ADDRESSES.get(this)) {
@@ -1165,9 +1165,9 @@ public class GiraphConfiguration extends Configuration
   /**
    * Get string, replacing variables in the output.
    *
-   * %JOB_ID% => job id
-   * %TASK_ID% => task id
-   * %USER% => owning user name
+   * %JOB_ID% =&gt; job id
+   * %TASK_ID% =&gt; task id
+   * %USER% =&gt; owning user name
    *
    * @param key name of key to lookup
    * @param context mapper context
@@ -1180,9 +1180,9 @@ public class GiraphConfiguration extends Configuration
   /**
    * Get string, replacing variables in the output.
    *
-   * %JOB_ID% => job id
-   * %TASK_ID% => task id
-   * %USER% => owning user name
+   * %JOB_ID% =&gt; job id
+   * %TASK_ID% =&gt; task id
+   * %USER% =&gt; owning user name
    *
    * @param key name of key to lookup
    * @param defaultValue value to return if no mapping exists. This can also

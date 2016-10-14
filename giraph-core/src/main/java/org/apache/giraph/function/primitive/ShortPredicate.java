@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (short) -> boolean
+ * (short) -&gt; boolean
  */
 public interface ShortPredicate extends Serializable {
   /**

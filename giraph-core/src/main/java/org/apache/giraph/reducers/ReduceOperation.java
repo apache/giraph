@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.reducers;
 
+import org.apache.giraph.master.AggregatorReduceOperation;
 import org.apache.hadoop.io.Writable;
 
 /**

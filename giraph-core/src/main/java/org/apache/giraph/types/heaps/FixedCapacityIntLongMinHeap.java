@@ -155,8 +155,8 @@ public class FixedCapacityIntLongMinHeap
    * @param value1 First value
    * @param key2   Second key
    * @param value2 Second value
-   * @return 0 if entries are equal, < 0 if first entry is smaller than the
-   * second one, and > 0 if first entry is larger than the second one
+   * @return 0 if entries are equal, &lt; 0 if first entry is smaller than the
+   * second one, and &gt; 0 if first entry is larger than the second one
    */
   protected int compare(int key1, long value1,
       int key2, long value2) {

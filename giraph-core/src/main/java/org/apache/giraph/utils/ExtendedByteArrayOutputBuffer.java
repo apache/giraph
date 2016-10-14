@@ -112,7 +112,7 @@ public class ExtendedByteArrayOutputBuffer {
   }
 
   /**
-   * Holder for index & DataOutput objects
+   * Holder for index &amp; DataOutput objects
    */
   public static class IndexAndDataOut {
     /** Index */

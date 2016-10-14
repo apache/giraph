@@ -31,7 +31,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- *  Tests for {@link BrachaTougeDeadlockComputation}
+ *  Tests for {@link BrachaTouegDeadlockComputation}
  */
 public class BrachaTouegDeadlockComputationTest {
   /** Giraph shared configuration */

@@ -31,7 +31,7 @@ package org.apache.giraph.types.ops;
 public interface TypeOps<T> {
   /**
    * Class object for generic type T.
-   * @return Class<T> object
+   * @return Class&lt;T&gt; object
    */
   Class<T> getTypeClass();
   /**

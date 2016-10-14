@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (long, byte) -> void
+ * (long, byte) -&gt; void
  */
 public interface LongByteConsumer extends Serializable {
   /**

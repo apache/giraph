@@ -50,7 +50,6 @@ public abstract class EdgeInputFormat<I extends WritableComparable,
    * @param context the information about the task
    * @return a new record reader
    * @throws IOException
-   * @throws InterruptedException
    */
   public abstract EdgeReader<I, E> createEdgeReader(
       InputSplit split,

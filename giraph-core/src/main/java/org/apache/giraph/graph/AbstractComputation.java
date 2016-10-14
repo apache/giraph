@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.Mapper;
  * See {@link Computation} for explanation of the interface.
  *
  * This is a abstract class helper for users to implement their computations.
- * It implements all of the methods required by the {@link Computation
+ * It implements all of the methods required by the {@link Computation}
  * interface except for the {@link #compute(Vertex, Iterable)} which we leave
  * to the user to define.
  *
@@ -101,9 +101,8 @@ public abstract class AbstractComputation<I extends WritableComparable,
    *
    * @param graphState Graph state
    * @param workerClientRequestProcessor Processor for handling requests
-   * @param graphTaskManager Graph-wide BSP Mapper for this Vertex
+   * @param serviceWorker Graph-wide BSP Mapper for this Vertex
    * @param workerGlobalCommUsage Worker global communication usage
-   * @param workerContext Worker context
    */
   @Override
   public void initialize(

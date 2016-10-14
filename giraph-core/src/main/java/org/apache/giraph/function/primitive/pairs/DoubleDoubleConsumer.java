@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (double, double) -> void
+ * (double, double) -&gt; void
  */
 public interface DoubleDoubleConsumer extends Serializable {
   /**

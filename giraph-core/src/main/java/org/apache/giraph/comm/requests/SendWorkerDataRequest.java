@@ -58,7 +58,7 @@ public abstract class SendWorkerDataRequest<I extends WritableComparable, T,
   /**
    * Constructor used to send request.
    *
-   * @param partVertData Map of remote partitions => VertexIdData
+   * @param partVertData Map of remote partitions =&gt; VertexIdData
    */
   public SendWorkerDataRequest(
       PairList<Integer, B> partVertData) {

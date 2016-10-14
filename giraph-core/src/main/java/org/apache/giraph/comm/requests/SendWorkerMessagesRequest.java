@@ -43,7 +43,7 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   /**
    * Constructor used to send request.
    *
-   * @param partVertMsgs Map of remote partitions =>
+   * @param partVertMsgs Map of remote partitions =&gt;
    *                     VertexIdMessages
    */
   public SendWorkerMessagesRequest(

@@ -52,7 +52,7 @@ public class SccComputationTestInMemory {
   }
 
   /**
-   * Connects the {@outgoingVertices} to the given vertex id
+   * Connects the outgoingVertices to the given vertex id
    * with null-valued edges.
    *
    * @param graph

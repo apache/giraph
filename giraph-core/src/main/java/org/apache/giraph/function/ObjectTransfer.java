@@ -81,7 +81,7 @@ public class ObjectTransfer<T> implements Supplier<T>, Consumer<T> {
    * and to make code work without compile errors/warnings.
    *
    * In Java7, some callsites might need explicit types:
-   * object.<LongWritable, DoubleWritable, Writable>castToSupplier()
+   * object.&lt;LongWritable, DoubleWritable, Writable&gt;castToSupplier()
    * In Java8, object.castToSupplier() is always going to be enough.
    *
    * @param <I> Vertex id type
@@ -107,7 +107,7 @@ public class ObjectTransfer<T> implements Supplier<T>, Consumer<T> {
    * and to make code work without compile errors/warnings.
    *
    * In Java7, some callsites might need explicit types:
-   * object.<LongWritable, DoubleWritable, Writable>castToConsumer()
+   * object.&lt;LongWritable, DoubleWritable, Writable&gt;castToConsumer()
    * In Java8, object.castToConsumer() is always going to be enough.
    *
    * @param <I> Vertex id type

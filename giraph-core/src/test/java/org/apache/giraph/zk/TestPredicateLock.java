@@ -128,8 +128,6 @@ public class TestPredicateLock {
 
   /**
    * Thread signaled test to make sure the the event is signaled correctly
-   *
-   * @throws InterruptedException
    */
   @Test
   public void testWaitMsecs() {

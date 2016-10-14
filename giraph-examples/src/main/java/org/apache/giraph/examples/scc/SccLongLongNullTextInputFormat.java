@@ -51,7 +51,7 @@ public class SccLongLongNullTextInputFormat extends
   }
 
   /**
-   * Vertex reader associated with {@link LongLongNullLongTextInputFormat}.
+   * Vertex reader associated with {@link SccLongLongNullTextInputFormat}.
    */
   public class LongLongNullVertexReader extends
       TextVertexReaderFromEachLineProcessed<String[]> {

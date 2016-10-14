@@ -1101,7 +1101,7 @@ public interface GiraphConstants {
           "edges every time.");
 
   /**
-   * This option will tell which message encode & store enum to use when
+   * This option will tell which message encode &amp; store enum to use when
    * combining is not enabled
    */
   EnumConfOption<MessageEncodeAndStoreType> MESSAGE_ENCODE_AND_STORE_TYPE =

@@ -28,8 +28,8 @@ import com.esotericsoftware.kryo.io.Output;
 /**
  * Special serializer for Arrays.asList() as they can not be
  * deserialized in a standard way.
- * {@see
- * https://groups.google.com/forum/#!msg/kryo-users/2lXTCEOSxA0/gLzIZRtaNCUJ}
+ *
+ * https://groups.google.com/forum/#!msg/kryo-users/2lXTCEOSxA0/gLzIZRtaNCUJ
  */
 public class ArraysAsListSerializer extends Serializer<List> {
   @Override

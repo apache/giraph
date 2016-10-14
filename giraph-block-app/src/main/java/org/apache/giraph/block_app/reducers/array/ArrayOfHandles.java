@@ -64,7 +64,8 @@ public class ArrayOfHandles<H> implements ArrayHandle<H> {
   /**
    * ReducerArrayHandle implemented as an array of separate reducer handles.
    *
-   * @param <H> Handle type
+   * @param <S> Handle type
+   * @param <R> Reduce value type
    */
   public static class ArrayOfReducers<S, R>
       extends ArrayOfHandles<ReducerHandle<S, R>>

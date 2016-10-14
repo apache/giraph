@@ -113,7 +113,7 @@ public class AggregatorToGlobalCommTranslation
   }
 
   /**
-   * Called after master compute, to do aggregator->reduce/broadcast
+   * Called after master compute, to do aggregator-&gt;reduce/broadcast
    * translation
    */
   public void postMasterCompute() {

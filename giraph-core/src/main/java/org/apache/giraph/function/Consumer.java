@@ -22,7 +22,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * (T) -> void
+ * (T) -&gt; void
  *
  * @param <T> Argument type
  */

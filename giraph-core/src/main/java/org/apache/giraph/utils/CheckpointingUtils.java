@@ -81,12 +81,12 @@ public class CheckpointingUtils {
   }
 
   /**
-   * Path to checkpoint&halt node in hdfs.
+   * Path to checkpoint&amp;halt node in hdfs.
    * It is set to let client know that master has
    * successfully finished checkpointing and job can be restarted.
    * @param conf Immutable configuration of the job
    * @param jobId job ID
-   * @return path to checkpoint&halt node in hdfs.
+   * @return path to checkpoint&amp;halt node in hdfs.
    */
   public static Path getCheckpointMarkPath(Configuration conf,
                                            String jobId) {

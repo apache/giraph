@@ -301,7 +301,7 @@ public class BrachaTouegDeadlockVertexValue implements Writable {
   }
 
   /**
-   * @return ArrayList<Long> list of parent IDs collected
+   * @return list of parent IDs collected
    */
   public ArrayList<Long> getParents() {
     return this.parents;

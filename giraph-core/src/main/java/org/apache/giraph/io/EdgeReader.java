@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
- * Analogous to {@link org.apache.giraph.bsp.BspRecordReader} for edges.
+ * Analogous to org.apache.giraph.bsp.BspRecordReader for edges.
  * Will read the edges from an input split.
  *
  * @param <I> Vertex id

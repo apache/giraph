@@ -22,7 +22,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * (F) -> T
+ * (F) -&gt; T
  *
  * @param <F> Argument type
  * @param <T> Result type

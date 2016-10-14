@@ -1289,7 +1289,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Has the user enabled compression in netty client & server
+   * Has the user enabled compression in netty client &amp; server
    *
    * @return true if ok to do compression of netty requests
    */

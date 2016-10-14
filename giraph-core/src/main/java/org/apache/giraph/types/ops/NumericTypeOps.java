@@ -77,8 +77,8 @@ public interface NumericTypeOps<T> extends TypeOps<T> {
    *
    * @param value1 First value
    * @param value2 Second value
-   * @return 0 if values are equal, negative value if value1<value2 and
-   *         positive value if value1>value2
+   * @return 0 if values are equal, negative value if value1&lt;value2 and
+   *         positive value if value1&gt;value2
    */
   int compare(T value1, T value2);
 }

@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (boolean, long) -> void
+ * (boolean, long) -&gt; void
  */
 public interface BooleanLongConsumer extends Serializable {
   /**

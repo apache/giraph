@@ -30,7 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 
 /**
- * Aggregating PairWritable<L, R>, by taking pair with largest second value.
+ * Aggregating PairWritable&lt;L, R&gt;, by taking pair with largest second value.
  *
  * @param <L> Type of the left value
  * @param <R> Type of the right value

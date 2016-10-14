@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (byte, byte) -> boolean
+ * (byte, byte) -&gt; boolean
  */
 public interface ByteBytePredicate extends Serializable {
   /**

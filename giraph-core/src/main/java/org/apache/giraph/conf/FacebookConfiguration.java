@@ -94,7 +94,6 @@ public class FacebookConfiguration implements BulkConfigurator {
    * {@link #CONFIGURE_JAVA_OPTS} setting
    *
    * @param conf Configuration
-   * @return Configuration
    */
   @Override
   public void configure(GiraphConfiguration conf) {

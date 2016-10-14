@@ -64,7 +64,7 @@ public class ByteArrayOneMessageToManyIds<I extends WritableComparable,
 
   /**
    * Add a message.
-   * The order is: the message>id count>ids .
+   * The order is: the message &gt; id count &gt; ids .
    *
    * @param ids   The byte array which holds target ids
    *              of this message on the worker

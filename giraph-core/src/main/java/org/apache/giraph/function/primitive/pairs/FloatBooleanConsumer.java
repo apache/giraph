@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (float, boolean) -> void
+ * (float, boolean) -&gt; void
  */
 public interface FloatBooleanConsumer extends Serializable {
   /**

@@ -53,7 +53,7 @@ import org.junit.Test;
 /**
  * Tests the Giraph on YARN workflow. Basically, the plan is to use a
  * <code>MiniYARNCluster</code> to run a small test job through our
- * GiraphYarnClient -> GiraphApplicationMaster -> GiraphYarnTask (2 no-ops)
+ * GiraphYarnClient -&gt; GiraphApplicationMaster -gt; GiraphYarnTask (2 no-ops)
  * No "real" BSP code need be tested here, as it is not aware it is running on
  * YARN once the job is in progress, so the existing MRv1 BSP tests are fine.
  */

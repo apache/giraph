@@ -126,7 +126,7 @@ public abstract class GoraEdgeInputFormat
    * Gets the splits for a data store.
    * @param context JobContext
    * @param minSplitCountHint Hint for a minimum split count
-   * @return List<InputSplit> A list of splits
+   * @return A list of splits
    */
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
@@ -249,7 +249,7 @@ public abstract class GoraEdgeInputFormat
 
     /**
      * Finishes the reading process.
-     * @throws IOException.
+     * @throws IOException
      */
     @Override
     public void close() throws IOException {

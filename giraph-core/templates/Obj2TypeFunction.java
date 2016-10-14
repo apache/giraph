@@ -23,7 +23,7 @@ ${generated_message}
 
 /**
  * Primitive specialization of Function:
- * (T) -> ${type.lower}
+ * (T) -&gt; ${type.lower}
  *
  * @param <T> Argument type
  */

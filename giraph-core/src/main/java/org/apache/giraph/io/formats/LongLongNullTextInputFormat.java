@@ -50,7 +50,7 @@ public class LongLongNullTextInputFormat extends
   }
 
   /**
-   * Vertex reader associated with {@link LongLongNullLongTextInputFormat}.
+   * Vertex reader associated with {@link LongLongNullTextInputFormat}.
    */
   public class LongLongNullVertexReader extends
       TextVertexReaderFromEachLineProcessed<String[]> {

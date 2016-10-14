@@ -20,8 +20,10 @@ package org.apache.giraph.jython;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphType;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.jython.wrappers.JythonWritableWrapper;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -63,7 +65,7 @@ public abstract class JythonComputation extends
 
   /**
    * Prepare for computation. This method is executed exactly once prior to
-   * {@link #compute(Vertex, Iterable)} being called for any of the vertices
+   * {@link #compute(Object, Iterable)} being called for any of the vertices
    * in the partition.
    */
   public void preSuperstep() { }

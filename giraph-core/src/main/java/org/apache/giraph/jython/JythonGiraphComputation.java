@@ -18,6 +18,7 @@
 package org.apache.giraph.jython;
 
 import org.apache.giraph.graph.AbstractComputation;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphType;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;

@@ -37,7 +37,7 @@ import com.google.common.collect.MapMaker;
 
 /**
  *
- * An implementation of MappingStore<LongWritable, ByteWritable>
+ * An implementation of MappingStore&lt;LongWritable, ByteWritable&gt;
  *
  * Methods implemented here are thread safe by default because it is guaranteed
  * that each entry is written to only once.

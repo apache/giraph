@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (short) -> void
+ * (short) -&gt; void
  */
 public interface ShortConsumer extends Serializable {
   /**

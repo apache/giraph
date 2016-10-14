@@ -23,7 +23,8 @@ import it.unimi.dsi.fastutil.objects.ObjectIterable;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 /**
- * Iterable which has its size and ObjectIterator<${type1.camel}2${type2.camel}Map.Entry>
+ * Iterable which has its size and
+ * ObjectIterator&lt;${type1.camel}2${type2.camel}Map.Entry&gt;
  */
 public interface ${type1.camel}2${type2.camel}MapEntryIterable
     extends ObjectIterable<${type1.camel}2${type2.camel}Map.Entry> {

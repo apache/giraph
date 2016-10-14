@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.block_app.framework.api;
 
+import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.BlockWithApiHandle;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**

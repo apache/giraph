@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.jython.factories;
 
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.jython.JythonOptions;
 import org.apache.hadoop.io.Writable;
 

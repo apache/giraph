@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (T) -> int
+ * (T) -&gt; int
  *
  * @param <T> Argument type
  */

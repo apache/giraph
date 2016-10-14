@@ -26,7 +26,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Function:
- * (vertex, F) -> T
+ * (vertex, F) -&gt; T
  *
  * Determines an output value based on a vertex and an input value.
  *

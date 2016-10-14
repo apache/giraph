@@ -47,7 +47,7 @@ public class LocalData<I extends WritableComparable, V extends Writable,
   /**
    * Constructor
    *
-   * Set configuration, create & initialize mapping store
+   * Set configuration, create &amp; initialize mapping store
    * @param conf giraph configuration
    */
   public LocalData(ImmutableClassesGiraphConfiguration<I, V, E> conf) {

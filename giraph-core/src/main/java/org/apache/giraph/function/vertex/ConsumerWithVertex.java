@@ -27,7 +27,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Function:
- * (vertex, T) -> void
+ * (vertex, T) -&gt; void
  *
  * A class that can consume objects of a single type, when given a vertex.
  *

@@ -46,7 +46,7 @@ import org.apache.hadoop.io.WritableComparable;
 public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
     M extends Writable> extends WritableRequest<I, Writable, Writable>
     implements WorkerRequest<I, Writable, Writable> {
-  /** ByteArrayOneMessageToManyIds encoding of vertexId & messages */
+  /** ByteArrayOneMessageToManyIds encoding of vertexId &amp; messages */
   protected ByteArrayOneMessageToManyIds<I, M> oneMessageToManyIds;
 
   /**

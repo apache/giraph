@@ -155,8 +155,8 @@ public class FixedCapacity${type1.camel}${type2.camel}MinHeap
    * @param value1 First value
    * @param key2   Second key
    * @param value2 Second value
-   * @return 0 if entries are equal, < 0 if first entry is smaller than the
-   * second one, and > 0 if first entry is larger than the second one
+   * @return 0 if entries are equal, &lt; 0 if first entry is smaller than the
+   * second one, and &gt; 0 if first entry is larger than the second one
    */
   protected int compare(${type1.lower} key1, ${type2.lower} value1,
       ${type1.lower} key2, ${type2.lower} value2) {

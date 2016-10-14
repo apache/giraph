@@ -23,7 +23,8 @@ import it.unimi.dsi.fastutil.objects.ObjectIterable;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 /**
- * Iterable which has its size and ObjectIterator<Int2IntMap.Entry>
+ * Iterable which has its size and
+ * ObjectIterator&lt;Int2IntMap.Entry&gt;
  */
 public interface Int2IntMapEntryIterable
     extends ObjectIterable<Int2IntMap.Entry> {

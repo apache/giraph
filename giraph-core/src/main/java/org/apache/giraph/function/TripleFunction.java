@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * (F1, F2, F3) -> T
+ * (F1, F2, F3) -&gt; T
  *
  * @param <F1> First argument type
  * @param <F2> Second argument type

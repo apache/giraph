@@ -145,7 +145,7 @@ public class GiraphTransferRegulator {
     edgeAccumulator.clear();
   }
 
-  /** Increment V & E counts for new vertex read, store values
+  /** Increment V &amp; E counts for new vertex read, store values
    * for that outgoing _temporary_ Partition, which shares the
    * Partition ID for the actual remote Partition the collection
    * will eventually be processed in.

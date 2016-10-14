@@ -24,7 +24,7 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (float, long) -> void
+ * (float, long) -&gt; void
  */
 public interface FloatLongConsumer extends Serializable {
   /**

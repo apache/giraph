@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 /**
  * Function:
- * (T) -> boolean
+ * (T) -&gt; boolean
  *
  * @param <T1> First argument type
  * @param <T2> Second argument type

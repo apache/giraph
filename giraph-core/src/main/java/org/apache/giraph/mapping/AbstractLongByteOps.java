@@ -37,7 +37,7 @@ public abstract class AbstractLongByteOps
   }
 
   /**
-   * Compute partition given id, partitionCount, workerCount & target
+   * Compute partition given id, partitionCount, workerCount &amp; target
    * @param id vertex id
    * @param partitionCount number of partitions
    * @param workerCount number of workers

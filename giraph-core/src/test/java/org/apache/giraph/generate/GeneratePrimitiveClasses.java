@@ -44,7 +44,7 @@ import freemarker.template.TemplateNotFoundException;
  * to appropriate generate* function.</p>
  *
  * <p>Templates are using freemarker template format, which given
- * template file and map of String->Object replacements generates
+ * template file and map of String-&gt;Object replacements generates
  * new file.</p>
  * Main rules:
  * <ul>

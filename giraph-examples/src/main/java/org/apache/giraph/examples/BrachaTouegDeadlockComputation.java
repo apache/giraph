@@ -32,12 +32,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
 /**
- * This code demonstrates the Bracha Toueg deadlock detection algorithm.<br />
+ * This code demonstrates the Bracha Toueg deadlock detection algorithm.
  * The Bracha Toueg algorithm is a distributed, asynchronous, centralized
  * algorithm for deadlock detection. The algorithm is executed on a snapshot of
- * a undirected graph which depicts the corresponding wait-for-graph.<br />
+ * a undirected graph which depicts the corresponding wait-for-graph.
  * Consequently the algorithm works on <b>directed graphs</b> but assumes
- * the possibility to communicate in both ways on all the edges.<br />
+ * the possibility to communicate in both ways on all the edges.
  * This is an adaptation of the standard algorithm for Giraph/Pregel system.
  * Since the value of the vertex is dumped during checkpointing, the algorithm
  * keeps all the state of the vertex in the value.

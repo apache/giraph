@@ -23,7 +23,7 @@ ${generated_message}
 
 /**
  * Primitive specialization of Function:
- * (${type.lower}) -> void
+ * (${type.lower}) -&gt; void
  */
 public interface ${type.camel}Consumer extends Serializable {
   /**
