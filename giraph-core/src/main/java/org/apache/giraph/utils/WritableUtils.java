@@ -521,7 +521,7 @@ public class WritableUtils {
   }
 
   /**
-   * Reads data from input stream to inizialize Vertex. Assumes the vertex has
+   * Reads data from input stream to initialize Vertex. Assumes the vertex has
    * already been initialized and contains values for Id, value, and edges.
    *
    * @param input The input stream
