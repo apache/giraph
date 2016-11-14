@@ -17,13 +17,12 @@
  */
 package org.apache.giraph.jython.factories;
 
-import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.jython.JythonOptions;
 import org.apache.hadoop.io.Writable;
 
 /**
- * {@link MessageValueFactory} that creates outgoing message values which are
- * Jython classes.
+ * {@link org.apache.giraph.factories.MessageValueFactory} that
+ * creates outgoing message values which are Jython classes.
  *
  * @param <M> Outgoing Message Value
  */

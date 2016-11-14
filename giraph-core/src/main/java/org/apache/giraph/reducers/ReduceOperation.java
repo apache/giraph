@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.reducers;
 
-import org.apache.giraph.master.AggregatorReduceOperation;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -27,7 +26,8 @@ import org.apache.hadoop.io.Writable;
  *
  * Object should be thread safe. Most frequently it should be
  * immutable object, so that functions can execute concurrently.
- * Rarely when object is mutable ({@link AggregatorReduceOperation}),
+ * Rarely when object is mutable
+ * ({@link org.apache.giraph.master.AggregatorReduceOperation}),
  * i.e. stores reusable object inside, accesses should be synchronized.
  *
  * @param <S> Single value type, objects passed on workers

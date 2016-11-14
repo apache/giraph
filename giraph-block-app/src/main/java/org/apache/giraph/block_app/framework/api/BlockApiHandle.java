@@ -17,9 +17,6 @@
  */
 package org.apache.giraph.block_app.framework.api;
 
-import org.apache.giraph.block_app.framework.block.Block;
-import org.apache.giraph.block_app.framework.block.BlockWithApiHandle;
-
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -30,8 +27,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Block Api interfaces, (ii) are not in the context of a Piece when defined,
  * and (iii) are in the context of a Piece when executed.
  *
- * To do this, as opposed to defining an application as a {@link Block}, define
- * your application as a {@link BlockWithApiHandle}.
+ * To do this, as opposed to defining an application as a
+ * {@link org.apache.giraph.block_app.framework.block.Block}, define
+ * your application as a
+ * {@link org.apache.giraph.block_app.framework.block.BlockWithApiHandle}.
  *
  * NOTE: Depending on the context in which this class is used, some of the
  * handles may not be set. For instance, the {@link masterApi} is not set when

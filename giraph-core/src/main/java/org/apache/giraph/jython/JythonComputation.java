@@ -20,10 +20,8 @@ package org.apache.giraph.jython;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphType;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.jython.wrappers.JythonWritableWrapper;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -35,16 +33,20 @@ import java.util.Iterator;
 /**
  * Base class for writing computations in Jython.
  *
- * Note that this class DOES NOT implement {@link Computation}. This is because
- * we want to support passing in pure Jython types, and implementing the
- * {@link Computation} requires passing in {@link Writable}s. Calling such
- * methods from Jython would throw errors. So, instead, we have recreated the
- * methods with the same name here. In each method we check if the type is a
- * pure Jython value, and if so wrap it in the necessary
- * {@link JythonWritableWrapper}.
+ * Note that this class DOES NOT implement
+ * {@link org.apache.giraph.graph.Computation}.
+ * This is because we want to support passing in pure Jython types,
+ * and implementing the {@link org.apache.giraph.graph.Computation}
+ * requires passing in {@link Writable}s.
+ * Calling such methods from Jython would throw errors. So, instead,
+ * we have recreated the methods with the same name here. In each method
+ * we check if the type is a pure Jython value, and if so wrap it in
+ * the necessary
+ * {@link org.apache.giraph.jython.wrappers.JythonWritableWrapper}.
  *
  * This class works together with {@link JythonGiraphComputation} which takes
- * care of the {@link Computation} Giraph infrastructure side of things.
+ * care of the {@link org.apache.giraph.graph.Computation}
+ * Giraph infrastructure side of things.
  */
 public abstract class JythonComputation extends
     DefaultImmutableClassesGiraphConfigurable {

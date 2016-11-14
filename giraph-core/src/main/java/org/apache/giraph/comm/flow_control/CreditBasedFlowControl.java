@@ -59,12 +59,13 @@ import com.google.common.collect.Sets;
 /**
  * Representation of credit-based flow control policy. With this policy there
  * can be limited number of open requests from any worker x to any other worker
- * y. This number is called 'credit'. Let's denote this number by C{x-&gt;y}. This
- * implementation assumes that for a particular worker W, all values of C{x-&gt;W}
- * are the same. Let's denote this value by CR_W. CR_W may change due to other
- * reasons (e.g. memory pressure observed in an out-of-core mechanism). However,
- * CR_W is always in range [0, MAX_CR], where MAX_CR is a user-defined constant.
- * Note that MAX_CR should be representable by at most 14 bits.
+ * y. This number is called 'credit'. Let's denote this number by C{x-&gt;y}.
+ * This implementation assumes that for a particular worker W, all values of
+ * C{x-&gt;W} are the same. Let's denote this value by CR_W. CR_W may change
+ * due to other reasons (e.g. memory pressure observed in an out-of-core
+ * mechanism). However, CR_W is always in range [0, MAX_CR], where MAX_CR
+ * is a user-defined constant. Note that MAX_CR should be representable by
+ * at most 14 bits.
  *
  * In this implementation, the value of CR_W is announced to other workers along
  * with the ACK response envelope for all ACK response envelope going out of W.

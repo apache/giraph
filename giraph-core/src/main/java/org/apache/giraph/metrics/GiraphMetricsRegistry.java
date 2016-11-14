@@ -274,7 +274,8 @@ public class GiraphMetricsRegistry {
    * Get a Gauge that is already present in the MetricsRegistry
    *
    * @param name String name of Gauge
-   * @return Gauge&lt;T&gt; from MetricsRegistry
+   * @param <T> type of gauge
+   * @return Gauge, from MetricsRegistry
    */
   public <T> Gauge<T> getExistingGauge(String name) {
     Metric metric = registry.allMetrics().get(makeMetricName(name));
