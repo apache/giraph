@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Generating Patches</title>
+  </properties>
+
+  <body>
+  <section name="Generating patches" id="Generatingpatches">
+    <p>Releasing new version of Apache Giraph may take 2 weeks or more. Please, plan accordingly.</p>
+    <p>Follow these steps to release new version of Apache Giraph.</p>
+    <ul>
+      <li>Check out the Giraph source from the <a href="http://git-wip-us.apache.org/repos/asf/giraph.git">git repository</a>.</li>
+      <li>Make a release branch <tt>git checkout -b release-1.2; git push origin release-1.2</tt></li>
+      <li>Once you have a release branch, setup continuous integration in Jenkins. <a href="https://builds.apache.org/job/Giraph-1.2/">See for example a setup for Giraph 1.2 release</a></li>
+      <li>Fix test cases and build errors until you have a clean build for both hadoop_1 and hadoop_2 profiles</li>
+      <li>Check JIRA tickets associated with this release and make sure you don't have any open</li>
+      <li>When you have everything ready for the release, create a tag <tt>git tag -a rel/1.2.0-RC1 -m "Preparing release 1.2.0"</tt></li>
+      <li>Do the license check: <tt>mvn apache-rat:check -Phadoop_1</tt>  and make sure you don't have any issues <tt>grep '!?????' target/rat.txt</tt>
+      </li>
+      <li>When all of above are clean, you can do the build: <tt>mvn clean install -Phadoop_1 -Prelease</tt>
+      If this command fails generating signatures <a href="http://www.apache.org/dev/release-signing.html">check this page for more information</a></li>
+      <li>You can now get the prepared binaries, source files and signatures in <tt>giraph-dist/target/</tt></li>
+      <li>To generate remaining md5 and sha1 hashes, wou can use the following set of commands:
+        <source>
+md5 -r * |grep -v asc | while read k f; do
+  echo $k > "$f.md5"
+done
+
+shasum * |grep -v asc |grep -v md5 | while read k f; do
+  echo $k > "$f.sha1"
+done
+        </source>
+      </li>
+      <li>Now you need to build release for hadoop_2. First, change version in all pom.xml files:
+          <source>
+mvn versions:set -DnewVersion=1.2.0-hadoop2
+grep -R 'version.*1.2.0' . | grep pom.xml | grep -v hadoop2
+          </source>
+      Make sure the output of the second command is empty. Modify missed pom.xml manually otherwise.
+      </li>
+      <li>Repeat steps for hadoop_2 profile:
+          <source>
+mvn apache-rat:check -Phadoop_2
+grep '!?????' target/rat.txt
+
+mvn clean install -Phadoop_2
+
+          </source>
+          Get release files from <tt>~/.m2/repository/org/apache/giraph/giraph-dist/1.2.0-hadoop2</tt> and sign them.
+
+      </li>
+      <li>Finally make files available in dist SVN:
+          <tt>svn checkout https://dist.apache.org/repos/dist/dev/giraph/</tt>
+          Make sure that the content there looks ok (try to build and run Giraph just from those tarballs).
+      </li>
+      <li>
+      Configure your .m2/settings.xml as described <a href="http://www.apache.org/dev/publishing-maven-artifacts.html#dev-env">here</a>. And deploy released artifacts to the maven repository:
+          <source>
+mvn -Prelease -Phadoop_1 deploy
+mvn -Prelease -Phadoop_2 deploy
+          </source>
+      </li>
+
+    </ul>
+
+  </section>
+  </body>
+</document>

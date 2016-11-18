@@ -101,6 +101,7 @@
     	<item name="Rexster I/O" href="rexster.html"/>
       </item>
       <item name="How to generate patches?" href="generating_patches.html" />
+      <item name="How to release giraph?" href="releasing_giraph.html" />
       <item name="How to build this site?" href="build_site.html" />
     </menu>
   </body>
