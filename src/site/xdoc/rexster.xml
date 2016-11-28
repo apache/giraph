@@ -129,7 +129,7 @@ exit
       the <b>Rexster Input Format</b> and the <b>Rexster Output
         Format</b> which are part of the Giraph code. Both components are
       split into <b>Vertex</b> and <b>Edge</b> interfaces. Additionally,
-      the architectre provides the <b>Giraph Kibble</b>, which is a Rexster
+      the architecture provides the <b>Giraph Kibble</b>, which is a Rexster
       extension to provide the needed facilities to load and store the data
       from and to the graph databases. The figure below shows the architecture
       in a high level fashion.<br/>
