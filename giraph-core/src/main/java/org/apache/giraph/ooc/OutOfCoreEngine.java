@@ -22,7 +22,9 @@ import com.sun.management.GarbageCollectionNotificationInfo;
 import com.yammer.metrics.core.Gauge;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.NetworkMetrics;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.flow_control.CreditBasedFlowControl;
 import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -101,6 +103,11 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   /** Semaphore used for controlling number of active threads at each moment */
   private final AdjustableSemaphore activeThreadsPermit;
   /**
+   * Cached value for NettyClient.MAX_NUM_OF_OPEN_REQUESTS_PER_WORKER (max
+   * credit used for credit-based flow-control mechanism)
+   */
+  private final short maxRequestsCredit;
+  /**
    * Generally, the logic in Giraph for change of the superstep happens in the
    * following order:
    *   (1) Compute threads are done processing all partitions
@@ -141,14 +148,23 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   private boolean resetDone;
 
   /**
+   * Provides statistics about network traffic (e.g. received bytes per
+   * superstep etc).
+   */
+  private final NetworkMetrics networkMetrics;
+
+  /**
    * Constructor
    *
    * @param conf Configuration
    * @param service Service worker
+   * @param networkMetrics Interface for network stats
    */
   public OutOfCoreEngine(ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
-                         CentralizedServiceWorker<?, ?, ?> service) {
+                         CentralizedServiceWorker<?, ?, ?> service,
+                         NetworkMetrics networkMetrics) {
     this.service = service;
+    this.networkMetrics = networkMetrics;
     Class<? extends OutOfCoreDataAccessor> accessorClass =
         GiraphConstants.OUT_OF_CORE_DATA_ACCESSOR.get(conf);
     try {
@@ -178,22 +194,24 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
           "out-of-core policy. Setting the oracle to be FixedPartitionsOracle");
       oracleClass = FixedPartitionsOracle.class;
     }
-    try {
-      Constructor<?> constructor = oracleClass.getConstructor(
-          ImmutableClassesGiraphConfiguration.class, OutOfCoreEngine.class);
-      this.oracle = (OutOfCoreOracle) constructor.newInstance(conf, this);
-    } catch (NoSuchMethodException | IllegalAccessException |
-        InstantiationException | InvocationTargetException e) {
-      throw new IllegalStateException("OutOfCoreEngine: caught exception " +
-          "while creating the oracle!", e);
-    }
     this.numComputeThreads = conf.getNumComputeThreads();
     // At the beginning of the execution, only input threads are processing data
     this.numProcessingThreads = conf.getNumInputSplitsThreads();
     this.activeThreadsPermit = new AdjustableSemaphore(numProcessingThreads);
+    this.maxRequestsCredit = (short)
+        CreditBasedFlowControl.MAX_NUM_OF_OPEN_REQUESTS_PER_WORKER.get(conf);
     this.superstep = BspService.INPUT_SUPERSTEP;
     this.resetDone = false;
     GiraphMetrics.get().addSuperstepResetObserver(this);
+    try {
+      Constructor<?> constructor = oracleClass.getConstructor(
+        ImmutableClassesGiraphConfiguration.class, OutOfCoreEngine.class);
+      this.oracle = (OutOfCoreOracle) constructor.newInstance(conf, this);
+    } catch (NoSuchMethodException | IllegalAccessException |
+      InstantiationException | InvocationTargetException e) {
+      throw new IllegalStateException("OutOfCoreEngine: caught exception " +
+        "while creating the oracle!", e);
+    }
   }
 
   /**
@@ -332,6 +350,7 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       "UL_UNRELEASED_LOCK_EXCEPTION_PATH")
   public void startIteration() {
+    oracle.startIteration();
     if (!resetDone) {
       superstepLock.writeLock().lock();
       metaPartitionManager.resetPartitions();
@@ -460,6 +479,27 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
   }
 
   /**
+   * Update the credit announced for this worker in Netty. The lower the credit
+   * is, the lower rate incoming messages arrive at this worker. Thus, credit
+   * is an indirect way of controlling amount of memory incoming messages would
+   * take.
+   *
+   * @param fraction the fraction of max credits others can use to send requests
+   *                 to this worker
+   */
+  public void updateRequestsCreditFraction(double fraction) {
+    checkState(fraction >= 0 && fraction <= 1);
+    short newCredit = (short) (maxRequestsCredit * fraction);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("updateRequestsCreditFraction: updating the credit to " +
+          newCredit);
+    }
+    if (flowControl != null) {
+      ((CreditBasedFlowControl) flowControl).updateCredit(newCredit);
+    }
+  }
+
+  /**
    * Reset partitions and messages meta data. Also, reset the cached value of
    * superstep counter.
    */
@@ -506,5 +546,9 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
 
   public OutOfCoreDataAccessor getDataAccessor() {
     return dataAccessor;
+  }
+
+  public NetworkMetrics getNetworkMetrics() {
+    return networkMetrics;
   }
 }

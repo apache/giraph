@@ -83,11 +83,6 @@ public interface FlowControl {
   int calculateResponse(AckSignalFlag flag, int taskId);
 
   /**
-   * Shutdown the flow control policy
-   */
-  void shutdown();
-
-  /**
    * Log the status of the flow control
    */
   void logInfo();

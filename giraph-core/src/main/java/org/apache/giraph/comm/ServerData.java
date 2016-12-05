@@ -131,11 +131,13 @@ public class ServerData<I extends WritableComparable,
    * Constructor.
    *
    * @param service Service worker
+   * @param workerServer Worker server
    * @param conf Configuration
    * @param context Mapper context
    */
   public ServerData(
       CentralizedServiceWorker<I, V, E> service,
+      WorkerServer workerServer,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.serviceWorker = service;
@@ -147,7 +149,7 @@ public class ServerData<I extends WritableComparable,
     PartitionStore<I, V, E> inMemoryPartitionStore =
         new SimplePartitionStore<I, V, E>(conf, context);
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
-      oocEngine = new OutOfCoreEngine(conf, service);
+      oocEngine = new OutOfCoreEngine(conf, service, workerServer);
       partitionStore =
           new DiskBackedPartitionStore<I, V, E>(inMemoryPartitionStore,
               conf, context, oocEngine);

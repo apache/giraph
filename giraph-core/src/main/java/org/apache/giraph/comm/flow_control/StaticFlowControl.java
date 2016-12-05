@@ -155,9 +155,6 @@ public class StaticFlowControl implements
   }
 
   @Override
-  public void shutdown() { }
-
-  @Override
   public void logInfo() {
     if (LOG.isInfoEnabled()) {
       LOG.info("logInfo: " + numWaitingThreads.get() + " threads waiting " +

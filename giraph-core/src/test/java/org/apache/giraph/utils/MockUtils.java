@@ -21,6 +21,7 @@ package org.apache.giraph.utils;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
@@ -206,9 +207,10 @@ public class MockUtils {
         ByteArrayMessagesPerVertexStore.newFactory(serviceWorker, conf)
             .getClass());
 
+    WorkerServer workerServer = Mockito.mock(WorkerServer.class);
     ServerData<IntWritable, IntWritable, IntWritable> serverData =
       new ServerData<IntWritable, IntWritable, IntWritable>(
-          serviceWorker, conf, context);
+          serviceWorker, workerServer, conf, context);
     // Here we add a partition to simulate the case that there is one partition.
     serverData.getPartitionStore().addPartition(new SimplePartition());
     return serverData;

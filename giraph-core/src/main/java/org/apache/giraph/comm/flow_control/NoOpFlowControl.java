@@ -66,8 +66,5 @@ public class NoOpFlowControl implements FlowControl {
   }
 
   @Override
-  public void shutdown() { }
-
-  @Override
   public void logInfo() { }
 }

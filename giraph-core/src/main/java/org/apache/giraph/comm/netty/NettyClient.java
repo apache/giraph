@@ -237,7 +237,7 @@ public class NettyClient {
     if (limitNumberOfOpenRequests) {
       flowControl = new StaticFlowControl(conf, this);
     } else if (limitOpenRequestsPerWorker) {
-      flowControl = new CreditBasedFlowControl(conf, this);
+      flowControl = new CreditBasedFlowControl(conf, this, exceptionHandler);
     } else {
       flowControl = new NoOpFlowControl(this);
     }
@@ -644,7 +644,6 @@ public class NettyClient {
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Halting netty client");
     }
-    flowControl.shutdown();
     // Close connections asynchronously, in a Netty-approved
     // way, without cleaning up thread pools until all channels
     // in addressChannelMap are closed (success or failure)

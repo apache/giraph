@@ -714,6 +714,7 @@ else[HADOOP_NON_SECURE]*/
     workerInfoList.clear();
     workerInfoList = addressesAndPartitions.getWorkerInfos();
     masterInfo = addressesAndPartitions.getMasterInfo();
+    workerServer.resetBytesReceivedPerSuperstep();
 
     if (LOG.isInfoEnabled()) {
       LOG.info("startSuperstep: " + masterInfo);

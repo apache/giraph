@@ -19,27 +19,14 @@
 package org.apache.giraph.ooc.policy;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
-import org.apache.giraph.comm.flow_control.CreditBasedFlowControl;
-import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.LongConfOption;
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.command.IOCommand;
-import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -89,7 +76,7 @@ import static com.google.common.base.Preconditions.checkState;
 public class ThresholdBasedOracle implements OutOfCoreOracle {
   /** The memory pressure at/above which the job would fail */
   public static final FloatConfOption FAIL_MEMORY_PRESSURE =
-      new FloatConfOption("giraph.memory.failPressure", 0.975f,
+      new FloatConfOption("giraph.threshold.failPressure", 0.975f,
           "The memory pressure (fraction of used memory) at/above which the " +
               "job would fail.");
   /**
@@ -98,13 +85,13 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
    * job processing rate.
    */
   public static final FloatConfOption EMERGENCY_MEMORY_PRESSURE =
-      new FloatConfOption("giraph.memory.emergencyPressure", 0.925f,
+      new FloatConfOption("giraph.threshold.emergencyPressure", 0.925f,
           "The memory pressure (fraction of used memory) at which the job " +
               "is close to fail, hence we should reduce its processing rate " +
               "as much as possible.");
   /** The memory pressure at which the job is suffering from GC overhead. */
   public static final FloatConfOption HIGH_MEMORY_PRESSURE =
-      new FloatConfOption("giraph.memory.highPressure", 0.875f,
+      new FloatConfOption("giraph.threshold.highPressure", 0.875f,
           "The memory pressure (fraction of used memory) at which the job " +
               "is suffering from GC overhead.");
   /**
@@ -112,7 +99,7 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
    * memory intensive job.
    */
   public static final FloatConfOption OPTIMAL_MEMORY_PRESSURE =
-      new FloatConfOption("giraph.memory.optimalPressure", 0.8f,
+      new FloatConfOption("giraph.threshold.optimalPressure", 0.8f,
           "The memory pressure (fraction of used memory) at which a " +
               "memory-intensive job shows the optimal GC behavior.");
   /**
@@ -120,12 +107,12 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
    * suffering from GC overhead.
    */
   public static final FloatConfOption LOW_MEMORY_PRESSURE =
-      new FloatConfOption("giraph.memory.lowPressure", 0.7f,
+      new FloatConfOption("giraph.threshold.lowPressure", 0.7f,
           "The memory pressure (fraction of used memory) at/below which the " +
               "job can use more memory without suffering the performance.");
   /** The interval at which memory observer thread wakes up. */
   public static final LongConfOption CHECK_MEMORY_INTERVAL =
-      new LongConfOption("giraph.checkMemoryInterval", 2500,
+      new LongConfOption("giraph.threshold.checkMemoryInterval", 2500,
           "The interval/period where memory observer thread wakes up and " +
               "monitors memory footprint (in milliseconds)");
   /**
@@ -134,7 +121,7 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
    * past is specified in this parameter
    */
   public static final LongConfOption LAST_GC_CALL_INTERVAL =
-      new LongConfOption("giraph.lastGcCallInterval", 10 * 1000,
+      new LongConfOption("giraph.threshold.lastGcCallInterval", 10 * 1000,
           "How long after last major/full GC should we call manual GC?");
 
   /** Class logger */
@@ -154,18 +141,6 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
   private final long checkMemoryInterval;
   /** Cached value for LAST_GC_CALL_INTERVAL */
   private final long lastGCCallInterval;
-  /**
-   * Cached value for NettyClient.MAX_NUM_OF_OPEN_REQUESTS_PER_WORKER (max
-   * credit used for credit-based flow-control mechanism)
-   */
-  private final short maxRequestsCredit;
-  /**
-   * Whether the job is shutting down. Used for terminating the memory
-   * observer thread.
-   */
-  private final CountDownLatch shouldTerminate;
-  /** Result of memory observer thread */
-  private final Future<Void> checkMemoryThreadResult;
   /** Out-of-core engine */
   private final OutOfCoreEngine oocEngine;
   /** Last time a major/full GC has been called (in milliseconds) */
@@ -188,69 +163,58 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
     this.lowMemoryPressure = LOW_MEMORY_PRESSURE.get(conf);
     this.checkMemoryInterval = CHECK_MEMORY_INTERVAL.get(conf);
     this.lastGCCallInterval = LAST_GC_CALL_INTERVAL.get(conf);
-    this.maxRequestsCredit = (short)
-        CreditBasedFlowControl.MAX_NUM_OF_OPEN_REQUESTS_PER_WORKER.get(conf);
     NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.setIfUnset(conf, true);
     boolean useCredit = NettyClient.LIMIT_OPEN_REQUESTS_PER_WORKER.get(conf);
     checkState(useCredit, "ThresholdBasedOracle: credit-based flow control " +
         "must be enabled. Use giraph.waitForPerWorkerRequests=true");
-    this.shouldTerminate = new CountDownLatch(1);
     this.oocEngine = oocEngine;
     this.lastMajorGCTime = 0;
 
-    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+    final Thread thread = new Thread(new Runnable() {
       @Override
-      public Callable<Void> newCallable(int callableId) {
-        return new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            while (true) {
-              boolean done = shouldTerminate.await(checkMemoryInterval,
-                  TimeUnit.MILLISECONDS);
-              if (done) {
-                break;
-              }
-              double usedMemoryFraction = 1 - MemoryUtils.freeMemoryFraction();
-              long time = System.currentTimeMillis();
-              if ((usedMemoryFraction > highMemoryPressure &&
-                  time - lastMajorGCTime >= lastGCCallInterval) ||
-                  (usedMemoryFraction > optimalMemoryPressure &&
+      public void run() {
+        while (true) {
+          double usedMemoryFraction = 1 - MemoryUtils.freeMemoryFraction();
+          long time = System.currentTimeMillis();
+          if ((usedMemoryFraction > highMemoryPressure &&
+              time - lastMajorGCTime >= lastGCCallInterval) ||
+              (usedMemoryFraction > optimalMemoryPressure &&
                   time - lastMajorGCTime >= lastGCCallInterval &&
                   time - lastMinorGCTime >= lastGCCallInterval)) {
-                if (LOG.isInfoEnabled()) {
-                  LOG.info("call: last GC happened a while ago and the " +
-                      "amount of used memory is high (used memory " +
-                      "fraction is " +
-                      String.format("%.2f", usedMemoryFraction) + "). " +
-                      "Calling GC manually");
-                }
-                System.gc();
-                time = System.currentTimeMillis() - time;
-                usedMemoryFraction = 1 - MemoryUtils.freeMemoryFraction();
-                if (LOG.isInfoEnabled()) {
-                  LOG.info("call: manual GC is done. It took " +
-                      String.format("%.2f", (double) time / 1000) +
-                      " seconds. Used memory fraction is " +
-                      String.format("%.2f", usedMemoryFraction));
-                }
-              }
-              updateRates(usedMemoryFraction);
+            if (LOG.isInfoEnabled()) {
+              LOG.info("call: last GC happened a while ago and the " +
+                  "amount of used memory is high (used memory " +
+                  "fraction is " +
+                  String.format("%.2f", usedMemoryFraction) + "). " +
+                  "Calling GC manually");
             }
-            return null;
+            System.gc();
+            time = System.currentTimeMillis() - time;
+            usedMemoryFraction = 1 - MemoryUtils.freeMemoryFraction();
+            if (LOG.isInfoEnabled()) {
+              LOG.info("call: manual GC is done. It took " +
+                  String.format("%.2f", (double) time / 1000) +
+                  " seconds. Used memory fraction is " +
+                  String.format("%.2f", usedMemoryFraction));
+            }
           }
-        };
+          updateRates(usedMemoryFraction);
+          try {
+            Thread.sleep(checkMemoryInterval);
+          } catch (InterruptedException e) {
+            LOG.warn("run: exception occurred!", e);
+            return;
+          }
+        }
       }
-    };
-    ExecutorService executor = Executors.newSingleThreadExecutor(
-        ThreadUtils.createThreadFactory("check-memory"));
-    this.checkMemoryThreadResult = executor.submit(new LogStacktraceCallable<>(
-        callableFactory.newCallable(0)));
-    executor.shutdown();
+    });
+    thread.setUncaughtExceptionHandler(oocEngine.getServiceWorker()
+        .getGraphTaskManager().createUncaughtExceptionHandler());
+    thread.setName("memory-checker");
+    thread.setDaemon(true);
+    thread.start();
   }
 
-  /**
-   * upon major/full GC calls.
-   */
   /**
    * Update statistics and rate regarding communication credits and number of
    * active threads.
@@ -272,13 +236,13 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
     // Update the fraction of credit that should be used in credit-based flow-
     // control
     if (usedMemoryFraction >= emergencyMemoryPressure) {
-      updateRequestsCredit((short) 0);
+      oocEngine.updateRequestsCreditFraction(0);
     } else if (usedMemoryFraction < optimalMemoryPressure) {
-      updateRequestsCredit(maxRequestsCredit);
+      oocEngine.updateRequestsCreditFraction(1);
     } else {
-      updateRequestsCredit((short) (maxRequestsCredit *
-          (1 - (usedMemoryFraction - optimalMemoryPressure) /
-              (emergencyMemoryPressure - optimalMemoryPressure))));
+      oocEngine.updateRequestsCreditFraction(1 -
+          (usedMemoryFraction - optimalMemoryPressure) /
+              (emergencyMemoryPressure - optimalMemoryPressure));
     }
   }
 
@@ -331,35 +295,6 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
   }
 
   @Override
-  public void shutdown() {
-    shouldTerminate.countDown();
-    try {
-      checkMemoryThreadResult.get();
-    } catch (InterruptedException | ExecutionException e) {
-      LOG.error("shutdown: caught exception while waiting on check-memory " +
-          "thread to terminate!");
-      throw new IllegalStateException(e);
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("shutdown: ThresholdBasedOracle shutdown complete!");
-    }
-  }
-
-  /**
-   * Update the credit announced for this worker in Netty. The lower the credit
-   * is, the lower rate incoming messages arrive at this worker. Thus, credit
-   * is an indirect way of controlling amount of memory incoming messages would
-   * take.
-   *
-   * @param newCredit the new credit to announce to other workers
-   */
-  private void updateRequestsCredit(short newCredit) {
-    if (LOG.isInfoEnabled()) {
-      LOG.info("updateRequestsCredit: updating the credit to " + newCredit);
-    }
-    FlowControl flowControl = oocEngine.getFlowControl();
-    if (flowControl != null) {
-      ((CreditBasedFlowControl) flowControl).updateCredit(newCredit);
-    }
+  public void startIteration() {
   }
 }

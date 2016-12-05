@@ -1695,6 +1695,11 @@ under the License.
         <version>${dep.commons-lang3.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>2.1</version>
+      </dependency>
+      <dependency>
         <groupId>com.facebook.thirdparty.yourkit-api</groupId>
         <artifactId>yjp-controller-api-redist</artifactId>
         <version>${dep.yourkit-api.version}</version>

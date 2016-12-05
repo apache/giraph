@@ -94,12 +94,11 @@ public class LocalDiskDataAccessor implements OutOfCoreDataAccessor {
     int ptr = 0;
     String jobId = conf.getJobId();
     for (String path : userPaths) {
-      File file = new File(path);
-      if (!file.exists()) {
-        checkState(file.mkdirs(), "LocalDiskDataAccessor: cannot create " +
-            "directory " + file.getAbsolutePath());
-      }
-      basePaths[ptr] = path + "/" + jobId;
+      String jobDirectory = path + "/" + jobId;
+      File file = new File(jobDirectory);
+      checkState(file.mkdirs(), "LocalDiskDataAccessor: cannot create " +
+          "directory " + file.getAbsolutePath());
+      basePaths[ptr] = jobDirectory + "/";
       ptr++;
     }
     final int diskBufferSize = OOC_DISK_BUFFER_SIZE.get(conf);
@@ -112,7 +111,7 @@ public class LocalDiskDataAccessor implements OutOfCoreDataAccessor {
   @Override
   public void shutdown() {
     for (String path : basePaths) {
-      File file = new File(path).getParentFile();
+      File file = new File(path);
       for (String subFileName : file.list()) {
         File subFile = new File(file.getPath(), subFileName);
         checkState(subFile.delete(), "shutdown: cannot delete file %s",

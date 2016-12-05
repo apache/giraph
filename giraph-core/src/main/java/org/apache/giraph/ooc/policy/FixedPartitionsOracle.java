@@ -145,5 +145,6 @@ public class FixedPartitionsOracle implements OutOfCoreOracle {
   public void gcCompleted(GarbageCollectionNotificationInfo gcInfo) { }
 
   @Override
-  public void shutdown() { }
+  public void startIteration() {
+  }
 }

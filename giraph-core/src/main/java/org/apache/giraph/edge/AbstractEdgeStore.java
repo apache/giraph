@@ -27,7 +27,9 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.CallableFactory;
+import org.apache.giraph.utils.ProgressCounter;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.ThreadLocalProgressCounter;
 import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.VertexIdEdgeIterator;
 import org.apache.giraph.utils.VertexIdEdges;
@@ -60,6 +62,9 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   V extends Writable, E extends Writable, K, Et>
   extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
   implements EdgeStore<I, V, E> {
+  /** Used to keep track of progress during the move-edges process */
+  public static final ThreadLocalProgressCounter PROGRESS_COUNTER =
+    new ThreadLocalProgressCounter();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(AbstractEdgeStore.class);
   /** Service worker. */
@@ -81,9 +86,10 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
    */
   protected boolean useInputOutEdges;
   /** Whether we spilled edges on disk */
-  private boolean hasEdgesOnDisk = false;
+  private volatile boolean hasEdgesOnDisk = false;
   /** Create source vertices */
   private CreateSourceVertexCallback<I> createSourceVertexCallback;
+
 
   /**
    * Constructor.
@@ -274,12 +280,12 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
         return new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            Integer partitionId;
             I representativeVertexId = configuration.createVertexId();
             OutOfCoreEngine oocEngine = service.getServerData().getOocEngine();
             if (oocEngine != null) {
               oocEngine.processingThreadStart();
             }
+            ProgressCounter numVerticesProcessed = PROGRESS_COUNTER.get();
             while (true) {
               Partition<I, V, E> partition =
                   service.getPartitionStore().getNextPartition();
@@ -338,6 +344,7 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
                   // require us to put back the vertex after modifying it.
                   partition.saveVertex(vertex);
                 }
+                numVerticesProcessed.inc();
                 iterator.remove();
               }
               // Some PartitionStore implementations
