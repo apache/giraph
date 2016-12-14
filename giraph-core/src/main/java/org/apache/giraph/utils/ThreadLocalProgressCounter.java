@@ -32,7 +32,7 @@ public class ThreadLocalProgressCounter extends ThreadLocal<ProgressCounter> {
 
   /**
    * Initializes a new counter, adds it to the list of counters
-   * and and returns it.
+   * and returns it.
    * @return Progress counter.
    */
   @Override
@@ -65,4 +65,3 @@ public class ThreadLocalProgressCounter extends ThreadLocal<ProgressCounter> {
     counters.clear();
   }
 }
-

@@ -64,30 +64,46 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
   /** Memory check interval in msec */
   public static final LongConfOption CHECK_MEMORY_INTERVAL =
     new LongConfOption("giraph.garbageEstimator.checkMemoryInterval", 1000,
-      "The interval where memory checker thread wakes up and " +
-        "monitors memory footprint (in milliseconds)");
-  /** If mem-usage is above this threshold and no Full GC has been called,
-   * we call it manually. */
+        "The interval where memory checker thread wakes up and " +
+            "monitors memory footprint (in milliseconds)");
+  /**
+   * If mem-usage is above this threshold and no Full GC has been called,
+   * we call it manually
+   */
   public static final FloatConfOption MANUAL_GC_MEMORY_PRESSURE =
-    new FloatConfOption("giraph.garbageEstimator.manualGCPressure", 0.95f, "");
+    new FloatConfOption("giraph.garbageEstimator.manualGCPressure", 0.95f,
+        "The threshold above which GC is called manually if Full GC has not " +
+            "happened in a while");
   /** Used to detect a high memory pressure situation */
   public static final FloatConfOption GC_MINIMUM_RECLAIM_FRACTION =
-    new FloatConfOption("giraph.garbageEstimator.gcReclaimFraction", 0.05f, "");
+    new FloatConfOption("giraph.garbageEstimator.gcReclaimFraction", 0.05f,
+        "Minimum percentage of memory we expect to be reclaimed after a Full " +
+            "GC. If less than this amount is reclaimed, it is sage to say " +
+            "we are in a high memory situation and the estimation mechanism " +
+            "has not recognized it yet!");
   /** If mem-usage is above this threshold, active threads are set to 0 */
   public static final FloatConfOption AM_HIGH_THRESHOLD =
-    new FloatConfOption("giraph.amHighThreshold", 0.95f, "");
+    new FloatConfOption("giraph.amHighThreshold", 0.95f,
+        "If mem-usage is above this threshold, all active threads " +
+            "(compute/input) are paused.");
   /** If mem-usage is below this threshold, active threads are set to max */
   public static final FloatConfOption AM_LOW_THRESHOLD =
-    new FloatConfOption("giraph.amLowThreshold", 0.90f, "");
-  /** If mem-usage is above this threshold, creid is set to 0 */
+    new FloatConfOption("giraph.amLowThreshold", 0.90f,
+        "If mem-usage is below this threshold, all active threads " +
+            "(compute/input) are running.");
+  /** If mem-usage is above this threshold, credit is set to 0 */
   public static final FloatConfOption CREDIT_HIGH_THRESHOLD =
-    new FloatConfOption("giraph.creditHighThreshold", 0.95f, "");
+    new FloatConfOption("giraph.creditHighThreshold", 0.95f,
+        "If mem-usage is above this threshold, credit is set to 0");
   /** If mem-usage is below this threshold, credit is set to max */
   public static final FloatConfOption CREDIT_LOW_THRESHOLD =
-    new FloatConfOption("giraph.creditLowThreshold", 0.90f, "");
-  /** OOC starts if mem-usage is above this treshold */
+    new FloatConfOption("giraph.creditLowThreshold", 0.90f,
+        "If mem-usage is below this threshold, credit is set to max");
+  /** OOC starts if mem-usage is above this threshold */
   public static final FloatConfOption OOC_THRESHOLD =
-    new FloatConfOption("giraph.oocThreshold", 0.90f, "");
+    new FloatConfOption("giraph.oocThreshold", 0.90f,
+        "If mem-usage is above this threshold, out of core threads starts " +
+            "writing data to disk");
 
   /** Logger */
   private static final Logger LOG =
@@ -207,7 +223,9 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
    * <p>
    * The number of vertices to compute in the next superstep gets reset in
    * {@link org.apache.giraph.graph.GraphTaskManager#processGraphPartitions}
-   * right before {@link PartitionStore#startIteration()} gets called.
+   * right before
+   * {@link org.apache.giraph.partition.PartitionStore#startIteration()} gets
+   * called.
    */
   @Override
   public void startIteration() {
@@ -248,7 +266,6 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
 
   @Override
   public void commandCompleted(IOCommand command) {
-    // long oocBytesBefore = OOC_BYTES_INJECTED.get();
     if (command instanceof LoadPartitionIOCommand) {
       oocBytesInjected.getAndAdd(command.bytesTransferred());
       if (state == State.OFFLOADING) {
@@ -441,8 +458,8 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
 
     /**
      * Constructor
-     * @param oocBytesInjected Reference to {@link AtomiLong} object maintaining
-     *                         the number of OOC bytes stored.
+     * @param oocBytesInjected Reference to {@link AtomicLong} object
+     *                         maintaining the number of OOC bytes stored.
      * @param networkMetrics Interface to get network stats.
      */
     public MemoryEstimator(AtomicLong oocBytesInjected,
@@ -725,7 +742,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
     }
 
     /**
-     * Copys the values from a Vector to an array.
+     * Copies the values from a Vector to an array.
      * @param source Source vector of values
      * @param target Target array.
      */
