@@ -18,6 +18,7 @@
 package org.apache.giraph.ooc.policy;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import org.apache.commons.math.stat.regression.OLSMultipleLinearRegression;
 import org.apache.giraph.comm.NetworkMetrics;
 import org.apache.giraph.conf.FloatConfOption;
@@ -36,9 +37,10 @@ import org.apache.log4j.Logger;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -229,6 +231,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
    */
   @Override
   public void startIteration() {
+    AbstractEdgeStore.PROGRESS_COUNTER.reset();
     oocBytesInjected.set(0);
     memoryEstimator.clear();
     memoryEstimator.setCurrentSuperstep(oocEngine.getSuperstep());
@@ -434,13 +437,13 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
    */
   private static class MemoryEstimator {
     /** Stores the (x1,x2,...,x5) arrays of data samples, one for each sample */
-    private Vector<double[]> dataSamples = new Vector<>();
+    private List<double[]> dataSamples = new ArrayList<>();
     /** Stores the y memory usage dataSamples, one for each sample */
-    private Vector<Double> memorySamples = new Vector<>();
+    private DoubleArrayList memorySamples = new DoubleArrayList();
     /** Stores the coefficients computed by the linear regression model */
     private double[] coefficient = new double[6];
     /** Stores the column indices that can be used in the regression model */
-    private Vector<Integer> validColumnIndices = new Vector<>();
+    private List<Integer> validColumnIndices = new ArrayList<>();
     /** Potentially out-of-range coefficient values */
     private double[] extreme = new double[6];
     /** Indicates whether current coefficients can be used for estimation */
@@ -605,9 +608,9 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           dataSamples.size() >= validColumnIndices.size() + 1) {
 
           double[][] xValues = new double[dataSamples.size()][];
-          double[] yValues = new double[memorySamples.size()];
           fillXMatrix(dataSamples, validColumnIndices, xValues);
-          copyVectorToArray(memorySamples, yValues);
+          double[] yValues =
+              memorySamples.toDoubleArray(new double[memorySamples.size()]);
           mlr.newSampleData(yValues, xValues);
           calculateRegression(coefficient, validColumnIndices, mlr);
 
@@ -615,6 +618,37 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           // values outside the valid value range. In this case, we set the
           // coefficient to the minimum or maximum value allowed, and re-run the
           // regression.
+          // We only care about coefficients of two of the variables:
+          // bytes received due to messages (receivedBytes -- index 3 in
+          // `coefficient` array) and bytes transferred due to OOC (oocBytes --
+          // index 4 in `coefficient` array).
+          //
+          // receivedByte's coefficient cannot be negative, meaning that it does
+          // not make sense that memory footprint decreases because of receipt
+          // of messages. We either have message combiner or we do not have
+          // combiner. If message combiner is used, the memory footprint
+          // will not change much due to messages leading to the coefficient for
+          // oocBytes to be close to 0. If message combiner is not used, the
+          // memory only increase with messages, and the coefficient should be
+          // positive. In this case, a message is usually deserialized and then
+          // written to the message store. We assume that the process of
+          // deserializing the message and putting it into the message store
+          // will not result in more than twice the size of the serialized form
+          // of the message (meaning that the memory footprint for message store
+          // will not be more than 2*receivedBytes). Based on this assumption
+          // the upper bound for coefficient of receivedBytes should be 2.
+          //
+          // "oocBytes" represents the size of the serialized form of data that
+          // has transferred to/from secondary storage. On the other hand, in
+          // our estimation mechanism, we are estimating the aggregate size of
+          // all live objects in memory, meaning that we are estimating the size
+          // of deserialized for of data in memory. Since we are not using any
+          // (de)compression for (de)serialization of data, we assume that
+          // size of serialized data <= size of deserialized data <=
+          // 2 * (size of serialized dat)
+          // This basically means that the coefficient for oocBytes should be
+          // between 1 and 2.
+
           boolean changed;
           extreme[3] = -1;
           extreme[4] = -1;
@@ -648,9 +682,24 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
     }
 
     /**
-     * Certain coefficients need to be within a specific range. For instance,
+     * Certain coefficients need to be within a specific range.
      * If the coefficient is not in this range, we set it to the closest bound
-     * and re-run the linear regression.
+     * and re-run the linear regression. In this case, we keep the possible
+     * extremum coefficient in an intermediate array ("extreme"). Also, if
+     * we choose the extremum coefficient for an index, that index is removed
+     * from the regression calculation as well as the rest of the refinement
+     * process.
+     *
+     * Note that the regression calculation here is based on the method of
+     * least square for minimizing the error. The sum of squares of errors for
+     * all points is a convex function. This means if we solve the
+     * non-constrained linear regression and then refine the coefficient to
+     * apply their bounds, we will achieve a solution to our constrained
+     * linear regression problem.
+     *
+     * This method is called in a loop to refine certain coefficients. The loop
+     * should continue until all coefficients are refined and are within their
+     * range.
      *
      * @param coefIndex Coefficient index
      * @param lowerBound Lower bound
@@ -675,12 +724,14 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           value = upperBound;
         }
         int ptr = -1;
-        if (validColumnIndices.size() >= 1 &&
-          validColumnIndices.get(validColumnIndices.size() - 1) == coefIndex) {
-          ptr = validColumnIndices.size() - 1;
-        } else if (validColumnIndices.size() >= 2 &&
-          validColumnIndices.get(validColumnIndices.size() - 2) == coefIndex) {
-          ptr = validColumnIndices.size() - 2;
+        // Finding the 'coefIndex' in the valid indices. Since this method is
+        // used only for the variables with higher indices, we use a reverse
+        // loop to lookup the 'coefIndex' for faster termination of the loop.
+        for (int i = validColumnIndices.size() - 1; i >= 0; --i) {
+          if (validColumnIndices.get(i) == coefIndex) {
+            ptr = i;
+            break;
+          }
         }
         if (ptr != -1) {
           if (LOG.isDebugEnabled()) {
@@ -705,7 +756,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
               "addRecord: coefficient was not in the regression, " +
-                "setting it to the lower bound");
+                "setting it to the extreme of the bound");
           }
           result = false;
         }
@@ -722,7 +773,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
      * @throws Exception
      */
     private static void calculateRegression(double[] coefficient,
-      Vector<Integer> validColumnIndices, OLSMultipleLinearRegression mlr)
+      List<Integer> validColumnIndices, OLSMultipleLinearRegression mlr)
       throws Exception {
 
       if (coefficient.length != validColumnIndices.size()) {
@@ -732,9 +783,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
       }
 
       double[] beta = mlr.estimateRegressionParameters();
-      for (int i = 0; i < coefficient.length; ++i) {
-        coefficient[i] = 0;
-      }
+      Arrays.fill(coefficient, 0);
       for (int i = 0; i < validColumnIndices.size(); ++i) {
         coefficient[validColumnIndices.get(i)] = beta[i];
       }
@@ -742,26 +791,15 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
     }
 
     /**
-     * Copies the values from a Vector to an array.
-     * @param source Source vector of values
-     * @param target Target array.
-     */
-    private static void copyVectorToArray(Vector<Double> source,
-                                          double[] target) {
-      for (int i = 0; i < source.size(); ++i) {
-        target[i] = source.get(i);
-      }
-    }
-
-    /**
-     * Copies values from a Vector of double[] to a double[][]. Takes into
+     * Copies values from a List of double[] to a double[][]. Takes into
      * consideration the list of valid column indices.
-     * @param sourceValues Source Vector of double[]
+     * @param sourceValues Source List of double[]
      * @param validColumnIndices Valid column indices
      * @param xValues Target double[][] matrix.
      */
-    private static void fillXMatrix(Vector<double[]> sourceValues,
-      Vector<Integer> validColumnIndices, double[][] xValues) {
+    private static void fillXMatrix(List<double[]> sourceValues,
+                                    List<Integer> validColumnIndices,
+                                    double[][] xValues) {
 
       for (int i = 0; i < sourceValues.size(); ++i) {
         xValues[i] = new double[validColumnIndices.size() + 1];
@@ -787,15 +825,15 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
     /**
      * Utility function that checks if two columns have linear dependence.
      *
-     * @param values Matrix in the form of a Vector of double[] values.
+     * @param values Matrix in the form of a List of double[] values.
      * @param col1 First column index
      * @param col2 Second column index
      * @return True if there is linear dependence.
      */
-    private static boolean isLinearDependence(Vector<double[]> values,
+    private static boolean isLinearDependence(List<double[]> values,
                                               int col1, int col2) {
-
-      Vector<Double> factor = new Vector<>();
+      boolean firstValSeen = false;
+      double firstVal = 0;
       for (double[] value : values) {
         double val1 = value[col1];
         double val2 = value[col2];
@@ -809,16 +847,13 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
         if (equal(val2, 0)) {
           return false;
         }
-        factor.add(val1 / val2);
-      }
-
-      if (factor.size() < 2) {
-        return true;
-      }
-      double firstVal = factor.get(0);
-      for (int i = 1; i < factor.size(); ++i) {
-        if (!equal((factor.get(i) - firstVal) / firstVal, 0)) {
-          return false;
+        if (!firstValSeen) {
+          firstVal = val1 / val2;
+          firstValSeen = true;
+        } else {
+          if (!equal((val1 / val2 - firstVal) / firstVal, 0)) {
+            return false;
+          }
         }
       }
       return true;
