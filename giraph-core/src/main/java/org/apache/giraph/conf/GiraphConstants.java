@@ -75,8 +75,8 @@ import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.ooc.persistence.OutOfCoreDataAccessor;
 import org.apache.giraph.ooc.persistence.LocalDiskDataAccessor;
+import org.apache.giraph.ooc.policy.MemoryEstimatorOracle;
 import org.apache.giraph.ooc.policy.OutOfCoreOracle;
-import org.apache.giraph.ooc.policy.ThresholdBasedOracle;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
@@ -986,7 +986,7 @@ public interface GiraphConstants {
    */
   ClassConfOption<OutOfCoreOracle> OUT_OF_CORE_ORACLE =
       ClassConfOption.create("giraph.outOfCoreOracle",
-          ThresholdBasedOracle.class, OutOfCoreOracle.class,
+          MemoryEstimatorOracle.class, OutOfCoreOracle.class,
           "Out-of-core oracle that is to be used for adaptive out-of-core " +
               "engine");
 

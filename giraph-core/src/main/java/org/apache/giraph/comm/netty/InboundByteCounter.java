@@ -53,6 +53,21 @@ public class InboundByteCounter extends ChannelInboundHandlerAdapter implements
   }
 
   /**
+   * Returns bytes received per superstep.
+   * @return Number of bytes.
+   */
+  public long getBytesReceivedPerSuperstep() {
+    return delegate.getBytesProcessedPerSuperstep();
+  }
+
+  /**
+   * Set bytes received per superstep to 0.
+   */
+  public void resetBytesReceivedPerSuperstep() {
+    delegate.resetBytesProcessedPerSuperstep();
+  }
+
+  /**
    * @return Mbytes received / sec in the current interval
    */
   public double getMbytesPerSecReceived() {

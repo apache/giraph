@@ -74,7 +74,7 @@ public class NettyWorkerServer<I extends WritableComparable,
     this.context = context;
 
     serverData =
-        new ServerData<I, V, E>(service, conf, context);
+        new ServerData<I, V, E>(service, this, conf, context);
 
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E>(serverData),
@@ -110,5 +110,20 @@ public class NettyWorkerServer<I extends WritableComparable,
   @Override
   public void setFlowControl(FlowControl flowControl) {
     nettyServer.setFlowControl(flowControl);
+  }
+
+  @Override
+  public long getBytesReceivedPerSuperstep() {
+    return nettyServer.getInByteCounter().getBytesReceivedPerSuperstep();
+  }
+
+  @Override
+  public void resetBytesReceivedPerSuperstep() {
+    nettyServer.getInByteCounter().resetBytesReceivedPerSuperstep();
+  }
+
+  @Override
+  public long getBytesReceived() {
+    return nettyServer.getInByteCounter().getBytesReceived();
   }
 }

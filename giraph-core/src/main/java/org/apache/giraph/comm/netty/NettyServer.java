@@ -71,7 +71,6 @@ public class NettyServer {
   /** Default maximum thread pool size */
   public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
 
-
 /*if_not[HADOOP_NON_SECURE]*/
   /** Used to authenticate with netty clients */
   public static final AttributeKey<SaslNettyServer>
@@ -127,6 +126,7 @@ public class NettyServer {
   private final String handlerToUseExecutionGroup;
   /** Handles all uncaught exceptions in netty threads */
   private final Thread.UncaughtExceptionHandler exceptionHandler;
+
 
   /**
    * Constructor for creating the server
@@ -215,6 +215,14 @@ public class NettyServer {
     this.saslServerHandlerFactory = saslServerHandlerFactory;
   }
 /*end[HADOOP_NON_SECURE]*/
+
+  /**
+   * Returns a handle on the in-bound byte counter.
+   * @return The {@link InboundByteCounter} object for this server.
+   */
+  public InboundByteCounter getInByteCounter() {
+    return inByteCounter;
+  }
 
   /**
    * Start the server with the appropriate port

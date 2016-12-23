@@ -44,8 +44,10 @@ public class ByteCounterDelegate implements ByteCounter {
       new DecimalFormat("#######.####");
   /** Class timer */
   private static final Time TIME = SystemTime.get();
-  /** All bytes ever processed */
+  /** Bytes processed during the most recent time interval */
   private final AtomicLong bytesProcessed = new AtomicLong();
+  /** Aggregate bytes per superstep */
+  private final AtomicLong bytesProcessedPerSuperstep = new AtomicLong();
   /** Total processed requests */
   private final AtomicLong processedRequests = new AtomicLong();
   /** Start time (for bandwidth calculation) */
@@ -99,6 +101,7 @@ public class ByteCounterDelegate implements ByteCounter {
   public int byteBookkeeper(ByteBuf buf) {
     int processedBytes = buf.readableBytes();
     bytesProcessed.addAndGet(processedBytes);
+    bytesProcessedPerSuperstep.addAndGet(processedBytes);
     processedBytesHist.update(processedBytes);
     processedRequests.incrementAndGet();
     processedRequestsMeter.mark();
@@ -124,6 +127,21 @@ public class ByteCounterDelegate implements ByteCounter {
   public void resetAll() {
     resetBytes();
     resetStartMsecs();
+  }
+
+  /**
+   * Returns bytes processed per superstep.
+   * @return Number of bytes.
+   */
+  public long getBytesProcessedPerSuperstep() {
+    return bytesProcessedPerSuperstep.get();
+  }
+
+  /**
+   * Set bytes processed per superstep to 0.
+   */
+  public void resetBytesProcessedPerSuperstep() {
+    bytesProcessedPerSuperstep.set(0);
   }
 
   public long getBytesProcessed() {

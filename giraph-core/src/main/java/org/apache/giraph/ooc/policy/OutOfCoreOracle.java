@@ -128,8 +128,7 @@ public interface OutOfCoreOracle {
   void gcCompleted(GarbageCollectionNotificationInfo gcInfo);
 
   /**
-   * Shut down the out-of-core oracle. Necessary specifically for cases where
-   * out-of-core oracle is using additional monitoring threads.
+   * Called at the beginning of a superstep.
    */
-  void shutdown();
+  void startIteration();
 }

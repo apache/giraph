@@ -20,24 +20,9 @@ package org.apache.giraph.comm.flow_control;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
-
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.giraph.comm.netty.NettyClient;
@@ -47,14 +32,19 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.utils.AdjustableSemaphore;
-import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.utils.LogStacktraceCallable;
-import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Representation of credit-based flow control policy. With this policy there
@@ -182,20 +172,17 @@ public class CreditBasedFlowControl implements FlowControl {
   private final Semaphore unsentRequestPermit;
   /** Netty client used for sending requests */
   private final NettyClient nettyClient;
-  /**
-   * Result of execution for the thread responsible for sending resume signals
-   */
-  private final Future<Void> resumeThreadResult;
-  /** Whether we are shutting down the execution */
-  private volatile boolean shouldTerminate;
 
   /**
    * Constructor
    * @param conf configuration
    * @param nettyClient netty client
+   * @param exceptionHandler Exception handler
    */
   public CreditBasedFlowControl(ImmutableClassesGiraphConfiguration conf,
-                                NettyClient nettyClient) {
+                                NettyClient nettyClient,
+                                Thread.UncaughtExceptionHandler
+                                    exceptionHandler) {
     this.nettyClient = nettyClient;
     maxOpenRequestsPerWorker =
         (short) MAX_NUM_OF_OPEN_REQUESTS_PER_WORKER.get(conf);
@@ -205,45 +192,33 @@ public class CreditBasedFlowControl implements FlowControl {
     unsentRequestPermit = new Semaphore(MAX_NUM_OF_UNSENT_REQUESTS.get(conf));
     unsentWaitMsecs = UNSENT_CACHE_WAIT_INTERVAL.get(conf);
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
-    shouldTerminate = false;
-    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+    Thread thread = new Thread(new Runnable() {
       @Override
-      public Callable<Void> newCallable(int callableId) {
-        return new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            while (true) {
-              synchronized (workersToResume) {
-                if (shouldTerminate) {
-                  break;
-                }
-                for (Integer workerId : workersToResume) {
-                  if (maxOpenRequestsPerWorker != 0) {
-                    sendResumeSignal(workerId);
-                  } else {
-                    break;
-                  }
-                }
-                try {
-                  workersToResume.wait();
-                } catch (InterruptedException e) {
-                  throw new IllegalStateException("call: caught exception " +
-                      "while waiting for resume-sender thread to be notified!",
-                      e);
-                }
+      public void run() {
+        while (true) {
+          synchronized (workersToResume) {
+            for (Integer workerId : workersToResume) {
+              if (maxOpenRequestsPerWorker != 0) {
+                sendResumeSignal(workerId);
+              } else {
+                break;
               }
             }
-            return null;
+            try {
+              workersToResume.wait();
+            } catch (InterruptedException e) {
+              throw new IllegalStateException("run: caught exception " +
+                  "while waiting for resume-sender thread to be notified!",
+                  e);
+            }
           }
-        };
+        }
       }
-    };
-
-    ExecutorService executor = Executors.newSingleThreadExecutor(
-        ThreadUtils.createThreadFactory("resume-sender"));
-    resumeThreadResult = executor.submit(new LogStacktraceCallable<>(
-        callableFactory.newCallable(0)));
-    executor.shutdown();
+    });
+    thread.setUncaughtExceptionHandler(exceptionHandler);
+    thread.setName("resume-sender");
+    thread.setDaemon(true);
+    thread.start();
   }
 
   /**
@@ -252,6 +227,11 @@ public class CreditBasedFlowControl implements FlowControl {
    * @param workerId id of the worker to send the resume signal to
    */
   private void sendResumeSignal(int workerId) {
+    if (maxOpenRequestsPerWorker == 0) {
+      LOG.warn("sendResumeSignal: method called while the max open requests " +
+          "for worker " + workerId + " is still 0");
+      return;
+    }
     WritableRequest request = new SendResumeRequest(maxOpenRequestsPerWorker);
     Long resumeId = nettyClient.doSend(workerId, request);
     checkState(resumeId != null);
@@ -404,20 +384,6 @@ public class CreditBasedFlowControl implements FlowControl {
         ((ignoreCredit ? 1 : 0) << (16 + 14)) |
         (maxOpenRequestsPerWorker << 16) |
         timestamp;
-  }
-
-  @Override
-  public void shutdown() {
-    synchronized (workersToResume) {
-      shouldTerminate = true;
-      workersToResume.notifyAll();
-    }
-    try {
-      resumeThreadResult.get();
-    } catch (InterruptedException | ExecutionException e) {
-      throw new IllegalStateException("shutdown: caught exception while" +
-          "getting result of resume-sender thread");
-    }
   }
 
   @Override

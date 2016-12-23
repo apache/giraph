@@ -24,6 +24,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
@@ -162,13 +163,14 @@ public class TestPartitionStores {
 
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
       serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
+    WorkerServer workerServer = Mockito.mock(WorkerServer.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
     GraphTaskManager<IntWritable, IntWritable, NullWritable>
         graphTaskManager = Mockito.mock(GraphTaskManager.class);
     Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
-        serverData = new ServerData<>(serviceWorker, conf, context);
+        serverData = new ServerData<>(serviceWorker, workerServer, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
@@ -191,13 +193,14 @@ public class TestPartitionStores {
 
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
+    WorkerServer workerServer = Mockito.mock(WorkerServer.class);
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
     GraphTaskManager<IntWritable, IntWritable, NullWritable>
         graphTaskManager = Mockito.mock(GraphTaskManager.class);
     Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
-        serverData = new ServerData<>(serviceWorker, conf, context);
+        serverData = new ServerData<>(serviceWorker, workerServer, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>
@@ -308,6 +311,7 @@ public class TestPartitionStores {
 
     CentralizedServiceWorker<IntWritable, IntWritable, NullWritable>
     serviceWorker = Mockito.mock(CentralizedServiceWorker.class);
+    WorkerServer workerServer = Mockito.mock(WorkerServer.class);
 
     Mockito.when(serviceWorker.getSuperstep()).thenReturn(
         BspService.INPUT_SUPERSTEP);
@@ -315,7 +319,7 @@ public class TestPartitionStores {
         graphTaskManager = Mockito.mock(GraphTaskManager.class);
     Mockito.when(serviceWorker.getGraphTaskManager()).thenReturn(graphTaskManager);
     ServerData<IntWritable, IntWritable, NullWritable>
-        serverData = new ServerData<>(serviceWorker, conf, context);
+        serverData = new ServerData<>(serviceWorker, workerServer, conf, context);
     Mockito.when(serviceWorker.getServerData()).thenReturn(serverData);
 
     DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>

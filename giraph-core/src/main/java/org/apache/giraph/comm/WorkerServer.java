@@ -35,7 +35,7 @@ import java.net.InetSocketAddress;
 @SuppressWarnings("rawtypes")
 public interface WorkerServer<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends Closeable {
+    extends NetworkMetrics, Closeable {
   /**
    * Get server address
    *

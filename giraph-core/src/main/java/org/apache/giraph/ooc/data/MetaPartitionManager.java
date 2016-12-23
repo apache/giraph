@@ -526,8 +526,8 @@ public class MetaPartitionManager {
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
         StorageState.IN_MEM,
-        StorageState.ON_DISK,
-        null);
+        null,
+        StorageState.ON_DISK);
     if (meta != null) {
       return meta.getPartitionId();
     }
@@ -535,18 +535,17 @@ public class MetaPartitionManager {
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
         StorageState.ON_DISK,
-        StorageState.IN_MEM,
-        null);
+        null,
+        StorageState.IN_MEM);
     if (meta != null) {
       return meta.getPartitionId();
     }
 
-    // Forth, look for a processed partition entirely on disk
     meta = perThreadPartitionDictionary.get(threadId).lookup(
         ProcessingState.PROCESSED,
         StorageState.ON_DISK,
-        StorageState.ON_DISK,
-        null);
+        null,
+        StorageState.ON_DISK);
     if (meta != null) {
       return meta.getPartitionId();
     }

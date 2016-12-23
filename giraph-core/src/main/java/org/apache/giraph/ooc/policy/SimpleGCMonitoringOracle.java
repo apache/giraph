@@ -141,6 +141,10 @@ public class SimpleGCMonitoringOracle implements OutOfCoreOracle {
     lastGCObservation = observation;
   }
 
+  @Override
+  public void startIteration() {
+  }
+
   /**
    * Get the current data injection rate to memory based on the commands ran
    * in the history (retrieved from statistics collector), and outstanding
@@ -273,9 +277,6 @@ public class SimpleGCMonitoringOracle implements OutOfCoreOracle {
   public void commandCompleted(IOCommand command) {
     commandOccurrences.get(command.getType()).getAndDecrement();
   }
-
-  @Override
-  public void shutdown() { }
 
   /** Helper class to record memory status after GC calls */
   private class GCObservation {
