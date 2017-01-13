@@ -15,28 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
-
-import java.io.Serializable;
-
-// AUTO-GENERATED class via class:
-// org.apache.giraph.generate.GeneratePrimitiveClasses
+package org.apache.giraph.function;
 
 /**
- * Primitive specialization of Function:
- * (double) -&gt; T
+ * Allows consumer to subscribe to a supplier.
  *
- * @param <T> Result type
+ * @param <T> Argument type
  */
-public interface Double2ObjFunction<T> extends Serializable {
+public interface Notifier<T> {
   /**
-   * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
-   *
-   * @param input input
-   * @return result
+   * Subscribe consumer to notifications on the given object.
+   * @param consumer Consumer
    */
-  T apply(double input);
+  void subscribe(Consumer<T> consumer);
 }

@@ -24,19 +24,14 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (double) -&gt; T
- *
- * @param <T> Result type
+ * (short) -&gt; short
  */
-public interface Double2ObjFunction<T> extends Serializable {
+public interface Short2ShortFunction extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
    *
    * @param input input
    * @return result
    */
-  T apply(double input);
+  short apply(short input);
 }
