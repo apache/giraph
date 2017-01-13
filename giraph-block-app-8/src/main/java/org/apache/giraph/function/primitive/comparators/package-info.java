@@ -15,28 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
-
-import java.io.Serializable;
-
-// AUTO-GENERATED class via class:
-// org.apache.giraph.generate.GeneratePrimitiveClasses
-
 /**
- * Primitive specialization of Function:
- * (double) -&gt; T
- *
- * @param <T> Result type
+ * Package for primitive comparator interfaces that can be used as lambdas
+ * for fastutil libraries and elsewhere.
  */
-public interface Double2ObjFunction<T> extends Serializable {
-  /**
-   * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
-   *
-   * @param input input
-   * @return result
-   */
-  T apply(double input);
-}
+package org.apache.giraph.function.primitive.comparators;

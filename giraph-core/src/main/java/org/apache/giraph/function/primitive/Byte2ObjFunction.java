@@ -24,11 +24,11 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (double) -&gt; T
+ * (byte) -&gt; T
  *
  * @param <T> Result type
  */
-public interface Double2ObjFunction<T> extends Serializable {
+public interface Byte2ObjFunction<T> extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
    *
@@ -38,5 +38,5 @@ public interface Double2ObjFunction<T> extends Serializable {
    * @param input input
    * @return result
    */
-  T apply(double input);
+  T apply(byte input);
 }

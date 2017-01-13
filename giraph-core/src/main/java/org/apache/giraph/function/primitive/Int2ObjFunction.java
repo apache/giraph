@@ -19,6 +19,9 @@ package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
+// AUTO-GENERATED class via class:
+// org.apache.giraph.generate.GeneratePrimitiveClasses
+
 /**
  * Primitive specialization of Function:
  * (int) -&gt; T
