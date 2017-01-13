@@ -120,6 +120,10 @@ under the License.
       <artifactId>log4j</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>compiler</artifactId>
     </dependency>

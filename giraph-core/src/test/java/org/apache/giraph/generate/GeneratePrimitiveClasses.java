@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.generate;
 
-import org.junit.Test;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -123,15 +121,24 @@ public class GeneratePrimitiveClasses {
     cfg.setDefaultEncoding("UTF-8");
     cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 
-    String[] primitiveFunctions = { "%sConsumer", "%sPredicate", "Obj2%sFunction" };
+    String[] primitiveFunctions = {
+      "%sConsumer", "%sPredicate", "Obj2%sFunction", "%s2ObjFunction", "%s2%sFunction"
+    };
 
     for (String function: primitiveFunctions) {
       generateForAll(
           cfg,
           EnumSet.allOf(PrimitiveType.class),
-          String.format(function, "Type") + ".java",
+          function.replaceAll("\\%s", "Type") + ".java",
           "src/main/java/org/apache/giraph/function/primitive/" + function + ".java");
     }
+
+
+    generateForAll(
+        cfg,
+        EnumSet.allOf(PrimitiveType.class),
+        "TypeComparatorFunction.java",
+        "../giraph-block-app-8/src/main/java/org/apache/giraph/function/primitive/comparators/%sComparatorFunction.java");
 
     EnumSet<PrimitiveType> writableSet = EnumSet.noneOf(PrimitiveType.class);
     EnumSet<PrimitiveType> ids = EnumSet.noneOf(PrimitiveType.class);
@@ -215,7 +222,7 @@ public class GeneratePrimitiveClasses {
       props.put("type", type);
       generateAndWrite(cfg, props,
           template,
-          String.format(outputPattern, type.getCamel()));
+          outputPattern.replaceAll("\\%s", type.getCamel()));
     }
   }
 

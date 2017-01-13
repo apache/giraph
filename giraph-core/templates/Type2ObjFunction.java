@@ -19,16 +19,15 @@ package org.apache.giraph.function.primitive;
 
 import java.io.Serializable;
 
-// AUTO-GENERATED class via class:
-// org.apache.giraph.generate.GeneratePrimitiveClasses
+${generated_message}
 
 /**
  * Primitive specialization of Function:
- * (double) -&gt; T
+ * (${type.lower}) -&gt; T
  *
  * @param <T> Result type
  */
-public interface Double2ObjFunction<T> extends Serializable {
+public interface ${type.camel}2ObjFunction<T> extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
    *
@@ -38,5 +37,5 @@ public interface Double2ObjFunction<T> extends Serializable {
    * @param input input
    * @return result
    */
-  T apply(double input);
+  T apply(${type.lower} input);
 }

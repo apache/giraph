@@ -15,28 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.comparators;
+
+import it.unimi.dsi.fastutil.${type.lower}s.${type.camel}Comparator;
 
 import java.io.Serializable;
 
-// AUTO-GENERATED class via class:
-// org.apache.giraph.generate.GeneratePrimitiveClasses
-
-/**
- * Primitive specialization of Function:
- * (double) -&gt; T
- *
- * @param <T> Result type
- */
-public interface Double2ObjFunction<T> extends Serializable {
-  /**
-   * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
-   *
-   * @param input input
-   * @return result
-   */
-  T apply(double input);
+/** A type-specific comparator, that can be specified with a Lambda */
+public interface ${type.camel}ComparatorFunction
+    extends ${type.camel}Comparator, Serializable {
+  @Override
+  default int compare(${type.boxed} ok1, ${type.boxed} ok2) {
+   return compare(ok1.${type.lower}Value(), ok2.${type.lower}Value());
+  }
 }

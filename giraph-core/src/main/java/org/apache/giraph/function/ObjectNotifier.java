@@ -15,28 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function;
 
-import java.io.Serializable;
-
-// AUTO-GENERATED class via class:
-// org.apache.giraph.generate.GeneratePrimitiveClasses
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Primitive specialization of Function:
- * (double) -&gt; T
+ * Allows multiple Consumers to be combined into a single Consumer, by having
+ * them all subscribe to this object, and then using this object as a group
+ * Consumer.
  *
- * @param <T> Result type
+ * @param <T> Argument type
  */
-public interface Double2ObjFunction<T> extends Serializable {
-  /**
-   * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
-   *
-   * @param input input
-   * @return result
-   */
-  T apply(double input);
+public class ObjectNotifier<T> implements Consumer<T>, Notifier<T> {
+  /** List of subscribers */
+  private final List<Consumer<T>> subscribers = new ArrayList<>();
+
+  @Override
+  public void apply(T value) {
+    for (Consumer<T> consumer : subscribers) {
+      consumer.apply(value);
+    }
+  }
+
+  @Override
+  public void subscribe(Consumer<T> consumer) {
+    subscribers.add(consumer);
+  }
+
+  @Override
+  public String toString() {
+    return getClass() + " [subscribers=" + subscribers + "]";
+  }
 }

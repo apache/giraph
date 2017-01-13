@@ -24,19 +24,14 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (double) -&gt; T
- *
- * @param <T> Result type
+ * (byte) -&gt; byte
  */
-public interface Double2ObjFunction<T> extends Serializable {
+public interface Byte2ByteFunction extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
-   *
-   * The returned object may or may not be a new instance,
-   * depending on the implementation.
    *
    * @param input input
    * @return result
    */
-  T apply(double input);
+  byte apply(byte input);
 }
