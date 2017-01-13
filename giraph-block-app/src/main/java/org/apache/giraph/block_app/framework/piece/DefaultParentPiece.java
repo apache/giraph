@@ -178,6 +178,14 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
     return false;
   }
 
+  /**
+   * Override to specify that receive of this Piece (and send of next Piece)
+   * ignore existing vertices, and just process received messages.
+   */
+  protected boolean receiveIgnoreExistingVertices() {
+    return false;
+  }
+
   @Override
   public MessageClasses<I, M> getMessageClasses(
       ImmutableClassesGiraphConfiguration conf) {
@@ -247,7 +255,8 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
 
     return new ObjectMessageClasses<>(
         messageClass, messageFactorySupplier,
-        messageCombinerSupplier, messageEncodeAndStoreType);
+        messageCombinerSupplier, messageEncodeAndStoreType,
+        receiveIgnoreExistingVertices());
   }
 
   // Internal implementation

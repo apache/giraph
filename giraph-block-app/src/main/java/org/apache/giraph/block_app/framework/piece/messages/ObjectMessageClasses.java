@@ -44,20 +44,23 @@ public class ObjectMessageClasses<I extends WritableComparable,
   private final SupplierFromConf<? extends MessageCombiner<? super I, M>>
   messageCombinerSupplier;
   private final MessageEncodeAndStoreType messageEncodeAndStoreType;
+  private final boolean ignoreExistingVertices;
 
   public ObjectMessageClasses() {
-    this(null, null, null, null);
+    this(null, null, null, null, false);
   }
 
   public ObjectMessageClasses(Class<M> messageClass,
       SupplierFromConf<MessageValueFactory<M>> messageValueFactorySupplier,
       SupplierFromConf<? extends MessageCombiner<? super I, M>>
         messageCombinerSupplier,
-      MessageEncodeAndStoreType messageEncodeAndStoreType) {
+      MessageEncodeAndStoreType messageEncodeAndStoreType,
+      boolean ignoreExistingVertices) {
     this.messageClass = messageClass;
     this.messageValueFactorySupplier = messageValueFactorySupplier;
     this.messageCombinerSupplier = messageCombinerSupplier;
     this.messageEncodeAndStoreType = messageEncodeAndStoreType;
+    this.ignoreExistingVertices = ignoreExistingVertices;
   }
 
   @Override
@@ -85,6 +88,11 @@ public class ObjectMessageClasses<I extends WritableComparable,
   }
 
   @Override
+  public boolean ignoreExistingVertices() {
+    return ignoreExistingVertices;
+  }
+
+  @Override
   public MessageEncodeAndStoreType getMessageEncodeAndStoreType() {
     return messageEncodeAndStoreType;
   }
@@ -93,7 +101,8 @@ public class ObjectMessageClasses<I extends WritableComparable,
   public MessageClasses<I, M> createCopyForNewSuperstep() {
     return new ObjectMessageClasses<>(
         messageClass, messageValueFactorySupplier,
-        messageCombinerSupplier, messageEncodeAndStoreType);
+        messageCombinerSupplier, messageEncodeAndStoreType,
+        ignoreExistingVertices);
   }
 
   @Override

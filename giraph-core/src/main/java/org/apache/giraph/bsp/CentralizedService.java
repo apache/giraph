@@ -20,6 +20,7 @@ package org.apache.giraph.bsp;
 
 import java.util.List;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.worker.WorkerInfo;
@@ -37,8 +38,6 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public interface CentralizedService<I extends WritableComparable,
     V extends Writable, E extends Writable> {
-
-
   /**
    * Get the current global superstep of the application to work on.
    *
@@ -73,4 +72,10 @@ public interface CentralizedService<I extends WritableComparable,
    * @return JobProgressTrackerClient
    */
   JobProgressTracker getJobProgressTracker();
+
+  /**
+   * Get configuration
+   * @return configuration
+   */
+  ImmutableClassesGiraphConfiguration<I, V, E> getConfiguration();
 }

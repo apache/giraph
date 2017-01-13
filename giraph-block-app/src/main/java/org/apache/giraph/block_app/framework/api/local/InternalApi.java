@@ -19,11 +19,6 @@ package org.apache.giraph.block_app.framework.api.local;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.base.Preconditions;
-
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -74,6 +69,11 @@ import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.common.base.Preconditions;
+
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+
 /**
  * Internal implementation of Block API interfaces - representing an in-memory
  * giraph instance.
@@ -99,6 +99,9 @@ class InternalApi<I extends WritableComparable, V extends Writable,
 
   private InternalMessageStore previousMessages;
   private InternalMessageStore nextMessages;
+
+  private MessageClasses previousMessageClasses;
+  private MessageClasses nextMessageClasses;
 
   private final InternalWorkerApi workerApi;
   private final BlockWorkerContextLogic workerContextLogic;
@@ -353,6 +356,17 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     return Collections.emptyList();
   }
 
+  public Iterable<I> getPartitionDestinationVertices(int partitionId) {
+    if (previousMessages != null) {
+      Iterable result =
+          previousMessages.getPartitionDestinationVertices(partitionId);
+      if (result != null) {
+        return result;
+      }
+    }
+    return Collections.emptyList();
+  }
+
   public List<Writable> takeWorkerMessages() {
     if (previousWorkerMessages != null) {
       List<Writable> ret = new ArrayList<>(previousWorkerMessages.size());
@@ -385,11 +399,13 @@ class InternalApi<I extends WritableComparable, V extends Writable,
     afterMasterBeforeWorker();
 
     previousMessages = nextMessages;
+    previousMessageClasses = nextMessageClasses;
     previousWorkerMessages = nextWorkerMessages;
 
+    nextMessageClasses = computation.getOutgoingMessageClasses(conf);
     nextMessages = createMessageStore(
       conf,
-      computation.getOutgoingMessageClasses(conf),
+      nextMessageClasses,
       createPartitionInfo(),
       runAllChecks
     );
@@ -400,19 +416,9 @@ class InternalApi<I extends WritableComparable, V extends Writable,
       previousMessages.finalizeStore();
     }
 
-    // process mutations:
-    if (createVertexOnMsgs && previousMessages != null) {
-      Iterator<I> iter = previousMessages.targetVertexIds();
-      while (iter.hasNext()) {
-        I target = iter.next();
-        if (getPartition(target).getVertex(target) == null) {
-          // need a copy as the key might be reusable
-          I copyId = WritableUtils.createCopy(target);
-          mutations.putIfAbsent(copyId, new VertexMutations<I, V, E>());
-        }
-      }
-    }
+    boolean ignoreExistingVertices = ignoreExistingVertices();
 
+    // process mutations:
     VertexResolver<I, V, E> vertexResolver = conf.createVertexResolver();
     for (Map.Entry<I, VertexMutations<I, V, E>> entry : mutations.entrySet()) {
       I vertexIndex = entry.getKey();
@@ -423,7 +429,8 @@ class InternalApi<I extends WritableComparable, V extends Writable,
         vertexIndex,
         originalVertex,
         curMutations,
-        previousMessages != null && previousMessages.hasMessage(vertexIndex)
+        !ignoreExistingVertices && previousMessages != null &&
+        previousMessages.hasMessage(vertexIndex)
       );
 
       if (vertex != null) {
@@ -431,9 +438,36 @@ class InternalApi<I extends WritableComparable, V extends Writable,
       } else if (originalVertex != null) {
         getPartition(originalVertex.getId()).removeVertex(
             originalVertex.getId());
+        if (!ignoreExistingVertices && previousMessages != null) {
+          previousMessages.takeMessages(originalVertex.getId());
+        }
       }
     }
     mutations.clear();
+
+    if (!ignoreExistingVertices && createVertexOnMsgs &&
+        previousMessages != null) {
+      Iterator<I> iter = previousMessages.targetVertexIds();
+      while (iter.hasNext()) {
+        I target = iter.next();
+        if (getPartition(target).getVertex(target) == null) {
+          // need a copy as the key might be reusable
+          I copyId = WritableUtils.createCopy(target);
+
+          Vertex<I, V, E> vertex =
+              vertexResolver.resolve(copyId, null, null, true);
+
+          if (vertex != null) {
+            getPartition(vertex.getId()).putVertex(vertex);
+          }
+        }
+      }
+    }
+  }
+
+  public boolean ignoreExistingVertices() {
+    return previousMessageClasses != null &&
+        previousMessageClasses.ignoreExistingVertices();
   }
 
   private <M extends Writable>
