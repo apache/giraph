@@ -123,6 +123,10 @@ under the License.
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
     </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>compiler</artifactId>
+    </dependency>
 
     <!-- runtime dependency -->
     <dependency>
