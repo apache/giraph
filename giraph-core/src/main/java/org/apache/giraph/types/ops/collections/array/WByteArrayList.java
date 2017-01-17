@@ -34,7 +34,6 @@ import org.apache.hadoop.io.ByteWritable;
 import org.apache.giraph.utils.Varint;
 
 import it.unimi.dsi.fastutil.bytes.ByteArrayList;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import it.unimi.dsi.fastutil.bytes.ByteCollection;
 import it.unimi.dsi.fastutil.bytes.ByteList;
 
@@ -161,6 +160,7 @@ public class WByteArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEachByte(ByteConsumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(getByte(i));
@@ -175,6 +175,7 @@ public class WByteArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhileByte(BytePredicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(getByte(i))) {
@@ -186,7 +187,21 @@ public class WByteArrayList
 
   @Override
   public void sort() {
-    ByteArrays.quickSort(elements(), 0, size());
+    Arrays.sort(elements(), 0, size());
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    byte[] arr = elements();
+    byte tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override

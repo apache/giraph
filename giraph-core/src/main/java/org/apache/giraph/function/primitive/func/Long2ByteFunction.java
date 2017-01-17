@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.func;
 
 import java.io.Serializable;
 
@@ -24,14 +24,14 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (byte) -&gt; byte
+ * (long) -&gt; byte
  */
-public interface Byte2ByteFunction extends Serializable {
+public interface Long2ByteFunction extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
    *
    * @param input input
    * @return result
    */
-  byte apply(byte input);
+  byte apply(long input);
 }

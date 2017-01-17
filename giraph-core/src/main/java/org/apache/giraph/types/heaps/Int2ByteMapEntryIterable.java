@@ -18,7 +18,7 @@
 
 package org.apache.giraph.types.heaps;
 
-import it.unimi.dsi.fastutil.ints.Int2ByteMap;;
+import it.unimi.dsi.fastutil.ints.Int2ByteMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterable;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 

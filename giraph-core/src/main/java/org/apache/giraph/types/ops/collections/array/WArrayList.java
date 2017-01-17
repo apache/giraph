@@ -70,4 +70,11 @@ public interface WArrayList<T> extends WCollection<T> {
   void fillW(int from, int to, T value);
   /** Sort the array in ascending order */
   void sort();
+  /**
+   * Swap elements on given positions.
+   *
+   * @param i Index of first element to swap
+   * @param j Index of second element to swap
+   */
+  void swap(int i, int j);
 }

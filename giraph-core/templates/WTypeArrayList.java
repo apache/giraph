@@ -34,7 +34,9 @@ import org.apache.hadoop.io.${type.camel}Writable;
 import org.apache.giraph.utils.Varint;
 
 import it.unimi.dsi.fastutil.${type.lower}s.${type.camel}ArrayList;
+<#if !type.numeric>    
 import it.unimi.dsi.fastutil.${type.lower}s.${type.camel}Arrays;
+</#if>
 import it.unimi.dsi.fastutil.${type.lower}s.${type.camel}Collection;
 import it.unimi.dsi.fastutil.${type.lower}s.${type.camel}List;
 
@@ -160,6 +162,7 @@ public class W${type.camel}ArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEach${type.camel}(${type.camel}Consumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(get${type.camel}(i));
@@ -174,6 +177,7 @@ public class W${type.camel}ArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhile${type.camel}(${type.camel}Predicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(get${type.camel}(i))) {
@@ -185,7 +189,26 @@ public class W${type.camel}ArrayList
 
   @Override
   public void sort() {
+<#if type.numeric>    
+    Arrays.sort(elements(), 0, size());
+</#if>
+<#if !type.numeric>    
     ${type.camel}Arrays.quickSort(elements(), 0, size());
+</#if>
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    ${type.lower}[] arr = elements();
+    ${type.lower} tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override
