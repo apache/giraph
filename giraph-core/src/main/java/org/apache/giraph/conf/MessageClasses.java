@@ -83,8 +83,6 @@ public interface MessageClasses
    */
   void verifyConsistent(ImmutableClassesGiraphConfiguration conf);
 
-  /** */
-
   /**
    * Whether to completely ignore existing vertices,
    * and just process messages
