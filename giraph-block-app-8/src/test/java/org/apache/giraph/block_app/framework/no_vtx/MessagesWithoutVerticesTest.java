@@ -16,6 +16,7 @@ import org.apache.giraph.block_app.test_setup.graphs.EachVertexInit;
 import org.apache.giraph.block_app.test_setup.graphs.Small1GraphInit;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.function.ObjectTransfer;
+import org.apache.giraph.function.primitive.Int2IntFunction;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.types.ops.collections.array.WIntArrayList;
 import org.apache.hadoop.io.IntWritable;
@@ -24,6 +25,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
+
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 public class MessagesWithoutVerticesTest {
 
@@ -38,23 +41,26 @@ public class MessagesWithoutVerticesTest {
   }
 
   private void testSumOverSameGroup(int max, boolean fullGiraphEnv) throws Exception {
+    // uses messages to [-1, max - 1)
+    Int2IntFunction f = (id) -> id % max - 1;
     TestGraphUtils.runTest(
         TestGraphUtils.chainModifiers(
             new Small1GraphInit<IntWritable, IntWritable, NullWritable>(),
-            new EachVertexInit<>((vertex) -> vertex.getValue().set(- vertex.getId().get() % max))),
+            new EachVertexInit<>((vertex) -> vertex.getValue().set(f.apply(vertex.getId().get())))),
         (graph) -> {
-          int[] sums = new int[max];
+          Int2IntOpenHashMap sums = new Int2IntOpenHashMap();
           for (int i = 0; i < max; i ++) {
-            sums[i] -= i;
+            sums.addTo(f.apply(i), f.apply(i) + 1);
           }
 
           for (Vertex<IntWritable, IntWritable, NullWritable> vtx : graph.getTestGraph()) {
-            sums[vtx.getId().get() % max] += vtx.getId().get();
+            sums.addTo(f.apply(vtx.getId().get()), vtx.getId().get() + 1);
           }
 
           for (Vertex<IntWritable, IntWritable, NullWritable> vtx : graph.getTestGraph()) {
-            Assert.assertEquals(sums[vtx.getId().get() % max], vtx.getValue().get());
+            Assert.assertEquals(sums.get(f.apply(vtx.getId().get())), vtx.getValue().get());
           }
+          Assert.assertNull(graph.getVertex(-1));
         },
         (GiraphConfiguration conf) -> {
           BlockUtils.setBlockFactoryClass(conf, MessagesWithoutVerticesBlockFactory.class);
@@ -73,8 +79,6 @@ public class MessagesWithoutVerticesTest {
               BlockWorkerSendApi<IntWritable, IntWritable, NullWritable, IntWritable> workerApi,
               Object executionStage) {
             return (vtx) -> {
-              System.out.println("send: " + vtx);
-              System.out.flush();
               workerApi.sendMessage(vtx.getValue(), vtx.getId());
             };
           }
@@ -83,8 +87,6 @@ public class MessagesWithoutVerticesTest {
           public VertexReceiver<IntWritable,IntWritable,NullWritable,IntWritable> getVertexReceiver(
               BlockWorkerReceiveApi<IntWritable> workerApi, Object executionStage) {
             return (vtx, msgs) -> {
-              System.out.println("receive: " + vtx + " " + Iterables.toString(msgs));
-              System.out.flush();
               Assert.assertFalse("" + vtx.getId(), Iterables.isEmpty(msgs));
               msgsTransfer.apply(msgs);
             };
@@ -107,10 +109,10 @@ public class MessagesWithoutVerticesTest {
               Object executionStage) {
             return (vtx) -> {
               WIntArrayList received = new WIntArrayList();
-              int sum = vtx.getId().get();
+              int sum = vtx.getId().get() + 1;
               for (IntWritable msg : msgsTransfer.get()) {
                 received.add(msg.get());
-                sum += msg.get();
+                sum += msg.get() + 1;
               }
               workerApi.sendMessageToMultipleEdges(received.fastIteratorW(), new IntWritable(sum));
             };

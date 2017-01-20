@@ -181,6 +181,16 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
   /**
    * Override to specify that receive of this Piece (and send of next Piece)
    * ignore existing vertices, and just process received messages.
+   *
+   * Useful when distributed processing on groups that are not vertices is
+   * needed. This flag allows you not to worry whether a destination vertex
+   * exist, and removes need to clean it up when finished.
+   * One example is if each vertex is in a cluster, and we need to process
+   * something per cluster.
+   *
+   * Alternative are reducers, which have distributed reduction, but mostly
+   * master still does the processing afterwards, and amount of data needs to
+   * fit single machine (master).
    */
   protected boolean receiveIgnoreExistingVertices() {
     return false;
