@@ -120,6 +120,11 @@ public class DefaultMessageClasses
   }
 
   @Override
+  public boolean ignoreExistingVertices() {
+    return false;
+  }
+
+  @Override
   public MessageEncodeAndStoreType getMessageEncodeAndStoreType() {
     return messageEncodeAndStoreType;
   }

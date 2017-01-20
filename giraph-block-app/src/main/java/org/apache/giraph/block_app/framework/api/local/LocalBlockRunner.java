@@ -37,6 +37,7 @@ import org.apache.giraph.block_app.framework.output.BlockOutputHandle;
 import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.graph.OnlyIdVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.partition.Partition;
@@ -247,32 +248,51 @@ public class LocalBlockRunner {
                 BlockWorkerLogic localLogic = new BlockWorkerLogic(localPieces);
                 localLogic.preSuperstep(internalWorkerApi, internalWorkerApi);
 
-                for (Vertex<I, V, E> vertex : partition) {
-                  Iterable messages = internalApi.takeMessages(vertex.getId());
-                  if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
-                    vertex.wakeUp();
-                  }
-                  // Equivalent of ComputeCallable.computePartition
-                  if (!vertex.isHalted()) {
-                    localLogic.compute(vertex, messages);
+                if (internalApi.ignoreExistingVertices()) {
+                  Iterable<I> destinations =
+                      internalApi.getPartitionDestinationVertices(
+                          partition.getId());
+                  if (!Iterables.isEmpty(destinations)) {
+                    OnlyIdVertex<I> vertex = new OnlyIdVertex<>();
 
-                    // Need to unwrap the mutated edges (possibly)
-                    vertex.unwrapMutableEdges();
-                    //Compact edges representation if possible
-                    if (vertex instanceof Trimmable) {
-                      ((Trimmable) vertex).trim();
-                    }
-                    // Write vertex to superstep output
-                    // (no-op if it is not used)
-                    if (doOutputDuringComputation) {
-                      vertexSaver.writeVertex(vertex);
-                    }
-                    // Need to save the vertex changes (possibly)
-                    partition.saveVertex(vertex);
-                  }
+                    for (I vertexId : destinations) {
+                      Iterable messages = internalApi.takeMessages(vertexId);
+                      Preconditions.checkState(!Iterables.isEmpty(messages));
+                      vertex.setId(vertexId);
+                      localLogic.compute(vertex, messages);
 
-                  if (!vertex.isHalted()) {
-                    anyCurVertexAlive = true;
+                      anyCurVertexAlive = true;
+                    }
+                  }
+                } else {
+                  for (Vertex<I, V, E> vertex : partition) {
+                    Iterable messages =
+                        internalApi.takeMessages(vertex.getId());
+                    if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
+                      vertex.wakeUp();
+                    }
+                    // Equivalent of ComputeCallable.computePartition
+                    if (!vertex.isHalted()) {
+                      localLogic.compute(vertex, messages);
+
+                      // Need to unwrap the mutated edges (possibly)
+                      vertex.unwrapMutableEdges();
+                      //Compact edges representation if possible
+                      if (vertex instanceof Trimmable) {
+                        ((Trimmable) vertex).trim();
+                      }
+                      // Write vertex to superstep output
+                      // (no-op if it is not used)
+                      if (doOutputDuringComputation) {
+                        vertexSaver.writeVertex(vertex);
+                      }
+                      // Need to save the vertex changes (possibly)
+                      partition.saveVertex(vertex);
+                    }
+
+                    if (!vertex.isHalted()) {
+                      anyCurVertexAlive = true;
+                    }
                   }
                 }
 

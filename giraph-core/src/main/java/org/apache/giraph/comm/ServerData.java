@@ -18,14 +18,13 @@
 
 package org.apache.giraph.comm;
 
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
@@ -40,10 +39,10 @@ import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.data.DiskBackedEdgeStore;
 import org.apache.giraph.ooc.data.DiskBackedMessageStore;
 import org.apache.giraph.ooc.data.DiskBackedPartitionStore;
-import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.SimplePartitionStore;
@@ -53,7 +52,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 /**
  * Anything that the server stores
@@ -392,6 +392,9 @@ public class ServerData<I extends WritableComparable,
     ConcurrentMap<I, VertexMutations<I, V, E>> prevPartitionMutations =
         oldPartitionMutations.get(partitionId);
 
+    boolean ignoreExistingVertices =
+        conf.getIncomingMessageClasses().ignoreExistingVertices();
+
     // Resolve mutations that are explicitly sent for this partition
     if (prevPartitionMutations != null) {
       for (Map.Entry<I, VertexMutations<I, V, E>> entry : prevPartitionMutations
@@ -401,6 +404,7 @@ public class ServerData<I extends WritableComparable,
         VertexMutations<I, V, E> vertexMutations = entry.getValue();
         Vertex<I, V, E> vertex = vertexResolver.resolve(vertexId,
             originalVertex, vertexMutations,
+            !ignoreExistingVertices &&
             getCurrentMessageStore().hasMessagesForVertex(entry.getKey()));
 
         if (LOG.isDebugEnabled()) {
@@ -416,34 +420,39 @@ public class ServerData<I extends WritableComparable,
           partition.putVertex(vertex);
         } else if (originalVertex != null) {
           partition.removeVertex(vertexId);
-          getCurrentMessageStore().clearVertexMessages(vertexId);
+          if (!ignoreExistingVertices) {
+            getCurrentMessageStore().clearVertexMessages(vertexId);
+          }
         }
         context.progress();
       }
     }
 
-    // Keep track of vertices which are not here in the partition, but have
-    // received messages
-    Iterable<I> destinations = getCurrentMessageStore().
-        getPartitionDestinationVertices(partitionId);
-    if (!Iterables.isEmpty(destinations)) {
-      for (I vertexId : destinations) {
-        if (partition.getVertex(vertexId) == null) {
-          Vertex<I, V, E> vertex =
-              vertexResolver.resolve(vertexId, null, null, true);
+    if (!ignoreExistingVertices) {
+      // Keep track of vertices which are not here in the partition, but have
+      // received messages
+      Iterable<I> destinations = getCurrentMessageStore().
+          getPartitionDestinationVertices(partitionId);
+      if (!Iterables.isEmpty(destinations)) {
+        for (I vertexId : destinations) {
+          if (partition.getVertex(vertexId) == null) {
+            Vertex<I, V, E> vertex =
+                vertexResolver.resolve(vertexId, null, null, true);
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("resolvePartitionMutations: A non-existing vertex has " +
-                "message(s). Added vertex index " + vertexId +
-                " in partition index " + partitionId +
-                ", vertex = " + vertex + ", on superstep " +
-                serviceWorker.getSuperstep());
-          }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                  "resolvePartitionMutations: A non-existing vertex has " +
+                  "message(s). Added vertex index " + vertexId +
+                  " in partition index " + partitionId +
+                  ", vertex = " + vertex + ", on superstep " +
+                  serviceWorker.getSuperstep());
+            }
 
-          if (vertex != null) {
-            partition.putVertex(vertex);
+            if (vertex != null) {
+              partition.putVertex(vertex);
+            }
+            context.progress();
           }
-          context.progress();
         }
       }
     }

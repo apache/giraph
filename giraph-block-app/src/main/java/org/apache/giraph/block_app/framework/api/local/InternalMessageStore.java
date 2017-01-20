@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.block_app.framework.api.local;
 
-import com.google.common.collect.Iterators;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,6 +33,8 @@ import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.common.collect.Iterators;
+
 /**
  * Interface for internal message store, used by LocalBlockRunner
  *
@@ -50,6 +50,7 @@ interface InternalMessageStore
   void sendMessage(I id, M message);
   void sendMessageToMultipleEdges(Iterator<I> idIter, M message);
   void finalizeStore();
+  Iterable<I> getPartitionDestinationVertices(int partitionId);
 
   /**
    * A wrapper that uses InMemoryMessageStoreFactory to
@@ -64,7 +65,7 @@ interface InternalMessageStore
     private final MessageStore<I, M> messageStore;
     private final PartitionSplitInfo<I> partitionInfo;
 
-    public InternalWrappedMessageStore(
+    private InternalWrappedMessageStore(
       ImmutableClassesGiraphConfiguration<I, ?, ?> conf,
       MessageStore<I, M> messageStore,
       PartitionSplitInfo<I> partitionInfo
@@ -110,6 +111,11 @@ interface InternalMessageStore
       Iterable<M> result = messageStore.getVertexMessages(id);
       messageStore.clearVertexMessages(id);
       return result;
+    }
+
+    @Override
+    public Iterable<I> getPartitionDestinationVertices(int partitionId) {
+      return messageStore.getPartitionDestinationVertices(partitionId);
     }
 
     @Override
@@ -213,6 +219,11 @@ interface InternalMessageStore
     @Override
     public Iterator<I> targetVertexIds() {
       return messageStore.targetVertexIds();
+    }
+
+    @Override
+    public Iterable<I> getPartitionDestinationVertices(int partitionId) {
+      return messageStore.getPartitionDestinationVertices(partitionId);
     }
 
     @Override

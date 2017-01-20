@@ -27,6 +27,7 @@ import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.function.primitive.PrimitiveRefs.LongRef;
 import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricNames;
@@ -46,8 +47,10 @@ import org.apache.giraph.worker.WorkerThreadGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.yammer.metrics.core.Counter;
@@ -184,8 +187,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       startGCTime = taskManager.getSuperstepGCTime();
       try {
         serviceWorker.getServerData().resolvePartitionMutation(partition);
-        PartitionStats partitionStats =
-            computePartition(computation, partition, oocEngine);
+        PartitionStats partitionStats = computePartition(
+            computation, partition, oocEngine,
+            serviceWorker.getConfiguration().getIncomingMessageClasses()
+              .ignoreExistingVertices());
         partitionStatsList.add(partitionStats);
         long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
         partitionStats.addMessagesSentCount(partitionMsgs);
@@ -262,64 +267,96 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
    * @param computation Computation to use
    * @param partition Partition to compute
    * @param oocEngine out-of-core engine
+   * @param ignoreExistingVertices whether to ignore existing vertices
    * @return Partition stats for this computed partition
    */
   private PartitionStats computePartition(
       Computation<I, V, E, M1, M2> computation,
-      Partition<I, V, E> partition, OutOfCoreEngine oocEngine)
+      Partition<I, V, E> partition, OutOfCoreEngine oocEngine,
+      boolean ignoreExistingVertices)
       throws IOException, InterruptedException {
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
-    long verticesComputedProgress = 0;
-    // Make sure this is thread-safe across runs
-    synchronized (partition) {
-      int count = 0;
-      for (Vertex<I, V, E> vertex : partition) {
-        // If out-of-core mechanism is used, check whether this thread
-        // can stay active or it should temporarily suspend and stop
-        // processing and generating more data for the moment.
-        if (oocEngine != null &&
-            (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
-          oocEngine.activeThreadCheckIn();
-        }
-        Iterable<M1> messages = messageStore.getVertexMessages(vertex.getId());
-        if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
-          vertex.wakeUp();
-        }
-        if (!vertex.isHalted()) {
-          context.progress();
-          computation.compute(vertex, messages);
-          // Need to unwrap the mutated edges (possibly)
-          vertex.unwrapMutableEdges();
-          //Compact edges representation if possible
-          if (vertex instanceof Trimmable) {
-            ((Trimmable) vertex).trim();
-          }
-          // Write vertex to superstep output (no-op if it is not used)
-          vertexWriter.writeVertex(vertex);
-          // Need to save the vertex changes (possibly)
-          partition.saveVertex(vertex);
-        }
-        if (vertex.isHalted()) {
-          partitionStats.incrFinishedVertexCount();
-        }
-        // Remove the messages now that the vertex has finished computation
-        messageStore.clearVertexMessages(vertex.getId());
-
-        // Add statistics for this vertex
-        partitionStats.incrVertexCount();
-        partitionStats.addEdgeCount(vertex.getNumEdges());
-
-        verticesComputedProgress++;
-        if (verticesComputedProgress == VERTICES_TO_UPDATE_PROGRESS) {
-          WorkerProgress.get().addVerticesComputed(verticesComputedProgress);
-          verticesComputedProgress = 0;
+    final LongRef verticesComputedProgress = new LongRef(0);
+    Progressable verticesProgressable = new Progressable() {
+      @Override
+      public void progress() {
+        verticesComputedProgress.value++;
+        if (verticesComputedProgress.value == VERTICES_TO_UPDATE_PROGRESS) {
+          WorkerProgress.get().addVerticesComputed(
+              verticesComputedProgress.value);
+          verticesComputedProgress.value = 0;
         }
       }
+    };
+    // Make sure this is thread-safe across runs
+    synchronized (partition) {
+      if (ignoreExistingVertices) {
+        Iterable<I> destinations =
+            messageStore.getPartitionDestinationVertices(partition.getId());
+        if (!Iterables.isEmpty(destinations)) {
+          OnlyIdVertex<I> vertex = new OnlyIdVertex<>();
 
+          for (I vertexId : destinations) {
+            Iterable<M1> messages = messageStore.getVertexMessages(vertexId);
+            Preconditions.checkState(!Iterables.isEmpty(messages));
+            vertex.setId(vertexId);
+            computation.compute((Vertex) vertex, messages);
+
+            // Remove the messages now that the vertex has finished computation
+            messageStore.clearVertexMessages(vertexId);
+
+            // Add statistics for this vertex
+            partitionStats.incrVertexCount();
+
+            verticesProgressable.progress();
+          }
+        }
+      } else {
+        int count = 0;
+        for (Vertex<I, V, E> vertex : partition) {
+          // If out-of-core mechanism is used, check whether this thread
+          // can stay active or it should temporarily suspend and stop
+          // processing and generating more data for the moment.
+          if (oocEngine != null &&
+              (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+            oocEngine.activeThreadCheckIn();
+          }
+          Iterable<M1> messages =
+              messageStore.getVertexMessages(vertex.getId());
+          if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
+            vertex.wakeUp();
+          }
+          if (!vertex.isHalted()) {
+            context.progress();
+            computation.compute(vertex, messages);
+            // Need to unwrap the mutated edges (possibly)
+            vertex.unwrapMutableEdges();
+            //Compact edges representation if possible
+            if (vertex instanceof Trimmable) {
+              ((Trimmable) vertex).trim();
+            }
+            // Write vertex to superstep output (no-op if it is not used)
+            vertexWriter.writeVertex(vertex);
+            // Need to save the vertex changes (possibly)
+            partition.saveVertex(vertex);
+          }
+          if (vertex.isHalted()) {
+            partitionStats.incrFinishedVertexCount();
+          }
+          // Remove the messages now that the vertex has finished computation
+          messageStore.clearVertexMessages(vertex.getId());
+
+          // Add statistics for this vertex
+          partitionStats.incrVertexCount();
+          partitionStats.addEdgeCount(vertex.getNumEdges());
+
+          verticesProgressable.progress();
+        }
+      }
       messageStore.clearPartition(partition.getId());
     }
-    WorkerProgress.get().addVerticesComputed(verticesComputedProgress);
+    WorkerProgress.get().addVerticesComputed(verticesComputedProgress.value);
     WorkerProgress.get().incrementPartitionsComputed();
     return partitionStats;
   }
