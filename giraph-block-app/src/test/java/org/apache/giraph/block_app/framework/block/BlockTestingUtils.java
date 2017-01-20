@@ -18,7 +18,6 @@
 package org.apache.giraph.block_app.framework.block;
 
 import static org.junit.Assert.assertEquals;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +29,8 @@ import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class BlockTestingUtils {
 
@@ -38,11 +39,13 @@ public class BlockTestingUtils {
   private static final int NUM_TRIALS = 10;
   private static final int REPEAT_TIMES = 10;
 
-  private static int testSequential(Iterator<? extends AbstractPiece> referenceImpl,
-                                    Iterator<? extends AbstractPiece> testImpl) {
+  public static int testSequential(
+      Iterable<? extends AbstractPiece> referenceImpl,
+      Iterable<? extends AbstractPiece> testImpl) {
     int length = 0;
 
-    CheckIterator checkIterator = new CheckIterator(referenceImpl, testImpl);
+    CheckIterator checkIterator = new CheckIterator(
+        referenceImpl.iterator(), testImpl.iterator());
     while (checkIterator.hasNext()) {
       checkIterator.next();
       length++;
@@ -99,7 +102,7 @@ public class BlockTestingUtils {
    */
   public static void testIndependence(Iterable<? extends AbstractPiece> referenceImpl,
                                       Iterable<? extends AbstractPiece> testImpl) {
-    int length = testSequential(referenceImpl.iterator(), testImpl.iterator());
+    int length = testSequential(referenceImpl, testImpl);
     testRandom(length, referenceImpl, testImpl);
   }
 
