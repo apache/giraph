@@ -82,6 +82,23 @@ public class Pieces {
   }
 
   /**
+   * Execute given function on master.
+   */
+  public static
+  Piece<WritableComparable, Writable,  Writable, NoMessage,
+    Object> masterCompute(
+      final String pieceName, final Consumer<BlockMasterApi> process) {
+    return new Piece<WritableComparable, Writable,  Writable, NoMessage,
+        Object>() {
+      @Override
+      public void masterCompute(
+          BlockMasterApi masterApi, Object executionStage) {
+        process.apply(masterApi);
+      }
+    };
+  }
+
+  /**
    * For each vertex execute given process function.
    * Computation is happening in the receive phase of the returned Piece.
    * This function should be used if you need returned Piece to interact with

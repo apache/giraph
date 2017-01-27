@@ -26,6 +26,7 @@ import java.util.Iterator;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.function.Supplier;
+import org.apache.giraph.function.primitive.PrimitiveRefs.IntRef;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -56,6 +57,35 @@ public class TestRepeatUntilBlock {
     );
     BlockTestingUtils.testIndependence(
       Iterables.concat(Collections.nCopies(REPEAT_TIMES, Arrays.asList(piece1, piece2))),
+      repeatBlock);
+  }
+
+  @Test
+  public void testRepeatUntilBlockBasicExit() throws Exception {
+    testRepeatUntilBlockBasicExit(1, 1);
+    testRepeatUntilBlockBasicExit(1, 3);
+    testRepeatUntilBlockBasicExit(3, 1);
+    testRepeatUntilBlockBasicExit(3, 2);
+    testRepeatUntilBlockBasicExit(4, 7);
+  }
+
+  private void testRepeatUntilBlockBasicExit(int inner, int outer) {
+    final IntRef counter = new IntRef(outer + 1);
+    Supplier<Boolean> countDown = new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        counter.value--;
+        return counter.value == 0;
+      }
+    };
+    Piece piece = new Piece();
+    Block repeatBlock = new RepeatUntilBlock(
+      outer + 4,
+      new RepeatBlock(inner, piece),
+      countDown
+    );
+    BlockTestingUtils.testSequential(
+      Iterables.concat(Collections.nCopies(outer * inner, piece)),
       repeatBlock);
   }
 

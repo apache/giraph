@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.block_app.framework.block;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
@@ -25,7 +24,7 @@ import org.apache.giraph.function.Consumer;
 import org.apache.giraph.function.Supplier;
 
 import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 
 /**
  * Block that repeats another block until toQuit supplier returns true,
@@ -56,19 +55,18 @@ public final class RepeatUntilBlock implements Block {
 
   @Override
   public Iterator<AbstractPiece> iterator() {
-    // nCopies uses constant memory, creating a looped list with single element
-    final Iterator<AbstractPiece> repeatIterator =
-        Iterables.concat(Collections.nCopies(repeatTimes, block)).iterator();
-    return new AbstractIterator<AbstractPiece>() {
+    return Iterators.concat(new AbstractIterator<Iterator<AbstractPiece>>() {
+      private int index = 0;
+
       @Override
-      protected AbstractPiece computeNext() {
-        if (Boolean.TRUE.equals(toQuit.get()) || !repeatIterator.hasNext()) {
+      protected Iterator<AbstractPiece> computeNext() {
+        if (index >= repeatTimes || Boolean.TRUE.equals(toQuit.get())) {
           return endOfData();
         }
-
-        return repeatIterator.next();
+        index++;
+        return block.iterator();
       }
-    };
+    });
   }
 
   @Override

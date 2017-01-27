@@ -22,12 +22,19 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.api.CreateReducersApi;
 import org.apache.giraph.block_app.framework.api.local.LocalBlockRunner;
+import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.RepeatUntilBlock;
+import org.apache.giraph.block_app.framework.block.SequenceBlock;
 import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.block_app.framework.piece.global_comm.ReducerHandle;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
+import org.apache.giraph.block_app.library.Pieces;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.function.Consumer;
+import org.apache.giraph.function.ObjectTransfer;
+import org.apache.giraph.function.primitive.PrimitiveRefs.IntRef;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.reducers.impl.SumReduce;
 import org.apache.giraph.types.NoMessage;
@@ -175,4 +182,29 @@ public class BlockExecutionTest {
     Assert.assertNull(graph.getVertex(new LongWritable(3)));
     Assert.assertNotNull(graph.getVertex(new LongWritable(4)));
   }
+
+  @Test
+  public void testRepeatUntilBlockFinishCurrentLoop() throws Exception {
+    final ObjectTransfer<Boolean> toQuit = new ObjectTransfer<>();
+    final IntRef counter = new IntRef(5);
+    Block counterPiece = Pieces.masterCompute("Count", new Consumer<BlockMasterApi>() {
+      @Override
+      public void apply(BlockMasterApi input) {
+        counter.value--;
+        if (counter.value == 0) {
+          toQuit.apply(true);
+        }
+      }
+    });
+    Block innerBlock = new SequenceBlock(counterPiece, counterPiece, counterPiece, counterPiece);
+    Block repeatBlock = RepeatUntilBlock.unlimited(
+      innerBlock,
+      toQuit
+    );
+
+    LocalBlockRunner.runBlock(createTestGraph(), repeatBlock, new Object());
+
+    Assert.assertEquals(-3, counter.value);
+  }
+
 }
