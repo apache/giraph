@@ -41,67 +41,78 @@ under the License.
     </section>
  
     <section name="Research Articles">
-         <p>Avery Ching, Sergey Edunov, Maja Kabiljo, Dionysios Logothetis, Sambavi Muthukrishnan, <i>One Trillion Edges: Graph Processing at Facebook-Scale</i>. 
-         Proceedings of the VLDB Endowment, Vol. 8, No. 12, (2015)
-         <br/>
-         <a href="http://www.vldb.org/pvldb/vol8/p1804-ching.pdf">http://www.vldb.org/pvldb/vol8/p1804-ching.pdf</a>
-         </p>
+	    
+	<p>A. Arleo, W. Didimo, G. Liotta, and F. Montecchiani, <i>Large graph visualizations using a distributed computing platform</i>.
+        	Information Sciences, Volume 381, March 2017, Pages 124-141. (2017)<br/>
+        	<a href="http://dx.doi.org/10.1016/j.ins.2016.11.012">http://dx.doi.org/10.1016/j.ins.2016.11.012</a>
+        </p>
+	
+	<p>A. Arleo, W. Didimo, G. Liotta, and F. Montecchiani, <i>A Distributed Multilevel Force-Directed Algorithm</i>. 
+		In: Hu Y., Nöllenburg M. (eds) Graph Drawing and Network Visualization. GD 2016. Lecture Notes in Computer Science, vol 9801. Springer. (2016)
+		<a href="http://link.springer.com/chapter/10.1007/978-3-319-50106-2_1">http://link.springer.com/chapter/10.1007/978-3-319-50106-2_1</a>
+	</p>
+        
+	<p>A. Arleo, W. Didimo, G. Liotta, and F. Montecchiani, <i>A Million edge drawing for a Fistful of dollars</i>.
+        	In: Di Giacomo E., Lubiw A. (eds) Graph Drawing and Network Visualization. Lecture Notes in Computer Science, vol 9411. Springer. (2015)<br/>
+        	<a href="http://link.springer.com/chapter/10.1007/978-3-319-27261-0_4">http://link.springer.com/chapter/10.1007/978-3-319-27261-0_4</a>
+        </p>
+	    
+        <p>Avery Ching, Sergey Edunov, Maja Kabiljo, Dionysios Logothetis, Sambavi Muthukrishnan, <i>One Trillion Edges: Graph Processing at Facebook-Scale</i>. 
+        	Proceedings of the VLDB Endowment, Vol. 8, No. 12, (2015)<br/>
+        	<a href="http://www.vldb.org/pvldb/vol8/p1804-ching.pdf">http://www.vldb.org/pvldb/vol8/p1804-ching.pdf</a>
+        </p>
 		
-	   	<p>Xin, R. S., Crankshaw, D., Dave, A., Gonzalez, J. E., Franklin, M. J., &amp; Stoica, I. <i>GraphX: Unifying Data-Parallel and Graph-Parallel Analytics</i>. 
+	<p>Xin, R. S., Crankshaw, D., Dave, A., Gonzalez, J. E., Franklin, M. J., &amp; Stoica, I. <i>GraphX: Unifying Data-Parallel and Graph-Parallel Analytics</i>. 
 		arXiv preprint arXiv:1402.2394. (2014)<br/>
-         <a href="http://arxiv.org/pdf/1402.2394">http://arxiv.org/pdf/1402.2394</a>
-         </p>
+        	<a href="http://arxiv.org/pdf/1402.2394">http://arxiv.org/pdf/1402.2394</a>
+        </p>
 		
-		<p>Martella, Claudio et al. <i>Spinner: scalable graph partitioning for the cloud.</i> arXiv, (2014). <br/>
+	<p>Martella, Claudio et al. <i>Spinner: scalable graph partitioning for the cloud.</i> arXiv, (2014). <br/>
 		<a href="http://arxiv.org/pdf/1404.3861v1.pdf">http://arxiv.org/pdf/1404.3861v1.pdf</a>
         </p>
 		
         <p>Khayyat, Zuhair, et al. <i>Mizan: a system for dynamic load balancing in large-scale graph processing.</i> 
-        Proceedings of the 8th ACM European Conference on Computer Systems. ACM, (2013). <br/>
-        <a href="http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf">http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf</a>
+        	Proceedings of the 8th ACM European Conference on Computer Systems. ACM, (2013). <br/>
+        	<a href="http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf">http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf</a>
         </p>
 		
         <p>Salihoglu, Semih, &amp; Jennifer Widom. <i>Gps: A graph processing system.</i> 
-        Proceedings of the 25th International Conference on Scientific and Statistical Database Management. ACM, (2013).<br/>
-        <a href="http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf">http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf</a>
+        	Proceedings of the 25th International Conference on Scientific and Statistical Database Management. ACM, (2013).<br/>
+        	<a href="http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf">http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf</a>
         </p>		
 		
-		<p>Tian, Y., Balmin, A., Corsten, S. A., Tatikonda, S., &amp; McPherson, J. <i>From <b>Think Like a Vertex</b> to <b>Think Like a Graph</b></i>. 
+	<p>Tian, Y., Balmin, A., Corsten, S. A., Tatikonda, S., &amp; McPherson, J. <i>From <b>Think Like a Vertex</b> to <b>Think Like a Graph</b></i>. 
 		Proceedings of the VLDB Endowment, 7(3). (2013)<br/>
         <a href="http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf">http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf</a>
         </p>
  
-		<p>Schelter, S., Ewen, S., Tzoumas, K., &amp; Markl, V. <i>All roads lead to Rome: optimistic recovery for distributed iterative data processing</i>. 
+	<p>Schelter, S., Ewen, S., Tzoumas, K., &amp; Markl, V. <i>All roads lead to Rome: optimistic recovery for distributed iterative data processing</i>. 
 		In Proceedings of the 22nd ACM international conference on Conference on information &amp; knowledge management (pp. 1919-1928). ACM. (2013, October).<br/>
          <a href="http://stratosphere.eu/assets/papers/optimistic.pdf">http://stratosphere.eu/assets/papers/optimistic.pdf</a>
          </p>
  
         <p>Ewen, S., Tzoumas, K., Kaufmann, M., &amp; Markl, V. <i>Spinning fast iterative data flows</i>. Proceedings of the VLDB Endowment, 5(11), 1268-1279. (2012).<br/>
-         <a href="http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail">http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail</a>
+        	<a href="http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail">http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail</a>
         </p>
 		
-		<p>Malewicz, Grzegorz, et al. <i>Pregel: a system for large-scale graph processing.</i> Proceedings of the 2010 ACM SIGMOD International Conference on Management of data. ACM, (2010). <br/>
+	<p>Malewicz, Grzegorz, et al. <i>Pregel: a system for large-scale graph processing.</i> Proceedings of the 2010 ACM SIGMOD International Conference on Management of data. ACM, (2010). <br/>
 		<a href="http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf">http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf</a>
-		</p>
+	</p>
 				
      	<p>Valiant, Leslie G. <i>A bridging model for parallel computation.</i> Communications of the ACM 33.8 : 103-111. (1990).<br/>
 	    <a href="http://web.mit.edu/6.976/www/handout/valiant2.pdf">http://web.mit.edu/6.976/www/handout/valiant2.pdf</a>
 		</p>
-		
-		
-		
-		
-		<p>Hong, Sungpack, et al. <i>Green-Marl: a DSL for easy and efficient graph analysis.</i> ACM SIGARCH Computer Architecture News. Vol. 40. No. 1. ACM, (2012). <br/>
+	<p>Hong, Sungpack, et al. <i>Green-Marl: a DSL for easy and efficient graph analysis.</i> ACM SIGARCH Computer Architecture News. Vol. 40. No. 1. ACM, (2012). <br/>
 		<a href="http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf">http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf</a>
-	    </p>
+  	</p>
 	    
-		<p>Salihoglu, Semih, and Jennifer Widom. <i>Optimizing Graph Algorithms on Pregel-like Systems.</i> (2014). <br/>
-		<a href="http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf">http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf</a>
-		</p>
+	<p>Salihoglu, Semih, and Jennifer Widom. <i>Optimizing Graph Algorithms on Pregel-like Systems.</i> (2014). <br/>
+		<a href="http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf">http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf</a>	
+	</p>
 		
-		<p>Salihoglu, Semih, and Jennifer Widom. <i>HelP: High-level Primitives For Large-Scale Graph Processing.</i> <br/>
+	<p>Salihoglu, Semih, and Jennifer Widom. <i>HelP: High-level Primitives For Large-Scale Graph Processing.</i> <br/>
 		<a href="http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf">http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf</a>
- 		</p>
+ 	</p>
  		
      </section>
 
