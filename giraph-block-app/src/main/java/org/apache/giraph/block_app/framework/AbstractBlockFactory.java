@@ -97,7 +97,7 @@ public abstract class AbstractBlockFactory<S> implements BlockFactory<S> {
       } else {
         TypeOps<?> edgeValueTypeOps =
             TypeOpsUtils.getTypeOpsOrNull(edgeValueClass);
-        if (edgeValueTypeOps != null) {
+        if (edgeValueTypeOps != null && idTypeOps != null) {
           GiraphConstants.VERTEX_EDGES_CLASS.set(
               conf, IdAndValueArrayEdges.class);
         }
