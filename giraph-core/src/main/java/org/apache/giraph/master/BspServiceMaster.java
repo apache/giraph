@@ -863,7 +863,9 @@ public class BspServiceMaster<I extends WritableComparable,
           return isMaster;
         }
         LOG.info("becomeMaster: Waiting to become the master...");
-        getMasterElectionChildrenChangedEvent().waitForever();
+        getMasterElectionChildrenChangedEvent().waitForeverOrFail(
+            GiraphConstants.WAIT_FOREVER_ZOOKEEPER_TIMEOUT_MSEC.get(
+                getConfiguration()));
         getMasterElectionChildrenChangedEvent().reset();
       } catch (KeeperException e) {
         throw new IllegalStateException(
@@ -1832,7 +1834,9 @@ public class BspServiceMaster<I extends WritableComparable,
         return;
       }
 
-      getCleanedUpChildrenChangedEvent().waitForever();
+      getCleanedUpChildrenChangedEvent().waitForeverOrFail(
+          GiraphConstants.WAIT_FOREVER_ZOOKEEPER_TIMEOUT_MSEC.get(
+              getConfiguration()));
       getCleanedUpChildrenChangedEvent().reset();
     }
 
