@@ -448,7 +448,9 @@ public class BspServiceWorker<I extends WritableComparable,
       if (inputSplitsDoneStat != null) {
         break;
       }
-      getInputSplitsAllDoneEvent().waitForever();
+      getInputSplitsAllDoneEvent().waitForTimeoutOrFail(
+          GiraphConstants.WAIT_FOR_OTHER_WORKERS_TIMEOUT_MSEC.get(
+              getConfiguration()));
       getInputSplitsAllDoneEvent().reset();
     }
   }
@@ -647,7 +649,9 @@ else[HADOOP_NON_SECURE]*/
           "from previous failure): " + myHealthPath +
           ".  Waiting for change in attempts " +
           "to re-join the application");
-      getApplicationAttemptChangedEvent().waitForever();
+      getApplicationAttemptChangedEvent().waitForTimeoutOrFail(
+          GiraphConstants.WAIT_ZOOKEEPER_TIMEOUT_MSEC.get(
+              getConfiguration()));
       if (LOG.isInfoEnabled()) {
         LOG.info("registerHealth: Got application " +
             "attempt changed event, killing self");
@@ -868,7 +872,9 @@ else[HADOOP_NON_SECURE]*/
   private void waitForOtherWorkers(String superstepFinishedNode) {
     try {
       while (getZkExt().exists(superstepFinishedNode, true) == null) {
-        getSuperstepFinishedEvent().waitForever();
+        getSuperstepFinishedEvent().waitForTimeoutOrFail(
+            GiraphConstants.WAIT_FOR_OTHER_WORKERS_TIMEOUT_MSEC.get(
+                getConfiguration()));
         getSuperstepFinishedEvent().reset();
       }
     } catch (KeeperException e) {
@@ -1683,7 +1689,9 @@ else[HADOOP_NON_SECURE]*/
           LOG.info("exchangeVertexPartitions: Waiting for workers " +
               workerIdSet);
         }
-        getPartitionExchangeChildrenChangedEvent().waitForever();
+        getPartitionExchangeChildrenChangedEvent().waitForTimeoutOrFail(
+            GiraphConstants.WAIT_FOR_OTHER_WORKERS_TIMEOUT_MSEC.get(
+                getConfiguration()));
         getPartitionExchangeChildrenChangedEvent().reset();
       }
     } catch (KeeperException | InterruptedException e) {

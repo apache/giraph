@@ -281,7 +281,8 @@ public abstract class BspService<I extends WritableComparable,
                                  conf.getZookeeperOpsRetryWaitMsecs(),
                                  this,
                                  context);
-      connectedEvent.waitForever();
+      connectedEvent.waitForTimeoutOrFail(
+          GiraphConstants.WAIT_ZOOKEEPER_TIMEOUT_MSEC.get(conf));
       this.fs = FileSystem.get(getConfiguration());
     } catch (IOException e) {
       throw new RuntimeException(e);

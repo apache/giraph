@@ -88,6 +88,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.OutputFormat;
 
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -1238,5 +1239,27 @@ public interface GiraphConstants {
   BooleanConfOption PREFER_IP_ADDRESSES =
       new BooleanConfOption("giraph.preferIP", false,
       "Prefer IP addresses instead of host names");
+
+  /**
+   * Timeout for "waitForever", when we need to wait for zookeeper.
+   * Since we should never really have to wait forever.
+   * We should only wait some reasonable but large amount of time.
+   */
+  LongConfOption WAIT_ZOOKEEPER_TIMEOUT_MSEC =
+      new LongConfOption("giraph.waitZookeeperTimeoutMsec",
+          MINUTES.toMillis(15),
+          "How long should we stay in waitForever loops in various " +
+              "places that require network connection");
+
+  /**
+   * Timeout for "waitForever", when we need to wait for other workers
+   * to complete their job.
+   * Since we should never really have to wait forever.
+   * We should only wait some reasonable but large amount of time.
+   */
+  LongConfOption WAIT_FOR_OTHER_WORKERS_TIMEOUT_MSEC =
+      new LongConfOption("giraph.waitForOtherWorkersMsec",
+          HOURS.toMillis(48),
+          "How long should workers wait to finish superstep");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

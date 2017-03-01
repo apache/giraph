@@ -27,8 +27,6 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.time.Time;
-import org.apache.giraph.zk.BspEvent;
-import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -111,14 +109,14 @@ public class TestPredicateLock {
   }
 
   /**
-   * Thread signaled test for {@link PredicateLock#waitForever()}
+   * Thread signaled test for {@link PredicateLock#waitForTimeoutOrFail(long)}
    */
   @Test
   public void testWaitForever() {
     BspEvent event = new PredicateLock(getStubProgressable());
     Thread signalThread = new SignalThread(event);
     signalThread.start();
-    event.waitForever();
+    event.waitForTimeoutOrFail(5 * 60_000);
     try {
       signalThread.join();
     } catch (InterruptedException e) {
