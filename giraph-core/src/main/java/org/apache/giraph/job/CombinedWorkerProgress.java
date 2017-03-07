@@ -20,6 +20,7 @@ package org.apache.giraph.job;
 
 import com.google.common.collect.Iterables;
 import org.apache.giraph.conf.FloatConfOption;
+import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.worker.WorkerProgressStats;
 import org.apache.hadoop.conf.Configuration;
@@ -71,15 +72,19 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
   private int minGraphPercentageInMemory = 100;
   /** Id of the worker with min percentage of graph in memory */
   private int workerWithMinGraphPercentageInMemory = -1;
+  /** Master progress */
+  private MasterProgress masterProgress;
 
   /**
    * Constructor
    *
    * @param workerProgresses Worker progresses to combine
+   * @param masterProgress Master progress
    * @param conf Configuration
    */
   public CombinedWorkerProgress(Iterable<WorkerProgress> workerProgresses,
-      Configuration conf) {
+      MasterProgress masterProgress, Configuration conf) {
+    this.masterProgress = masterProgress;
     normalFreeMemoryFraction = NORMAL_FREE_MEMORY_FRACTION.get(conf);
     for (WorkerProgress workerProgress : workerProgresses) {
       if (workerProgress.getCurrentSuperstep() > currentSuperstep) {
@@ -151,11 +156,26 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
     sb.append("Data from ").append(workersInSuperstep).append(" workers - ");
     if (isInputSuperstep()) {
       sb.append("Loading data: ");
-      sb.append(verticesLoaded).append(" vertices loaded, ");
-      sb.append(vertexInputSplitsLoaded).append(
-          " vertex input splits loaded; ");
-      sb.append(edgesLoaded).append(" edges loaded, ");
-      sb.append(edgeInputSplitsLoaded).append(" edge input splits loaded");
+      if (!masterProgress.vertexInputSplitsSet() ||
+          masterProgress.getVertexInputSplitCount() > 0) {
+        sb.append(verticesLoaded).append(" vertices loaded, ");
+        sb.append(vertexInputSplitsLoaded).append(
+            " vertex input splits loaded");
+        if (masterProgress.getVertexInputSplitCount() > 0) {
+          sb.append(" (out of ").append(
+              masterProgress.getVertexInputSplitCount()).append(")");
+        }
+        sb.append("; ");
+      }
+      if (!masterProgress.edgeInputSplitsSet() ||
+          masterProgress.getEdgeInputSplitsCount() > 0) {
+        sb.append(edgesLoaded).append(" edges loaded, ");
+        sb.append(edgeInputSplitsLoaded).append(" edge input splits loaded");
+        if (masterProgress.getEdgeInputSplitsCount() > 0) {
+          sb.append(" (out of ").append(
+              masterProgress.getEdgeInputSplitsCount()).append(")");
+        }
+      }
     } else if (isComputeSuperstep()) {
       sb.append("Compute superstep ").append(currentSuperstep).append(": ");
       sb.append(verticesComputed).append(" out of ").append(

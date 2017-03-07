@@ -659,24 +659,28 @@ public class BspServiceMaster<I extends WritableComparable,
 
   @Override
   public int createVertexInputSplits() {
-    // Short-circuit if there is no vertex input format
-    if (!getConfiguration().hasVertexInputFormat()) {
-      return 0;
+    int splits = 0;
+    if (getConfiguration().hasVertexInputFormat()) {
+      VertexInputFormat<I, V, E> vertexInputFormat =
+          getConfiguration().createWrappedVertexInputFormat();
+      splits = createInputSplits(vertexInputFormat, InputType.VERTEX);
     }
-    VertexInputFormat<I, V, E> vertexInputFormat =
-        getConfiguration().createWrappedVertexInputFormat();
-    return createInputSplits(vertexInputFormat, InputType.VERTEX);
+    MasterProgress.get().setVertexInputSplitCount(splits);
+    getJobProgressTracker().updateMasterProgress(MasterProgress.get());
+    return splits;
   }
 
   @Override
   public int createEdgeInputSplits() {
-    // Short-circuit if there is no edge input format
-    if (!getConfiguration().hasEdgeInputFormat()) {
-      return 0;
+    int splits = 0;
+    if (getConfiguration().hasEdgeInputFormat()) {
+      EdgeInputFormat<I, E> edgeInputFormat =
+          getConfiguration().createWrappedEdgeInputFormat();
+      splits = createInputSplits(edgeInputFormat, InputType.EDGE);
     }
-    EdgeInputFormat<I, E> edgeInputFormat =
-        getConfiguration().createWrappedEdgeInputFormat();
-    return createInputSplits(edgeInputFormat, InputType.EDGE);
+    MasterProgress.get().setEdgeInputSplitsCount(splits);
+    getJobProgressTracker().updateMasterProgress(MasterProgress.get());
+    return splits;
   }
 
   @Override
