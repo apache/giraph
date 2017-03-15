@@ -625,7 +625,8 @@ end[PURE_YARN]*/
       }
       serviceMaster = new BspServiceMaster<I, V, E>(context, this);
       masterThread = new MasterThread<I, V, E>(serviceMaster, context);
-      masterThread.setUncaughtExceptionHandler(createUncaughtExceptionHandler());
+      masterThread.setUncaughtExceptionHandler(
+          createUncaughtExceptionHandler());
       masterThread.start();
     }
     if (graphFunctions.isWorker()) {
