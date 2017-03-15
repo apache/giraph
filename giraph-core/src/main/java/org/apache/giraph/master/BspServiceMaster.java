@@ -1835,7 +1835,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
 
       getCleanedUpChildrenChangedEvent().waitForTimeoutOrFail(
-          GiraphConstants.WAIT_ZOOKEEPER_TIMEOUT_MSEC.get(
+          GiraphConstants.WAIT_FOR_OTHER_WORKERS_TIMEOUT_MSEC.get(
               getConfiguration()));
       getCleanedUpChildrenChangedEvent().reset();
     }
