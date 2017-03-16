@@ -612,7 +612,11 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           double[] yValues =
               memorySamples.toDoubleArray(new double[memorySamples.size()]);
           mlr.newSampleData(yValues, xValues);
-          calculateRegression(coefficient, validColumnIndices, mlr);
+          boolean isRegressionValid = calculateRegression(coefficient, validColumnIndices, mlr);
+
+          if (!isRegressionValid) { // invalid regression result
+            return; // The finally-block at the end will release any locks.
+          }
 
           // After the computation of the regression, some coefficients may have
           // values outside the valid value range. In this case, we set the
@@ -653,8 +657,19 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           extreme[3] = -1;
           extreme[4] = -1;
           do {
-            changed = refineCoefficient(4, 1, 2, xValues, yValues);
-            changed |= refineCoefficient(3, 0, 2, xValues, yValues);
+            Boolean result = null;
+
+            result = refineCoefficient(4, 1, 2, xValues, yValues);
+            if (result == null) { // invalid regression result
+              return;  // finally-block will release lock
+            }
+            changed = result;
+
+            result = refineCoefficient(3, 0, 2, xValues, yValues);
+            if (result == null) { // invalid regression result
+              return;  // finally-block will release lock
+            }
+            changed |= result;
           } while (changed);
           if (extreme[3] != -1) {
             coefficient[3] = extreme[3];
@@ -706,12 +721,12 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
      * @param upperBound Upper bound
      * @param xValues double[][] matrix with data samples
      * @param yValues double[] matrix with y samples
-     * @return True if coefficients were out-of-range
+     * @return True if coefficients were out-of-range, false otherwise. A null value means the
+     *         regression result was invalid and the result of this method is invalid too.
      * @throws Exception
      */
-    private boolean refineCoefficient(int coefIndex, double lowerBound,
-      double upperBound, double[][] xValues, double[] yValues)
-      throws Exception {
+    private Boolean refineCoefficient(int coefIndex, double lowerBound,
+      double upperBound, double[][] xValues, double[] yValues) {
 
       boolean result = false;
       if (coefficient[coefIndex] < lowerBound ||
@@ -750,8 +765,10 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           extreme[coefIndex] = value;
           // re-run regression
           mlr.newSampleData(yValues, xValues);
-          calculateRegression(coefficient, validColumnIndices, mlr);
-          result = true;
+          result = calculateRegression(coefficient, validColumnIndices, mlr);
+          if (!result) { // invalid regression result
+            return null;
+          }
         } else {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
@@ -770,16 +787,17 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
      * @param coefficient Array of coefficients
      * @param validColumnIndices List of valid columns
      * @param mlr {@link OLSMultipleLinearRegression} instance.
+     * @return True if the result is valid, false otherwise.
      * @throws Exception
      */
-    private static void calculateRegression(double[] coefficient,
-      List<Integer> validColumnIndices, OLSMultipleLinearRegression mlr)
-      throws Exception {
+    private static boolean calculateRegression(double[] coefficient,
+      List<Integer> validColumnIndices, OLSMultipleLinearRegression mlr) {
 
       if (coefficient.length != validColumnIndices.size()) {
-        throw new Exception("There are " + coefficient.length +
+        LOG.warn("There are " + coefficient.length +
           " coefficients, but " + validColumnIndices.size() +
           " valid columns in the regression");
+        return false;
       }
 
       double[] beta = mlr.estimateRegressionParameters();
@@ -788,6 +806,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
         coefficient[validColumnIndices.get(i)] = beta[i];
       }
       coefficient[5] = beta[validColumnIndices.size()];
+      return true;
     }
 
     /**
