@@ -23,6 +23,7 @@ import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.giraph.comm.netty.NettyClient;
@@ -41,6 +42,8 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -166,6 +169,14 @@ public class CreditBasedFlowControl implements FlowControl {
   private final ConcurrentMap<Integer, Set<Long>> resumeRequestsId =
       Maps.newConcurrentMap();
   /**
+   * Queue of the cached requests to be sent out. The queue keeps pairs of
+   * (destination id, request). The thread-safe blocking queue is used here for
+   * the sake of simplicity. The blocking queue should be bounded (with bounds
+   * no more than user-defined max number of unsent/cached requests) to avoid
+   * excessive memory footprint.
+   */
+  private final BlockingQueue<Pair<Integer, WritableRequest>> toBeSent;
+  /**
    * Semaphore to control number of cached unsent requests. Maximum number of
    * permits of this semaphore should be equal to MAX_NUM_OF_UNSENT_REQUESTS.
    */
@@ -180,7 +191,7 @@ public class CreditBasedFlowControl implements FlowControl {
    * @param exceptionHandler Exception handler
    */
   public CreditBasedFlowControl(ImmutableClassesGiraphConfiguration conf,
-                                NettyClient nettyClient,
+                                final NettyClient nettyClient,
                                 Thread.UncaughtExceptionHandler
                                     exceptionHandler) {
     this.nettyClient = nettyClient;
@@ -189,10 +200,15 @@ public class CreditBasedFlowControl implements FlowControl {
     checkState(maxOpenRequestsPerWorker < 0x4000 &&
         maxOpenRequestsPerWorker > 0, "NettyClient: max number of open " +
         "requests should be in range (0, " + 0x4FFF + ")");
-    unsentRequestPermit = new Semaphore(MAX_NUM_OF_UNSENT_REQUESTS.get(conf));
+    int maxUnsentRequests = MAX_NUM_OF_UNSENT_REQUESTS.get(conf);
+    unsentRequestPermit = new Semaphore(maxUnsentRequests);
+    this.toBeSent = new ArrayBlockingQueue<Pair<Integer, WritableRequest>>(
+        maxUnsentRequests);
     unsentWaitMsecs = UNSENT_CACHE_WAIT_INTERVAL.get(conf);
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
-    Thread thread = new Thread(new Runnable() {
+
+    // Thread to handle/send resume signals when necessary
+    Thread resumeHandlerThread = new Thread(new Runnable() {
       @Override
       public void run() {
         while (true) {
@@ -215,10 +231,38 @@ public class CreditBasedFlowControl implements FlowControl {
         }
       }
     });
-    thread.setUncaughtExceptionHandler(exceptionHandler);
-    thread.setName("resume-sender");
-    thread.setDaemon(true);
-    thread.start();
+    resumeHandlerThread.setUncaughtExceptionHandler(exceptionHandler);
+    resumeHandlerThread.setName("resume-sender");
+    resumeHandlerThread.setDaemon(true);
+    resumeHandlerThread.start();
+
+    // Thread to handle/send cached requests
+    Thread cachedRequestHandlerThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        while (true) {
+          Pair<Integer, WritableRequest> pair = null;
+          try {
+            pair = toBeSent.take();
+          } catch (InterruptedException e) {
+            throw new IllegalStateException("run: failed while waiting to " +
+                "take an element from the request queue!", e);
+          }
+          int taskId = pair.getLeft();
+          WritableRequest request = pair.getRight();
+          nettyClient.doSend(taskId, request);
+          if (aggregateUnsentRequests.decrementAndGet() == 0) {
+            synchronized (aggregateUnsentRequests) {
+              aggregateUnsentRequests.notifyAll();
+            }
+          }
+        }
+      }
+    });
+    cachedRequestHandlerThread.setUncaughtExceptionHandler(exceptionHandler);
+    cachedRequestHandlerThread.setName("cached-req-sender");
+    cachedRequestHandlerThread.setDaemon(true);
+    cachedRequestHandlerThread.start();
   }
 
   /**
@@ -510,13 +554,14 @@ public class CreditBasedFlowControl implements FlowControl {
       }
       unsentRequestPermit.release();
       // At this point, we have a request, and we reserved a credit for the
-      // sender client. So, we send the request to the client and update
-      // the state.
-      nettyClient.doSend(taskId, request);
-      if (aggregateUnsentRequests.decrementAndGet() == 0) {
-        synchronized (aggregateUnsentRequests) {
-          aggregateUnsentRequests.notifyAll();
-        }
+      // sender client. So, we put the request in a queue to be sent to the
+      // client.
+      try {
+        toBeSent.put(
+            new ImmutablePair<Integer, WritableRequest>(taskId, request));
+      } catch (InterruptedException e) {
+        throw new IllegalStateException("trySendCachedRequests: failed while" +
+            "waiting to put element in send queue!", e);
       }
     }
   }
