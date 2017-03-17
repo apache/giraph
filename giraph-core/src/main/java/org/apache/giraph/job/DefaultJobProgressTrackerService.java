@@ -20,6 +20,7 @@ package org.apache.giraph.job;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.hadoop.mapreduce.Job;
@@ -28,6 +29,7 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Default implementation of JobProgressTrackerService
@@ -55,6 +57,9 @@ public class DefaultJobProgressTrackerService
   /** Map of worker progresses */
   private final Map<Integer, WorkerProgress> workerProgresses =
       new ConcurrentHashMap<>();
+  /** Master progress */
+  private final AtomicReference<MasterProgress> masterProgress =
+      new AtomicReference<>(new MasterProgress());
   /** Job */
   private Job job;
 
@@ -81,7 +86,8 @@ public class DefaultJobProgressTrackerService
               !workerProgresses.isEmpty()) {
             // Combine and log
             CombinedWorkerProgress combinedWorkerProgress =
-                new CombinedWorkerProgress(workerProgresses.values(), conf);
+                new CombinedWorkerProgress(workerProgresses.values(),
+                    masterProgress.get(), conf);
             if (LOG.isInfoEnabled()) {
               LOG.info(combinedWorkerProgress.toString());
             }
@@ -170,6 +176,11 @@ public class DefaultJobProgressTrackerService
   @Override
   public void updateProgress(WorkerProgress workerProgress) {
     workerProgresses.put(workerProgress.getTaskId(), workerProgress);
+  }
+
+  @Override
+  public void updateMasterProgress(MasterProgress masterProgress) {
+    this.masterProgress.set(masterProgress);
   }
 
   @Override
