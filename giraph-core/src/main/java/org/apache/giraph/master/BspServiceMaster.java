@@ -1741,7 +1741,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (checkpointFrequency == 0) {
       return CheckpointStatus.NONE;
     }
-    long firstCheckpoint = INPUT_SUPERSTEP + 1 + checkpointFrequency;
+    long firstCheckpoint = INPUT_SUPERSTEP + 1;
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       firstCheckpoint = getRestartedSuperstep() + checkpointFrequency;
     }
