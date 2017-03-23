@@ -1211,6 +1211,7 @@ public class BspServiceMaster<I extends WritableComparable,
     setApplicationAttempt(getApplicationAttempt() + 1);
     setCachedSuperstep(checkpoint);
     setRestartedSuperstep(checkpoint);
+    checkpointStatus = CheckpointStatus.NONE;
     setJobState(ApplicationState.START_SUPERSTEP,
         getApplicationAttempt(),
         checkpoint);
