@@ -216,7 +216,7 @@ public class BspServiceWorker<I extends WritableComparable,
         graphTaskManager.createUncaughtExceptionHandler());
     workerInfo.setInetSocketAddress(workerServer.getMyAddress(),
         workerServer.getLocalHostOrIp());
-    workerInfo.setTaskId(getTaskPartition());
+    workerInfo.setTaskId((int)getApplicationAttempt() * conf.getMaxWorkers() + getTaskPartition());
     workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
         graphTaskManager.createUncaughtExceptionHandler());
     workerServer.setFlowControl(workerClient.getFlowControl());
@@ -921,7 +921,7 @@ else[HADOOP_NON_SECURE]*/
 
     String finishedWorkerPath =
         getWorkerFinishedPath(getApplicationAttempt(), getSuperstep()) +
-        "/" + getHostnamePartitionId();
+        "/" + workerInfo.getHostnameId();
     try {
       getZkExt().createExt(finishedWorkerPath,
           workerFinishedInfoObj.toString().getBytes(Charset.defaultCharset()),
@@ -1303,7 +1303,7 @@ else[HADOOP_NON_SECURE]*/
     // Notify master that checkpoint is stored
     String workerWroteCheckpoint =
         getWorkerWroteCheckpointPath(getApplicationAttempt(),
-            getSuperstep()) + "/" + getHostnamePartitionId();
+            getSuperstep()) + "/" + workerInfo.getHostnameId();
     try {
       getZkExt().createExt(workerWroteCheckpoint,
           new byte[0],
