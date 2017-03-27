@@ -26,6 +26,7 @@ import org.apache.giraph.conf.LongConfOption;
 import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.command.IOCommand;
 import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -170,7 +171,7 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
     this.oocEngine = oocEngine;
     this.lastMajorGCTime = 0;
 
-    final Thread thread = new Thread(new Runnable() {
+    ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (true) {
@@ -207,12 +208,8 @@ public class ThresholdBasedOracle implements OutOfCoreOracle {
           }
         }
       }
-    });
-    thread.setUncaughtExceptionHandler(oocEngine.getServiceWorker()
-        .getGraphTaskManager().createUncaughtExceptionHandler());
-    thread.setName("memory-checker");
-    thread.setDaemon(true);
-    thread.start();
+    }, "memory-checker", oocEngine.getServiceWorker().getGraphTaskManager().
+        createUncaughtExceptionHandler());
   }
 
   /**

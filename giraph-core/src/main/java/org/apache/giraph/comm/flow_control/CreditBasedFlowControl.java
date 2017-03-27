@@ -33,6 +33,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.utils.AdjustableSemaphore;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayDeque;
@@ -208,7 +209,7 @@ public class CreditBasedFlowControl implements FlowControl {
     waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
 
     // Thread to handle/send resume signals when necessary
-    Thread resumeHandlerThread = new Thread(new Runnable() {
+    ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (true) {
@@ -230,14 +231,10 @@ public class CreditBasedFlowControl implements FlowControl {
           }
         }
       }
-    });
-    resumeHandlerThread.setUncaughtExceptionHandler(exceptionHandler);
-    resumeHandlerThread.setName("resume-sender");
-    resumeHandlerThread.setDaemon(true);
-    resumeHandlerThread.start();
+    }, "resume-sender", exceptionHandler);
 
     // Thread to handle/send cached requests
-    Thread cachedRequestHandlerThread = new Thread(new Runnable() {
+    ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (true) {
@@ -258,11 +255,7 @@ public class CreditBasedFlowControl implements FlowControl {
           }
         }
       }
-    });
-    cachedRequestHandlerThread.setUncaughtExceptionHandler(exceptionHandler);
-    cachedRequestHandlerThread.setName("cached-req-sender");
-    cachedRequestHandlerThread.setDaemon(true);
-    cachedRequestHandlerThread.start();
+    }, "cached-req-sender", exceptionHandler);
   }
 
   /**
