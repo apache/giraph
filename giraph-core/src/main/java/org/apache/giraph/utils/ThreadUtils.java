@@ -106,6 +106,24 @@ public class ThreadUtils {
   }
 
   /**
+   * Start thread with specified name, runnable and exception handler, and make
+   * it daemon
+   *
+   * @param runnable Runnable to execute
+   * @param threadName Name of the thread
+   * @param handler Exception handler
+   * @return Thread
+   */
+  public static Thread startThread(Runnable runnable, String threadName,
+                                   Thread.UncaughtExceptionHandler handler) {
+    Thread thread = new Thread(runnable, threadName);
+    thread.setUncaughtExceptionHandler(handler);
+    thread.setDaemon(true);
+    thread.start();
+    return thread;
+  }
+
+  /**
    * Sleep for specified milliseconds, logging and ignoring interrupted
    * exceptions
    *

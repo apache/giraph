@@ -29,6 +29,7 @@ import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.ooc.command.IOCommand;
 import org.apache.giraph.ooc.command.LoadPartitionIOCommand;
 import org.apache.giraph.ooc.command.WaitIOCommand;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.worker.EdgeInputSplitsCallable;
 import org.apache.giraph.worker.VertexInputSplitsCallable;
 import org.apache.giraph.worker.WorkerProgress;
@@ -171,7 +172,7 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
 
     final long checkMemoryInterval = CHECK_MEMORY_INTERVAL.get(conf);
 
-    Thread thread = new Thread(new Runnable() {
+    ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (true) {
@@ -211,12 +212,8 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           }
         }
       }
-    });
-    thread.setUncaughtExceptionHandler(oocEngine.getServiceWorker()
-      .getGraphTaskManager().createUncaughtExceptionHandler());
-    thread.setName("ooc-memory-checker");
-    thread.setDaemon(true);
-    thread.start();
+    }, "ooc-memory-checker", oocEngine.getServiceWorker().getGraphTaskManager()
+        .createUncaughtExceptionHandler());
   }
 
   /**
