@@ -54,6 +54,9 @@ public class OutOfCoreIOStatistics {
           "Number of most recent IO operations to consider for reporting the" +
               "statistics.");
 
+  /**
+   * Use this option to control how frequently to print OOC statistics.
+   */
   public static final IntConfOption STATS_PRINT_FREQUENCY =
       new IntConfOption("giraph.oocStatPrintFrequency", 200,
           "Number of updates before stats are printed.");
@@ -83,6 +86,7 @@ public class OutOfCoreIOStatistics {
   private final Map<IOCommandType, StatisticsEntry> aggregateStats;
   /** How many IO command completed? */
   private int numUpdates = 0;
+  /** Cached value for {@link #STATS_PRINT_FREQUENCY} */
   private int statsPrintFrequency = 0;
 
   /**
