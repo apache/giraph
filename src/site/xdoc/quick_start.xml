@@ -88,7 +88,7 @@ sudo chown hduser:hadoop /app/hadoop/tmp
 sudo chmod 750 /app/hadoop/tmp</source>
       <p>Make sure the <tt>/etc/hosts</tt> file has the following lines (if not, add/update them):</p>
       <source>
-172.0.0.1       localhost
+127.0.0.1       localhost
 192.168.56.10   hdnode01</source>
       <p>Even though we can use <tt>localhost</tt> for all communication within this single-node cluster, using the hostname is generally a better practice (e.g., you might add a new node and convert your single-node, pseudo-distributed cluster to multi-node, distributed cluster).</p>
       <p>Now, edit Hadoop configuration files <tt>core-site.xml</tt>, <tt>mapred-site.xml</tt>, and <tt>hdfs-site.xml</tt> under <tt>$HADOOP_HOME/conf</tt> to reflect the current setup. Add the new lines between <tt>&lt;configuration&gt;...&lt;/configuration&gt;</tt>, as specified below:</p>
