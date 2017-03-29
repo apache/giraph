@@ -38,7 +38,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 public class BlockOutputFormat extends BspOutputFormat {
   private static final StrConfOption OUTPUT_CONF_OPTIONS = new StrConfOption(
-      "digraph.outputConfOptions", "",
+      "giraph.outputConfOptions", "",
       "List of conf options for outputs used");
 
   public static <OD> void addOutputDesc(OD outputDesc, String confOption,
@@ -53,7 +53,12 @@ public class BlockOutputFormat extends BspOutputFormat {
     ConfigurationObjectUtils.setObjectKryo(outputDesc, confOption, conf);
   }
 
-  private static String[] getOutputConfOptions(Configuration conf) {
+  /**
+   * Returns an array of output configuration options set in the input configuration.
+   * @param conf Configuration
+   * @return Array of options
+   */
+  public static String[] getOutputConfOptions(Configuration conf) {
     String outputConfOptions = OUTPUT_CONF_OPTIONS.get(conf);
     return outputConfOptions.isEmpty() ?
         new String[0] : outputConfOptions.split(",");
