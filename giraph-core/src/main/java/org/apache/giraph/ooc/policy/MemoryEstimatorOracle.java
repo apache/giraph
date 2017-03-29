@@ -35,6 +35,7 @@ import org.apache.giraph.worker.VertexInputSplitsCallable;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
@@ -609,7 +610,8 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           double[] yValues =
               memorySamples.toDoubleArray(new double[memorySamples.size()]);
           mlr.newSampleData(yValues, xValues);
-          boolean isRegressionValid = calculateRegression(coefficient, validColumnIndices, mlr);
+          boolean isRegressionValid =
+            calculateRegression(coefficient, validColumnIndices, mlr);
 
           if (!isRegressionValid) { // invalid regression result
             return; // The finally-block at the end will release any locks.
@@ -677,10 +679,6 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
           setIsValid = true;
           return; // the finally-block will execute before return
         }
-        // CHECKSTYLE: stop IllegalCatch
-      } catch (Exception e) {
-        // CHECKSTYLE: resume IllegalCatch
-        LOG.warn("addRecord: exception occurred!", e);
       } finally {
         // This inner try-finally block is necessary to ensure that the
         // lock is always released.
@@ -718,10 +716,11 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
      * @param upperBound Upper bound
      * @param xValues double[][] matrix with data samples
      * @param yValues double[] matrix with y samples
-     * @return True if coefficients were out-of-range, false otherwise. A null value means the
-     *         regression result was invalid and the result of this method is invalid too.
-     * @throws Exception
+     * @return True if coefficients were out-of-range, false otherwise. A null
+     *         value means the regression result was invalid and the result of
+     *         this method is invalid too.
      */
+    @Nullable
     private Boolean refineCoefficient(int coefIndex, double lowerBound,
       double upperBound, double[][] xValues, double[] yValues) {
 
@@ -785,7 +784,6 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
      * @param validColumnIndices List of valid columns
      * @param mlr {@link OLSMultipleLinearRegression} instance.
      * @return True if the result is valid, false otherwise.
-     * @throws Exception
      */
     private static boolean calculateRegression(double[] coefficient,
       List<Integer> validColumnIndices, OLSMultipleLinearRegression mlr) {
