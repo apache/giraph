@@ -69,7 +69,10 @@
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
   </Match>
   <Match>
-    <Class name="org.apache.giraph.comm.flow_control.CreditBasedFlowControl"/>
+    <Or>
+      <Class name="org.apache.giraph.comm.flow_control.CreditBasedFlowControl"/>
+      <Class name="org.apache.giraph.comm.flow_control.CreditBasedFlowControl$2"/>
+    </Or>
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
   </Match>
   <Match>
