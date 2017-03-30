@@ -54,7 +54,9 @@ public class BlockOutputFormat extends BspOutputFormat {
   }
 
   /**
-   * Returns an array of output configuration options set in the input configuration.
+   * Returns an array of output configuration options set in the input
+   * configuration.
+   *
    * @param conf Configuration
    * @return Array of options
    */
