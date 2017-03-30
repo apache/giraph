@@ -260,6 +260,9 @@ end[PURE_YARN]*/
     context
         .setStatus("setup: Connected to Zookeeper service " + serverPortList);
     this.graphFunctions = determineGraphFunctions(conf, zkManager);
+    if (this.graphFunctions.isMaster()) {
+      zkManager.cleanupOnExit();
+    }
     try {
       instantiateBspService();
     } catch (IOException e) {

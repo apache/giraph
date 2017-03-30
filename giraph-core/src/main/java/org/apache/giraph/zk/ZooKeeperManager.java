@@ -725,6 +725,18 @@ public class ZooKeeperManager {
   }
 
   /**
+   * Mark files zookeeper creates in hdfs to be deleted on exit.
+   * To be called on master, since it's the last one who finishes.
+   */
+  public void cleanupOnExit() {
+    try {
+      fs.deleteOnExit(baseDirectory);
+    } catch (IOException e) {
+      LOG.error("cleanupOnExit: Failed to delete on exit " + baseDirectory);
+    }
+  }
+
+  /**
    * Do necessary cleanup in zookeeper wrapper.
    */
   public void cleanup() {
