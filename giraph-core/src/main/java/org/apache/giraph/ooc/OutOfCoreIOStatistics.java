@@ -54,6 +54,13 @@ public class OutOfCoreIOStatistics {
           "Number of most recent IO operations to consider for reporting the" +
               "statistics.");
 
+  /**
+   * Use this option to control how frequently to print OOC statistics.
+   */
+  public static final IntConfOption STATS_PRINT_FREQUENCY =
+      new IntConfOption("giraph.oocStatPrintFrequency", 200,
+          "Number of updates before stats are printed.");
+
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(OutOfCoreIOStatistics.class);
@@ -79,6 +86,8 @@ public class OutOfCoreIOStatistics {
   private final Map<IOCommandType, StatisticsEntry> aggregateStats;
   /** How many IO command completed? */
   private int numUpdates = 0;
+  /** Cached value for {@link #STATS_PRINT_FREQUENCY} */
+  private int statsPrintFrequency = 0;
 
   /**
    * Constructor
@@ -101,6 +110,7 @@ public class OutOfCoreIOStatistics {
     for (IOCommandType type : IOCommandType.values()) {
       aggregateStats.put(type, new StatisticsEntry(type, 0, 0, 0));
     }
+    this.statsPrintFrequency = STATS_PRINT_FREQUENCY.get(conf);
   }
 
   /**
@@ -145,7 +155,7 @@ public class OutOfCoreIOStatistics {
     }
     numUpdates++;
     // Outputting log every so many commands
-    if (numUpdates % 10 == 0) {
+    if (numUpdates % statsPrintFrequency == 0) {
       if (LOG.isInfoEnabled()) {
         LOG.info(this);
       }
