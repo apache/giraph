@@ -260,7 +260,7 @@ end[PURE_YARN]*/
     context
         .setStatus("setup: Connected to Zookeeper service " + serverPortList);
     this.graphFunctions = determineGraphFunctions(conf, zkManager);
-    if (this.graphFunctions.isMaster()) {
+    if (zkManager != null && this.graphFunctions.isMaster()) {
       zkManager.cleanupOnExit();
     }
     try {
