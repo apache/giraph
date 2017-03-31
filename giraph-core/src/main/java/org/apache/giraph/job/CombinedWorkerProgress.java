@@ -150,10 +150,13 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
     return workersDone == expectedWorkersDone;
   }
 
-  @Override
-  public String toString() {
+  /**
+   * Get string describing total job progress
+   *
+   * @return String describing total job progress
+   */
+  protected String getProgressString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("Data from ").append(workersInSuperstep).append(" workers - ");
     if (isInputSuperstep()) {
       sb.append("Loading data: ");
       if (!masterProgress.vertexInputSplitsSet() ||
@@ -189,6 +192,14 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
       sb.append(partitionsStored).append(" out of ").append(
           partitionsToStore).append(" partitions stored");
     }
+    return sb.toString();
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Data from ").append(workersInSuperstep).append(" workers - ");
+    sb.append(getProgressString());
     sb.append("; min free memory on worker ").append(
         workerWithMinFreeMemory).append(" - ").append(
         DECIMAL_FORMAT.format(minFreeMemoryMB)).append("MB, average ").append(
@@ -203,5 +214,20 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
           .append(workerWithMinGraphPercentageInMemory);
     }
     return sb.toString();
+  }
+
+  /**
+   * Check if this instance made progress from another instance
+   *
+   * @param lastProgress Instance to compare with
+   * @return True iff progress was made
+   */
+  public boolean madeProgressFrom(CombinedWorkerProgress lastProgress) {
+    // If progress strings are different there was progress made
+    if (!getProgressString().equals(lastProgress.getProgressString())) {
+      return true;
+    }
+    // If more workers were done there was progress made
+    return workersDone != lastProgress.workersDone;
   }
 }

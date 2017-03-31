@@ -20,6 +20,7 @@ package org.apache.giraph.job;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.IntConfOption;
 import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.worker.WorkerProgress;
@@ -36,6 +37,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DefaultJobProgressTrackerService
     implements JobProgressTrackerService {
+  /** Max time job is allowed to not make progress before getting killed */
+  public static final IntConfOption MAX_ALLOWED_TIME_WITHOUT_PROGRESS_MS =
+      new IntConfOption(
+          "giraph.maxAllowedTimeWithoutProgressMs",
+          3 * 60 * 60 * 1000, // Allow 3h
+          "Max time job is allowed to not make progress before getting killed");
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(JobProgressTrackerService.class);
@@ -81,6 +88,10 @@ public class DefaultJobProgressTrackerService
     writerThread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
+        long lastTimeProgressChanged = -1;
+        long maxAllowedTimeWithoutProgress =
+            MAX_ALLOWED_TIME_WITHOUT_PROGRESS_MS.get(conf);
+        CombinedWorkerProgress lastProgress = null;
         while (!finished) {
           if (mappersStarted == conf.getMaxWorkers() + 1 &&
               !workerProgresses.isEmpty()) {
@@ -95,6 +106,16 @@ public class DefaultJobProgressTrackerService
             if (combinedWorkerProgress.isDone(conf.getMaxWorkers())) {
               break;
             }
+
+            if (lastProgress == null ||
+                combinedWorkerProgress.madeProgressFrom(lastProgress)) {
+              lastProgress = combinedWorkerProgress;
+              lastTimeProgressChanged = System.currentTimeMillis();
+            } else if (lastTimeProgressChanged +
+                maxAllowedTimeWithoutProgress < System.currentTimeMillis()) {
+              killTooLongJob();
+              break;
+            }
           }
           if (!ThreadUtils.trySleep(UPDATE_MILLISECONDS)) {
             break;
@@ -102,6 +123,21 @@ public class DefaultJobProgressTrackerService
         }
       }
     }, "progress-writer");
+  }
+
+  /**
+   * Kill the job which was taking too long to make any progress
+   */
+  protected void killTooLongJob() {
+    // Job didn't make progress in too long, killing it
+    try {
+      LOG.error("Killing the job because it didn't make progress for " +
+          MAX_ALLOWED_TIME_WITHOUT_PROGRESS_MS.get(conf) / 1000 + "s");
+      job.killJob();
+    } catch (IOException e) {
+      LOG.error(
+          "Failed to kill the job which wasn't making progress", e);
+    }
   }
 
   @Override
