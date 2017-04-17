@@ -18,26 +18,9 @@
 
 package org.apache.giraph.master;
 
-import static org.apache.giraph.conf.GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT;
-import static org.apache.giraph.conf.GiraphConstants.KEEP_ZOOKEEPER_DATA;
-import static org.apache.giraph.conf.GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT;
-
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import net.iharder.Base64;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
@@ -62,9 +45,9 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.GiraphInputFormat;
+import org.apache.giraph.io.InputType;
 import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
-import org.apache.giraph.io.InputType;
 import org.apache.giraph.master.input.MasterInputSplitsHandler;
 import org.apache.giraph.metrics.AggregatedMetrics;
 import org.apache.giraph.metrics.GiraphMetrics;
@@ -106,8 +89,23 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.giraph.conf.GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT;
+import static org.apache.giraph.conf.GiraphConstants.KEEP_ZOOKEEPER_DATA;
+import static org.apache.giraph.conf.GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceMaster}.
@@ -370,13 +368,21 @@ public class BspServiceMaster<I extends WritableComparable,
           new org.apache.hadoop.mapred.JobClient(
             (org.apache.hadoop.mapred.JobConf)
             getContext().getConfiguration());
-        @SuppressWarnings("deprecation")
-        JobID jobId = JobID.forName(getJobId());
-        RunningJob job = jobClient.getJob(jobId);
-        if (job != null) {
-          job.killJob();
-        } else {
-          LOG.error("Jon not found for jobId=" + getJobId());
+        try {
+          @SuppressWarnings("deprecation")
+          JobID jobId = JobID.forName(getJobId());
+          RunningJob job = jobClient.getJob(jobId);
+          if (job != null) {
+            job.killJob();
+          } else {
+            LOG.error("Job not found for jobId=" + getJobId());
+          }
+        } catch (IllegalArgumentException iae) {
+          LOG.info("This job (" + getJobId() +
+                       ") is not a legacy Hadoop job and will " +
+                       "continue with failure cleanup." +
+                       e.getMessage(),
+                   e);
         }
       }
     } catch (IOException ioe) {
