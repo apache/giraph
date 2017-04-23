@@ -860,7 +860,7 @@ public class BspServiceMaster<I extends WritableComparable,
                   getGraphTaskManager().createUncaughtExceptionHandler());
           masterInfo.setInetSocketAddress(masterServer.getMyAddress(),
               masterServer.getLocalHostOrIp());
-          masterInfo.setTaskId(getTaskPartition());
+          masterInfo.setTaskId((int)getApplicationAttempt() * getConfiguration().getMaxWorkers() + getTaskPartition());
           masterClient =
               new NettyMasterClient(getContext(), getConfiguration(), this,
                   getGraphTaskManager().createUncaughtExceptionHandler());
