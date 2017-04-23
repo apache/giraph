@@ -579,15 +579,15 @@ public class BspServiceMaster<I extends WritableComparable,
     if (LOG.isInfoEnabled()) {
       Set<Integer> partitionSet = new TreeSet<Integer>();
       for (WorkerInfo workerInfo : healthyWorkerInfoList) {
-        partitionSet.add(workerInfo.getTaskId());
+        partitionSet.add(workerInfo.getTaskId() % maxWorkers);
       }
       for (WorkerInfo workerInfo : unhealthyWorkerInfoList) {
-        partitionSet.add(workerInfo.getTaskId());
+        partitionSet.add(workerInfo.getTaskId() % maxWorkers);
       }
       for (int i = 1; i <= maxWorkers; ++i) {
         if (partitionSet.contains(Integer.valueOf(i))) {
           continue;
-        } else if (i == getTaskPartition()) {
+        } else if (i == getTaskId() % maxWorkers) {
           continue;
         } else {
           LOG.info("logMissingWorkersOnSuperstep: No response from " +
@@ -802,7 +802,7 @@ public class BspServiceMaster<I extends WritableComparable,
     try {
       myBid =
           getZkExt().createExt(masterElectionPath +
-              "/" + getHostnamePartitionId(),
+              "/" + getHostnameTaskId(),
               null,
               Ids.OPEN_ACL_UNSAFE,
               CreateMode.EPHEMERAL_SEQUENTIAL,
@@ -841,7 +841,7 @@ public class BspServiceMaster<I extends WritableComparable,
         }
         if (masterChildArr.get(0).equals(myBid)) {
           GiraphStats.getInstance().getCurrentMasterTaskPartition().
-              setValue(getTaskPartition());
+              setValue(getTaskId());
 
           globalCommHandler = new MasterGlobalCommHandler(
               new MasterAggregatorHandler(getConfiguration(), getContext()),
@@ -860,7 +860,7 @@ public class BspServiceMaster<I extends WritableComparable,
                   getGraphTaskManager().createUncaughtExceptionHandler());
           masterInfo.setInetSocketAddress(masterServer.getMyAddress(),
               masterServer.getLocalHostOrIp());
-          masterInfo.setTaskId((int)getApplicationAttempt() * getConfiguration().getMaxWorkers() + getTaskPartition());
+          masterInfo.setTaskId(getTaskId());
           masterClient =
               new NettyMasterClient(getContext(), getConfiguration(), this,
                   getGraphTaskManager().createUncaughtExceptionHandler());
@@ -1913,7 +1913,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // for workers and masters, the master will clean up the ZooKeeper
     // znodes associated with this job.
     String masterCleanedUpPath = cleanedUpPath  + "/" +
-        getTaskPartition() + MASTER_SUFFIX;
+        getTaskId() + MASTER_SUFFIX;
     try {
       String finalFinishedPath =
           getZkExt().createExt(masterCleanedUpPath,

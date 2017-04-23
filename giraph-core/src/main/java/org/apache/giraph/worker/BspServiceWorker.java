@@ -216,7 +216,7 @@ public class BspServiceWorker<I extends WritableComparable,
         graphTaskManager.createUncaughtExceptionHandler());
     workerInfo.setInetSocketAddress(workerServer.getMyAddress(),
         workerServer.getLocalHostOrIp());
-    workerInfo.setTaskId((int)getApplicationAttempt() * conf.getMaxWorkers() + getTaskPartition());
+    workerInfo.setTaskId(getTaskId());
     workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
         graphTaskManager.createUncaughtExceptionHandler());
     workerServer.setFlowControl(workerClient.getFlowControl());
@@ -243,7 +243,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
     observers = conf.createWorkerObservers(context);
 
-    WorkerProgress.get().setTaskId(getTaskPartition());
+    WorkerProgress.get().setTaskId(getTaskId());
     workerProgressWriter = conf.trackJobProgressOnClient() ?
         new WorkerProgressWriter(graphTaskManager.getJobProgressTracker()) :
         null;
@@ -1202,7 +1202,7 @@ else[HADOOP_NON_SECURE]*/
     // for workers and masters, the master will clean up the ZooKeeper
     // znodes associated with this job.
     String workerCleanedUpPath = cleanedUpPath  + "/" +
-        getTaskPartition() + WORKER_SUFFIX;
+        getTaskId() + WORKER_SUFFIX;
     try {
       String finalFinishedPath =
           getZkExt().createExt(workerCleanedUpPath,
