@@ -270,8 +270,16 @@ public class ProgressableUtils {
           // Try to get result from the future
           result = entry.getValue().get(
               MSEC_TO_WAIT_ON_EACH_FUTURE, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | ExecutionException e) {
-          throw new IllegalStateException("Exception occurred", e);
+        } catch (InterruptedException e) {
+          throw new IllegalStateException("Interrupted", e);
+        } catch (ExecutionException e) {
+          // Execution exception wraps the actual cause
+          if (e.getCause() instanceof RuntimeException) {
+            throw (RuntimeException) e.getCause();
+          } else {
+            throw new IllegalStateException("Exception occurred", e.getCause());
+          }
+
         } catch (TimeoutException e) {
           // If result is not ready yet just keep waiting
           continue;
