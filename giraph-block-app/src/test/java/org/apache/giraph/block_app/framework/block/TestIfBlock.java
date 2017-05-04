@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.function.Supplier;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestIfBlock {
@@ -53,6 +54,7 @@ public class TestIfBlock {
     BlockTestingUtils.testIndependence(
         Arrays.asList(piece1, piece2),
         ifBlock);
+    Assert.assertFalse(ifBlock.getPieceCount().isKnown());
   }
 
   @Test
@@ -69,6 +71,7 @@ public class TestIfBlock {
     BlockTestingUtils.testIndependence(
         Arrays.asList(piece1, piece2),
         ifBlock);
+    Assert.assertFalse(ifBlock.getPieceCount().isKnown());
   }
 
   @Test
@@ -83,6 +86,19 @@ public class TestIfBlock {
     BlockTestingUtils.testNestedRepeatBlock(
             Arrays.asList(piece1, piece2),
             ifBlock);
+    Assert.assertFalse(ifBlock.getPieceCount().isKnown());
   }
 
+  @Test
+  public void testIfThenElsePieceCount() {
+    Piece piece1 = new Piece();
+    Piece piece2 = new Piece();
+    Block ifBlock = new IfBlock(
+        TRUE_SUPPLIER,
+        piece1,
+        piece2
+    );
+    Assert.assertTrue(ifBlock.getPieceCount().isKnown());
+    Assert.assertEquals(1, ifBlock.getPieceCount().getCount());
+  }
 }

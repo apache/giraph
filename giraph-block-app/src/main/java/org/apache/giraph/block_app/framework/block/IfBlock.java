@@ -61,6 +61,14 @@ public final class IfBlock implements Block {
   }
 
   @Override
+  public PieceCount getPieceCount() {
+    PieceCount thenCount = thenBlock.getPieceCount();
+    PieceCount elseCount = elseBlock.getPieceCount();
+    return thenCount.equals(elseCount) ?
+        thenCount : PieceCount.createUnknownCount();
+  }
+
+  @Override
   public String toString() {
     if (elseBlock instanceof EmptyBlock) {
       return "IfBlock(" + thenBlock + ")";

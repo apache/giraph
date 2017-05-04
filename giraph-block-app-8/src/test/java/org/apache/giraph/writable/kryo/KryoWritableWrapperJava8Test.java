@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.library.striping.StripingUtils;
 import org.apache.giraph.function.Consumer;
@@ -145,6 +146,11 @@ public class KryoWritableWrapperJava8Test {
 
             @Override
             public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) { }
+
+            @Override
+            public PieceCount getPieceCount() {
+              return PieceCount.createUnknownCount();
+            }
           })));
   }
 

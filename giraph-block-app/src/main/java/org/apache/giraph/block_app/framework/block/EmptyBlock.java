@@ -36,4 +36,9 @@ public final class EmptyBlock implements Block {
   @Override
   public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
   }
+
+  @Override
+  public PieceCount getPieceCount() {
+    return new PieceCount(0);
+  }
 }

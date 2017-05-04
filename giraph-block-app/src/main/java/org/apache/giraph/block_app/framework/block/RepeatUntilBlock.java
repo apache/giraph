@@ -75,6 +75,11 @@ public final class RepeatUntilBlock implements Block {
   }
 
   @Override
+  public PieceCount getPieceCount() {
+    return PieceCount.createUnknownCount();
+  }
+
+  @Override
   public String toString() {
     return "RepeatUntilBlock(" + repeatTimes + " * " + block + ")";
   }

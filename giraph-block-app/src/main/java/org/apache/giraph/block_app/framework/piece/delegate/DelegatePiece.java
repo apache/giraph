@@ -26,6 +26,7 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerContextReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexPostprocessor;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
@@ -247,6 +248,11 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
     for (AbstractPiece<I, V, E, M, WV, WM, S> innerPiece : innerPieces) {
       innerPiece.forAllPossiblePieces(consumer);
     }
+  }
+
+  @Override
+  public PieceCount getPieceCount() {
+    return new PieceCount(1);
   }
 
   @SuppressWarnings("deprecation")

@@ -26,6 +26,7 @@ import org.apache.giraph.block_app.framework.api.giraph.BlockComputation;
 import org.apache.giraph.block_app.framework.api.giraph.BlockMasterCompute;
 import org.apache.giraph.block_app.framework.api.giraph.BlockWorkerContext;
 import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.conf.BooleanConfOption;
@@ -146,6 +147,11 @@ public class BlockUtils {
     Block executionBlock = blockFactory.createBlock(immConf);
     checkBlockTypes(
         executionBlock, blockFactory.createExecutionStage(immConf), immConf);
+
+    PieceCount pieceCount = executionBlock.getPieceCount();
+    if (pieceCount.isKnown()) {
+      GiraphConstants.SUPERSTEP_COUNT.set(conf, pieceCount.getCount() + 1);
+    }
 
     // check for non 'static final' fields in BlockFactories
     Class<?> bfClass = blockFactory.getClass();

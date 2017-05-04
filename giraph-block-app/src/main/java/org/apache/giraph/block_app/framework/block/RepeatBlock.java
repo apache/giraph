@@ -32,10 +32,12 @@ import com.google.common.collect.Iterables;
 @SuppressWarnings("rawtypes")
 public final class RepeatBlock implements Block {
   private final Block block;
+  private final boolean constantRepeatTimes;
   private final IntSupplier repeatTimes;
 
   public RepeatBlock(final int repeatTimes, Block block) {
     this.block = block;
+    this.constantRepeatTimes = true;
     this.repeatTimes = new IntSupplier() {
       @Override
       public int get() {
@@ -56,6 +58,7 @@ public final class RepeatBlock implements Block {
    */
   public RepeatBlock(IntSupplier repeatTimes, Block block) {
     this.block = block;
+    this.constantRepeatTimes = false;
     this.repeatTimes = repeatTimes;
   }
 
@@ -78,6 +81,13 @@ public final class RepeatBlock implements Block {
   @Override
   public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
     block.forAllPossiblePieces(consumer);
+  }
+
+  @Override
+  public PieceCount getPieceCount() {
+    return constantRepeatTimes ?
+        block.getPieceCount().multiply(repeatTimes.get()) :
+        PieceCount.createUnknownCount();
   }
 
   @Override

@@ -26,6 +26,7 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.api.local.LocalBlockRunner;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.block.BlockWithApiHandle;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.DefaultParentPiece;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
@@ -196,6 +197,11 @@ public class BlockApiHandleTest {
       @Override
       public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
         piece.forAllPossiblePieces(consumer);
+      }
+
+      @Override
+      public PieceCount getPieceCount() {
+        return piece.getPieceCount();
       }
 
       @Override
