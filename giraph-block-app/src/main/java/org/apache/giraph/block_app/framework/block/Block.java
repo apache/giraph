@@ -56,4 +56,12 @@ public interface Block extends Iterable<AbstractPiece> {
    * without actually executing them.
    */
   void forAllPossiblePieces(Consumer<AbstractPiece> consumer);
+
+  /**
+   * How many pieces are in this block.
+   * Sometimes we don't know (eg RepeatBlock).
+   *
+   * @return How many pieces are in this block.
+   */
+  PieceCount getPieceCount();
 }

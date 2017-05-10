@@ -110,4 +110,9 @@ public final class FilteringBlock<I extends WritableComparable,
   public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
     block.forAllPossiblePieces(consumer);
   }
+
+  @Override
+  public PieceCount getPieceCount() {
+    return block.getPieceCount();
+  }
 }

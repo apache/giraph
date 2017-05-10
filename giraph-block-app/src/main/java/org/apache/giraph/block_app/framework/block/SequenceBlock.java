@@ -54,6 +54,15 @@ public final class SequenceBlock implements Block {
   }
 
   @Override
+  public PieceCount getPieceCount() {
+    PieceCount ret = new PieceCount(0);
+    for (Block block : blocks) {
+      ret.add(block.getPieceCount());
+    }
+    return ret;
+  }
+
+  @Override
   public String toString() {
     return "SequenceBlock" + Arrays.toString(blocks);
   }

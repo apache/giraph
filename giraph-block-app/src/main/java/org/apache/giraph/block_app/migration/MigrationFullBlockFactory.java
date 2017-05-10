@@ -21,6 +21,7 @@ import java.util.Iterator;
 
 import org.apache.giraph.block_app.framework.AbstractBlockFactory;
 import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.block.SequenceBlock;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
@@ -100,6 +101,11 @@ public abstract class MigrationFullBlockFactory
           @Override
           public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
             consumer.apply(curPiece);
+          }
+
+          @Override
+          public PieceCount getPieceCount() {
+            return curPiece.getPieceCount();
           }
         }
     );

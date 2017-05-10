@@ -27,6 +27,7 @@ import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.function.Supplier;
 import org.apache.giraph.function.primitive.PrimitiveRefs.IntRef;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -58,6 +59,8 @@ public class TestRepeatUntilBlock {
     BlockTestingUtils.testIndependence(
       Iterables.concat(Collections.nCopies(REPEAT_TIMES, Arrays.asList(piece1, piece2))),
       repeatBlock);
+    Assert.assertEquals(2, innerBlock.getPieceCount().getCount());
+    Assert.assertFalse(repeatBlock.getPieceCount().isKnown());
   }
 
   @Test

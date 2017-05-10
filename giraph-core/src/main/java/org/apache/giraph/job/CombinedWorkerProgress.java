@@ -20,6 +20,7 @@ package org.apache.giraph.job;
 
 import com.google.common.collect.Iterables;
 import org.apache.giraph.conf.FloatConfOption;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.worker.WorkerProgressStats;
@@ -50,6 +51,8 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
    * warning will be printed
    */
   private double normalFreeMemoryFraction;
+  /** Total number of supersteps */
+  private final int superstepCount;
   /**
    * How many workers have reported that they are in highest reported
    * superstep
@@ -86,6 +89,7 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
       MasterProgress masterProgress, Configuration conf) {
     this.masterProgress = masterProgress;
     normalFreeMemoryFraction = NORMAL_FREE_MEMORY_FRACTION.get(conf);
+    superstepCount = GiraphConstants.SUPERSTEP_COUNT.get(conf);
     for (WorkerProgress workerProgress : workerProgresses) {
       if (workerProgress.getCurrentSuperstep() > currentSuperstep) {
         verticesToCompute = 0;
@@ -180,8 +184,12 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
         }
       }
     } else if (isComputeSuperstep()) {
-      sb.append("Compute superstep ").append(currentSuperstep).append(": ");
-      sb.append(verticesComputed).append(" out of ").append(
+      sb.append("Compute superstep ").append(currentSuperstep);
+      if (superstepCount > 0) {
+        // Supersteps are 0..superstepCount-1 so subtract 1 here
+        sb.append(" (out of ").append(superstepCount - 1).append(")");
+      }
+      sb.append(": ").append(verticesComputed).append(" out of ").append(
           verticesToCompute).append(" vertices computed; ");
       sb.append(partitionsComputed).append(" out of ").append(
           partitionsToCompute).append(" partitions computed");

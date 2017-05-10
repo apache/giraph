@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
 import org.apache.giraph.block_app.framework.piece.Piece;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -46,6 +47,7 @@ public class TestRepeatBlock {
     BlockTestingUtils.testIndependence(
             Iterables.concat(Collections.nCopies(REPEAT_TIMES, Arrays.asList(piece1, piece2))),
             repeatBlock);
+    Assert.assertEquals(REPEAT_TIMES * 2, repeatBlock.getPieceCount().getCount());
   }
 
   @Test

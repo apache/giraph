@@ -1261,5 +1261,9 @@ public interface GiraphConstants {
       new LongConfOption("giraph.waitForOtherWorkersMsec",
           HOURS.toMillis(48),
           "How long should workers wait to finish superstep");
+
+  /** Number of supersteps job will run for */
+  IntConfOption SUPERSTEP_COUNT = new IntConfOption("giraph.numSupersteps", -1,
+      "Number of supersteps job will run for");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

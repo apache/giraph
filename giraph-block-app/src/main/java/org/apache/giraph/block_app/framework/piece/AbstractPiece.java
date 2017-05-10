@@ -26,6 +26,7 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.block.Block;
+import org.apache.giraph.block_app.framework.block.PieceCount;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexPostprocessor;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
@@ -260,6 +261,11 @@ public abstract class AbstractPiece<I extends WritableComparable,
   @Override
   public void forAllPossiblePieces(Consumer<AbstractPiece> consumer) {
     consumer.apply(this);
+  }
+
+  @Override
+  public PieceCount getPieceCount() {
+    return new PieceCount(1);
   }
 
   @Override
