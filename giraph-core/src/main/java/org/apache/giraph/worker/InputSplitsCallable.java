@@ -208,15 +208,19 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   @Override
   public VertexEdgeCount call() {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
-    byte[] serializedInputSplit;
     int inputSplitsProcessed = 0;
     try {
       OutOfCoreEngine oocEngine = serviceWorker.getServerData().getOocEngine();
       if (oocEngine != null) {
         oocEngine.processingThreadStart();
       }
-      while ((serializedInputSplit =
-          splitsHandler.reserveInputSplit(getInputType())) != null) {
+      while (true) {
+        byte[] serializedInputSplit = splitsHandler.reserveInputSplit(
+            getInputType(), inputSplitsProcessed == 0);
+        if (serializedInputSplit == null) {
+          // No splits left
+          break;
+        }
         // If out-of-core mechanism is used, check whether this thread
         // can stay active or it should temporarily suspend and stop
         // processing and generating more data for the moment.

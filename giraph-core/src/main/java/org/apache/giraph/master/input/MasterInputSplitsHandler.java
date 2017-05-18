@@ -20,10 +20,13 @@ package org.apache.giraph.master.input;
 
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.requests.ReplyWithInputSplitRequest;
+import org.apache.giraph.conf.StrConfOption;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.InputType;
 import org.apache.giraph.worker.WorkerInfo;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
@@ -34,6 +37,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Handler for input splits on master
@@ -44,6 +48,15 @@ import java.util.concurrent.CountDownLatch;
  * these splits back to queues.
  */
 public class MasterInputSplitsHandler {
+  /**
+   * Store in counters timestamps when we finished reading
+   * these fractions of input
+   */
+  public static final StrConfOption DONE_FRACTIONS_TO_STORE_IN_COUNTERS =
+      new StrConfOption("giraph.master.input.doneFractionsToStoreInCounters",
+          "0.99,1", "Store in counters timestamps when we finished reading " +
+          "these fractions of input");
+
   /** Whether to use locality information */
   private final boolean useLocality;
   /** Master client */
@@ -56,16 +69,42 @@ public class MasterInputSplitsHandler {
   /** Latches to say when one input splits type is ready to be accessed */
   private Map<InputType, CountDownLatch> latchesMap =
       new EnumMap<>(InputType.class);
+  /** Context for accessing counters */
+  private final Mapper.Context context;
+  /** How many splits per type are there total */
+  private final Map<InputType, Integer> numSplitsPerType =
+      new EnumMap<>(InputType.class);
+  /** How many splits per type have been read so far */
+  private final Map<InputType, AtomicInteger> numSplitsReadPerType =
+      new EnumMap<>(InputType.class);
+  /** Timestamps when various splits were created */
+  private final Map<InputType, Long> splitsCreatedTimestamp =
+      new EnumMap<>(InputType.class);
+  /**
+   * Store in counters timestamps when we finished reading
+   * these fractions of input
+   */
+  private final double[] doneFractionsToStoreInCounters;
 
   /**
    * Constructor
    *
    * @param useLocality Whether to use locality information or not
+   * @param context Context for accessing counters
    */
-  public MasterInputSplitsHandler(boolean useLocality) {
+  public MasterInputSplitsHandler(boolean useLocality, Mapper.Context context) {
     this.useLocality = useLocality;
+    this.context = context;
     for (InputType inputType : InputType.values()) {
       latchesMap.put(inputType, new CountDownLatch(1));
+      numSplitsReadPerType.put(inputType, new AtomicInteger(0));
+    }
+
+    String[] tmp = DONE_FRACTIONS_TO_STORE_IN_COUNTERS.get(
+        context.getConfiguration()).split(",");
+    doneFractionsToStoreInCounters = new double[tmp.length];
+    for (int i = 0; i < tmp.length; i++) {
+      doneFractionsToStoreInCounters[i] = Double.parseDouble(tmp[i].trim());
     }
   }
 
@@ -89,6 +128,7 @@ public class MasterInputSplitsHandler {
    */
   public void addSplits(InputType splitsType, List<InputSplit> inputSplits,
       GiraphInputFormat inputFormat) {
+    splitsCreatedTimestamp.put(splitsType, System.currentTimeMillis());
     List<byte[]> serializedSplits = new ArrayList<>();
     for (InputSplit inputSplit : inputSplits) {
       try {
@@ -114,6 +154,7 @@ public class MasterInputSplitsHandler {
     }
     splitsMap.put(splitsType, inputSplitsOrganizer);
     latchesMap.get(splitsType).countDown();
+    numSplitsPerType.put(splitsType, serializedSplits.size());
   }
 
   /**
@@ -123,8 +164,11 @@ public class MasterInputSplitsHandler {
    *
    * @param splitType Type of split requested
    * @param workerTaskId Id of worker who requested split
+   * @param isFirstSplit Whether this is the first split a thread is requesting,
+   *   or this request indicates that previously requested input split was done
    */
-  public void sendSplitTo(InputType splitType, int workerTaskId) {
+  public void sendSplitTo(InputType splitType, int workerTaskId,
+      boolean isFirstSplit) {
     try {
       // Make sure we don't try to retrieve splits before they were added
       latchesMap.get(splitType).await();
@@ -136,5 +180,52 @@ public class MasterInputSplitsHandler {
     masterClient.sendWritableRequest(workerTaskId,
         new ReplyWithInputSplitRequest(splitType,
             serializedInputSplit == null ? new byte[0] : serializedInputSplit));
+    if (!isFirstSplit) {
+      incrementSplitsRead(splitType);
+    }
+  }
+
+  /**
+   * Increment splits read
+   *
+   * @param splitType Type of split which was read
+   */
+  private void incrementSplitsRead(InputType splitType) {
+    int splitsRead = numSplitsReadPerType.get(splitType).incrementAndGet();
+    int splits = numSplitsPerType.get(splitType);
+    for (int i = 0; i < doneFractionsToStoreInCounters.length; i++) {
+      if (splitsRead == (int) (splits * doneFractionsToStoreInCounters[i])) {
+        splitFractionReached(
+            splitType, doneFractionsToStoreInCounters[i], context);
+      }
+    }
+  }
+
+  /**
+   * Call when we reached some fraction of split type done to set the
+   * timestamp counter
+   *
+   * @param inputType Type of input
+   * @param fraction Which fraction of input type was done reading
+   * @param context Context for accessing counters
+   */
+  private void splitFractionReached(
+      InputType inputType, double fraction, Mapper.Context context) {
+    getSplitFractionDoneTimestampCounter(inputType, fraction, context).setValue(
+        System.currentTimeMillis() - splitsCreatedTimestamp.get(inputType));
+  }
+
+  /**
+   * Get counter
+   *
+   * @param inputType Type of input for counter
+   * @param fraction Fraction for counter
+   * @param context Context to get counter from
+   * @return Counter
+   */
+  public static Counter getSplitFractionDoneTimestampCounter(
+      InputType inputType, double fraction, Mapper.Context context) {
+    return context.getCounter(inputType.name() + " input",
+        String.format("%.2f%% done time (ms)", fraction * 100));
   }
 }

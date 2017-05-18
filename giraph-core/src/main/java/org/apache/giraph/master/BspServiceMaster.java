@@ -846,7 +846,7 @@ public class BspServiceMaster<I extends WritableComparable,
           globalCommHandler = new MasterGlobalCommHandler(
               new MasterAggregatorHandler(getConfiguration(), getContext()),
               new MasterInputSplitsHandler(
-                  getConfiguration().useInputSplitLocality()));
+                  getConfiguration().useInputSplitLocality(), getContext()));
           aggregatorTranslation = new AggregatorToGlobalCommTranslation(
               getConfiguration(), globalCommHandler);
 
