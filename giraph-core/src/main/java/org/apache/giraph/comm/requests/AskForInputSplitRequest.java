@@ -34,16 +34,25 @@ public class AskForInputSplitRequest extends WritableRequest
   private InputType splitType;
   /** Task id of worker which requested the split */
   private int workerTaskId;
+  /**
+   * Whether this is the first split a thread is requesting,
+   * or this request indicates that previously requested input split was done
+   */
+  private boolean isFirstSplit;
 
   /**
    * Constructor
    *
    * @param splitType Type of split we are requesting
    * @param workerTaskId Task id of worker which requested the split
+   * @param isFirstSplit Whether this is the first split a thread is requesting,
+   *   or this request indicates that previously requested input split was done
    */
-  public AskForInputSplitRequest(InputType splitType, int workerTaskId) {
+  public AskForInputSplitRequest(InputType splitType, int workerTaskId,
+      boolean isFirstSplit) {
     this.splitType = splitType;
     this.workerTaskId = workerTaskId;
+    this.isFirstSplit = isFirstSplit;
   }
 
   /**
@@ -54,19 +63,22 @@ public class AskForInputSplitRequest extends WritableRequest
 
   @Override
   public void doRequest(MasterGlobalCommHandler commHandler) {
-    commHandler.getInputSplitsHandler().sendSplitTo(splitType, workerTaskId);
+    commHandler.getInputSplitsHandler().sendSplitTo(
+        splitType, workerTaskId, isFirstSplit);
   }
 
   @Override
   void readFieldsRequest(DataInput in) throws IOException {
     splitType = InputType.values()[in.readInt()];
     workerTaskId = in.readInt();
+    isFirstSplit = in.readBoolean();
   }
 
   @Override
   void writeRequest(DataOutput out) throws IOException {
     out.writeInt(splitType.ordinal());
     out.writeInt(workerTaskId);
+    out.writeBoolean(isFirstSplit);
   }
 
   @Override

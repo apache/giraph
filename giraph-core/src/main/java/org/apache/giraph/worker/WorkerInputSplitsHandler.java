@@ -91,12 +91,14 @@ public class WorkerInputSplitsHandler {
    * have been created.
    *
    * @param splitType Type of split
+   * @param isFirstSplit Whether this is the first split input thread reads
    * @return reserved InputSplit or null if no unfinished InputSplits exist
    */
-  public byte[] reserveInputSplit(InputType splitType) {
+  public byte[] reserveInputSplit(InputType splitType, boolean isFirstSplit) {
     // Send request
     workerClient.sendWritableRequest(masterTaskId,
-        new AskForInputSplitRequest(splitType, workerInfo.getTaskId()));
+        new AskForInputSplitRequest(
+            splitType, workerInfo.getTaskId(), isFirstSplit));
     try {
       // Wait for some split to become available
       byte[] serializedInputSplit = availableInputSplits.get(splitType).take();
