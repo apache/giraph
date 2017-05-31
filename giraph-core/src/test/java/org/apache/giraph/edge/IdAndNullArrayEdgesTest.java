@@ -21,8 +21,8 @@ import com.google.common.collect.Lists;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,45 +42,44 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 
-public class IdAndValueArrayEdgesTest {
-  private static Edge<LongWritable, DoubleWritable> createEdge(long id) {
-    return EdgeFactory.create(new LongWritable(id), new DoubleWritable((double) id));
+public class IdAndNullArrayEdgesTest {
+  private static Edge<LongWritable, NullWritable> createEdge(long id) {
+    return EdgeFactory.create(new LongWritable(id));
   }
 
-  private static void assertEdges(IdAndValueArrayEdges edges, long... expected) {
+  private static void assertEdges(IdAndNullArrayEdges edges, long... expected) {
     int index = 0;
-    for (Edge<LongWritable, DoubleWritable> edge :
-      (Iterable<Edge<LongWritable, DoubleWritable>>) edges) {
+    for (Edge<LongWritable, NullWritable> edge :
+      (Iterable<Edge<LongWritable, NullWritable>>) edges) {
       Assert.assertEquals(expected[index], edge.getTargetVertexId().get());
-      Assert.assertEquals((double) expected[index], edge.getValue().get(), 0.00001);
       index++;
     }
     Assert.assertEquals(expected.length, index);
   }
 
-  private IdAndValueArrayEdges getEdges() {
+  private IdAndNullArrayEdges getEdges() {
     GiraphConfiguration gc = new GiraphConfiguration();
     GiraphConstants.VERTEX_ID_CLASS.set(gc, LongWritable.class);
-    GiraphConstants.EDGE_VALUE_CLASS.set(gc, DoubleWritable.class);
-    ImmutableClassesGiraphConfiguration<LongWritable, Writable, DoubleWritable> conf =
-        new ImmutableClassesGiraphConfiguration<LongWritable, Writable, DoubleWritable>(gc);
-    IdAndValueArrayEdges ret = new IdAndValueArrayEdges();
+    GiraphConstants.EDGE_VALUE_CLASS.set(gc, NullWritable.class);
+    ImmutableClassesGiraphConfiguration<LongWritable, Writable, NullWritable> conf =
+        new ImmutableClassesGiraphConfiguration<LongWritable, Writable, NullWritable>(gc);
+    IdAndNullArrayEdges ret = new IdAndNullArrayEdges();
     ret.setConf(
-      new ImmutableClassesGiraphConfiguration<LongWritable, Writable, DoubleWritable>(conf));
+      new ImmutableClassesGiraphConfiguration<LongWritable, Writable, NullWritable>(conf));
     return ret;
   }
 
   @Test
   public void testEdges() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
-    List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(
+    List<Edge<LongWritable, NullWritable>> initialEdges = Lists.newArrayList(
         createEdge(1), createEdge(2), createEdge(4));
 
     edges.initialize(initialEdges);
     assertEdges(edges, 1, 2, 4);
 
-    edges.add(EdgeFactory.createReusable(new LongWritable(3), new DoubleWritable(3.0)));
+    edges.add(EdgeFactory.createReusable(new LongWritable(3)));
     assertEdges(edges, 1, 2, 4, 3); // order matters, it's an array
 
     edges.remove(new LongWritable(2));
@@ -89,16 +88,16 @@ public class IdAndValueArrayEdgesTest {
 
   @Test
   public void testInitialize() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
-    List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(
+    List<Edge<LongWritable, NullWritable>> initialEdges = Lists.newArrayList(
       createEdge(1), createEdge(2), createEdge(4));
 
     edges.initialize(initialEdges);
     assertEdges(edges, 1, 2, 4);
 
-    edges.add(EdgeFactory.createReusable(new LongWritable(3), new DoubleWritable(3.0)));
-    assertEdges(edges, 1, 2, 4, 3); // order matters, it's an array
+    edges.add(EdgeFactory.createReusable(new LongWritable(3)));
+    assertEdges(edges, 1, 2, 4, 3);
 
     edges.initialize();
     assertEquals(0, edges.size());
@@ -106,7 +105,7 @@ public class IdAndValueArrayEdgesTest {
 
   @Test
   public void testMutateEdges() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
     edges.initialize();
 
@@ -116,7 +115,7 @@ public class IdAndValueArrayEdgesTest {
     }
 
     // Use the mutable iterator to remove edges with even id
-    Iterator<MutableEdge<LongWritable, DoubleWritable>> edgeIt =
+    Iterator<MutableEdge<LongWritable, NullWritable>> edgeIt =
         edges.mutableIterator();
     while (edgeIt.hasNext()) {
       if (edgeIt.next().getTargetVertexId().get() % 2 == 0) {
@@ -127,15 +126,15 @@ public class IdAndValueArrayEdgesTest {
     // We should now have 5 edges
     assertEquals(5, edges.size());
     // The edge ids should be all odd
-    for (Edge<LongWritable, DoubleWritable> edge :
-      (Iterable<Edge<LongWritable, DoubleWritable>>) edges) {
+    for (Edge<LongWritable, NullWritable> edge :
+      (Iterable<Edge<LongWritable, NullWritable>>) edges) {
       assertEquals(1, edge.getTargetVertexId().get() % 2);
     }
   }
 
   @Test
   public void testSerialization() throws IOException {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
     edges.initialize();
 
@@ -145,7 +144,7 @@ public class IdAndValueArrayEdgesTest {
     }
 
     // Use the mutable iterator to remove edges with even id
-    Iterator<MutableEdge<LongWritable, DoubleWritable>> edgeIt =
+    Iterator<MutableEdge<LongWritable, NullWritable>> edgeIt =
         edges.mutableIterator();
     while (edgeIt.hasNext()) {
       if (edgeIt.next().getTargetVertexId().get() % 2 == 0) {
@@ -174,10 +173,9 @@ public class IdAndValueArrayEdgesTest {
     long[] ids = new long[]{9, 1, 7, 3, 5};
     int index = 0;
 
-    for (Edge<LongWritable, DoubleWritable> edge :
-      (Iterable<Edge<LongWritable, DoubleWritable>>) edges) {
+    for (Edge<LongWritable, NullWritable> edge :
+      (Iterable<Edge<LongWritable, NullWritable>>) edges) {
       assertEquals(ids[index], edge.getTargetVertexId().get());
-      assertEquals((double) ids[index], edge.getValue().get(), 0.00001);
       index++;
     }
     assertEquals(ids.length, index);
@@ -185,9 +183,9 @@ public class IdAndValueArrayEdgesTest {
 
   @Test
   public void testParallelEdges() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
-    List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(
+    List<Edge<LongWritable, NullWritable>> initialEdges = Lists.newArrayList(
         createEdge(2), createEdge(2), createEdge(2));
 
     edges.initialize(initialEdges);
@@ -196,7 +194,7 @@ public class IdAndValueArrayEdgesTest {
     edges.remove(new LongWritable(2));
     assertEquals(0, edges.size());
 
-    edges.add(EdgeFactory.create(new LongWritable(2), new DoubleWritable(2.0)));
+    edges.add(EdgeFactory.create(new LongWritable(2)));
     assertEquals(1, edges.size());
 
     assertEquals(1, edges.size());
@@ -204,21 +202,21 @@ public class IdAndValueArrayEdgesTest {
 
   @Test
   public void testEdgeValues() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
     Set<Long> testValues = new HashSet<Long>();
     testValues.add(0L);
     testValues.add((long) Integer.MAX_VALUE);
     testValues.add(Long.MAX_VALUE);
 
-    List<Edge<LongWritable, DoubleWritable>> initialEdges =
-      new ArrayList<Edge<LongWritable, DoubleWritable>>();
+    List<Edge<LongWritable, NullWritable>> initialEdges =
+      new ArrayList<Edge<LongWritable, NullWritable>>();
     for(Long id : testValues) {
       initialEdges.add(createEdge(id));
     }
 
     edges.initialize(initialEdges);
 
-    Iterator<MutableEdge<LongWritable, DoubleWritable>> edgeIt =
+    Iterator<MutableEdge<LongWritable, NullWritable>> edgeIt =
         edges.mutableIterator();
     while (edgeIt.hasNext()) {
       long value = edgeIt.next().getTargetVertexId().get();
@@ -228,9 +226,9 @@ public class IdAndValueArrayEdgesTest {
 
   @Test
   public void testAddedSmallerValues() {
-    IdAndValueArrayEdges edges = getEdges();
+    IdAndNullArrayEdges edges = getEdges();
 
-    List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(
+    List<Edge<LongWritable, NullWritable>> initialEdges = Lists.newArrayList(
         createEdge(100));
 
     edges.initialize(initialEdges);

@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -48,6 +49,8 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
   /** Array of target vertex ids. */
   private WArrayList<I> neighbors;
+  /** Type operations for ID */
+  private PrimitiveIdTypeOps<I> idTypeOps;
 
   @Override
   public
@@ -58,8 +61,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
   @Override
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, Writable, NullWritable> conf) {
-    PrimitiveIdTypeOps<I> idTypeOps =
-        TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
+    idTypeOps = TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
     neighbors = idTypeOps.createArrayList(10);
     if (!conf.getEdgeValueClass().equals(NullWritable.class)) {
       throw new IllegalArgumentException(
@@ -75,7 +77,7 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
   @Override
   public void initialize(int capacity) {
-    neighbors.setCapacity(capacity);
+    neighbors = idTypeOps.createArrayList(capacity);
   }
 
   @Override
@@ -158,6 +160,9 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
       @Override
       public MutableEdge<I, NullWritable> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
         neighbors.getIntoW(offset++, representativeEdge.getTargetVertexId());
         return representativeEdge;
       }
