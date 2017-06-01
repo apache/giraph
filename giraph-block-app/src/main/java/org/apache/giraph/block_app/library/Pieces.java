@@ -342,7 +342,7 @@ public class Pieces {
   Piece<I, V, E, NoMessage, Object> reduceAndBroadcastWithArrayOfHandles(
       final String name,
       final int numHandles,
-      final ReduceOperation<S, R> reduceOp,
+      final Supplier<ReduceOperation<S, R>> reduceOp,
       final SupplierFromVertex<I, V, E, Long> handleHashSupplier,
       final SupplierFromVertex<I, V, E, S> valueSupplier,
       final ConsumerWithVertex<I, V, E, R> reducedValueConsumer) {
@@ -362,7 +362,7 @@ public class Pieces {
             new Supplier<ReducerHandle<S, R>>() {
               @Override
               public ReducerHandle<S, R> get() {
-                return reduceApi.createLocalReducer(reduceOp);
+                return reduceApi.createLocalReducer(reduceOp.get());
               }
             });
       }
