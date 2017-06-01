@@ -54,10 +54,6 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
   private WArrayList<I> neighborIds;
   /** Array of edge values. */
   private WArrayList<E> neighborEdgeValues;
-  /** Type operations for vertex ID */
-  private PrimitiveIdTypeOps<I> idTypeOps;
-  /** Type operations for edge value */
-  private PrimitiveTypeOps<E> edgeTypeOps;
 
   @Override
   public ImmutableClassesGiraphConfiguration<I, Writable, E> getConf() {
@@ -67,10 +63,12 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
   @Override
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
-    idTypeOps = TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
+    PrimitiveIdTypeOps<I> idTypeOps =
+        TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
     neighborIds = idTypeOps.createArrayList(10);
 
-    edgeTypeOps = TypeOpsUtils.getPrimitiveTypeOps(conf.getEdgeValueClass());
+    PrimitiveTypeOps<E> edgeTypeOps =
+        TypeOpsUtils.getPrimitiveTypeOps(conf.getEdgeValueClass());
     neighborEdgeValues = edgeTypeOps.createArrayList(10);
   }
 
@@ -81,8 +79,10 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
   @Override
   public void initialize(int capacity) {
-    neighborIds = idTypeOps.createArrayList(capacity);
-    neighborEdgeValues = edgeTypeOps.createArrayList(capacity);
+    neighborIds.clear();
+    neighborIds.setCapacity(capacity);
+    neighborEdgeValues.clear();
+    neighborEdgeValues.setCapacity(capacity);
   }
 
   @Override

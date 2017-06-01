@@ -49,8 +49,6 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
   /** Array of target vertex ids. */
   private WArrayList<I> neighbors;
-  /** Type operations for ID */
-  private PrimitiveIdTypeOps<I> idTypeOps;
 
   @Override
   public
@@ -61,7 +59,8 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
   @Override
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, Writable, NullWritable> conf) {
-    idTypeOps = TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
+    PrimitiveIdTypeOps<I> idTypeOps =
+        TypeOpsUtils.getPrimitiveIdTypeOps(conf.getVertexIdClass());
     neighbors = idTypeOps.createArrayList(10);
     if (!conf.getEdgeValueClass().equals(NullWritable.class)) {
       throw new IllegalArgumentException(
@@ -77,7 +76,8 @@ public class IdAndNullArrayEdges<I extends WritableComparable>
 
   @Override
   public void initialize(int capacity) {
-    neighbors = idTypeOps.createArrayList(capacity);
+    neighbors.clear();
+    neighbors.setCapacity(capacity);
   }
 
   @Override
