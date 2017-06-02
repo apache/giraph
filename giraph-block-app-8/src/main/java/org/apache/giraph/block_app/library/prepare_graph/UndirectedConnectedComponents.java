@@ -352,10 +352,15 @@ public class UndirectedConnectedComponents {
     Pair<LongWritable, LongWritable> componentToReducePair = Pair.of(
         new LongWritable(), new LongWritable(1));
     LongWritable reusableLong = new LongWritable();
-    return Pieces.reduceAndBroadcast(
-        "CalcConnectedComponentSizes",
+    // This reduce operation is stateless so we can use a single instance
+    BasicMapReduce<LongWritable, LongWritable, LongWritable> reduceOperation =
         new BasicMapReduce<>(
-            LongTypeOps.INSTANCE, LongTypeOps.INSTANCE, SumReduce.LONG),
+            LongTypeOps.INSTANCE, LongTypeOps.INSTANCE, SumReduce.LONG);
+    return Pieces.reduceAndBroadcastWithArrayOfHandles(
+        "CalcConnectedComponentSizes",
+        3137, /* Just using some large prime number */
+        () -> reduceOperation,
+        vertex -> getComponent.get(vertex).get(),
         (Vertex<LongWritable, V, Writable> vertex) -> {
           componentToReducePair.getLeft().set(getComponent.get(vertex).get());
           return componentToReducePair;
