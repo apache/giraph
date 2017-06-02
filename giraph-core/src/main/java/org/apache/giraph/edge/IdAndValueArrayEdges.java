@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -78,7 +79,9 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
   @Override
   public void initialize(int capacity) {
+    neighborIds.clear();
     neighborIds.setCapacity(capacity);
+    neighborEdgeValues.clear();
     neighborEdgeValues.setCapacity(capacity);
   }
 
@@ -162,6 +165,9 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
       @Override
       public Edge<I, E> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
         neighborIds.getIntoW(index, representativeEdge.getTargetVertexId());
         neighborEdgeValues.getIntoW(index, representativeEdge.getValue());
         index++;
@@ -220,6 +226,9 @@ public class IdAndValueArrayEdges<I extends WritableComparable,
 
       @Override
       public MutableEdge<I, E> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
         representativeEdge.setIndex(index++);
         return representativeEdge;
       }
