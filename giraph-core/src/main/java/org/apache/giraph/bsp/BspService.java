@@ -273,7 +273,7 @@ public abstract class BspService<I extends WritableComparable,
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +
-          ", " + getTaskId() + " on " + serverPortList);
+          ", partition " + conf.getTaskPartition() + " on " + serverPortList);
     }
     try {
       this.zk = new ZooKeeperExt(serverPortList,
