@@ -188,7 +188,7 @@ public abstract class BspService<I extends WritableComparable,
   private long cachedApplicationAttempt = UNSET_APPLICATION_ATTEMPT;
   /** Job id, to ensure uniqueness */
   private final String jobId;
-  /** Task id, derived from partition and application attempt to ensure uniqueness */
+  /** Task id, from partition and application attempt to ensure uniqueness */
   private final int taskId;
   /** My hostname */
   private final String hostname;
@@ -289,7 +289,8 @@ public abstract class BspService<I extends WritableComparable,
       throw new RuntimeException(e);
     }
 
-    this.taskId = (int)getApplicationAttempt() * conf.getMaxWorkers() + conf.getTaskPartition();
+    this.taskId = (int) getApplicationAttempt() * conf.getMaxWorkers() +
+            conf.getTaskPartition();
     this.hostnameTaskId = hostname + "_" + getTaskId();
 
     //Trying to restart from the latest superstep
