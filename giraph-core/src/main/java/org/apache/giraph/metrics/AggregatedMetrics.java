@@ -153,8 +153,8 @@ public class AggregatedMetrics {
     if (aggregatedMetric.hasData()) {
       out.println(header);
       out.println("  mean: " + aggregatedMetric.mean() + " " + unit);
-      printValueFromHost(out, "  smallest: ", unit, aggregatedMetric.max());
-      printValueFromHost(out, "  largest: ", unit, aggregatedMetric.min());
+      printValueFromHost(out, "  smallest: ", unit, aggregatedMetric.min());
+      printValueFromHost(out, "  largest: ", unit, aggregatedMetric.max());
     } else {
       out.println(header + ": NO DATA");
     }
