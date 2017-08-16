@@ -29,6 +29,7 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -60,6 +61,8 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
   protected final int maxMessagesSizePerWorker;
   /** NettyWorkerClientRequestProcessor for message sending */
   protected final NettyWorkerClientRequestProcessor<I, ?, ?> clientProcessor;
+  /** Cached message value factory */
+  protected MessageValueFactory<M> messageValueFactory;
   /**
    * Constructor
    *
@@ -76,12 +79,13 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
         ADDITIONAL_MSG_REQUEST_SIZE.get(conf));
     maxMessagesSizePerWorker = maxMsgSize;
     clientProcessor = processor;
+    messageValueFactory =
+            conf.createOutgoingMessageValueFactory();
   }
 
   @Override
   public VertexIdMessages<I, M> createVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>(
-        getConf().<M>createOutgoingMessageValueFactory());
+    return new ByteArrayVertexIdMessages<I, M>(messageValueFactory);
   }
 
   /**
