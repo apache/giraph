@@ -145,7 +145,7 @@ public class SendOneMessageToManyCache<I extends WritableComparable,
       msgVidsCache[workerInfo.getTaskId()];
     if (workerData == null) {
       workerData = new ByteArrayOneMessageToManyIds<I, M>(
-          getConf().<M>createOutgoingMessageValueFactory());
+          messageValueFactory);
       workerData.setConf(getConf());
       workerData.initialize(getSendWorkerInitialBufferSize(
         workerInfo.getTaskId()));

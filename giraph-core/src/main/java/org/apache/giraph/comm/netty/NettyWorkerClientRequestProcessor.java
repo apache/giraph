@@ -43,6 +43,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
@@ -111,6 +112,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final Counter localRequests;
   /** Number of requests that were handled locally */
   private final Counter remoteRequests;
+  /** Cached message value factory */
+  private final MessageValueFactory messageValueFactory;
 
   /**
    * Constructor.
@@ -158,6 +161,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     localRequests = smr.getCounter(MetricNames.LOCAL_REQUESTS);
     remoteRequests = smr.getCounter(MetricNames.REMOTE_REQUESTS);
     setupGauges(smr, localRequests, remoteRequests);
+    messageValueFactory = configuration.createOutgoingMessageValueFactory();
   }
 
   @Override
@@ -213,7 +217,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         serverData.getCurrentMessageStore();
     ByteArrayVertexIdMessages<I, Writable> vertexIdMessages =
         new ByteArrayVertexIdMessages<I, Writable>(
-            configuration.createOutgoingMessageValueFactory());
+            messageValueFactory);
     vertexIdMessages.setConf(configuration);
     vertexIdMessages.initialize();
     for (I vertexId :
@@ -231,7 +235,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         doRequest(workerInfo, messagesRequest);
         vertexIdMessages =
             new ByteArrayVertexIdMessages<I, Writable>(
-                configuration.createOutgoingMessageValueFactory());
+                messageValueFactory);
         vertexIdMessages.setConf(configuration);
         vertexIdMessages.initialize();
       }
