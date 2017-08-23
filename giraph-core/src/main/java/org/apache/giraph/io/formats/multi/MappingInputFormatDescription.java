@@ -124,7 +124,7 @@ public class MappingInputFormatDescription<I extends WritableComparable,
           Lists.newArrayListWithCapacity(inputFormatsJson.length());
       for (int i = 0; i < inputFormatsJson.length(); i++) {
         descriptions.add(new MappingInputFormatDescription<I, V, E, B>(
-            inputFormatsJson.getString(i)));
+            inputFormatsJson.getJSONArray(i).toString()));
       }
       return descriptions;
     } catch (JSONException e) {

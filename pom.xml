@@ -340,7 +340,7 @@ under the License.
     <dep.jaxb-impl.version>2.2.4-1</dep.jaxb-impl.version>
     <dep.jersey.version>1.17</dep.jersey.version>
     <dep.jetty.version>6.1.26</dep.jetty.version>
-    <dep.json.version>20090211</dep.json.version>
+    <dep.json.version>20160810</dep.json.version>
     <dep.junit.version>4.11</dep.junit.version>
     <dep.jython.version>2.5.3</dep.jython.version>
     <dep.kryo.version>3.0.1</dep.kryo.version>
