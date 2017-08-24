@@ -216,7 +216,7 @@ public class BspServiceWorker<I extends WritableComparable,
         graphTaskManager.createUncaughtExceptionHandler());
     workerInfo.setInetSocketAddress(workerServer.getMyAddress(),
         workerServer.getLocalHostOrIp());
-    workerInfo.setTaskId(getTaskPartition());
+    workerInfo.setTaskId(getTaskId());
     workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
         graphTaskManager.createUncaughtExceptionHandler());
     workerServer.setFlowControl(workerClient.getFlowControl());
@@ -243,7 +243,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
     observers = conf.createWorkerObservers(context);
 
-    WorkerProgress.get().setTaskId(getTaskPartition());
+    WorkerProgress.get().setTaskId(getTaskId());
     workerProgressWriter = conf.trackJobProgressOnClient() ?
         new WorkerProgressWriter(graphTaskManager.getJobProgressTracker()) :
         null;
@@ -921,7 +921,7 @@ else[HADOOP_NON_SECURE]*/
 
     String finishedWorkerPath =
         getWorkerFinishedPath(getApplicationAttempt(), getSuperstep()) +
-        "/" + getHostnamePartitionId();
+        "/" + workerInfo.getHostnameId();
     try {
       getZkExt().createExt(finishedWorkerPath,
           workerFinishedInfoObj.toString().getBytes(Charset.defaultCharset()),
@@ -1202,7 +1202,7 @@ else[HADOOP_NON_SECURE]*/
     // for workers and masters, the master will clean up the ZooKeeper
     // znodes associated with this job.
     String workerCleanedUpPath = cleanedUpPath  + "/" +
-        getTaskPartition() + WORKER_SUFFIX;
+        getTaskId() + WORKER_SUFFIX;
     try {
       String finalFinishedPath =
           getZkExt().createExt(workerCleanedUpPath,
@@ -1303,7 +1303,7 @@ else[HADOOP_NON_SECURE]*/
     // Notify master that checkpoint is stored
     String workerWroteCheckpoint =
         getWorkerWroteCheckpointPath(getApplicationAttempt(),
-            getSuperstep()) + "/" + getHostnamePartitionId();
+            getSuperstep()) + "/" + workerInfo.getHostnameId();
     try {
       getZkExt().createExt(workerWroteCheckpoint,
           new byte[0],
