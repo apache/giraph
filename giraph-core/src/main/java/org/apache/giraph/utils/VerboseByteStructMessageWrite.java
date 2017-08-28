@@ -85,12 +85,12 @@ public class VerboseByteStructMessageWrite {
    */
   public static <I extends WritableComparable>
   void handleNegativeArraySize(I vertexId) {
-    throw new RuntimeException("The numbers of bytes sent to vertex " +
-        vertexId + " exceeded the max capacity of " +
-        "its ExtendedDataOutput. Please consider setting " +
-        "giraph.useBigDataIOForMessages=true. If there are super-vertices" +
-        " in the graph which receive a lot of messages (total serialized " +
-        "size of messages goes beyond the maximum size of a byte array), " +
-        "setting this option to true will remove that limit");
+    throw new RuntimeException("The number of bytes sent to vertex " +
+      vertexId + " exceeded the max capacity of its buffer. Please consider" +
+      " setting giraph.useBigDataIOForMessages to true. You can do" +
+      " this by adding the following option to your command line:" +
+      " -Dgiraph.useBigDataIOForMessages=true." +
+      " If there are super-vertices in the graph that receive many messages," +
+      " setting this option will remove that limit");
   }
 }
