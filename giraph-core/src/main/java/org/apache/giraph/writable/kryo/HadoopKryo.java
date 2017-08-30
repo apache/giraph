@@ -94,7 +94,7 @@ public class HadoopKryo extends Kryo {
         "it is marked to not allow serialization, " +
         "look at the class for more details");
     NON_SERIALIZABLE.put(
-        KryoWritableWrapper.class, "recursion is dissallowed");
+        KryoWritableWrapper.class, "recursion is disallowed");
     NON_SERIALIZABLE.put(
         Configuration.class,
         "it cannot be supported since it contains ClassLoader");
@@ -152,7 +152,7 @@ public class HadoopKryo extends Kryo {
 
   /**
    * Read object from the input stream, by reading first type of the object,
-   * and then all of it's fields.
+   * and then all of its fields.
    * Inverse of writeClassAndObject.
    *
    * @param in Input stream
@@ -188,7 +188,7 @@ public class HadoopKryo extends Kryo {
 
   /**
    * Create copy of the object, by magically recursively copying
-   * all of it's fields, keeping reference structures (like cycles)
+   * all of its fields, keeping reference structures (like cycles)
    *
    * @param object Object to be copied
    * @return Copy of the object.
@@ -208,7 +208,7 @@ public class HadoopKryo extends Kryo {
   /**
    * Create new instance of HadoopKryo, properly initialized.
    *
-   * @return New HadoopKryo instnace
+   * @return New HadoopKryo instance
    */
   private static HadoopKryo createKryo() {
     HadoopKryo kryo = new HadoopKryo();
