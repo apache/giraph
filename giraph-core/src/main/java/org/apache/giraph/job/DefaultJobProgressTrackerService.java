@@ -113,7 +113,10 @@ public class DefaultJobProgressTrackerService
               lastTimeProgressChanged = System.currentTimeMillis();
             } else if (lastTimeProgressChanged +
                 maxAllowedTimeWithoutProgress < System.currentTimeMillis()) {
-              killTooLongJob();
+              // Job didn't make progress in too long, killing it
+              killJobWithMessage(
+                  "Killing the job because it didn't make progress for " +
+                      maxAllowedTimeWithoutProgress / 1000 + "s");
               break;
             }
           }
@@ -126,17 +129,16 @@ public class DefaultJobProgressTrackerService
   }
 
   /**
-   * Kill the job which was taking too long to make any progress
+   * Kill job with message describing why it's being killed
+   *
+   * @param message Message describing why job is being killed
    */
-  protected void killTooLongJob() {
-    // Job didn't make progress in too long, killing it
+  protected void killJobWithMessage(String message) {
+    LOG.error(message);
     try {
-      LOG.error("Killing the job because it didn't make progress for " +
-          MAX_ALLOWED_TIME_WITHOUT_PROGRESS_MS.get(conf) / 1000 + "s");
       job.killJob();
     } catch (IOException e) {
-      LOG.error(
-          "Failed to kill the job which wasn't making progress", e);
+      LOG.error("Failed to kill the job", e);
     }
   }
 
@@ -159,13 +161,8 @@ public class DefaultJobProgressTrackerService
         @Override
         public void run() {
           if (ThreadUtils.trySleep(maxAllowedJobTimeMs)) {
-            try {
-              LOG.warn("Killing job because it took longer than " +
-                  maxAllowedJobTimeMs + " milliseconds");
-              job.killJob();
-            } catch (IOException e) {
-              LOG.warn("Failed to kill job", e);
-            }
+            killJobWithMessage("Killing the job because it took longer than " +
+                maxAllowedJobTimeMs + " milliseconds");
           }
         }
       }, "job-runtime-observer");
