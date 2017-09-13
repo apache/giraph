@@ -107,6 +107,12 @@ public class DefaultJobProgressTrackerService
               break;
             }
 
+            if (!canFinishInTime(conf, job,
+                combinedWorkerProgress.getCurrentComputeSuperstepProgress(
+                    mappersStarted - 1))) {
+              killSlowJob();
+            }
+
             if (lastProgress == null ||
                 combinedWorkerProgress.madeProgressFrom(lastProgress)) {
               lastProgress = combinedWorkerProgress;
@@ -126,6 +132,36 @@ public class DefaultJobProgressTrackerService
         }
       }
     }, "progress-writer");
+  }
+
+  /**
+   * Determine if the job will finish in allotted time.
+   * @param conf Giraph configuration
+   * @param job Job
+   * @param progress Current superstep progress.
+   * @return true it the job can finish in allotted time, false otherwise.
+   */
+  protected boolean canFinishInTime(GiraphConfiguration conf, Job job,
+      SuperstepProgress progress) {
+    // No defaut implementation.
+    return true;
+  }
+
+  /**
+   * Kill the job which wont be able to complete in allotted time due to slow
+   * progress.
+   */
+  protected void killSlowJob() {
+    try {
+      LOG.error("Killing the job because it won't complete in max " +
+              "allotted time: " +
+              GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf) / 1000 + "s");
+      job.killJob();
+    } catch (IOException e) {
+      LOG.error(
+        "Failed to kill the job which won't complete in max allotted time: ",
+        e);
+    }
   }
 
   /**

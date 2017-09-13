@@ -45,7 +45,6 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
       new FloatConfOption("giraph.normalFreeMemoryFraction", 0.1f,
           "If free memory fraction on some worker goes below this value, " +
               "warning will be printed");
-
   /**
    * If free memory fraction on some worker goes below this value,
    * warning will be printed
@@ -152,6 +151,22 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
    */
   public boolean isDone(int expectedWorkersDone) {
     return workersDone == expectedWorkersDone;
+  }
+
+  /**
+   * Get the current superstep progress.
+   * @param workerCount total worker count.
+   * @return current superstep progress
+   */
+  public SuperstepProgress getCurrentComputeSuperstepProgress(int workerCount) {
+    if (workersInSuperstep != workerCount) {
+      return null;
+    }
+    if (isComputeSuperstep()) {
+      return new SuperstepProgress(currentSuperstep, verticesComputed,
+          verticesToCompute);
+    }
+    return null;
   }
 
   /**
