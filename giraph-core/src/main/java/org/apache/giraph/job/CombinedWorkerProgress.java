@@ -143,6 +143,38 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
   }
 
   /**
+   * Get Current superstep
+   * @return Current superstep
+   */
+  public long getCurrentSuperstep() {
+    return currentSuperstep;
+  }
+
+  /**
+   * Get workers in superstep
+   * @return Workers in superstep.
+   */
+  public long getWorkerseInSuperstep() {
+    return workersInSuperstep;
+  }
+
+  /**
+   * Get vertices computed
+   * @return Vertices computed
+   */
+  public long getVerticesComputed() {
+    return verticesComputed;
+  }
+
+  /**
+   * Get vertices to compute
+   * @return Vertices to compute
+   */
+  public long getVerticesToCompute() {
+    return verticesToCompute;
+  }
+
+  /**
    * Is the application done
    *
    * @param expectedWorkersDone Number of workers which should be done in
@@ -151,22 +183,6 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
    */
   public boolean isDone(int expectedWorkersDone) {
     return workersDone == expectedWorkersDone;
-  }
-
-  /**
-   * Get the current superstep progress.
-   * @param workerCount total worker count.
-   * @return current superstep progress
-   */
-  public SuperstepProgress getCurrentComputeSuperstepProgress(int workerCount) {
-    if (workersInSuperstep != workerCount) {
-      return null;
-    }
-    if (isComputeSuperstep()) {
-      return new SuperstepProgress(currentSuperstep, verticesComputed,
-          verticesToCompute);
-    }
-    return null;
   }
 
   /**

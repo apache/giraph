@@ -107,10 +107,12 @@ public class DefaultJobProgressTrackerService
               break;
             }
 
-            if (!canFinishInTime(conf, job,
-                combinedWorkerProgress.getCurrentComputeSuperstepProgress(
-                    mappersStarted - 1))) {
-              killSlowJob();
+            if (!canFinishInTime(conf, job, mappersStarted - 1,
+                combinedWorkerProgress)) {
+              killJobWithMessage("Killing the job because it won't " +
+                "complete in max allotted time: " +
+                GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf) / 1000 +
+                "s");
             }
 
             if (lastProgress == null ||
@@ -135,14 +137,15 @@ public class DefaultJobProgressTrackerService
   }
 
   /**
-   * Determine if the job will finish in allotted time.
+   * Determine if the job will finish in allotted time
    * @param conf Giraph configuration
    * @param job Job
-   * @param progress Current superstep progress.
-   * @return true it the job can finish in allotted time, false otherwise.
+   * @param workerCount Worker count
+   * @param progress Combined worker progress
+   * @return true it the job can finish in allotted time, false otherwise
    */
   protected boolean canFinishInTime(GiraphConfiguration conf, Job job,
-      SuperstepProgress progress) {
+      int workerCount, CombinedWorkerProgress progress) {
     // No defaut implementation.
     return true;
   }
