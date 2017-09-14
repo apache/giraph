@@ -151,23 +151,6 @@ public class DefaultJobProgressTrackerService
   }
 
   /**
-   * Kill the job which wont be able to complete in allotted time due to slow
-   * progress.
-   */
-  protected void killSlowJob() {
-    try {
-      LOG.error("Killing the job because it won't complete in max " +
-              "allotted time: " +
-              GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf) / 1000 + "s");
-      job.killJob();
-    } catch (IOException e) {
-      LOG.error(
-        "Failed to kill the job which won't complete in max allotted time: ",
-        e);
-    }
-  }
-
-  /**
    * Kill job with message describing why it's being killed
    *
    * @param message Message describing why job is being killed
