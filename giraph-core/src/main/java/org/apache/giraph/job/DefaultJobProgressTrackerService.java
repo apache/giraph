@@ -132,13 +132,22 @@ public class DefaultJobProgressTrackerService
    * Kill job with message describing why it's being killed
    *
    * @param message Message describing why job is being killed
+   * @return True iff job was killed successfully, false if job was already
+   * done or kill failed
    */
-  protected void killJobWithMessage(String message) {
-    LOG.error(message);
+  protected boolean killJobWithMessage(String message) {
     try {
-      job.killJob();
+      if (job.isComplete()) {
+        LOG.info("Job " + job.getJobID() + " is already done");
+        return false;
+      } else {
+        LOG.error(message);
+        job.killJob();
+        return true;
+      }
     } catch (IOException e) {
       LOG.error("Failed to kill the job", e);
+      return false;
     }
   }
 
