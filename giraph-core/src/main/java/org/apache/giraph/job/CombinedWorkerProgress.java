@@ -154,7 +154,7 @@ public class CombinedWorkerProgress extends WorkerProgressStats {
    * Get workers in superstep
    * @return Workers in superstep.
    */
-  public long getWorkerseInSuperstep() {
+  public long getWorkersInSuperstep() {
     return workersInSuperstep;
   }
 
