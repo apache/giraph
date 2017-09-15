@@ -107,8 +107,7 @@ public class DefaultJobProgressTrackerService
               break;
             }
 
-            if (!canFinishInTime(conf, job, mappersStarted - 1,
-                combinedWorkerProgress)) {
+            if (!canFinishInTime(conf, job, combinedWorkerProgress)) {
               killJobWithMessage("Killing the job because it won't " +
                 "complete in max allotted time: " +
                 GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf) / 1000 +
@@ -140,12 +139,11 @@ public class DefaultJobProgressTrackerService
    * Determine if the job will finish in allotted time
    * @param conf Giraph configuration
    * @param job Job
-   * @param workerCount Worker count
    * @param progress Combined worker progress
    * @return true it the job can finish in allotted time, false otherwise
    */
   protected boolean canFinishInTime(GiraphConfiguration conf, Job job,
-      int workerCount, CombinedWorkerProgress progress) {
+      CombinedWorkerProgress progress) {
     // No defaut implementation.
     return true;
   }
