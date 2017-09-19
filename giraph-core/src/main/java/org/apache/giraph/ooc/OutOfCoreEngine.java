@@ -426,11 +426,14 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
    * threads.
    *
    * @param fraction the fraction of processing threads to remain active. This
-   *                 number is in range [0, 1]
+   *                 number is in range (0, 1]
    */
   public void updateActiveThreadsFraction(double fraction) {
     checkState(fraction >= 0 && fraction <= 1);
-    int numActiveThreads = (int) (numProcessingThreads * fraction);
+    // Making sure the number of active threads is not set to 0 to ensure
+    // progress in computation
+    int numActiveThreads = Math.max(
+      (int) (Math.ceil(numProcessingThreads * fraction)), 1);
     if (LOG.isInfoEnabled()) {
       LOG.info("updateActiveThreadsFraction: updating the number of active " +
           "threads to " + numActiveThreads);
@@ -489,7 +492,7 @@ public class OutOfCoreEngine implements ResetSuperstepMetricsObserver {
    */
   public void updateRequestsCreditFraction(double fraction) {
     checkState(fraction >= 0 && fraction <= 1);
-    short newCredit = (short) (maxRequestsCredit * fraction);
+    short newCredit = (short) (Math.ceil(maxRequestsCredit * fraction));
     if (LOG.isInfoEnabled()) {
       LOG.info("updateRequestsCreditFraction: updating the credit to " +
           newCredit);
