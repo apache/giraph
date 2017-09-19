@@ -792,7 +792,6 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
         LOG.warn("There are " + coefficient.length +
           " coefficients, but " + validColumnIndices.size() +
           " valid columns in the regression");
-        return false;
       }
 
       double[] beta = mlr.estimateRegressionParameters();
