@@ -789,8 +789,8 @@ public class MemoryEstimatorOracle implements OutOfCoreOracle {
       List<Integer> validColumnIndices, OLSMultipleLinearRegression mlr) {
 
       if (coefficient.length != validColumnIndices.size()) {
-        LOG.warn("There are " + coefficient.length +
-          " coefficients, but " + validColumnIndices.size() +
+        LOG.info("There are " + coefficient.length +
+          " coefficients, and " + validColumnIndices.size() +
           " valid columns in the regression");
       }
 
