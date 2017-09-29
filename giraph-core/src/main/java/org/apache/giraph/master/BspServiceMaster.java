@@ -335,6 +335,7 @@ public class BspServiceMaster<I extends WritableComparable,
         INPUT_SPLIT_SAMPLE_PERCENT.get(getConfiguration());
     if (samplePercent != INPUT_SPLIT_SAMPLE_PERCENT.getDefaultValue()) {
       int lastIndex = (int) (samplePercent * splits.size() / 100f);
+      Collections.shuffle(splits);
       List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
       LOG.warn(logPrefix + ": Using sampling - Processing only " +
           sampleSplits.size() + " instead of " + splits.size() +
