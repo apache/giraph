@@ -26,6 +26,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.function.primitive.PrimitiveRefs.LongRef;
 import org.apache.giraph.io.SimpleVertexWriter;
@@ -78,7 +79,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Class time object */
   private static final Time TIME = SystemTime.get();
   /** How often to update WorkerProgress */
-  private static final long VERTICES_TO_UPDATE_PROGRESS = 100000;
+  private final long verticesToUpdateProgress;
   /** Context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state */
@@ -140,6 +141,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         metrics.getUniformHistogram("wait-per-thread-ms");
     histogramProcessingTimePerThread =
         metrics.getUniformHistogram("processing-per-thread-ms");
+    verticesToUpdateProgress =
+        GiraphConstants.VERTICES_TO_UPDATE_PROGRESS.get(configuration);
   }
 
   @Override
@@ -278,11 +281,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
     final LongRef verticesComputedProgress = new LongRef(0);
+
     Progressable verticesProgressable = new Progressable() {
       @Override
       public void progress() {
         verticesComputedProgress.value++;
-        if (verticesComputedProgress.value == VERTICES_TO_UPDATE_PROGRESS) {
+        if (verticesComputedProgress.value == verticesToUpdateProgress) {
           WorkerProgress.get().addVerticesComputed(
               verticesComputedProgress.value);
           verticesComputedProgress.value = 0;
