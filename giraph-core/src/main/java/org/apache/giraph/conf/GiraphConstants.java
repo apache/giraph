@@ -1181,6 +1181,15 @@ public interface GiraphConstants {
           JobProgressTrackerService.class,
           "Class to use to track job progress on client");
 
+  /**
+   * Minimum number of vertices to compute before adding to worker progress.
+   */
+  LongConfOption VERTICES_TO_UPDATE_PROGRESS =
+          new LongConfOption("giraph.VerticesToUpdateProgress", 100000,
+                  "Minimum number of vertices to compute before " +
+                          "updating worker progress");
+
+
   /** Number of retries for creating the HDFS files */
   IntConfOption HDFS_FILE_CREATION_RETRIES =
       new IntConfOption("giraph.hdfs.file.creation.retries", 10,
