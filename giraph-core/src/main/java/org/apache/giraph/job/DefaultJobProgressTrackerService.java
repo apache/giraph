@@ -224,7 +224,8 @@ public class DefaultJobProgressTrackerService
   }
 
   @Override
-  public void logError(String logLine) {
+  public void
+  logError(String logLine, byte [] exByteArray) {
     LOG.error(logLine);
   }
 

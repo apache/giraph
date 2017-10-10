@@ -21,8 +21,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.giraph.utils.UnsafeReusableByteArrayInput;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.log4j.Logger;
 
 /**
  * Generic wrapper object, making any object writable.
@@ -36,6 +39,9 @@ import org.apache.hadoop.io.Writable;
  * @param <T> Object type
  */
 public class KryoWritableWrapper<T> implements Writable {
+  /** Class logger */
+  private static final Logger LOG =
+          Logger.getLogger(KryoWritableWrapper.class);
   /** Wrapped object */
   private T object;
 
@@ -119,5 +125,51 @@ public class KryoWritableWrapper<T> implements Writable {
    */
   public static <T> T wrapAndCopy(T object) {
     return WritableUtils.createCopy(new KryoWritableWrapper<>(object)).get();
+  }
+
+  /**
+   * Try converting the object to byte array.
+   * @param object Object
+   * @param <T> Type
+   * @return byte array
+   */
+  public static <T> byte [] tryConvertToByteArray(T object) {
+    byte [] arr = null;
+    try {
+      KryoWritableWrapper<T> wrapper =
+              new KryoWritableWrapper<>(object);
+      arr = WritableUtils.toByteArrayUnsafe(wrapper);
+      // Checkstyle exception due to unsafe conversion
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.error("Failed to convert to byte array: " +
+              ExceptionUtils.getStackTrace(e));
+    }
+    return arr;
+  }
+
+  /**
+   * Try converting from byte array
+   * @param arr byte array
+   * @param <T> type
+   * @return original object
+   */
+  public static <T> T tryConvertFromByteArray(byte [] arr) {
+    T result = null;
+    try {
+      KryoWritableWrapper<T> wrapper =
+              new KryoWritableWrapper<>();
+      WritableUtils.fromByteArrayUnsafe(
+              arr, wrapper, new UnsafeReusableByteArrayInput());
+      result = wrapper.get();
+      // Checkstyle exception due to unsafe conversion
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.error("Failed to convert from byte array: " +
+              ExceptionUtils.getStackTrace(e));
+    }
+    return result;
   }
 }
