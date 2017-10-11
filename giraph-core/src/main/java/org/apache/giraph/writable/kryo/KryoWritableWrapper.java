@@ -138,7 +138,7 @@ public class KryoWritableWrapper<T> implements Writable {
     try {
       KryoWritableWrapper<T> wrapper =
               new KryoWritableWrapper<>(object);
-      arr = WritableUtils.toByteArrayUnsafe(wrapper);
+      arr = WritableUtils.toByteArray(wrapper);
       // Checkstyle exception due to unsafe conversion
       // CHECKSTYLE: stop IllegalCatch
     } catch (Exception e) {
@@ -160,8 +160,7 @@ public class KryoWritableWrapper<T> implements Writable {
     try {
       KryoWritableWrapper<T> wrapper =
               new KryoWritableWrapper<>();
-      WritableUtils.fromByteArrayUnsafe(
-              arr, wrapper, new UnsafeReusableByteArrayInput());
+      WritableUtils.fromByteArray(arr, wrapper);
       result = wrapper.get();
       // Checkstyle exception due to unsafe conversion
       // CHECKSTYLE: stop IllegalCatch
