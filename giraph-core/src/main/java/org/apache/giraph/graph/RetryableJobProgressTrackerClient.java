@@ -124,11 +124,12 @@ public class RetryableJobProgressTrackerClient
   }
 
   @Override
-  public synchronized void logError(final String logLine) {
+  public synchronized void logError(final String logLine,
+                                    final byte [] exByteArray) {
     executeWithRetry(new Runnable() {
       @Override
       public void run() {
-        jobProgressTracker.logError(logLine);
+        jobProgressTracker.logError(logLine, exByteArray);
       }
     });
   }

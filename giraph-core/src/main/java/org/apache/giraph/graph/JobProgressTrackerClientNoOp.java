@@ -39,7 +39,7 @@ public class JobProgressTrackerClientNoOp implements JobProgressTrackerClient {
   }
 
   @Override
-  public void logError(String logLine) {
+  public void logError(String logLine, byte [] exByteArray) {
   }
 
   @Override

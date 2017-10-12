@@ -43,13 +43,17 @@ public interface JobProgressTracker {
   void logInfo(String logLine);
 
   /**
-   * Call this when you want to log an error line from any mapper to command
-   * line
+   * Call this when you want to log an error line and exception
+   * object from any mapper to command line
+   *
+   * KryoWritableWrapper.convertFromByteArray can be used to
+   * get exception object back
    *
    * @param logLine Line to log
+   * @param exByteArray Exception byte array
    */
   @ThriftMethod
-  void logError(String logLine);
+  void logError(String logLine, byte [] exByteArray);
 
   /**
    * Notify that job is failing

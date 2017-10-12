@@ -19,6 +19,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -93,11 +94,12 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       // CHECKSTYLE: stop IllegalCatch
     } catch (RuntimeException e) {
       // CHECKSTYLE: resume IllegalCatch
+      byte [] exByteArray = KryoWritableWrapper.convertToByteArray(e);
       LOG.error("Caught an unrecoverable exception " + e.getMessage(), e);
       graphTaskManager.getJobProgressTracker().logError(
           "Exception occurred on mapper " +
               graphTaskManager.getConf().getTaskPartition() + ": " +
-              ExceptionUtils.getStackTrace(e));
+              ExceptionUtils.getStackTrace(e), exByteArray);
       graphTaskManager.zooKeeperCleanup();
       graphTaskManager.workerFailureCleanup();
       throw new IllegalStateException(
