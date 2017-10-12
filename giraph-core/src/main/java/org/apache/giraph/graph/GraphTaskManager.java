@@ -65,6 +65,7 @@ import org.apache.giraph.worker.InputSplitsCallable;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.giraph.worker.WorkerProgress;
+import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -1115,8 +1116,9 @@ end[PURE_YARN]*/
         LOG.fatal(
             "uncaughtException: OverrideExceptionHandler on thread " +
                 t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
-        jobProgressTracker.logError(ExceptionUtils.getStackTrace(e));
-
+        byte [] exByteArray = KryoWritableWrapper.convertToByteArray(e);
+        jobProgressTracker.logError(ExceptionUtils.getStackTrace(e),
+                exByteArray);
         zooKeeperCleanup();
         workerFailureCleanup();
       } finally {
