@@ -94,7 +94,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       // CHECKSTYLE: stop IllegalCatch
     } catch (RuntimeException e) {
       // CHECKSTYLE: resume IllegalCatch
-      byte [] exByteArray = KryoWritableWrapper.tryConvertToByteArray(e);
+      byte [] exByteArray = KryoWritableWrapper.convertToByteArray(e);
       LOG.error("Caught an unrecoverable exception " + e.getMessage(), e);
       graphTaskManager.getJobProgressTracker().logError(
           "Exception occurred on mapper " +

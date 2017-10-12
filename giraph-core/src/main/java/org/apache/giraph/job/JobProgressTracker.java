@@ -46,7 +46,7 @@ public interface JobProgressTracker {
    * Call this when you want to log an error line and exception
    * object from any mapper to command line
    *
-   * KryoWritableWrapper.tryConvertFromByteArray can be used to
+   * KryoWritableWrapper.convertFromByteArray can be used to
    * get exception object back
    *
    * @param logLine Line to log

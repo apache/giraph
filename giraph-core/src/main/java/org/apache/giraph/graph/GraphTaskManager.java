@@ -1116,7 +1116,7 @@ end[PURE_YARN]*/
         LOG.fatal(
             "uncaughtException: OverrideExceptionHandler on thread " +
                 t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
-        byte [] exByteArray = KryoWritableWrapper.tryConvertToByteArray(e);
+        byte [] exByteArray = KryoWritableWrapper.convertToByteArray(e);
         jobProgressTracker.logError(ExceptionUtils.getStackTrace(e),
                 exByteArray);
         zooKeeperCleanup();
