@@ -163,6 +163,7 @@ public class InternalVertexRunner {
     File outputDir = FileUtils.createTempDir(tmpDir, "output");
     File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
     File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
+    File mrLocalDir = FileUtils.createTempDir(tmpDir, "_mapred");
     // Write input data to disk
     if (conf.hasVertexInputFormat()) {
       FileUtils.writeLines(vertexInputFile, vertexInputData);
@@ -174,6 +175,8 @@ public class InternalVertexRunner {
     conf.setWorkerConfiguration(1, 1, 100.0f);
     GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
+    conf.setIfUnset("mapred.job.tracker", "local");
+    conf.setIfUnset("mapred.local.dir", mrLocalDir.toString());
 
     conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
     GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
@@ -267,6 +270,7 @@ public class InternalVertexRunner {
       String checkpointsDir) throws Exception {
     File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
     File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
+    File mrLocalDir = FileUtils.createTempDir(tmpDir, "_mapred");
 
     if (checkpointsDir == null) {
       checkpointsDir = FileUtils.
@@ -284,6 +288,8 @@ public class InternalVertexRunner {
     GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
     GiraphConstants.ZOOKEEPER_SERVER_PORT.set(conf, 0);
+    conf.setIfUnset("mapred.job.tracker", "local");
+    conf.setIfUnset("mapred.local.dir", mrLocalDir.toString());
 
     conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
     GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
