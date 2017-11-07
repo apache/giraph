@@ -18,6 +18,7 @@
 package org.apache.giraph.block_app.framework.piece;
 
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
+import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.api.CreateReducersApi;
 import org.apache.giraph.block_app.framework.piece.global_comm.ReduceUtilsObject;
@@ -25,6 +26,7 @@ import org.apache.giraph.block_app.framework.piece.global_comm.ReducerHandle;
 import org.apache.giraph.block_app.framework.piece.global_comm.internal.CreateReducersApiWrapper;
 import org.apache.giraph.block_app.framework.piece.global_comm.internal.ReducersForPieceHandler;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexPostprocessor;
+import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
 import org.apache.giraph.block_app.framework.piece.messages.ObjectMessageClasses;
 import org.apache.giraph.block_app.framework.piece.messages.SupplierFromConf;
@@ -132,6 +134,25 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
    */
   public VertexSender<I, V, E> getVertexSender(
       BlockWorkerSendApi<I, V, E, M> workerApi, S executionStage) {
+    return null;
+  }
+
+  /**
+   * Override to do vertex receive processing.
+   *
+   * Creates handler that defines what should be executed on worker
+   * for each vertex during receive phase.
+   *
+   * This logic executed last.
+   * This function is called once on each worker on each thread, in parallel,
+   * on their copy of Piece object to create functions handler.
+   *
+   * If returned object implements Postprocessor interface, then corresponding
+   * postprocess() function is going to be called once, after all vertices
+   * corresponding thread needed to process are done.
+   */
+  public VertexReceiver<I, V, E, M> getVertexReceiver(
+      BlockWorkerReceiveApi<I> workerApi, S executionStage) {
     return null;
   }
 
@@ -284,12 +305,45 @@ public abstract class DefaultParentPiece<I extends WritableComparable,
           functions.vertexSend(vertex);
         }
       }
+
+      @Override
+      public boolean isVertexNoOp() {
+        return functions == null;
+      }
+
       @Override
       public void postprocess() {
         if (functions instanceof VertexPostprocessor) {
           ((VertexPostprocessor) functions).postprocess();
         }
         reducersHandler.vertexSenderWorkerPostprocess(workerApi);
+      }
+    };
+  }
+
+  @Override
+  public final InnerVertexReceiver getWrappedVertexReceiver(
+      final BlockWorkerReceiveApi<I> workerApi, S executionStage) {
+    final VertexReceiver<I, V, E, M> functions =
+        getVertexReceiver(workerApi, executionStage);
+    return new InnerVertexReceiver() {
+      @Override
+      public void vertexReceive(Vertex<I, V, E> vertex, Iterable<M> messages) {
+        if (functions != null) {
+          functions.vertexReceive(vertex, messages);
+        }
+      }
+
+      @Override
+      public boolean isVertexNoOp() {
+        return functions == null;
+      }
+
+      @Override
+      public void postprocess() {
+        if (functions instanceof VertexPostprocessor) {
+          ((VertexPostprocessor) functions).postprocess();
+        }
       }
     };
   }

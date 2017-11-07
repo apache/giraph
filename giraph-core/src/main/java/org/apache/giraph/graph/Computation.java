@@ -205,4 +205,13 @@ public interface Computation<I extends WritableComparable,
    */
   @SuppressWarnings("unchecked")
   <W extends WorkerContext> W getWorkerContext();
+
+  /**
+   * Check if this Computation doesn't do anything inside of compute() function.
+   * It will be used to skip iterating through vertices, so if it returns true
+   * compute() won't be called at all.
+   *
+   * @return True iff compute function is empty.
+   */
+  boolean isVertexNoOp();
 }

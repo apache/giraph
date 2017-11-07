@@ -294,4 +294,9 @@ public abstract class AbstractComputation<I extends WritableComparable,
     return allWorkersInfo.getWorkerIndex(
         serviceWorker.getVertexPartitionOwner(vertexId).getWorkerInfo());
   }
+
+  @Override
+  public boolean isVertexNoOp() {
+    return false;
+  }
 }

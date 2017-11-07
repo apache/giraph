@@ -278,6 +278,15 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       Partition<I, V, E> partition, OutOfCoreEngine oocEngine,
       boolean ignoreExistingVertices)
       throws IOException, InterruptedException {
+    if (computation.isVertexNoOp()) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Skipping compute since it's no-op");
+      }
+      return new PartitionStats(partition.getId(), partition.getVertexCount(),
+          0, partition.getEdgeCount(), 0, 0);
+    }
+
+
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
     final LongRef verticesComputedProgress = new LongRef(0);

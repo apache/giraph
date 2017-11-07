@@ -25,8 +25,8 @@ import org.apache.giraph.block_app.framework.api.BlockWorkerContextSendApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
+import org.apache.giraph.block_app.framework.piece.AbstractPiece.InnerVertexReceiver;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece.InnerVertexSender;
-import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -73,10 +73,10 @@ public class PairedPieceAndStage<S> {
     }
   }
 
-  public VertexReceiver getVertexReceiver(
+  public InnerVertexReceiver getVertexReceiver(
       BlockWorkerReceiveApi receiveApi) {
     if (piece != null) {
-      return piece.getVertexReceiver(receiveApi, executionStage);
+      return piece.getWrappedVertexReceiver(receiveApi, executionStage);
     }
     return null;
   }
