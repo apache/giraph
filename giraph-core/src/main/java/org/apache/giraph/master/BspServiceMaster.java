@@ -984,6 +984,9 @@ public class BspServiceMaster<I extends WritableComparable,
       } else {
         printAggregatedMetricsToHDFS(superstep, aggregatedMetrics);
       }
+      for (MasterObserver observer : observers) {
+        observer.superstepMetricsUpdate(superstep, aggregatedMetrics);
+      }
     }
 
     if (LOG.isInfoEnabled()) {

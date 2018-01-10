@@ -19,6 +19,7 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.metrics.AggregatedMetrics;
 
 /**
  * Observer for Master.
@@ -55,4 +56,13 @@ public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
    * @param superstep The superstep number
    */
   void postSuperstep(long superstep);
+
+  /**
+   * Called after each superstep with aggregated metrics from workers
+   *
+   * @param superstep Supsertep number
+   * @param aggregatedMetrics Metrics
+   */
+  void superstepMetricsUpdate(
+      long superstep, AggregatedMetrics aggregatedMetrics);
 }
