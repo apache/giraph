@@ -23,7 +23,7 @@ package org.apache.giraph.metrics;
  *
  * @param <T> types of value (either long or double)
  */
-class ValueWithHostname<T extends Number> {
+public class ValueWithHostname<T extends Number> {
   /** long value we're holding */
   private T value;
   /** host associated with value */

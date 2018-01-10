@@ -19,6 +19,7 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.metrics.AggregatedMetrics;
 
 /**
  * A no-op implementation of MasterObserver to make it easier for users.
@@ -51,4 +52,8 @@ public class DefaultMasterObserver implements MasterObserver {
 
   @Override
   public void postSuperstep(long superstep) { }
+
+  @Override
+  public void superstepMetricsUpdate(long superstep,
+      AggregatedMetrics aggregatedMetrics) { }
 }
