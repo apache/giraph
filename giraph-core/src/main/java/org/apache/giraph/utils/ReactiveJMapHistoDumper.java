@@ -22,6 +22,7 @@ import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.metrics.AggregatedMetrics;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.log4j.Logger;
 
@@ -109,6 +110,10 @@ public class ReactiveJMapHistoDumper extends
 
   @Override
   public void postSuperstep(long superstep) { }
+
+  @Override
+  public void superstepMetricsUpdate(long superstep,
+      AggregatedMetrics aggregatedMetrics) { }
 
   @Override
   public void applicationFailed(Exception e) { }

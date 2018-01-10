@@ -19,6 +19,7 @@ package org.apache.giraph.utils;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.metrics.AggregatedMetrics;
 import org.apache.giraph.worker.WorkerObserver;
 
 /**
@@ -55,4 +56,8 @@ public class LogVersions implements WorkerObserver, MasterObserver {
 
   @Override
   public void postSuperstep(long superstep) { }
+
+  @Override
+  public void superstepMetricsUpdate(long superstep,
+      AggregatedMetrics aggregatedMetrics) { }
 }
