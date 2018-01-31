@@ -36,6 +36,7 @@ import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.EdgeValueFactory;
 import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.factories.OutEdgesFactory;
 import org.apache.giraph.factories.ValueFactories;
 import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
@@ -112,6 +113,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private Class<? extends Writable> mappingTargetClass = null;
   /** Value (IVEMM) Factories */
   private final ValueFactories<I, V, E> valueFactories;
+  /** {@link OutEdges} factory. */
+  private final OutEdgesFactory<I, E> outEdgesFactory;
   /** Language values (IVEMM) are implemented in */
   private final PerGraphTypeEnum<Language> valueLanguages;
   /** Whether values (IVEMM) need Jython wrappers */
@@ -148,6 +151,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         GiraphConstants.GRAPH_TYPES_NEEDS_WRAPPERS, conf);
     isStaticGraph = GiraphConstants.STATIC_GRAPH.get(this);
     valueFactories = new ValueFactories<I, V, E>(this);
+    outEdgesFactory = OUT_EDGES_FACTORY_CLASS.newInstance(this);
   }
 
   /**
@@ -1083,7 +1087,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated user OutEdges
    */
   public OutEdges<I, E> createOutEdges() {
-    return ReflectionUtils.newInstance(getOutEdgesClass(), this);
+    return outEdgesFactory.newInstance();
   }
 
   /**
