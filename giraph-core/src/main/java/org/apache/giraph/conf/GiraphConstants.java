@@ -35,6 +35,7 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
 import org.apache.giraph.factories.DefaultEdgeValueFactory;
+import org.apache.giraph.factories.DefaultInputOutEdgesFactory;
 import org.apache.giraph.factories.DefaultMessageValueFactory;
 import org.apache.giraph.factories.DefaultOutEdgesFactory;
 import org.apache.giraph.factories.DefaultVertexIdFactory;
@@ -205,6 +206,11 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.outEdgesFactoryClass",
         DefaultOutEdgesFactory.class, OutEdgesFactory.class,
           "OutEdges factory class - optional");
+  /** OutEdges for input factory class - optional */
+  ClassConfOption<OutEdgesFactory> INPUT_OUT_EDGES_FACTORY_CLASS =
+      ClassConfOption.create("giraph.inputOutEdgesFactoryClass",
+        DefaultInputOutEdgesFactory.class, OutEdgesFactory.class,
+          "OutEdges for input factory class - optional");
 
   /** Class for Master - optional */
   ClassConfOption<MasterCompute> MASTER_COMPUTE_CLASS =

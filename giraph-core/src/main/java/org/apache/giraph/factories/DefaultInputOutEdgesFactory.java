@@ -26,13 +26,13 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Default factory class for creating {@link OutEdges} instances to be used
- * during computation. This factory simply creates an instance of the
+ * during input. This factory simply creates an instance of the
  * {@link OutEdges} class set in the configuration.
  *
  * @param <I> Vertex ID type.
  * @param <E> Edge value type.
  */
-public class DefaultOutEdgesFactory<I extends WritableComparable,
+public class DefaultInputOutEdgesFactory<I extends WritableComparable,
   E extends Writable> implements OutEdgesFactory<I, E>,
   GiraphConfigurationSettable {
   /** Configuration */
@@ -45,6 +45,6 @@ public class DefaultOutEdgesFactory<I extends WritableComparable,
 
   @Override
   public OutEdges<I, E> newInstance() {
-    return ReflectionUtils.newInstance(conf.getOutEdgesClass(), conf);
+    return ReflectionUtils.newInstance(conf.getInputOutEdgesClass(), conf);
   }
 }

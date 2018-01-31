@@ -113,8 +113,10 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private Class<? extends Writable> mappingTargetClass = null;
   /** Value (IVEMM) Factories */
   private final ValueFactories<I, V, E> valueFactories;
-  /** {@link OutEdges} factory. */
+  /** Factory to create {@link OutEdges} for computation */
   private final OutEdgesFactory<I, E> outEdgesFactory;
+  /** Factory to create {@link OutEdges} for input */
+  private final OutEdgesFactory<I, E> inputOutEdgesFactory;
   /** Language values (IVEMM) are implemented in */
   private final PerGraphTypeEnum<Language> valueLanguages;
   /** Whether values (IVEMM) need Jython wrappers */
@@ -152,6 +154,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     isStaticGraph = GiraphConstants.STATIC_GRAPH.get(this);
     valueFactories = new ValueFactories<I, V, E>(this);
     outEdgesFactory = OUT_EDGES_FACTORY_CLASS.newInstance(this);
+    inputOutEdgesFactory = INPUT_OUT_EDGES_FACTORY_CLASS.newInstance(this);
   }
 
   /**
@@ -1136,7 +1139,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated user input OutEdges
    */
   public OutEdges<I, E> createInputOutEdges() {
-    return ReflectionUtils.newInstance(getInputOutEdgesClass(), this);
+    return inputOutEdgesFactory.newInstance();
   }
 
   /**
