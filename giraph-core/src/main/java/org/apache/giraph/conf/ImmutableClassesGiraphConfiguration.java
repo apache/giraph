@@ -153,8 +153,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         GiraphConstants.GRAPH_TYPES_NEEDS_WRAPPERS, conf);
     isStaticGraph = GiraphConstants.STATIC_GRAPH.get(this);
     valueFactories = new ValueFactories<I, V, E>(this);
-    outEdgesFactory = OUT_EDGES_FACTORY_CLASS.newInstance(this);
-    inputOutEdgesFactory = INPUT_OUT_EDGES_FACTORY_CLASS.newInstance(this);
+    outEdgesFactory = VERTEX_EDGES_FACTORY_CLASS.newInstance(this);
+    inputOutEdgesFactory = INPUT_VERTEX_EDGES_FACTORY_CLASS.newInstance(this);
   }
 
   /**

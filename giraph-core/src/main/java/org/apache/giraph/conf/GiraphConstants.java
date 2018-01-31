@@ -202,12 +202,12 @@ public interface GiraphConstants {
           ByteArrayEdges.class, OutEdges.class,
           "Vertex edges class to be used during edge input only - optional");
   /** OutEdges factory class - optional */
-  ClassConfOption<OutEdgesFactory> OUT_EDGES_FACTORY_CLASS =
+  ClassConfOption<OutEdgesFactory> VERTEX_EDGES_FACTORY_CLASS =
       ClassConfOption.create("giraph.outEdgesFactoryClass",
         DefaultOutEdgesFactory.class, OutEdgesFactory.class,
           "OutEdges factory class - optional");
   /** OutEdges for input factory class - optional */
-  ClassConfOption<OutEdgesFactory> INPUT_OUT_EDGES_FACTORY_CLASS =
+  ClassConfOption<OutEdgesFactory> INPUT_VERTEX_EDGES_FACTORY_CLASS =
       ClassConfOption.create("giraph.inputOutEdgesFactoryClass",
         DefaultInputOutEdgesFactory.class, OutEdgesFactory.class,
           "OutEdges for input factory class - optional");
