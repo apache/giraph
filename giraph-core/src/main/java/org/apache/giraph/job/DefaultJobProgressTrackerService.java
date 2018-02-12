@@ -180,7 +180,7 @@ public class DefaultJobProgressTrackerService
    * Called when job got all mappers, used to check MAX_ALLOWED_JOB_TIME_MS
    * and potentially start a thread which will kill the job after this time
    */
-  private void jobGotAllMappers() {
+  protected void jobGotAllMappers() {
     jobObserver.jobGotAllMappers(job);
     final long maxAllowedJobTimeMs =
         GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf);
