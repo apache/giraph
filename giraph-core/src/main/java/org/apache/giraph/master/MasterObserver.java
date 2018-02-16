@@ -20,6 +20,9 @@ package org.apache.giraph.master;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.metrics.AggregatedMetrics;
+import org.apache.giraph.partition.PartitionStats;
+
+import java.util.List;
 
 /**
  * Observer for Master.
@@ -62,7 +65,9 @@ public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
    *
    * @param superstep Supsertep number
    * @param aggregatedMetrics Metrics
+   * @param partitionStatsList List of partition stats
    */
   void superstepMetricsUpdate(
-      long superstep, AggregatedMetrics aggregatedMetrics);
+      long superstep, AggregatedMetrics aggregatedMetrics,
+      List<PartitionStats> partitionStatsList);
 }
