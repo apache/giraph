@@ -206,6 +206,14 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
             partitionStatsList.size() + " partitions, " +
             partitionStore.getNumPartitions() + " remaining " +
             MemoryUtils.getRuntimeMemoryStats());
+        long timeDoingGCWhileProcessing =
+            taskManager.getSuperstepGCTime() - startGCTime;
+        timeDoingGC += timeDoingGCWhileProcessing;
+        long timeProcessingPartition =
+            System.currentTimeMillis() - startProcessingTime -
+                timeDoingGCWhileProcessing;
+        timeProcessing += timeProcessingPartition;
+        partitionStats.setComputeMs(timeProcessingPartition);
       } catch (IOException e) {
         throw new IllegalStateException("call: Caught unexpected IOException," +
             " failing.", e);
@@ -215,11 +223,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       } finally {
         partitionStore.putPartition(partition);
       }
-      long timeDoingGCWhileProcessing =
-          taskManager.getSuperstepGCTime() - startGCTime;
-      timeDoingGC += timeDoingGCWhileProcessing;
-      timeProcessing += System.currentTimeMillis() - startProcessingTime -
-          timeDoingGCWhileProcessing;
       histogramComputePerPartition.update(
           System.currentTimeMillis() - startTime);
     }
@@ -279,7 +282,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       boolean ignoreExistingVertices)
       throws IOException, InterruptedException {
     PartitionStats partitionStats =
-        new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
+        new PartitionStats(partition.getId(), 0, 0, 0, 0, 0,
+            serviceWorker.getWorkerInfo().getHostnameId());
     final LongRef verticesComputedProgress = new LongRef(0);
 
     Progressable verticesProgressable = new Progressable() {

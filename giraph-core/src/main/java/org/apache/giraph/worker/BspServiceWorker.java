@@ -608,7 +608,9 @@ else[HADOOP_NON_SECURE]*/
               partitionStore.getPartitionVertexCount(partitionId),
               0,
               partitionStore.getPartitionEdgeCount(partitionId),
-              0, 0);
+              0,
+              0,
+              workerInfo.getHostnameId());
       partitionStatsList.add(partitionStats);
     }
     workerGraphPartitioner.finalizePartitionStats(
