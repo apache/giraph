@@ -25,8 +25,6 @@ import org.apache.giraph.types.ops.collections.BasicSet;
 
 import com.google.common.base.Preconditions;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 /**
  * Holds reusable objects of multiple sizes.
  * Example usecase, is when we need a hashmap - that we will insert and iterate
@@ -43,7 +41,6 @@ public class MultiSizedReusable<T> implements Int2ObjFunction<T> {
   private final Int2ObjFunction<T> createSized;
   private final Consumer<T> init;
   @SuppressWarnings("unchecked")
-  @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
   private final transient T[] holder = (T[]) new Object[Integer.SIZE];
 
   // No-arg constructor Kryo can call to initialize holder

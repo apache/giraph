@@ -96,4 +96,12 @@
       On the other hand, Kryo needs lambdas to be Serializable to work. -->
     <Bug pattern="SE_BAD_FIELD,SE_COMPARATOR_SHOULD_BE_SERIALIZABLE,SE_NO_SERIALVERSIONID" />
   </Match>
+  <Match>
+    <Class name="org.apache.giraph.block_app.library.gc.WorkerGCPiece"/>
+    <Bug pattern="DM_GC"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.object.MultiSizedReusable"/>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+  </Match>
 </FindBugsFilter>
