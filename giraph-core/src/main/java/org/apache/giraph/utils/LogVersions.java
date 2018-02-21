@@ -20,7 +20,10 @@ package org.apache.giraph.utils;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.metrics.AggregatedMetrics;
+import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.worker.WorkerObserver;
+
+import java.util.List;
 
 /**
  * Logs versions of Giraph dependencies on job start.
@@ -59,5 +62,6 @@ public class LogVersions implements WorkerObserver, MasterObserver {
 
   @Override
   public void superstepMetricsUpdate(long superstep,
-      AggregatedMetrics aggregatedMetrics) { }
+      AggregatedMetrics aggregatedMetrics,
+      List<PartitionStats> partitionStatsList) { }
 }

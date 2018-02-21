@@ -20,6 +20,9 @@ package org.apache.giraph.master;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.metrics.AggregatedMetrics;
+import org.apache.giraph.partition.PartitionStats;
+
+import java.util.List;
 
 /**
  * A no-op implementation of MasterObserver to make it easier for users.
@@ -55,5 +58,6 @@ public class DefaultMasterObserver implements MasterObserver {
 
   @Override
   public void superstepMetricsUpdate(long superstep,
-      AggregatedMetrics aggregatedMetrics) { }
+      AggregatedMetrics aggregatedMetrics,
+      List<PartitionStats> partitionStatsList) { }
 }

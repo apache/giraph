@@ -985,7 +985,8 @@ public class BspServiceMaster<I extends WritableComparable,
         printAggregatedMetricsToHDFS(superstep, aggregatedMetrics);
       }
       for (MasterObserver observer : observers) {
-        observer.superstepMetricsUpdate(superstep, aggregatedMetrics);
+        observer.superstepMetricsUpdate(
+            superstep, aggregatedMetrics, allPartitionStatsList);
       }
     }
 

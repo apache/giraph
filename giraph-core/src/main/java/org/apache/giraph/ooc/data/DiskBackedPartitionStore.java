@@ -368,7 +368,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
           partitionStore.getPartitionEdgeCount(partitionId));
       Partition<I, V, E> partition =
           partitionStore.removePartition(partitionId);
-      LOG.debug("Offloading partition " + partition + " DataIndex[" + index + "]");
+      LOG.debug(
+          "Offloading partition " + partition + " DataIndex[" + index + "]");
       index.addIndex(DataIndex.TypeIndexEntry.PARTITION_VERTICES);
       OutOfCoreDataAccessor.DataOutputWrapper outputWrapper =
           dataAccessor.prepareOutput(ioThreadId, index.copy(), false);
