@@ -84,6 +84,7 @@ import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.SimplePartition;
+import org.apache.giraph.utils.GcObserver;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
@@ -229,6 +230,10 @@ public interface GiraphConstants {
   ClassConfOption<MapperObserver> MAPPER_OBSERVER_CLASSES =
       ClassConfOption.create("giraph.mapper.observers", null,
           MapperObserver.class, "Classes for Mapper Observer - optional");
+  /** Classes for GC Observer - optional */
+  ClassConfOption<GcObserver> GC_OBSERVER_CLASSES =
+      ClassConfOption.create("giraph.gc.observers", null,
+          GcObserver.class, "Classes for GC oObserver - optional");
   /** Message combiner class - optional */
   ClassConfOption<MessageCombiner> MESSAGE_COMBINER_CLASS =
       ClassConfOption.create("giraph.messageCombinerClass", null,

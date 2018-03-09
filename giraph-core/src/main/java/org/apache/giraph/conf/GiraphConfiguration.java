@@ -51,6 +51,7 @@ import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.ReusesObjectsPartition;
+import org.apache.giraph.utils.GcObserver;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
@@ -321,6 +322,16 @@ public class GiraphConfiguration extends Configuration
   public final void addMapperObserverClass(
       Class<? extends MapperObserver> mapperObserverClass) {
     MAPPER_OBSERVER_CLASSES.add(this, mapperObserverClass);
+  }
+
+  /**
+   * Add a GcObserver class (optional)
+   *
+   * @param gcObserverClass GcObserver class to add.
+   */
+  public final void addGcObserverClass(
+      Class<? extends GcObserver> gcObserverClass) {
+    GC_OBSERVER_CLASSES.add(this, gcObserverClass);
   }
 
   /**
@@ -704,6 +715,15 @@ public class GiraphConfiguration extends Configuration
    */
   public Class<? extends MapperObserver>[] getMapperObserverClasses() {
     return MAPPER_OBSERVER_CLASSES.getArray(this);
+  }
+
+  /**
+   * Get array of GcObserver classes set in configuration.
+   *
+   * @return array of GcObserver classes.
+   */
+  public Class<? extends GcObserver>[] getGcObserverClasses() {
+    return GC_OBSERVER_CLASSES.getArray(this);
   }
 
   /**

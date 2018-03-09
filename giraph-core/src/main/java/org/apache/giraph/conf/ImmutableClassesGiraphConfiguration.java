@@ -76,6 +76,7 @@ import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.GcObserver;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
@@ -780,6 +781,22 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context) {
     Class<? extends MapperObserver>[] klasses = getMapperObserverClasses();
     MapperObserver[] objects = new MapperObserver[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this, context);
+    }
+    return objects;
+  }
+
+  /**
+   * Create array of GcObservers.
+   *
+   * @param context Mapper context
+   * @return Instantiated array of GcObservers.
+   */
+  public GcObserver[] createGcObservers(
+      Mapper<?, ?, ?, ?>.Context context) {
+    Class<? extends GcObserver>[] klasses = getGcObserverClasses();
+    GcObserver[] objects = new GcObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
       objects[i] = ReflectionUtils.newInstance(klasses[i], this, context);
     }
