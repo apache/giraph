@@ -58,6 +58,7 @@ import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.utils.CallableFactory;
+import org.apache.giraph.utils.GcObserver;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.worker.BspServiceWorker;
@@ -650,6 +651,7 @@ end[PURE_YARN]*/
    * notifies an out-of-core engine (if any is used) about the GC.
    */
   private void installGCMonitoring() {
+    final GcObserver[] gcObservers = conf.createGcObservers(context);
     List<GarbageCollectorMXBean> mxBeans = ManagementFactory
         .getGarbageCollectorMXBeans();
     final OutOfCoreEngine oocEngine =
@@ -674,6 +676,9 @@ end[PURE_YARN]*/
             }
             gcTimeMetric.inc(info.getGcInfo().getDuration());
             GiraphMetrics.get().getGcTracker().gcOccurred(info.getGcInfo());
+            for (GcObserver gcObserver : gcObservers) {
+              gcObserver.gcOccurred(info);
+            }
             if (oocEngine != null) {
               oocEngine.gcCompleted(info);
             }
