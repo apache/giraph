@@ -47,7 +47,8 @@ public class SendReducedToMasterRequest extends ByteArrayRequest
   @Override
   public void doRequest(MasterGlobalCommHandler commHandler) {
     try {
-      commHandler.getAggregatorHandler().acceptReducedValues(getDataInput());
+      commHandler.getAggregatorHandler().
+              acceptReducedValues(getExtendedInput());
     } catch (IOException e) {
       throw new IllegalStateException("doRequest: " +
           "IOException occurred while processing request", e);

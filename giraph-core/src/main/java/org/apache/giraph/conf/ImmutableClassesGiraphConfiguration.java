@@ -72,8 +72,8 @@ import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.master.SuperstepClasses;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.ExtendedByteArrayDataInput;
-import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
+import org.apache.giraph.utils.ExtendedInput;
+import org.apache.giraph.utils.ExtendedOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.GcObserver;
@@ -125,7 +125,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
 
   /**
-   * Use unsafe serialization? Cached for fast access to instantiate the
+   * Use extended serialization? Cached for fast access to instantiate the
    * extended data input/output classes
    */
   private final boolean useUnsafeSerialization;
@@ -1217,7 +1217,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (useUnsafeSerialization) {
       return new UnsafeByteArrayOutputStream();
     } else {
-      return new ExtendedByteArrayDataOutput();
+      return new ExtendedOutput();
     }
   }
 
@@ -1231,7 +1231,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (useUnsafeSerialization) {
       return new UnsafeByteArrayOutputStream(expectedSize);
     } else {
-      return new ExtendedByteArrayDataOutput(expectedSize);
+      return new ExtendedOutput(expectedSize);
     }
   }
 
@@ -1247,7 +1247,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (useUnsafeSerialization) {
       return new UnsafeByteArrayOutputStream(buf, pos);
     } else {
-      return new ExtendedByteArrayDataOutput(buf, pos);
+      return new ExtendedOutput(buf, pos);
     }
   }
 
@@ -1264,7 +1264,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (useUnsafeSerialization) {
       return new UnsafeByteArrayInputStream(buf, off, length);
     } else {
-      return new ExtendedByteArrayDataInput(buf, off, length);
+      return new ExtendedInput(buf, off, length);
     }
   }
 
@@ -1278,7 +1278,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (useUnsafeSerialization) {
       return new UnsafeByteArrayInputStream(buf);
     } else {
-      return new ExtendedByteArrayDataInput(buf);
+      return new ExtendedInput(buf);
     }
   }
 

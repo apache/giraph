@@ -18,7 +18,6 @@
 package org.apache.giraph.partition;
 
 import com.google.common.collect.MapMaker;
-import com.google.common.primitives.Ints;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
@@ -233,14 +232,8 @@ public class ByteArrayPartition<I extends WritableComparable,
       entry.getKey().write(output);
       // Note here that we are writing the size of the vertex data first
       // as it is encoded in the first four bytes of the byte[]
-      int vertexDataSize;
-      if (useUnsafeSerialization) {
-        vertexDataSize = UnsafeByteArrayInputStream.getInt(entry.getValue(),
+      int vertexDataSize = UnsafeByteArrayInputStream.getInt(entry.getValue(),
             0);
-      } else {
-        vertexDataSize = Ints.fromByteArray(entry.getValue());
-      }
-
       output.writeInt(vertexDataSize);
       output.write(entry.getValue(), 0, vertexDataSize);
     }
