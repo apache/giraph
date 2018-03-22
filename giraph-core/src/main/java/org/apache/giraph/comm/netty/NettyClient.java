@@ -533,7 +533,8 @@ public class NettyClient {
               addressChannelMap.get(waitingConnection.address);
           if (rotater == null) {
             ChannelRotater newRotater =
-                new ChannelRotater(waitingConnection.taskId);
+                new ChannelRotater(waitingConnection.taskId,
+                    waitingConnection.address);
             rotater = addressChannelMap.putIfAbsent(
                 waitingConnection.address, newRotater);
             if (rotater == null) {

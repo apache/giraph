@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import com.google.common.collect.Lists;
 
@@ -36,14 +37,18 @@ public class ChannelRotater {
   private final List<Channel> channelList = Lists.newArrayList();
   /** Task id of this channel */
   private final Integer taskId;
+  /** Address these channels are associated with */
+  private final InetSocketAddress address;
 
   /**
    * Constructor
    *
    * @param taskId Id of the task these channels as associated with
+   * @param address Address these channels are associated with
    */
-  public ChannelRotater(Integer taskId) {
+  public ChannelRotater(Integer taskId, InetSocketAddress address) {
     this.taskId = taskId;
+    this.address = address;
   }
 
   public Integer getTaskId() {
@@ -68,7 +73,9 @@ public class ChannelRotater {
    */
   public synchronized Channel nextChannel() {
     if (channelList.isEmpty()) {
-      throw new IllegalArgumentException("nextChannel: No channels exist!");
+      throw new IllegalArgumentException(
+          "nextChannel: No channels exist for hostname " +
+              address.getHostName());
     }
 
     ++index;
