@@ -20,7 +20,7 @@ package org.apache.giraph.comm.aggregators;
 
 import java.io.IOException;
 import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.ExtendedOutput;
+import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 
 /**
  * Wrapper for output stream which keeps the place in the beginning for the
@@ -36,7 +36,7 @@ public abstract class CountingOutputStream {
    * Default constructor
    */
   public CountingOutputStream() {
-    dataOutput = new ExtendedOutput();
+    dataOutput = new UnsafeByteArrayOutputStream();
     reset();
   }
 

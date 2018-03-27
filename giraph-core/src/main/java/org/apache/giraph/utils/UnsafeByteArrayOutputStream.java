@@ -17,8 +17,9 @@
  */
 package org.apache.giraph.utils;
 
+import com.esotericsoftware.kryo.io.Output;
+
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ import static org.apache.giraph.utils.ByteUtils.SIZE_OF_DOUBLE;
  * Byte array output stream that uses Unsafe methods to serialize/deserialize
  * much faster
  */
-public class UnsafeByteArrayOutputStream extends OutputStream
+public class UnsafeByteArrayOutputStream extends Output
   implements ExtendedDataOutput {
   static {
     try {
@@ -112,12 +113,15 @@ public class UnsafeByteArrayOutputStream extends OutputStream
    *
    * @param size Size to add
    */
-  private void ensureSize(int size) {
+  @Override
+  protected boolean require(int size) {
     if (pos + size > buf.length) {
       byte[] newBuf = new byte[(buf.length + size) << 1];
       System.arraycopy(buf, 0, newBuf, 0, pos);
       buf = newBuf;
+      return true;
     }
+    return false;
   }
 
   @Override
@@ -150,57 +154,57 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   }
 
   @Override
-  public void write(int b) throws IOException {
-    ensureSize(SIZE_OF_BYTE);
+  public void write(int b) {
+    require(SIZE_OF_BYTE);
     buf[pos] = (byte) b;
     pos += SIZE_OF_BYTE;
   }
 
   @Override
-  public void write(byte[] b) throws IOException {
-    ensureSize(b.length);
+  public void write(byte[] b) {
+    require(b.length);
     System.arraycopy(b, 0, buf, pos, b.length);
     pos += b.length;
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
-    ensureSize(len);
+  public void write(byte[] b, int off, int len) {
+    require(len);
     System.arraycopy(b, off, buf, pos, len);
     pos += len;
   }
 
   @Override
-  public void writeBoolean(boolean v) throws IOException {
-    ensureSize(SIZE_OF_BOOLEAN);
+  public void writeBoolean(boolean v) {
+    require(SIZE_OF_BOOLEAN);
     UNSAFE.putBoolean(buf, BYTE_ARRAY_OFFSET + pos, v);
     pos += SIZE_OF_BOOLEAN;
   }
 
   @Override
-  public void writeByte(int v) throws IOException {
-    ensureSize(SIZE_OF_BYTE);
+  public void writeByte(int v) {
+    require(SIZE_OF_BYTE);
     UNSAFE.putByte(buf, BYTE_ARRAY_OFFSET + pos, (byte) v);
     pos += SIZE_OF_BYTE;
   }
 
   @Override
-  public void writeShort(int v) throws IOException {
-    ensureSize(SIZE_OF_SHORT);
+  public void writeShort(int v) {
+    require(SIZE_OF_SHORT);
     UNSAFE.putShort(buf, BYTE_ARRAY_OFFSET + pos, (short) v);
     pos += SIZE_OF_SHORT;
   }
 
   @Override
   public void writeChar(int v) throws IOException {
-    ensureSize(SIZE_OF_CHAR);
+    require(SIZE_OF_CHAR);
     UNSAFE.putChar(buf, BYTE_ARRAY_OFFSET + pos, (char) v);
     pos += SIZE_OF_CHAR;
   }
 
   @Override
-  public void writeInt(int v) throws IOException {
-    ensureSize(SIZE_OF_INT);
+  public void writeInt(int v) {
+    require(SIZE_OF_INT);
     UNSAFE.putInt(buf, BYTE_ARRAY_OFFSET + pos, v);
     pos += SIZE_OF_INT;
   }
@@ -229,22 +233,22 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   }
 
   @Override
-  public void writeLong(long v) throws IOException {
-    ensureSize(SIZE_OF_LONG);
+  public void writeLong(long v) {
+    require(SIZE_OF_LONG);
     UNSAFE.putLong(buf, BYTE_ARRAY_OFFSET + pos, v);
     pos += SIZE_OF_LONG;
   }
 
   @Override
-  public void writeFloat(float v) throws IOException {
-    ensureSize(SIZE_OF_FLOAT);
+  public void writeFloat(float v) {
+    require(SIZE_OF_FLOAT);
     UNSAFE.putFloat(buf, BYTE_ARRAY_OFFSET + pos, v);
     pos += SIZE_OF_FLOAT;
   }
 
   @Override
-  public void writeDouble(double v) throws IOException {
-    ensureSize(SIZE_OF_DOUBLE);
+  public void writeDouble(double v) {
+    require(SIZE_OF_DOUBLE);
     UNSAFE.putDouble(buf, BYTE_ARRAY_OFFSET + pos, v);
     pos += SIZE_OF_DOUBLE;
   }
@@ -253,7 +257,7 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   public void writeBytes(String s) throws IOException {
     // Note that this code is mostly copied from DataOutputStream
     int len = s.length();
-    ensureSize(len);
+    require(len);
     for (int i = 0; i < len; i++) {
       int v = s.charAt(i);
       writeByte(v);
@@ -264,7 +268,7 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   public void writeChars(String s) throws IOException {
     // Note that this code is mostly copied from DataOutputStream
     int len = s.length();
-    ensureSize(len * SIZE_OF_CHAR);
+    require(len * SIZE_OF_CHAR);
     for (int i = 0; i < len; i++) {
       int v = s.charAt(i);
       writeChar(v);
@@ -295,7 +299,7 @@ public class UnsafeByteArrayOutputStream extends OutputStream
           "encoded string too long: " + utflen + " bytes");
     }
 
-    ensureSize(utflen + SIZE_OF_SHORT);
+    require(utflen + SIZE_OF_SHORT);
     writeShort(utflen);
 
     int i = 0;

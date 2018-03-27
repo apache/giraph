@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
-import org.apache.giraph.utils.ExtendedInput;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -52,7 +52,7 @@ public class SendWorkerAggregatorsRequest extends
 
   @Override
   public void doRequest(ServerData serverData) {
-    ExtendedInput input = getExtendedInput();
+    UnsafeByteArrayInputStream input = getUnsafeByteArrayInput();
     OwnerAggregatorServerData aggregatorData =
         serverData.getOwnerAggregatorData();
     try {

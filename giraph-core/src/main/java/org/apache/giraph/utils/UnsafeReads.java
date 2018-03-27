@@ -18,6 +18,8 @@
 
 package org.apache.giraph.utils;
 
+import com.esotericsoftware.kryo.io.Input;
+
 import java.io.IOException;
 import java.io.UTFDataFormatException;
 
@@ -25,7 +27,7 @@ import java.io.UTFDataFormatException;
  * Byte array input stream that uses Unsafe methods to deserialize
  * much faster
  */
-public abstract class UnsafeReads implements ExtendedDataInput {
+public abstract class UnsafeReads extends Input implements ExtendedDataInput {
 
   /** Buffer length */
   protected int bufLength;
@@ -72,16 +74,18 @@ public abstract class UnsafeReads implements ExtendedDataInput {
    * @param requiredBytes Bytes required to read
    * @throws IOException When there are not enough bytes to read
    */
-  protected void ensureRemaining(int requiredBytes) throws IOException {
+  @Override
+  protected int require(int requiredBytes) {
     if (available() < requiredBytes) {
-      throw new IOException("ensureRemaining: Only " + available() +
-          " bytes remaining, trying to read " + requiredBytes);
+      throw new IndexOutOfBoundsException("require: Only " +
+          available() + " bytes remaining, trying to read " + requiredBytes);
     }
+    return available();
   }
 
   @Override
-  public int skipBytes(int n) throws IOException {
-    ensureRemaining(n);
+  public int skipBytes(int n) {
+    require(n);
     pos += n;
     return n;
   }

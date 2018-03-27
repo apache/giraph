@@ -29,8 +29,8 @@ import java.util.Iterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
-import org.apache.giraph.utils.ExtendedInput;
-import org.apache.giraph.utils.ExtendedOutput;
+import org.apache.giraph.utils.ExtendedByteArrayDataInput;
+import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
@@ -304,7 +304,7 @@ public class LongDiffArray implements Writable {
       if (useUnsafeReader) {
         input = new UnsafeByteArrayInputStream(compressedData);
       } else {
-        input = new ExtendedInput(compressedData);
+        input = new ExtendedByteArrayDataInput(compressedData);
       }
     }
 
@@ -346,7 +346,7 @@ public class LongDiffArray implements Writable {
       if (useUnsafeWriter) {
         out = new UnsafeByteArrayOutputStream();
       } else {
-        out = new ExtendedOutput();
+        out = new ExtendedByteArrayDataOutput();
       }
     }
 

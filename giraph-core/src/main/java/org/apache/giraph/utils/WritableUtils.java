@@ -170,7 +170,7 @@ public class WritableUtils {
     if (unsafe) {
       extendedDataInput = new UnsafeByteArrayInputStream(byteArray);
     } else {
-      extendedDataInput = new ExtendedInput(byteArray);
+      extendedDataInput = new ExtendedByteArrayDataInput(byteArray);
     }
     try {
       extendedDataInput.readInt();
@@ -210,7 +210,7 @@ public class WritableUtils {
     if (unsafe) {
       extendedDataOutput = new UnsafeByteArrayOutputStream(buffer);
     } else {
-      extendedDataOutput = new ExtendedOutput(buffer);
+      extendedDataOutput = new ExtendedByteArrayDataOutput(buffer);
     }
     try {
       extendedDataOutput.writeInt(-1);
@@ -422,7 +422,7 @@ public class WritableUtils {
     if (unsafe) {
       extendedDataOutput = new UnsafeByteArrayOutputStream(buffer);
     } else {
-      extendedDataOutput = new ExtendedOutput(buffer);
+      extendedDataOutput = new ExtendedByteArrayDataOutput(buffer);
     }
     try {
       extendedDataOutput.writeInt(-1);
@@ -479,7 +479,7 @@ public class WritableUtils {
     if (unsafe) {
       extendedDataInput = new UnsafeByteArrayInputStream(byteArray);
     } else {
-      extendedDataInput = new ExtendedInput(byteArray);
+      extendedDataInput = new ExtendedByteArrayDataInput(byteArray);
     }
     try {
       extendedDataInput.readInt();
@@ -873,7 +873,7 @@ public class WritableUtils {
    * @param <T> Type of the object
    */
   public static <T extends Writable> void copyInto(T from, T to) {
-    copyIntoExtended(from, to, false);
+    copyInto(from, to, false);
   }
 
   /**
@@ -910,46 +910,6 @@ public class WritableUtils {
         throw new RuntimeException(
             "Serialization encountered issues with " + from.getClass() + ", " +
             (in.available() - (checkOverRead ? 1 : 0)) + " fewer bytes read");
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Copy {@code from} into {@code to}, by serializing and deserializing it.
-   * Since it is creating streams inside, it's mostly useful for
-   * tests/non-performant code.
-   *
-   * @param from Object to copy from
-   * @param to Object to copy into
-   * @param checkOverRead if true, will add one more byte at the end of writing,
-   *                      to make sure read is not touching it. Useful for tests
-   * @param <T> Type of the object
-   */
-  public static <T extends Writable> void copyIntoExtended(
-          T from, T to, boolean checkOverRead) {
-    try {
-      if (from.getClass() != to.getClass()) {
-        throw new RuntimeException(
-          "Trying to copy from " + from.getClass() +
-          " into " + to.getClass());
-      }
-
-      ExtendedOutput out = new ExtendedOutput();
-      from.write(out);
-      if (checkOverRead) {
-        out.writeByte(0);
-      }
-
-      ExtendedInput in =
-          new ExtendedInput(out.getByteArray(), 0, out.getPos());
-      to.readFields(in);
-
-      if (in.available() != (checkOverRead ? 1 : 0)) {
-        throw new RuntimeException(
-          "Serialization encountered issues with " + from.getClass() + ", " +
-          (in.available() - (checkOverRead ? 1 : 0)) + " fewer bytes read");
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -1045,7 +1005,7 @@ public class WritableUtils {
    */
   public static int size(Writable w) {
     try {
-      ExtendedOutput out = new ExtendedOutput();
+      ExtendedByteArrayDataOutput out = new ExtendedByteArrayDataOutput();
       w.write(out);
       return out.getPos();
     } catch (IOException e) {
@@ -1063,7 +1023,7 @@ public class WritableUtils {
    */
   public static <T extends Writable> byte[] toByteArray(T w) {
     try {
-      ExtendedOutput out = new ExtendedOutput();
+      ExtendedByteArrayDataOutput out = new ExtendedByteArrayDataOutput();
       w.write(out);
       return out.toByteArray();
     } catch (IOException e) {
@@ -1081,8 +1041,8 @@ public class WritableUtils {
    */
   public static <T extends Writable> void fromByteArray(byte[] data, T to) {
     try {
-      ExtendedInput in =
-          new ExtendedInput(data, 0, data.length);
+      ExtendedByteArrayDataInput in =
+          new ExtendedByteArrayDataInput(data, 0, data.length);
       to.readFields(in);
 
       if (in.available() != 0) {

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.requests;
 
-import org.apache.giraph.utils.ExtendedInput;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
@@ -67,11 +67,11 @@ public abstract class ByteArrayRequest extends WritableRequest {
   }
 
   /**
-   * Wraps the byte array with extended input stream.
-   * @return Extended input
+   * Wraps the byte array with UnsafeByteArrayInputStream stream.
+   * @return UnsafeByteArrayInputStream
    */
-  public ExtendedInput getExtendedInput() {
-    return new ExtendedInput(data);
+  public UnsafeByteArrayInputStream getUnsafeByteArrayInput() {
+    return new UnsafeByteArrayInputStream(data);
   }
 
   @Override

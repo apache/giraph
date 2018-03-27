@@ -24,7 +24,7 @@ import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.reducers.ReduceOperation;
-import org.apache.giraph.utils.ExtendedInput;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.giraph.utils.UnsafeReusableByteArrayInput;
 import org.apache.giraph.utils.WritableUtils;
@@ -59,7 +59,7 @@ public class SendAggregatorsToOwnerRequest
     UnsafeByteArrayOutputStream reusedOut = new UnsafeByteArrayOutputStream();
     UnsafeReusableByteArrayInput reusedIn = new UnsafeReusableByteArrayInput();
 
-    ExtendedInput input = getExtendedInput();
+    UnsafeByteArrayInputStream input = getUnsafeByteArrayInput();
     AllAggregatorServerData aggregatorData = serverData.getAllAggregatorData();
     try {
       int num = input.readInt();
