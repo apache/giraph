@@ -76,6 +76,7 @@ public class UnsafeByteArrayOutputStream extends Output
    */
   public UnsafeByteArrayOutputStream(int size) {
     buffer = new byte[size];
+    capacity = size;
   }
 
   /**
@@ -89,6 +90,7 @@ public class UnsafeByteArrayOutputStream extends Output
     } else {
       this.buffer = buf;
     }
+    capacity = this.buffer.length;
   }
 
   /**
@@ -114,6 +116,7 @@ public class UnsafeByteArrayOutputStream extends Output
       byte[] newBuf = new byte[(buffer.length + size) << 1];
       System.arraycopy(buffer, 0, newBuf, 0, position);
       buffer = newBuf;
+      capacity = buffer.length;
       return true;
     }
     return false;
@@ -133,7 +136,8 @@ public class UnsafeByteArrayOutputStream extends Output
   public byte[] toByteArray(int offset, int length) {
     if (offset + length > position) {
       throw new IndexOutOfBoundsException(String.format("Offset: %d + " +
-          "Length: %d exceeds the size of buffer : %d", offset, length, position));
+        "Length: %d exceeds the size of buffer : %d",
+            offset, length, position));
     }
     return Arrays.copyOfRange(buffer, offset, length);
   }
@@ -198,6 +202,13 @@ public class UnsafeByteArrayOutputStream extends Output
   }
 
   @Override
+  public void writeChar(char v) {
+    require(SIZE_OF_CHAR);
+    UNSAFE.putChar(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_CHAR;
+  }
+
+  @Override
   public void writeInt(int v) {
     require(SIZE_OF_INT);
     UNSAFE.putInt(buffer, BYTE_ARRAY_OFFSET + position, v);
@@ -207,7 +218,8 @@ public class UnsafeByteArrayOutputStream extends Output
   @Override
   public void ensureWritable(int minSize) {
     if ((position + minSize) > buffer.length) {
-      buffer = Arrays.copyOf(buffer, Math.max(buffer.length << 1, position + minSize));
+      buffer = Arrays.copyOf(buffer,
+                Math.max(buffer.length << 1, position + minSize));
     }
   }
 
