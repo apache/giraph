@@ -62,11 +62,6 @@ public class UnsafeByteArrayOutputStream extends Output
   private static final long BYTE_ARRAY_OFFSET  =
       UNSAFE.arrayBaseOffset(byte[].class);
 
-  /** Byte buffer */
-  private byte[] buf;
-  /** Position in the buffer */
-  private int pos = 0;
-
   /**
    * Constructor
    */
@@ -80,7 +75,7 @@ public class UnsafeByteArrayOutputStream extends Output
    * @param size Initial size of the underlying byte array
    */
   public UnsafeByteArrayOutputStream(int size) {
-    buf = new byte[size];
+    buffer = new byte[size];
   }
 
   /**
@@ -90,9 +85,9 @@ public class UnsafeByteArrayOutputStream extends Output
    */
   public UnsafeByteArrayOutputStream(byte[] buf) {
     if (buf == null) {
-      this.buf = new byte[DEFAULT_BYTES];
+      this.buffer = new byte[DEFAULT_BYTES];
     } else {
-      this.buf = buf;
+      this.buffer = buf;
     }
   }
 
@@ -104,7 +99,7 @@ public class UnsafeByteArrayOutputStream extends Output
    */
   public UnsafeByteArrayOutputStream(byte[] buf, int pos) {
     this(buf);
-    this.pos = pos;
+    this.position = pos;
   }
 
   /**
@@ -115,10 +110,10 @@ public class UnsafeByteArrayOutputStream extends Output
    */
   @Override
   protected boolean require(int size) {
-    if (pos + size > buf.length) {
-      byte[] newBuf = new byte[(buf.length + size) << 1];
-      System.arraycopy(buf, 0, newBuf, 0, pos);
-      buf = newBuf;
+    if (position + size > buffer.length) {
+      byte[] newBuf = new byte[(buffer.length + size) << 1];
+      System.arraycopy(buffer, 0, newBuf, 0, position);
+      buffer = newBuf;
       return true;
     }
     return false;
@@ -126,131 +121,131 @@ public class UnsafeByteArrayOutputStream extends Output
 
   @Override
   public byte[] getByteArray() {
-    return buf;
+    return buffer;
   }
 
   @Override
   public byte[] toByteArray() {
-    return Arrays.copyOf(buf, pos);
+    return Arrays.copyOf(buffer, position);
   }
 
   @Override
   public byte[] toByteArray(int offset, int length) {
-    if (offset + length > pos) {
+    if (offset + length > position) {
       throw new IndexOutOfBoundsException(String.format("Offset: %d + " +
-          "Length: %d exceeds the size of buf : %d", offset, length, pos));
+          "Length: %d exceeds the size of buffer : %d", offset, length, position));
     }
-    return Arrays.copyOfRange(buf, offset, length);
+    return Arrays.copyOfRange(buffer, offset, length);
   }
 
   @Override
   public void reset() {
-    pos = 0;
+    position = 0;
   }
 
   @Override
   public int getPos() {
-    return pos;
+    return position;
   }
 
   @Override
   public void write(int b) {
     require(SIZE_OF_BYTE);
-    buf[pos] = (byte) b;
-    pos += SIZE_OF_BYTE;
+    buffer[position] = (byte) b;
+    position += SIZE_OF_BYTE;
   }
 
   @Override
   public void write(byte[] b) {
     require(b.length);
-    System.arraycopy(b, 0, buf, pos, b.length);
-    pos += b.length;
+    System.arraycopy(b, 0, buffer, position, b.length);
+    position += b.length;
   }
 
   @Override
   public void write(byte[] b, int off, int len) {
     require(len);
-    System.arraycopy(b, off, buf, pos, len);
-    pos += len;
+    System.arraycopy(b, off, buffer, position, len);
+    position += len;
   }
 
   @Override
   public void writeBoolean(boolean v) {
     require(SIZE_OF_BOOLEAN);
-    UNSAFE.putBoolean(buf, BYTE_ARRAY_OFFSET + pos, v);
-    pos += SIZE_OF_BOOLEAN;
+    UNSAFE.putBoolean(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_BOOLEAN;
   }
 
   @Override
   public void writeByte(int v) {
     require(SIZE_OF_BYTE);
-    UNSAFE.putByte(buf, BYTE_ARRAY_OFFSET + pos, (byte) v);
-    pos += SIZE_OF_BYTE;
+    UNSAFE.putByte(buffer, BYTE_ARRAY_OFFSET + position, (byte) v);
+    position += SIZE_OF_BYTE;
   }
 
   @Override
   public void writeShort(int v) {
     require(SIZE_OF_SHORT);
-    UNSAFE.putShort(buf, BYTE_ARRAY_OFFSET + pos, (short) v);
-    pos += SIZE_OF_SHORT;
+    UNSAFE.putShort(buffer, BYTE_ARRAY_OFFSET + position, (short) v);
+    position += SIZE_OF_SHORT;
   }
 
   @Override
   public void writeChar(int v) throws IOException {
     require(SIZE_OF_CHAR);
-    UNSAFE.putChar(buf, BYTE_ARRAY_OFFSET + pos, (char) v);
-    pos += SIZE_OF_CHAR;
+    UNSAFE.putChar(buffer, BYTE_ARRAY_OFFSET + position, (char) v);
+    position += SIZE_OF_CHAR;
   }
 
   @Override
   public void writeInt(int v) {
     require(SIZE_OF_INT);
-    UNSAFE.putInt(buf, BYTE_ARRAY_OFFSET + pos, v);
-    pos += SIZE_OF_INT;
+    UNSAFE.putInt(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_INT;
   }
 
   @Override
   public void ensureWritable(int minSize) {
-    if ((pos + minSize) > buf.length) {
-      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, pos + minSize));
+    if ((position + minSize) > buffer.length) {
+      buffer = Arrays.copyOf(buffer, Math.max(buffer.length << 1, position + minSize));
     }
   }
 
   @Override
   public void skipBytes(int bytesToSkip) {
     ensureWritable(bytesToSkip);
-    pos += bytesToSkip;
+    position += bytesToSkip;
   }
 
   @Override
   public void writeInt(int pos, int value) {
-    if (pos + SIZE_OF_INT > this.pos) {
+    if (pos + SIZE_OF_INT > this.position) {
       throw new IndexOutOfBoundsException(
           "writeInt: Tried to write int to position " + pos +
-              " but current length is " + this.pos);
+              " but current length is " + this.position);
     }
-    UNSAFE.putInt(buf, BYTE_ARRAY_OFFSET + pos, value);
+    UNSAFE.putInt(buffer, BYTE_ARRAY_OFFSET + pos, value);
   }
 
   @Override
   public void writeLong(long v) {
     require(SIZE_OF_LONG);
-    UNSAFE.putLong(buf, BYTE_ARRAY_OFFSET + pos, v);
-    pos += SIZE_OF_LONG;
+    UNSAFE.putLong(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_LONG;
   }
 
   @Override
   public void writeFloat(float v) {
     require(SIZE_OF_FLOAT);
-    UNSAFE.putFloat(buf, BYTE_ARRAY_OFFSET + pos, v);
-    pos += SIZE_OF_FLOAT;
+    UNSAFE.putFloat(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_FLOAT;
   }
 
   @Override
   public void writeDouble(double v) {
     require(SIZE_OF_DOUBLE);
-    UNSAFE.putDouble(buf, BYTE_ARRAY_OFFSET + pos, v);
-    pos += SIZE_OF_DOUBLE;
+    UNSAFE.putDouble(buffer, BYTE_ARRAY_OFFSET + position, v);
+    position += SIZE_OF_DOUBLE;
   }
 
   @Override
@@ -308,21 +303,21 @@ public class UnsafeByteArrayOutputStream extends Output
       if (!((c >= 0x0001) && (c <= 0x007F))) {
         break;
       }
-      buf[pos++] = (byte) c;
+      buffer[position++] = (byte) c;
     }
 
     for (; i < strlen; i++) {
       c = s.charAt(i);
       if ((c >= 0x0001) && (c <= 0x007F)) {
-        buf[pos++] = (byte) c;
+        buffer[position++] = (byte) c;
 
       } else if (c > 0x07FF) {
-        buf[pos++] = (byte) (0xE0 | ((c >> 12) & 0x0F));
-        buf[pos++] = (byte) (0x80 | ((c >>  6) & 0x3F));
-        buf[pos++] = (byte) (0x80 | ((c >>  0) & 0x3F));
+        buffer[position++] = (byte) (0xE0 | ((c >> 12) & 0x0F));
+        buffer[position++] = (byte) (0x80 | ((c >>  6) & 0x3F));
+        buffer[position++] = (byte) (0x80 | ((c >>  0) & 0x3F));
       } else {
-        buf[pos++] = (byte) (0xC0 | ((c >>  6) & 0x1F));
-        buf[pos++] = (byte) (0x80 | ((c >>  0) & 0x3F));
+        buffer[position++] = (byte) (0xC0 | ((c >>  6) & 0x1F));
+        buffer[position++] = (byte) (0x80 | ((c >>  0) & 0x3F));
       }
     }
   }

@@ -29,18 +29,13 @@ import java.io.UTFDataFormatException;
  */
 public abstract class UnsafeReads extends Input implements ExtendedDataInput {
 
-  /** Buffer length */
-  protected int bufLength;
-  /** Position in the buffer */
-  protected long pos = 0;
-
   /**
    * Constructor
    *
    * @param length buf length
    */
   public UnsafeReads(int length) {
-    bufLength = length;
+    limit = length;
   }
 
   /**
@@ -50,8 +45,8 @@ public abstract class UnsafeReads extends Input implements ExtendedDataInput {
    * @param length buf length
    */
   public UnsafeReads(long offset, int length) {
-    pos = offset;
-    bufLength = length;
+    position = (int) offset;
+    limit = length;
   }
 
   /**
@@ -86,7 +81,7 @@ public abstract class UnsafeReads extends Input implements ExtendedDataInput {
   @Override
   public int skipBytes(int n) {
     require(n);
-    pos += n;
+    position += n;
     return n;
   }
 
@@ -109,7 +104,7 @@ public abstract class UnsafeReads extends Input implements ExtendedDataInput {
       case '\r':
         int c2 = readByte();
         if ((c2 != '\n') && (c2 != -1)) {
-          pos -= 1;
+          position -= 1;
         }
         break loop;
       default:
