@@ -720,7 +720,7 @@ end[PURE_YARN]*/
     // testing only
     if (conf.getLocalTestMode()) {
       LogManager.getLogger(org.apache.zookeeper.server.PrepRequestProcessor.
-          class.getName()).setLevel(Level.ERROR);
+              class.getName()).setLevel(Level.ERROR);
     }
   }
 
