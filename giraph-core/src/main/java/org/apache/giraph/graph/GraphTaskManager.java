@@ -75,6 +75,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
@@ -714,6 +715,12 @@ end[PURE_YARN]*/
       while (appenderEnum.hasMoreElements()) {
         appenderEnum.nextElement().setLayout(layout);
       }
+    }
+    // Change ZooKeeper logging level to error (info is quite verbose) for
+    // testing only
+    if (conf.getLocalTestMode()) {
+      LogManager.getLogger(org.apache.zookeeper.server.PrepRequestProcessor.
+              class.getName()).setLevel(Level.ERROR);
     }
   }
 
