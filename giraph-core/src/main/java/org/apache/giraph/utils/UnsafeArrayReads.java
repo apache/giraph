@@ -54,9 +54,6 @@ public class UnsafeArrayReads extends UnsafeReads {
   private static final long BYTE_ARRAY_OFFSET  =
       UNSAFE.arrayBaseOffset(byte[].class);
 
-  /** Byte buffer */
-  protected byte[] buf;
-
   /**
    * Constructor
    *
@@ -64,7 +61,7 @@ public class UnsafeArrayReads extends UnsafeReads {
    */
   public UnsafeArrayReads(byte[] buf) {
     super(buf.length);
-    this.buf = buf;
+    this.buffer = buf;
   }
 
   /**
@@ -76,12 +73,12 @@ public class UnsafeArrayReads extends UnsafeReads {
    */
   public UnsafeArrayReads(byte[] buf, int offset, int length) {
     super(offset, length);
-    this.buf = buf;
+    this.buffer = buf;
   }
 
   @Override
   public int available() {
-    return (int) (bufLength - pos);
+    return (int) (limit - position);
   }
 
   @Override
@@ -92,38 +89,38 @@ public class UnsafeArrayReads extends UnsafeReads {
 
   @Override
   public int getPos() {
-    return (int) pos;
+    return (int) position;
   }
 
   @Override
   public void readFully(byte[] b) throws IOException {
-    ensureRemaining(b.length);
-    System.arraycopy(buf, (int) pos, b, 0, b.length);
-    pos += b.length;
+    require(b.length);
+    System.arraycopy(buffer, (int) position, b, 0, b.length);
+    position += b.length;
   }
 
   @Override
   public void readFully(byte[] b, int off, int len) throws IOException {
-    ensureRemaining(len);
-    System.arraycopy(buf, (int) pos, b, off, len);
-    pos += len;
+    require(len);
+    System.arraycopy(buffer, (int) position, b, off, len);
+    position += len;
   }
 
   @Override
-  public boolean readBoolean() throws IOException {
-    ensureRemaining(SIZE_OF_BOOLEAN);
-    boolean value = UNSAFE.getBoolean(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_BOOLEAN;
+  public boolean readBoolean() {
+    require(SIZE_OF_BOOLEAN);
+    boolean value = UNSAFE.getBoolean(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_BOOLEAN;
     return value;
   }
 
   @Override
-  public byte readByte() throws IOException {
-    ensureRemaining(SIZE_OF_BYTE);
-    byte value = UNSAFE.getByte(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_BYTE;
+  public byte readByte() {
+    require(SIZE_OF_BYTE);
+    byte value = UNSAFE.getByte(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_BYTE;
     return value;
   }
 
@@ -133,11 +130,11 @@ public class UnsafeArrayReads extends UnsafeReads {
   }
 
   @Override
-  public short readShort() throws IOException {
-    ensureRemaining(SIZE_OF_SHORT);
-    short value = UNSAFE.getShort(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_SHORT;
+  public short readShort() {
+    require(SIZE_OF_SHORT);
+    short value = UNSAFE.getShort(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_SHORT;
     return value;
   }
 
@@ -147,47 +144,47 @@ public class UnsafeArrayReads extends UnsafeReads {
   }
 
   @Override
-  public char readChar() throws IOException {
-    ensureRemaining(SIZE_OF_CHAR);
-    char value = UNSAFE.getChar(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_CHAR;
+  public char readChar() {
+    require(SIZE_OF_CHAR);
+    char value = UNSAFE.getChar(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_CHAR;
     return value;
   }
 
   @Override
-  public int readInt() throws IOException {
-    ensureRemaining(SIZE_OF_INT);
-    int value = UNSAFE.getInt(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_INT;
+  public int readInt() {
+    require(SIZE_OF_INT);
+    int value = UNSAFE.getInt(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_INT;
     return value;
   }
 
   @Override
-  public long readLong() throws IOException {
-    ensureRemaining(SIZE_OF_LONG);
-    long value = UNSAFE.getLong(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_LONG;
+  public long readLong() {
+    require(SIZE_OF_LONG);
+    long value = UNSAFE.getLong(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_LONG;
     return value;
   }
 
   @Override
-  public float readFloat() throws IOException {
-    ensureRemaining(SIZE_OF_FLOAT);
-    float value = UNSAFE.getFloat(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_FLOAT;
+  public float readFloat() {
+    require(SIZE_OF_FLOAT);
+    float value = UNSAFE.getFloat(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_FLOAT;
     return value;
   }
 
   @Override
-  public double readDouble() throws IOException {
-    ensureRemaining(SIZE_OF_DOUBLE);
-    double value = UNSAFE.getDouble(buf,
-        BYTE_ARRAY_OFFSET + pos);
-    pos += SIZE_OF_DOUBLE;
+  public double readDouble() {
+    require(SIZE_OF_DOUBLE);
+    double value = UNSAFE.getDouble(buffer,
+        BYTE_ARRAY_OFFSET + position);
+    position += SIZE_OF_DOUBLE;
     return value;
   }
 
