@@ -39,8 +39,8 @@ public class UnsafeReusableByteArrayInput extends UnsafeArrayReads {
    * @param length length of the valid data
    */
   public void initialize(byte[] buf, int offset, int length) {
-    this.buf = buf;
-    this.pos = offset;
-    this.bufLength = length;
+    this.buffer = buf;
+    this.position = offset;
+    this.limit = length;
   }
 }

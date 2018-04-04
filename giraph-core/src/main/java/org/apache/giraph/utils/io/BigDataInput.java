@@ -18,9 +18,9 @@
 
 package org.apache.giraph.utils.io;
 
-import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ import java.util.List;
 public class BigDataInput implements ExtendedDataInput {
   /** Empty data input */
   private static final ExtendedDataInput EMPTY_INPUT =
-      new ExtendedByteArrayDataInput(new byte[0]);
+      new UnsafeByteArrayInputStream(new byte[0]);
 
   /** Input which we are currently reading from */
   private ExtendedDataInput currentInput;
