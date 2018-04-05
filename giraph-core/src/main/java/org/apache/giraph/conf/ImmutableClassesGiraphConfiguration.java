@@ -136,6 +136,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private final boolean useBigDataIOForMessages;
   /** Is the graph static (meaning there is no mutation)? */
   private final boolean isStaticGraph;
+  /** Whether or not to use message size encoding */
+  private final boolean useMessageSizeEncoding;
 
   /**
    * Constructor.  Takes the configuration and then gets the classes out of
@@ -156,6 +158,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     valueFactories = new ValueFactories<I, V, E>(this);
     outEdgesFactory = VERTEX_EDGES_FACTORY_CLASS.newInstance(this);
     inputOutEdgesFactory = INPUT_VERTEX_EDGES_FACTORY_CLASS.newInstance(this);
+    useMessageSizeEncoding = USE_MESSAGE_SIZE_ENCODING.get(conf);
   }
 
   /**
@@ -1374,5 +1377,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public String getJobId() {
     return get("mapred.job.id", "UnknownJob");
+  }
+
+  /**
+   * Use message size encoding?  This feature may help with complex message
+   * objects.
+   *
+   * @return Whether to use message size encoding
+   */
+  public boolean useMessageSizeEncoding() {
+    return useMessageSizeEncoding;
   }
 }
