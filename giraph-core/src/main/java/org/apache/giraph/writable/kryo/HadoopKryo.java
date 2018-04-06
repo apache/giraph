@@ -26,11 +26,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import com.esotericsoftware.kryo.util.DefaultClassResolver;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
+import com.esotericsoftware.kryo.ClassResolver;
+import com.esotericsoftware.kryo.ReferenceResolver;
+import com.esotericsoftware.kryo.util.MapReferenceResolver;
 import org.apache.giraph.types.ops.collections.Basic2ObjectMap;
 import org.apache.giraph.types.ops.collections.BasicSet;
-import org.apache.giraph.writable.kryo.markers.KryoIgnoreWritable;
 import org.apache.giraph.writable.kryo.markers.NonKryoWritable;
+import org.apache.giraph.writable.kryo.markers.KryoIgnoreWritable;
 import org.apache.giraph.writable.kryo.serializers.ArraysAsListSerializer;
 import org.apache.giraph.writable.kryo.serializers.CollectionsNCopiesSerializer;
 import org.apache.giraph.writable.kryo.serializers.DirectWritableSerializer;
@@ -76,9 +80,17 @@ public class HadoopKryo extends Kryo {
       new KryoFactory() {
         @Override
         public Kryo create() {
-          return createKryo();
+          return createKryo(true, true);
         }
       }).build();
+  /** Thread local HadoopKryo object */
+
+  private static final ThreadLocal<HadoopKryo> KRYO =
+    new ThreadLocal<HadoopKryo>() {
+      @Override protected HadoopKryo initialValue() {
+        return  createKryo(false, false);
+      }
+    };
 
   /**
    * List of interfaces/parent classes that will not be allowed to be
@@ -111,19 +123,15 @@ public class HadoopKryo extends Kryo {
         "Logger must be a static field");
   }
 
-  // Use chunked streams, so within same stream we can use both kryo and
-  // non-kryo serialization.
   /** Reusable Input object */
-  private final InputChunked input = new InputChunked(4096);
+  private InputChunked input;
   /** Reusable Output object */
-  private final OutputChunked output = new OutputChunked(4096);
+  private OutputChunked output;
 
   /** Reusable DataInput wrapper stream */
-  private final DataInputWrapperStream dataInputWrapperStream =
-      new DataInputWrapperStream();
+  private DataInputWrapperStream dataInputWrapperStream;
   /** Reusable DataOutput wrapper stream */
-  private final DataOutputWrapperStream dataOutputWrapperStream =
-      new DataOutputWrapperStream();
+  private DataOutputWrapperStream dataOutputWrapperStream;
 
   /**
    * Map of already initialized serializers used
@@ -136,17 +144,27 @@ public class HadoopKryo extends Kryo {
   private HadoopKryo() {
   }
 
+  /**
+   * Constructor that takes custom class resolver and reference resolver.
+   * @param classResolver Class resolver
+   * @param referenceResolver Reference resolver
+   */
+  private HadoopKryo(ClassResolver classResolver,
+                     ReferenceResolver referenceResolver) {
+    super(classResolver, referenceResolver);
+  }
+
   // Public API:
 
   /**
    * Write type of given object and the object itself to the output stream.
-   * Inverse of readClassAndObject.
+   * Inverse of readClassAndObj.
    *
    * @param out Output stream
    * @param object Object to write
    */
-  public static void writeClassAndObject(
-      final DataOutput out, final Object object) {
+  public static void writeClassAndObj(
+          final DataOutput out, final Object object) {
     writeInternal(out, object, false);
   }
 
@@ -159,7 +177,7 @@ public class HadoopKryo extends Kryo {
    * @return Deserialized object
    * @param <T> Type of the object being read
    */
-  public static <T> T readClassAndObject(DataInput in) {
+  public static <T> T readClassAndObj(DataInput in) {
     return readInternal(in, null, false);
   }
 
@@ -187,6 +205,62 @@ public class HadoopKryo extends Kryo {
   }
 
   /**
+   * Writes class and object to specified output stream with specified
+   * Kryo object. It does not use interim buffers.
+   * @param kryo Kryo object
+   * @param out Output stream
+   * @param object Object
+   */
+  public static void writeWithKryo(
+          final HadoopKryo kryo, final Output out,
+          final Object object) {
+    kryo.writeClassAndObject(out, object);
+    out.close();
+  }
+
+  /**
+   * Write out of object with given kryo
+   * @param kryo Kryo object
+   * @param out Output
+   * @param object Object to write
+   */
+  public static void writeWithKryoOutOfObject(
+          final HadoopKryo kryo, final Output out,
+          final Object object) {
+    kryo.writeOutOfObject(out, object);
+    out.close();
+  }
+
+  /**
+   * Reads class and object from specified input stream with
+   * specified kryo object.
+   * it does not use interim buffers.
+   * @param kryo Kryo object
+   * @param in Input buffer
+   * @param <T> Object type parameter
+   * @return Object
+   */
+  public static <T> T readWithKryo(
+          final HadoopKryo kryo, final Input in) {
+    T object;
+    object = (T) kryo.readClassAndObject(in);
+    in.close();
+    return object;
+  }
+
+  /**
+   * Read into object with given kryo.
+   * @param kryo Kryo object
+   * @param in Input
+   * @param object Object to read into
+   */
+  public static void readWithKryoIntoObject(
+          final HadoopKryo kryo, final Input in, Object object) {
+    kryo.readIntoObject(in, object);
+    in.close();
+  }
+
+  /**
    * Create copy of the object, by magically recursively copying
    * all of it's fields, keeping reference structures (like cycles)
    *
@@ -203,15 +277,33 @@ public class HadoopKryo extends Kryo {
     });
   }
 
+  /**
+   * Returns a kryo which doesn't track objects, hence
+   * no recursive/nested objects should be serialized.
+   * @return Hadoop kryo which doesn't track objects.
+   */
+  public static HadoopKryo getNontrackingKryo() {
+    return KRYO.get();
+  }
+
   // Private implementation:
 
   /**
    * Create new instance of HadoopKryo, properly initialized.
-   *
-   * @return New HadoopKryo instnace
+   * @param trackReferences if true, object references are tracked.
+   * @param hasBuffer if true, an interim buffer is used.
+   * @return new HadoopKryo instance
    */
-  private static HadoopKryo createKryo() {
-    HadoopKryo kryo = new HadoopKryo();
+  private static HadoopKryo createKryo(boolean trackReferences,
+                                       boolean hasBuffer) {
+    HadoopKryo kryo;
+    if (trackReferences) {
+      kryo = new HadoopKryo();
+    } else {
+      // TODO: if trackReferences is false use custom class resolver.
+      kryo = new HadoopKryo(new DefaultClassResolver(),
+              new MapReferenceResolver());
+    }
 
     String version = System.getProperty("java.version");
     char minor = version.charAt(2);
@@ -296,6 +388,19 @@ public class HadoopKryo extends Kryo {
     kryo.addDefaultSerializer(Writable.class, customSerializerFactory);
     kryo.setDefaultSerializer(customSerializerFactory);
 
+    if (hasBuffer) {
+      kryo.input = new InputChunked(4096);
+      kryo.output = new OutputChunked(4096);
+      kryo.dataInputWrapperStream = new DataInputWrapperStream();
+      kryo.dataOutputWrapperStream = new DataOutputWrapperStream();
+    }
+
+    if (!trackReferences) {
+      kryo.setReferences(false);
+
+      // TODO: Enable the following when a custom class resolver is created.
+      // kryo.setAutoReset(false);
+    }
     return kryo;
   }
 
