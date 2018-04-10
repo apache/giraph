@@ -28,11 +28,14 @@ import org.apache.hadoop.io.Writable;
 /**
  * Generic wrapper object, making any object writable.
  *
- * Unlike KryoWritableWrapper, this wrapper does not
- * support recursive/nested objects.
+ * Usage of this class is similar to KryoWritableWrapper but
+ * unlike KryoWritableWrapper, this class does not
+ * support recursive/nested objects to provide better
+ * performance.
  *
- * Optimized for performance,
- *
+ * If the underlying stream is a kryo output stream than the read/write
+ * happens with a kryo object that doesn't track references, providing
+ * significantly better performance.
  *
  * @param <T> Object type
  */

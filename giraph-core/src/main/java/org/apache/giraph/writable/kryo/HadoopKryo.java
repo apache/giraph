@@ -73,6 +73,9 @@ import de.javakaffee.kryoserializers.guava.ImmutableListSerializer;
  * It extends Kryo to reuse KryoPool functionality, but have additional needed
  * objects cached as well. If we move to ThreadLocal or other caching
  * technique, we can use composition, instead of inheritance here.
+ *
+ * TODO: Refactor this class into two separate classes depending on
+ * whether the reference tracking is enabled or disabled.
  */
 public class HadoopKryo extends Kryo {
   /** Pool of reusable Kryo objects, since they are expensive to create */
@@ -84,7 +87,6 @@ public class HadoopKryo extends Kryo {
         }
       }).build();
   /** Thread local HadoopKryo object */
-
   private static final ThreadLocal<HadoopKryo> KRYO =
     new ThreadLocal<HadoopKryo>() {
       @Override protected HadoopKryo initialValue() {
@@ -279,7 +281,13 @@ public class HadoopKryo extends Kryo {
 
   /**
    * Returns a kryo which doesn't track objects, hence
-   * no recursive/nested objects should be serialized.
+   * serialization of recursive/nested objects is not
+   * supported.
+   *
+   * Reference tracking significantly degrades the performance
+   * since kryo has to store all serialized objects and search
+   * the history to check if an object has been already serialized.
+   *
    * @return Hadoop kryo which doesn't track objects.
    */
   public static HadoopKryo getNontrackingKryo() {

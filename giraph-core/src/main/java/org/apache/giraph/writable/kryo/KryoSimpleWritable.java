@@ -29,8 +29,15 @@ import org.apache.giraph.writable.kryo.markers.KryoIgnoreWritable;
  * Class which you can extend to get all serialization/deserialization
  * done automagically.
  *
- * This serialization does not support recursive/nested structures
- * to provide faster serialization.
+ * Usage of this class is similar to KryoWritable but
+ * unlike KryoWritable, this class does not
+ * support recursive/nested objects to provide better
+ * performance.
+ *
+ * If the underlying stream is a kryo output stream than the read/write
+ * happens with a kryo object that doesn't track references, providing
+ * significantly better performance.
+ *
  */
 public abstract class KryoSimpleWritable implements KryoIgnoreWritable {
   @Override
