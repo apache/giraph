@@ -71,12 +71,12 @@ public class KryoWritableWrapper<T> implements Writable {
 
   @Override
   public void readFields(DataInput in) throws java.io.IOException {
-    object = HadoopKryo.readClassAndObject(in);
+    object = HadoopKryo.readClassAndObj(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    HadoopKryo.writeClassAndObject(out, object);
+    HadoopKryo.writeClassAndObj(out, object);
   }
 
   /**
