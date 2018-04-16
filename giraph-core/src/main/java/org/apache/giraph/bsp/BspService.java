@@ -25,6 +25,7 @@ import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.writable.kryo.GiraphClassResolver;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -81,7 +82,9 @@ public abstract class BspService<I extends WritableComparable,
   /** Input splits all done node*/
   public static final String INPUT_SPLITS_ALL_DONE_NODE =
       "/_inputSplitsAllDone";
-
+  /** Directory to store kryo className-ID assignment */
+  public static final String KRYO_REGISTERED_CLASS_DIR =
+          "/_kryo";
   /** Directory of attempts of this application */
   public static final String APPLICATION_ATTEMPTS_DIR =
       "/_applicationAttemptsDir";
@@ -155,6 +158,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String haltComputationPath;
   /** Path where memory observer stores data */
   protected final String memoryObserverPath;
+  /** Kryo className-ID mapping directory */
+  protected final String kryoRegisteredClassPath;
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
@@ -250,7 +255,7 @@ public abstract class BspService<I extends WritableComparable,
     inputSplitsAllDonePath = basePath + INPUT_SPLITS_ALL_DONE_NODE;
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
-
+    kryoRegisteredClassPath = basePath + KRYO_REGISTERED_CLASS_DIR;
 
 
     String restartJobId = RESTART_JOB_ID.get(conf);
@@ -289,6 +294,7 @@ public abstract class BspService<I extends WritableComparable,
       throw new RuntimeException(e);
     }
 
+    GiraphClassResolver.setZookeeperInfo(zk, kryoRegisteredClassPath);
     this.taskId = (int) getApplicationAttempt() * conf.getMaxWorkers() +
             conf.getTaskPartition();
     this.hostnameTaskId = hostname + "_" + getTaskId();

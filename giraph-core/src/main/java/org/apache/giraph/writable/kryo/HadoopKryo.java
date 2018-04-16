@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import com.esotericsoftware.kryo.util.DefaultClassResolver;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import com.esotericsoftware.kryo.ClassResolver;
 import com.esotericsoftware.kryo.ReferenceResolver;
@@ -308,8 +307,7 @@ public class HadoopKryo extends Kryo {
     if (trackReferences) {
       kryo = new HadoopKryo();
     } else {
-      // TODO: if trackReferences is false use custom class resolver.
-      kryo = new HadoopKryo(new DefaultClassResolver(),
+      kryo = new HadoopKryo(new GiraphClassResolver(),
               new MapReferenceResolver());
     }
 
@@ -405,9 +403,7 @@ public class HadoopKryo extends Kryo {
 
     if (!trackReferences) {
       kryo.setReferences(false);
-
-      // TODO: Enable the following when a custom class resolver is created.
-      // kryo.setAutoReset(false);
+      kryo.setAutoReset(false);
     }
     return kryo;
   }
