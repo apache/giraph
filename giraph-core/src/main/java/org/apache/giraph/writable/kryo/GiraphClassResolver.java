@@ -39,13 +39,11 @@ import static com.esotericsoftware.kryo.util.Util.getWrapperClass;
  * nodes.
  */
 public class GiraphClassResolver extends DefaultClassResolver {
-  /** Length of the ZK sequence number */
-  private static final int SEQUENCE_NUMBER_LENGTH = 10;
   /** Base ID to start for class name assignments.
    * This number has to be high enough to not conflict with
    * explicity registered class IDs.
    * */
-  private static final int BASE_CLASS_ID = 10000;
+  private static final int BASE_CLASS_ID = 1000;
 
   /** Class name to ID cache */
   private static Map<String, Integer> CLASS_NAME_TO_ID = new HashMap();
@@ -138,10 +136,12 @@ public class GiraphClassResolver extends DefaultClassResolver {
     }
 
     for (String name : registeredList) {
+      // Since these files are created with PERSISTENT_SEQUENTIAL mode,
+      // Kryo appends a sequential number to their file name.
       String className = name.substring(0,
-              name.length() - SEQUENCE_NUMBER_LENGTH);
+          name.length() - ZooKeeperExt.SEQUENCE_NUMBER_LENGTH);
       int classId = Integer.parseInt(
-              name.substring(name.length() - SEQUENCE_NUMBER_LENGTH));
+          name.substring(name.length() - ZooKeeperExt.SEQUENCE_NUMBER_LENGTH));
 
       if (MIN_CLASS_ID == -1) {
         MIN_CLASS_ID = classId;
@@ -281,17 +281,42 @@ public class GiraphClassResolver extends DefaultClassResolver {
 
   /**
    * Reset the internal state
+   * Reset clears two hash tables:
+   * 1 - Class name to ID: Every non-explicitly registered class takes the
+   *     ID agreed by all kryo instances, and it doesn't change across
+   *     serializations, so this reset is not required.
+   * 2- Reference tracking: Not required because it is disabled.
+   *
+   * Therefore, this method should not be invoked.
+   *
    */
   public void reset() {
     throw new IllegalStateException("Not implemented");
   }
 
+  /**
+   * This method writes the class name for the first encountered
+   * non-explicitly registered class. Since all non-explicitly registered
+   * classes take the ID agreed by all kryo instances, there is no need
+   * to write the class name, so this method should not be invoked.
+   * @param output Output stream
+   * @param type CLass type
+   * @param registration Registration
+   */
   @Override
   protected void writeName(Output output, Class type,
                             Registration registration) {
     throw new IllegalStateException("Not implemented");
   }
 
+  /**
+   * This method reads the class name for the first encountered
+   * non-explicitly registered class. Since all non-explicitly registered
+   * classes take the ID agreed by all kryo instances, class name is
+   * never written, so this method should not be invoked.
+   * @param input Input stream
+   * @return Registration
+   */
   @Override
   protected Registration readName(Input input) {
     throw new IllegalStateException("Not implemented");
