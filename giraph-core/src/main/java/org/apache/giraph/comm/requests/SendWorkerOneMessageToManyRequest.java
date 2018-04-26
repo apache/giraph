@@ -139,8 +139,8 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
         idMsgs.add(vertexId, msg);
 
         // If any of the list of messages reaches the expected initialSize
-        // threshold, then move everything we have so far to the message store,
-        // to avoid maintaining large intermediate lists of messages.
+        // threshold, then move everything we have so far to the message store.
+        // This avoids maintaining large intermediate lists of messages.
         if (idMsgs.getSize() >= initialSize) {
           addMessagesToStore(partitionIdMsgs,
             serverData.getIncomingMessageStore());
