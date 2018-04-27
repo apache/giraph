@@ -24,6 +24,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.util.DefaultClassResolver;
 import com.esotericsoftware.kryo.util.ObjectMap;
 import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -34,9 +35,24 @@ import java.util.List;
 import static com.esotericsoftware.kryo.util.Util.getWrapperClass;
 
 /**
- * This class resolver assigns unique classIds for every class that was not
- * explicitly registered. It uses zookeeper for consistent mapping across all
- * nodes.
+ * In order to avoid writing class names to the stream, this class resolver
+ * assigns unique integers to each class name and writes/reads those integers
+ * to/from the stream. Reads assume that there is already a class assigned
+ * to the given integer. This resolver only assigns unique integers for
+ * classes that are not explicitly registered since those classes are already
+ * assigned unique integers at the time of registration. This implementation
+ * uses zookeeper to provide consistent class name to ID mapping across all
+ + nodes.
+ *
+ *
+ * If resolver encounters a class name that has not been assigned to a unique
+ * integer yet, it creates a class node in zookeeper under a designated path
+ * with persistent_sequential mode - allowing the file name of the class node
+ * to be suffixed with an auto incremented integer. After the class node is
+ * created, the resolver reads back all the nodes under the designated path
+ * and uses the unique suffix as the class id. If there are duplicate entries
+ * for the same class name due to some race condition, the lowest suffix is
+ * used.
  */
 public class GiraphClassResolver extends DefaultClassResolver {
   /** Base ID to start for class name assignments.
@@ -44,6 +60,10 @@ public class GiraphClassResolver extends DefaultClassResolver {
    * explicity registered class IDs.
    * */
   private static final int BASE_CLASS_ID = 1000;
+
+  /** Class logger */
+  private static final Logger LOG =
+          Logger.getLogger(GiraphClassResolver.class);
 
   /** Class name to ID cache */
   private static Map<String, Integer> CLASS_NAME_TO_ID = new HashMap();
@@ -55,6 +75,8 @@ public class GiraphClassResolver extends DefaultClassResolver {
   private static String KRYO_REGISTERED_CLASS_PATH;
   /** Minimum class ID assigned by zookeeper sequencing */
   private static int MIN_CLASS_ID = -1;
+  /** True if the zookeeper class registration path is already created */
+  private static boolean IS_CLASS_PATH_CREATED = false;
 
   /** Memoized class id*/
   private int memoizedClassId = -1;
@@ -103,20 +125,23 @@ public class GiraphClassResolver extends DefaultClassResolver {
    * Not thread safe.
    */
   public static void refreshCache() {
-    try {
-      ZK.createOnceExt(KRYO_REGISTERED_CLASS_PATH,
-              null,
-              ZooDefs.Ids.OPEN_ACL_UNSAFE,
-              CreateMode.PERSISTENT,
-              true);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-              "Failed to refresh kryo cache " +
-                      KRYO_REGISTERED_CLASS_PATH, e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-              "Interrupted while refreshing kryo cache " +
-                      KRYO_REGISTERED_CLASS_PATH, e);
+    if (!IS_CLASS_PATH_CREATED) {
+      try {
+        ZK.createOnceExt(KRYO_REGISTERED_CLASS_PATH,
+                null,
+                ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                CreateMode.PERSISTENT,
+                true);
+        IS_CLASS_PATH_CREATED = true;
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+                "Failed to refresh kryo cache " +
+                        KRYO_REGISTERED_CLASS_PATH, e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+                "Interrupted while refreshing kryo cache " +
+                        KRYO_REGISTERED_CLASS_PATH, e);
+      }
     }
 
     List<String> registeredList;
@@ -138,6 +163,9 @@ public class GiraphClassResolver extends DefaultClassResolver {
     for (String name : registeredList) {
       // Since these files are created with PERSISTENT_SEQUENTIAL mode,
       // Kryo appends a sequential number to their file name.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Registered class: " + name);
+      }
       String className = name.substring(0,
           name.length() - ZooKeeperExt.SEQUENCE_NUMBER_LENGTH);
       int classId = Integer.parseInt(
@@ -239,6 +267,8 @@ public class GiraphClassResolver extends DefaultClassResolver {
     if (registration.getId() == NAME) {
       throw new IllegalStateException("Invalid registration ID");
     } else {
+      // Class ID's are incremented by 2 when writing, because 0 is used
+      // for null and 1 is used for non-explicitly registered classes.
       output.writeVarInt(registration.getId() + 2, true);
     }
     return registration;
