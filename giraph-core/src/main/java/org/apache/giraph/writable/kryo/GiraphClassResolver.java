@@ -96,6 +96,14 @@ public class GiraphClassResolver extends DefaultClassResolver {
   }
 
   /**
+   * Return true of the zookeeper is initialized.
+   * @return True if the zookeeper is initialized.
+   */
+  public static boolean isInitialized() {
+    return ZK != null;
+  }
+
+  /**
    * Creates a new node for the given class name.
    * Creation mode is persistent sequential, i.e.
    * ZK will always create a new node . There could be

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import com.esotericsoftware.kryo.util.DefaultClassResolver;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import com.esotericsoftware.kryo.ClassResolver;
 import com.esotericsoftware.kryo.ReferenceResolver;
@@ -307,7 +308,12 @@ public class HadoopKryo extends Kryo {
     if (trackReferences) {
       kryo = new HadoopKryo();
     } else {
-      kryo = new HadoopKryo(new GiraphClassResolver(),
+      // Only use GiraphClassResolver if it is properly initialized.
+      // This is to enable test cases which use KryoSimpleWrapper
+      // but don't start ZK.
+      kryo = new HadoopKryo(
+              GiraphClassResolver.isInitialized() ? new GiraphClassResolver() :
+                                                    new DefaultClassResolver(),
               new MapReferenceResolver());
     }
 
@@ -403,7 +409,12 @@ public class HadoopKryo extends Kryo {
 
     if (!trackReferences) {
       kryo.setReferences(false);
-      kryo.setAutoReset(false);
+
+      // Auto reset can only be disabled if the GiraphClassResolver is
+      // properly initialized.
+      if (GiraphClassResolver.isInitialized()) {
+        kryo.setAutoReset(false);
+      }
     }
     return kryo;
   }
