@@ -290,12 +290,8 @@ public class RequestTest {
     public int numVertices;
 
     @Parameterized.Parameters(name = "{index}: numVertices={0}")
-    public static Collection<Object[]> data() {
-      return Arrays.asList(new Object[][]{
-        {10},
-        {1000},
-        {1000000}
-      });
+    public static Object[] data() {
+      return new Object[] {10, 1000, 1000000};
     }
 
     @Test
