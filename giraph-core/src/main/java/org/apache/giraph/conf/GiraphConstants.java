@@ -1292,5 +1292,15 @@ public interface GiraphConstants {
   /** Number of supersteps job will run for */
   IntConfOption SUPERSTEP_COUNT = new IntConfOption("giraph.numSupersteps", -1,
       "Number of supersteps job will run for");
+
+  /** Whether to disable GiraphClassResolver which is an efficient
+   * implementation of kryo class resolver. By default this resolver is used by
+   * KryoSimpleWritable and KryoSimpleWrapper, and can be disabled with this
+   * option */
+  BooleanConfOption DISABLE_GIRAPH_CLASS_RESOLVER =
+          new BooleanConfOption("giraph.disableGiraphClassResolver", false,
+            "Disables GiraphClassResolver, which is a custom implementation " +
+            "of kryo class resolver that avoids writing class names to the " +
+            "underlying stream for faster serialization.");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

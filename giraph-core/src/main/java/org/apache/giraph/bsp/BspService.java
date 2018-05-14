@@ -294,7 +294,11 @@ public abstract class BspService<I extends WritableComparable,
       throw new RuntimeException(e);
     }
 
-    GiraphClassResolver.setZookeeperInfo(zk, kryoRegisteredClassPath);
+    boolean disableGiraphResolver =
+            GiraphConstants.DISABLE_GIRAPH_CLASS_RESOLVER.get(conf);
+    if (!disableGiraphResolver) {
+      GiraphClassResolver.setZookeeperInfo(zk, kryoRegisteredClassPath);
+    }
     this.taskId = (int) getApplicationAttempt() * conf.getMaxWorkers() +
             conf.getTaskPartition();
     this.hostnameTaskId = hostname + "_" + getTaskId();
