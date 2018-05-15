@@ -39,7 +39,7 @@ import org.apache.hadoop.io.Writable;
  *
  * @param <T> Object type
  */
-public class KryoSimpleWrapper<T> implements Writable {
+public class KryoSimpleWrapper<T> implements Writable, Boxed<T> {
 
   /** Wrapped object */
   private T object;

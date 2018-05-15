@@ -308,8 +308,12 @@ public class HadoopKryo extends Kryo {
     if (trackReferences) {
       kryo = new HadoopKryo();
     } else {
-      // TODO: if trackReferences is false use custom class resolver.
-      kryo = new HadoopKryo(new DefaultClassResolver(),
+      // Only use GiraphClassResolver if it is properly initialized.
+      // This is to enable test cases which use KryoSimpleWrapper
+      // but don't start ZK.
+      kryo = new HadoopKryo(
+              GiraphClassResolver.isInitialized() ? new GiraphClassResolver() :
+                                                    new DefaultClassResolver(),
               new MapReferenceResolver());
     }
 
@@ -406,8 +410,11 @@ public class HadoopKryo extends Kryo {
     if (!trackReferences) {
       kryo.setReferences(false);
 
-      // TODO: Enable the following when a custom class resolver is created.
-      // kryo.setAutoReset(false);
+      // Auto reset can only be disabled if the GiraphClassResolver is
+      // properly initialized.
+      if (GiraphClassResolver.isInitialized()) {
+        kryo.setAutoReset(false);
+      }
     }
     return kryo;
   }
