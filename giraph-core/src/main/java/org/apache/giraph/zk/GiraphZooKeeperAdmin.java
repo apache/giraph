@@ -130,6 +130,8 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    * Cleans the ZooKeeper quorum of in-memory failed/killed job fragments.
    * @param zooKeeper the connected ZK instance (session) to delete from.
    * @param zkBasePath the base node to begin erasing from.
+   * @throws KeeperException
+   * @throws InterruptedException
    */
   public void doZooKeeperCleanup(ZooKeeperExt zooKeeper, String zkBasePath)
     throws KeeperException, InterruptedException {
@@ -153,6 +155,7 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    * @param zkServerList the CSV-style list of hostnames of Zk quorum members.
    * @param zkPort the port the quorum is listening on.
    * @return the formatted zkConnectList for use in the ZkExt constructor.
+   * @throws UnknownHostException
    */
   private String formatZkServerList(String[] zkServerList, int zkPort)
     throws UnknownHostException {
@@ -167,6 +170,7 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
 
   /** Entry point from shell script
    * @param args the command line arguments
+   * @throws Exception
    */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(new GiraphZooKeeperAdmin(), args));

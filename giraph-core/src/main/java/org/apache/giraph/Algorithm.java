@@ -31,11 +31,13 @@ import java.lang.annotation.Target;
 public @interface Algorithm {
   /**
    * Name of the algorithm.
+   * @return Name
    */
   String name();
 
   /**
    * Short description of algorithm which is going to be presented to the user.
+   * @return Description
    */
   String description() default "";
 }

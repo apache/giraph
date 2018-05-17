@@ -34,6 +34,7 @@ public interface ZooKeeperRunner extends ImmutableClassesGiraphConfigurable {
    * @param zkDir working directory
    * @param config zookeeper configuration
    * @return port zookeeper runs on
+   * @throws IOException
    */
   int start(String zkDir, ZookeeperConfig config) throws IOException;
 
