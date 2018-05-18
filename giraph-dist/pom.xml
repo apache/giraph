@@ -31,11 +31,6 @@
   <packaging>pom</packaging>
   <name>Apache Giraph Distribution</name>
 
-
-  <properties>
-      <top.dir>${project.basedir}/..</top.dir>
-  </properties>
-
   <profiles>
     <profile>
       <id>release</id>
