@@ -149,6 +149,7 @@ public class ScriptLoader {
    * Load all the scripts deployed in Configuration
    *
    * @param conf Configuration
+   * @throws IOException
    */
   public static void loadScripts(Configuration conf) throws IOException {
     List<DeployedScript> deployedScripts = getScriptsToLoad(conf);
@@ -165,6 +166,7 @@ public class ScriptLoader {
    *
    * @param conf Configuration
    * @param deployedScript the deployed script
+   * @throws IOException
    */
   public static void loadScript(Configuration conf,
       DeployedScript deployedScript) throws IOException {

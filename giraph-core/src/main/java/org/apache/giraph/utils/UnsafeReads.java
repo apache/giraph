@@ -67,7 +67,6 @@ public abstract class UnsafeReads extends Input implements ExtendedDataInput {
    * Check whether there are enough remaining bytes for an operation
    *
    * @param requiredBytes Bytes required to read
-   * @throws IOException When there are not enough bytes to read
    */
   @Override
   protected int require(int requiredBytes) {

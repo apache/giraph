@@ -69,6 +69,9 @@ public abstract class MasterCompute
   /**
    * Initialize the MasterCompute class, this is the place to register
    * aggregators.
+   *
+   * @throws InstantiationException
+   * @throws IllegalAccessException
    */
   public abstract void initialize() throws InstantiationException,
     IllegalAccessException;
