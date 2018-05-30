@@ -339,6 +339,8 @@ public class HadoopKryo extends Kryo {
 
     registerSerializer(kryo, "com.google.common.collect.RegularImmutableMap",
         new ImmutableMapSerializer());
+    registerSerializer(kryo, "com.google.common.collect.RegularImmutableBiMap",
+        new ImmutableMapSerializer());
     registerSerializer(kryo,
         "com.google.common.collect.SingletonImmutableBiMap",
         new ImmutableMapSerializer());
