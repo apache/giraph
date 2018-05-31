@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import com.esotericsoftware.kryo.util.DefaultClassResolver;
+import de.javakaffee.kryoserializers.guava.ImmutableMapSerializer;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import com.esotericsoftware.kryo.ClassResolver;
 import com.esotericsoftware.kryo.ReferenceResolver;
@@ -39,7 +40,7 @@ import org.apache.giraph.writable.kryo.serializers.ArraysAsListSerializer;
 import org.apache.giraph.writable.kryo.serializers.CollectionsNCopiesSerializer;
 import org.apache.giraph.writable.kryo.serializers.DirectWritableSerializer;
 import org.apache.giraph.writable.kryo.serializers.FastUtilSerializer;
-import org.apache.giraph.writable.kryo.serializers.ImmutableMapSerializer;
+import org.apache.giraph.writable.kryo.serializers.ImmutableBiMapSerializerUtils;
 import org.apache.giraph.writable.kryo.serializers.ReusableFieldSerializer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -322,7 +323,8 @@ public class HadoopKryo extends Kryo {
     if (minor >= '8') {
       try {
         kryo.register(Class.forName("java.lang.invoke.SerializedLambda"));
-        kryo.register(Class.forName("com.esotericsoftware.kryo.Kryo$Closure"),
+        kryo.register(Class.forName(
+          "com.esotericsoftware.kryo.serializers.ClosureSerializer$Closure"),
             new ClosureSerializer());
       } catch (ClassNotFoundException e) {
         throw new IllegalStateException(
@@ -336,12 +338,8 @@ public class HadoopKryo extends Kryo {
         new CollectionsNCopiesSerializer());
 
     ImmutableListSerializer.registerSerializers(kryo);
-
-    registerSerializer(kryo, "com.google.common.collect.RegularImmutableMap",
-        new ImmutableMapSerializer());
-    registerSerializer(kryo,
-        "com.google.common.collect.SingletonImmutableBiMap",
-        new ImmutableMapSerializer());
+    ImmutableMapSerializer.registerSerializers(kryo);
+    ImmutableBiMapSerializerUtils.registerSerializers(kryo);
 
     // There are many fastutil classes, register them at the end,
     // so they don't use up small registration numbers
