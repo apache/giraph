@@ -172,8 +172,6 @@ public class BspServiceMaster<I extends WritableComparable,
   private MasterInfo masterInfo;
   /** List of workers in current superstep, sorted by task id */
   private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
-  /** Limit locality information added to each InputSplit znode */
-  private final int localityLimit = 5;
   /** Observers over master lifecycle. */
   private final MasterObserver[] observers;
 
