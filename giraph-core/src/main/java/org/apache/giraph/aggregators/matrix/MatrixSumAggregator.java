@@ -32,7 +32,7 @@ public abstract class MatrixSumAggregator {
    */
   private String name;
   /** Cache the names of the columns */
-  private ArrayList<String> names = new ArrayList<String>();
+  private ArrayList<String> names = new ArrayList<>();
 
   /**
    * Create a new matrix aggregator with the given prefix name for the vector
