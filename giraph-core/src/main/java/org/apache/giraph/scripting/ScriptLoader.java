@@ -35,6 +35,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import static org.apache.giraph.utils.DistributedCacheUtils.getLocalCacheFile;
 
 /**
@@ -213,7 +216,7 @@ public class ScriptLoader {
   private static InputStream openScriptInputStream(Configuration conf,
       DeployedScript deployedScript) {
     DeployType deployType = deployedScript.getDeployType();
-    String path = deployedScript.getPath();
+    Path path = Paths.get(deployedScript.getPath());
 
     InputStream stream;
     switch (deployType) {
@@ -222,7 +225,7 @@ public class ScriptLoader {
         LOG.info("getScriptStream: Reading script from resource at " +
             deployedScript.getPath());
       }
-      stream = ScriptLoader.class.getClassLoader().getResourceAsStream(path);
+      stream = ScriptLoader.class.getClassLoader().getResourceAsStream(path.toString());
       if (stream == null) {
         throw new IllegalStateException("getScriptStream: Failed to " +
             "open script from resource at " + path);
@@ -233,7 +236,7 @@ public class ScriptLoader {
         LOG.info("getScriptStream: Reading script from DistributedCache at " +
             path);
       }
-      Optional<Path> localPath = getLocalCacheFile(conf, path);
+      Optional<Path> localPath = getLocalCacheFile(conf, path.toString());
       if (!localPath.isPresent()) {
         throw new IllegalStateException("getScriptStream: Failed to " +
             "find script in local DistributedCache matching " + path);
