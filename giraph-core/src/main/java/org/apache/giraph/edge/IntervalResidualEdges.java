@@ -43,7 +43,8 @@ import com.google.common.collect.UnmodifiableIterator;
  * by the IntervalResidualEdges structure proposed in "Panagiotis Liakos, Katia
  * Papakonstantinopoulou, Alex Delis: Realizing Memory-Optimized Distributed
  * Graph Processing. IEEE Trans. Knowl. Data Eng. 30(4): 743-756 (2018)". Note:
- * this implementation is optimized for space usage, but edge addition and
+ * this implementation is optimized for space usage for graphs exhibiting the
+ * locality of reference property, but edge addition and
  * removals are expensive. Parallel edges are not allowed.
  */
 public class IntervalResidualEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
