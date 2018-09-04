@@ -292,12 +292,12 @@ public class IndexedBitArrayEdges extends ConfigurableOutEdges<IntWritable, Null
 	}
 
 	/**
-	 * returns a byte arrray with the concatenation of the three input parameters
+	 * returns a byte array with the concatenation of the three input parameters
 	 * 
 	 * @param original a byte array
 	 * @param bindex a byte array
 	 * @param myByte a byte
-	 * @return a byte arrray with the concatenation of the three input parameters
+	 * @return a byte array with the concatenation of the three input parameters
 	 * */
 	public static byte[] addBytes(byte[] original, byte[] bindex, byte myByte) {
 		byte[] destination = new byte[original.length + Integer.SIZE / Byte.SIZE + 1];
