@@ -22,7 +22,6 @@ import java.util.stream.StreamSupport;
 import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
 import org.weakref.jmx.com.google.common.collect.Iterators;
 
 import com.google.common.collect.ImmutableSet;
@@ -67,8 +66,7 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 	@Override
 	public void remove(IntWritable targetVertexId) {
 		// Note that this is very expensive (decompresses all edges and recompresses them again).
-		initialize(Iterables.filter(this,
-				edge -> !((Edge<IntWritable, NullWritable>) edge).getTargetVertexId().equals(targetVertexId)));
+		initialize(Iterables.filter(this, edge -> !edge.getTargetVertexId().equals(targetVertexId)));
 	}
 
 	@Override
@@ -139,10 +137,9 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 	 * @param obs        an output bit stream where the compressed data will be
 	 *                   stored.
 	 */
-	public static <E extends Writable> void diffComp(final int[] edgesArray, OutputBitStream obs) throws IOException {
+	public static void diffComp(final int[] edgesArray, OutputBitStream obs) throws IOException {
 		// We write the degree.
 		obs.writeInt(edgesArray.length, Integer.SIZE);
-		final int residual[], residualCount;
 		IntArrayList left = new IntArrayList();
 		IntArrayList len = new IntArrayList();
 		IntArrayList residuals = new IntArrayList();
@@ -177,21 +174,22 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 			prev = left.getInt(i) + currIntLen;
 			obs.writeGamma(currIntLen - BVGraph.DEFAULT_MIN_INTERVAL_LENGTH);
 		}
-		residual = residuals.elements();
-		residualCount = residuals.size();
+		final int[] residual = residuals.elements();
+		final int residualCount = residuals.size();
 		// Now we write out the residuals, if any
 		if (residualCount != 0) {
 			if (intervalCount > 0) {
 				obs.writeLongZeta(Fast.int2nat((long) (prev = residual[0]) - left.getInt(0)), BVGraph.DEFAULT_ZETA_K);
 			} else {
-				obs.writeInt((prev = residual[0]), Integer.SIZE);
+				prev = residual[0];
+				obs.writeInt(prev, Integer.SIZE);
 			}
 			for (int i = 1; i < residualCount; i++) {
 				if (residual[i] == prev) {
 					throw new IllegalArgumentException(
 							"Repeated successor " + prev + " in successor list of this node");
 				}
-				obs.writeLongZeta(residual[i] - prev - 1, BVGraph.DEFAULT_ZETA_K);
+				obs.writeLongZeta(residual[i] - prev - 1L, BVGraph.DEFAULT_ZETA_K);
 				prev = residual[i];
 			}
 		}
@@ -226,10 +224,11 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 	 * @param residuals   the resulting list of residuals.
 	 * @return the number of intervals.
 	 */
-	protected static <E extends Writable> int intervalize(final int[] edgesArray, final int minInterval,
+	protected static int intervalize(final int[] edgesArray, final int minInterval,
 			final int maxInterval, final IntArrayList left, final IntArrayList len, final IntArrayList residuals) {
 		int nInterval = 0;
-		int i, j;
+		int i;
+		int j;
 
 		for (i = 0; i < edgesArray.length; i++) {
 			j = 0;
@@ -308,25 +307,23 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 				int intervalCount = 0; // Number of intervals
 				int[] left = null;
 				int[] len = null;
-				if (extraCount > 0) {
-					// Prepare to read intervals, if any
-					if ((intervalCount = ibs.readGamma()) != 0) {
-						int prev = 0; // Holds the last integer in the last
-										// interval.
-						left = new int[intervalCount];
-						len = new int[intervalCount];
-						// Now we read intervals
-						left[0] = firstIntervalNode = prev = ibs.readInt(Integer.SIZE);
-						len[0] = ibs.readGamma() + BVGraph.DEFAULT_MIN_INTERVAL_LENGTH;
+				// Prepare to read intervals, if any
+				if (extraCount > 0 && (intervalCount = ibs.readGamma()) != 0) {
+					int prev = 0; // Holds the last integer in the last
+									// interval.
+					left = new int[intervalCount];
+					len = new int[intervalCount];
+					// Now we read intervals
+					left[0] = firstIntervalNode = prev = ibs.readInt(Integer.SIZE);
+					len[0] = ibs.readGamma() + BVGraph.DEFAULT_MIN_INTERVAL_LENGTH;
 
-						prev += len[0];
-						extraCount -= len[0];
-						for (int i = 1; i < intervalCount; i++) {
-							left[i] = prev = ibs.readGamma() + prev + 1;
-							len[i] = ibs.readGamma() + BVGraph.DEFAULT_MIN_INTERVAL_LENGTH;
-							prev += len[i];
-							extraCount -= len[i];
-						}
+					prev += len[0];
+					extraCount -= len[0];
+					for (int i = 1; i < intervalCount; i++) {
+						left[i] = prev = ibs.readGamma() + prev + 1;
+						len[i] = ibs.readGamma() + BVGraph.DEFAULT_MIN_INTERVAL_LENGTH;
+						prev += len[i];
+						extraCount -= len[i];
 					}
 				}
 
@@ -337,14 +334,15 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 						: new ResidualIntIterator(ibs, residualCount, firstIntervalNode);
 				// The extra part is made by the contribution of intervals, if
 				// any, and by the residuals iterator.
-				final LazyIntIterator extraIterator = intervalCount == 0 ? residualIterator
-						: (residualCount == 0 ? (LazyIntIterator) new IntIntervalSequenceIterator(left, len)
-								: (LazyIntIterator) new MergedIntIterator(new IntIntervalSequenceIterator(left, len),
-										residualIterator));
-				return extraIterator;
+				if (intervalCount == 0) {
+					return residualIterator;
+				} else if (residualCount == 0){
+					return new IntIntervalSequenceIterator(left, len);
+				} else {
+					return new MergedIntIterator(new IntIntervalSequenceIterator(left, len), residualIterator);
+				}
 			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
+				throw new IllegalStateException(e);
 			}
 		}
 
@@ -368,7 +366,7 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 						this.next = ibs.readInt(Integer.SIZE);
 					}
 				} catch (IOException e) {
-					throw new RuntimeException(e);
+					throw new IllegalStateException(e);
 				}
 			}
 
@@ -381,7 +379,7 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 						next += ibs.readZeta(BVGraph.DEFAULT_ZETA_K) + 1;
 					return result;
 				} catch (IOException cantHappen) {
-					throw new RuntimeException(cantHappen);
+					throw new IllegalStateException(cantHappen);
 				}
 			}
 
@@ -398,7 +396,7 @@ public class BVEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 					remaining -= n;
 					return n;
 				} catch (IOException cantHappen) {
-					throw new RuntimeException(cantHappen);
+					throw new IllegalStateException(cantHappen);
 				}
 			}
 

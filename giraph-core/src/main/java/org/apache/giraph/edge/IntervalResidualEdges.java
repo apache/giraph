@@ -69,7 +69,7 @@ public class IntervalResidualEdges extends ConfigurableOutEdges<IntWritable, Nul
 	@Override
 	public void remove(IntWritable targetVertexId) {
 	    // Note that this is very expensive (decompresses all edges and recompresses them again).
-		initialize(Iterables.filter(this, edge -> !((Edge<IntWritable, NullWritable>) edge).getTargetVertexId().equals(targetVertexId)));
+		initialize(Iterables.filter(this, edge -> !edge.getTargetVertexId().equals(targetVertexId)));
 	}
 
 	@Override
@@ -194,7 +194,7 @@ public class IntervalResidualEdges extends ConfigurableOutEdges<IntWritable, Nul
 					try {
 						representativeEdge.getTargetVertexId().set(extendedDataInput.readInt());
 					} catch (IOException canthappen) {
-						canthappen.printStackTrace();
+						throw new IllegalStateException(canthappen);
 					}
 					return representativeEdge;
 				default:
@@ -203,7 +203,7 @@ public class IntervalResidualEdges extends ConfigurableOutEdges<IntWritable, Nul
 						this.currentLen = extendedDataInput.readByte() & 0xff;
 						intervalCount--;
 					} catch (IOException canthappen) {
-						canthappen.printStackTrace();
+						throw new IllegalStateException(canthappen);
 					}
 					final int result = this.currentLeft;
 					this.currentLen--;
@@ -217,7 +217,6 @@ public class IntervalResidualEdges extends ConfigurableOutEdges<IntWritable, Nul
 				representativeEdge.getTargetVertexId().set(result);
 				return representativeEdge;
 			}
-
 		}
 
 	}
