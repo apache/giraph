@@ -522,6 +522,10 @@ under the License.
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil</artifactId>
     </dependency>
+ 	<dependency>
+	  <groupId>it.unimi.dsi</groupId>
+      <artifactId>webgraph</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>

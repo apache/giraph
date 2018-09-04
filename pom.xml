@@ -358,6 +358,7 @@ under the License.
     <dep.slf4j.version>1.7.6</dep.slf4j.version>
     <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
+    <dep.webgraph.version>3.6.1</dep.webgraph.version>
     <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
     <dep.yourkit-api.version>11.0.10</dep.yourkit-api.version>
     <dep.zookeeper.version>3.4.5</dep.zookeeper.version>
@@ -1785,6 +1786,11 @@ under the License.
         <groupId>it.unimi.dsi</groupId>
         <artifactId>fastutil</artifactId>
         <version>${dep.fastutil.version}</version>
+      </dependency>
+      <dependency>
+	    <groupId>it.unimi.dsi</groupId>
+        <artifactId>webgraph</artifactId>
+        <version>${dep.webgraph.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
