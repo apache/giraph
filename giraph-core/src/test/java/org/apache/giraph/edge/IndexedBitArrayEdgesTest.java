@@ -259,7 +259,7 @@ public class IndexedBitArrayEdgesTest {
 		edges.write(dataOutput);
 
 		// size of serializedEdges byte array should be equal to 15:
-		// 5 (bucket 0: 0-7) + 5 (bucket 1: 8-10) + 5 (bucket 3: 23)
+		// 5 (bucket 0: 0-7) + 5 (bucket 1: 8-10) + 5 (bucket 2: 23)
 		ArgumentCaptor<byte[]> serializedEdgesCaptop = ArgumentCaptor.forClass(byte[].class);
 		Mockito.verify(dataOutput).write(serializedEdgesCaptop.capture(), Mockito.anyInt(), Mockito.anyInt());
 		assertEquals(15, serializedEdgesCaptop.getValue().length);
