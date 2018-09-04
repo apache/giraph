@@ -24,7 +24,6 @@ import com.google.common.collect.UnmodifiableIterator;
 import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.python.google.common.primitives.Bytes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -40,7 +39,7 @@ import java.util.stream.StreamSupport;
  * Graph Processing. IEEE Trans. Knowl. Data Eng. 30(4): 743-756 (2018)". Note:
  * this implementation is optimized for space usage for graphs exhibiting the
  * locality of reference property, but edge addition and
- * removals are expensive. Parallel edges are not allowed.
+ * removals are expensive. Parallel edges are ignored.
  */
 public class IndexedBitArrayEdges extends ConfigurableOutEdges<IntWritable, NullWritable>
 		implements ReuseObjectsOutEdges<IntWritable, NullWritable>, Trimmable {
