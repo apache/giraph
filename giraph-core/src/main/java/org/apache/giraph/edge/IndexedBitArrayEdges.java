@@ -34,10 +34,13 @@ import java.util.stream.StreamSupport;
 
 /**
  * Implementation of {@link OutEdges} with int ids and null edge values, backed
- * by the IndexedBitArrayEdges structure proposed in "Panagiotis Liakos, Katia
- * Papakonstantinopoulou, Alex Delis: Realizing Memory-Optimized Distributed
- * Graph Processing. IEEE Trans. Knowl. Data Eng. 30(4): 743-756 (2018)". Note:
- * this implementation is optimized for space usage for graphs exhibiting the
+ * by the IndexedBitArrayEdges structure proposed in:
+ * 
+ * Panagiotis Liakos, Katia Papakonstantinopoulou, Alex Delis:
+ * Realizing Memory-Optimized Distributed Graph Processing.
+ * IEEE Trans. Knowl. Data Eng. 30(4): 743-756 (2018).
+ * 
+ * Note: this implementation is optimized for space usage for graphs exhibiting the
  * locality of reference property, but edge addition and
  * removals are expensive. Parallel edges are ignored.
  */
