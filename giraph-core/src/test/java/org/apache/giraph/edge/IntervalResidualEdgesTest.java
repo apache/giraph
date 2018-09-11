@@ -45,218 +45,227 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class IntervalResidualEdgesTest {
-	private static Edge<IntWritable, NullWritable> createEdge(int id) {
-		return EdgeFactory.create(new IntWritable(id));
-	}
+  private static Edge<IntWritable, NullWritable> createEdge(int id) {
+    return EdgeFactory.create(new IntWritable(id));
+  }
 
-	private static void assertEdges(IntervalResidualEdges edges, int... expected) {
-		int index = 0;
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			Assert.assertEquals(expected[index], edge.getTargetVertexId().get());
-			index++;
-		}
-		Assert.assertEquals(expected.length, index);
-	}
+  private static void assertEdges(IntervalResidualEdges edges,
+      int... expected) {
+    int index = 0;
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      Assert.assertEquals(expected[index], edge.getTargetVertexId().get());
+      index++;
+    }
+    Assert.assertEquals(expected.length, index);
+  }
 
-	private IntervalResidualEdges getEdges() {
-		GiraphConfiguration gc = new GiraphConfiguration();
-		GiraphConstants.VERTEX_ID_CLASS.set(gc, IntWritable.class);
-		GiraphConstants.EDGE_VALUE_CLASS.set(gc, NullWritable.class);
-		ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable> conf = new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
-				gc);
-		IntervalResidualEdges ret = new IntervalResidualEdges();
-		ret.setConf(new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(conf));
-		return ret;
-	}
+  private IntervalResidualEdges getEdges() {
+    GiraphConfiguration gc = new GiraphConfiguration();
+    GiraphConstants.VERTEX_ID_CLASS.set(gc, IntWritable.class);
+    GiraphConstants.EDGE_VALUE_CLASS.set(gc, NullWritable.class);
+    ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable> conf = new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
+        gc);
+    IntervalResidualEdges ret = new IntervalResidualEdges();
+    ret.setConf(
+        new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
+            conf));
+    return ret;
+  }
 
-	@Test
-	public void testEdges() {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testEdges() {
+    IntervalResidualEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(1), createEdge(2),
-				createEdge(4));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(1), createEdge(2), createEdge(4));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 1, 2, 4);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 1, 2, 4);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(3)));
-		assertEdges(edges, 1, 2, 3, 4); // order matters, it's an array
+    edges.add(EdgeFactory.createReusable(new IntWritable(3)));
+    assertEdges(edges, 1, 2, 3, 4); // order matters, it's an array
 
-		edges.remove(new IntWritable(2));
-		assertEdges(edges, 3, 4, 1);
-	}
+    edges.remove(new IntWritable(2));
+    assertEdges(edges, 3, 4, 1);
+  }
 
-	@Test
-	public void testInitialize() {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testInitialize() {
+    IntervalResidualEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(1), createEdge(2),
-				createEdge(4));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(1), createEdge(2), createEdge(4));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 1, 2, 4);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 1, 2, 4);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(3)));
-		assertEdges(edges, 1, 2, 3, 4);
+    edges.add(EdgeFactory.createReusable(new IntWritable(3)));
+    assertEdges(edges, 1, 2, 3, 4);
 
-		edges.initialize();
-		assertEquals(0, edges.size());
-	}
+    edges.initialize();
+    assertEquals(0, edges.size());
+  }
 
-	@Test
-	public void testInitializeUnsorted() {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testInitializeUnsorted() {
+    IntervalResidualEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(3), createEdge(4),
-				createEdge(1));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(3), createEdge(4), createEdge(1));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 3, 4, 1);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 3, 4, 1);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(2)));
-		assertEdges(edges, 1, 2, 3, 4);
+    edges.add(EdgeFactory.createReusable(new IntWritable(2)));
+    assertEdges(edges, 1, 2, 3, 4);
 
-		edges.initialize();
-		assertEquals(0, edges.size());
-	}
+    edges.initialize();
+    assertEquals(0, edges.size());
+  }
 
-	@Test
-	public void testMutateEdges() {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testMutateEdges() {
+    IntervalResidualEdges edges = getEdges();
 
-		edges.initialize();
+    edges.initialize();
 
-		// Add 10 edges with id i, for i = 0..9
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
+    // Add 10 edges with id i, for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
 
-		// Remove edges with even id
-		for (int i = 0; i < 10; i += 2) {
-			edges.remove(new IntWritable(i));
-		}
+    // Remove edges with even id
+    for (int i = 0; i < 10; i += 2) {
+      edges.remove(new IntWritable(i));
+    }
 
-		// We should now have 5 edges
-		assertEquals(5, edges.size());
-		// The edge ids should be all odd
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			assertEquals(1, edge.getTargetVertexId().get() % 2);
-		}
-	}
+    // We should now have 5 edges
+    assertEquals(5, edges.size());
+    // The edge ids should be all odd
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      assertEquals(1, edge.getTargetVertexId().get() % 2);
+    }
+  }
 
-	@Test
-	public void testSerialization() throws IOException {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testSerialization() throws IOException {
+    IntervalResidualEdges edges = getEdges();
 
-		edges.initialize();
+    edges.initialize();
 
-		// Add 10 edges with id i, for i = 0..9
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
+    // Add 10 edges with id i, for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
 
-		// Remove edges with even id
-		for (int i = 0; i < 10; i += 2) {
-			edges.remove(new IntWritable(i));
-		}
+    // Remove edges with even id
+    for (int i = 0; i < 10; i += 2) {
+      edges.remove(new IntWritable(i));
+    }
 
-		// We should now have 5 edges
-		assertEdges(edges, 1, 3, 5, 7, 9); // id order matter because of the implementation
+    // We should now have 5 edges
+    assertEdges(edges, 1, 3, 5, 7, 9); // id order matter because of the
+                                       // implementation
 
-		ByteArrayOutputStream arrayStream = new ByteArrayOutputStream();
-		DataOutputStream tempBuffer = new DataOutputStream(arrayStream);
+    ByteArrayOutputStream arrayStream = new ByteArrayOutputStream();
+    DataOutputStream tempBuffer = new DataOutputStream(arrayStream);
 
-		edges.write(tempBuffer);
-		tempBuffer.close();
+    edges.write(tempBuffer);
+    tempBuffer.close();
 
-		byte[] binary = arrayStream.toByteArray();
+    byte[] binary = arrayStream.toByteArray();
 
-		assertTrue("Serialized version should not be empty ", binary.length > 0);
+    assertTrue("Serialized version should not be empty ", binary.length > 0);
 
-		edges = getEdges();
-		edges.readFields(new DataInputStream(new ByteArrayInputStream(binary)));
+    edges = getEdges();
+    edges.readFields(new DataInputStream(new ByteArrayInputStream(binary)));
 
-		assertEquals(5, edges.size());
+    assertEquals(5, edges.size());
 
-		int[] ids = new int[] { 1, 3, 5, 7, 9 };
-		int index = 0;
+    int[] ids = new int[] { 1, 3, 5, 7, 9 };
+    int index = 0;
 
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			assertEquals(ids[index], edge.getTargetVertexId().get());
-			index++;
-		}
-		assertEquals(ids.length, index);
-	}
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      assertEquals(ids[index], edge.getTargetVertexId().get());
+      index++;
+    }
+    assertEquals(ids.length, index);
+  }
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testParallelEdges() {
-		IntervalResidualEdges edges = getEdges();
+  @Test(expected = IllegalArgumentException.class)
+  public void testParallelEdges() {
+    IntervalResidualEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(2), createEdge(2),
-				createEdge(2));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(2), createEdge(2), createEdge(2));
 
-		edges.initialize(initialEdges);
-	}
+    edges.initialize(initialEdges);
+  }
 
-	@Test
-	public void testEdgeValues() {
-		IntervalResidualEdges edges = getEdges();
-		Set<Integer> testValues = new HashSet<Integer>();
-		testValues.add(0);
-		testValues.add(Integer.MAX_VALUE / 2);
-		testValues.add(Integer.MAX_VALUE);
+  @Test
+  public void testEdgeValues() {
+    IntervalResidualEdges edges = getEdges();
+    Set<Integer> testValues = new HashSet<Integer>();
+    testValues.add(0);
+    testValues.add(Integer.MAX_VALUE / 2);
+    testValues.add(Integer.MAX_VALUE);
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = new ArrayList<Edge<IntWritable, NullWritable>>();
-		for (Integer id : testValues) {
-			initialEdges.add(createEdge(id));
-		}
+    List<Edge<IntWritable, NullWritable>> initialEdges = new ArrayList<Edge<IntWritable, NullWritable>>();
+    for (Integer id : testValues) {
+      initialEdges.add(createEdge(id));
+    }
 
-		edges.initialize(initialEdges);
+    edges.initialize(initialEdges);
 
-		Iterator<Edge<IntWritable, NullWritable>> edgeIt = edges.iterator();
-		while (edgeIt.hasNext()) {
-			int value = edgeIt.next().getTargetVertexId().get();
-			assertTrue("Unknown edge found " + value, testValues.remove(value));
-		}
-	}
+    Iterator<Edge<IntWritable, NullWritable>> edgeIt = edges.iterator();
+    while (edgeIt.hasNext()) {
+      int value = edgeIt.next().getTargetVertexId().get();
+      assertTrue("Unknown edge found " + value, testValues.remove(value));
+    }
+  }
 
-	@Test
-	public void testAddedSmallerValues() {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testAddedSmallerValues() {
+    IntervalResidualEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(100));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(100));
 
-		edges.initialize(initialEdges);
+    edges.initialize(initialEdges);
 
-		for (int i = 0; i < 16; i++) {
-			edges.add(createEdge(i));
-		}
+    for (int i = 0; i < 16; i++) {
+      edges.add(createEdge(i));
+    }
 
-		assertEquals(17, edges.size());
-	}
+    assertEquals(17, edges.size());
+  }
 
-	@Test
-	public void testCompressedSize() throws IOException {
-		IntervalResidualEdges edges = getEdges();
+  @Test
+  public void testCompressedSize() throws IOException {
+    IntervalResidualEdges edges = getEdges();
 
-		// Add 10 edges with id i, for i = 0..9
-		// to create on large interval
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
-		
-		// Add a residual edge
-		edges.add(createEdge(23));
-		
-		assertEquals(11, edges.size());
-		
-		DataOutput dataOutput = Mockito.mock(DataOutput.class);
-		edges.write(dataOutput);
+    // Add 10 edges with id i, for i = 0..9
+    // to create on large interval
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
 
-		// size of intervalResiduals byte array should be equal to 13:
-		// 4 (intervals' size) + 4 (index of 1st interval) + 1 (length of 1st interval) + 4 (residual)
-		ArgumentCaptor<byte[]> intervalsAndResidualsCaptop = ArgumentCaptor.forClass(byte[].class);
-		Mockito.verify(dataOutput).write(intervalsAndResidualsCaptop.capture(), Mockito.anyInt(), Mockito.anyInt());
-		assertEquals(13, intervalsAndResidualsCaptop.getValue().length);
-	}
+    // Add a residual edge
+    edges.add(createEdge(23));
+
+    assertEquals(11, edges.size());
+
+    DataOutput dataOutput = Mockito.mock(DataOutput.class);
+    edges.write(dataOutput);
+
+    // size of intervalResiduals byte array should be equal to 13:
+    // 4 (intervals' size) + 4 (index of 1st interval) + 1 (length of 1st
+    // interval)
+    // + 4 (residual)
+    ArgumentCaptor<byte[]> intervalsAndResidualsCaptop = ArgumentCaptor
+        .forClass(byte[].class);
+    Mockito.verify(dataOutput).write(intervalsAndResidualsCaptop.capture(),
+        Mockito.anyInt(), Mockito.anyInt());
+    assertEquals(13, intervalsAndResidualsCaptop.getValue().length);
+  }
 }

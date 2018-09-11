@@ -45,223 +45,227 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class IndexedBitArrayEdgesTest {
-	private static Edge<IntWritable, NullWritable> createEdge(int id) {
-		return EdgeFactory.create(new IntWritable(id));
-	}
+  private static Edge<IntWritable, NullWritable> createEdge(int id) {
+    return EdgeFactory.create(new IntWritable(id));
+  }
 
-	private static void assertEdges(IndexedBitArrayEdges edges, int... expected) {
-		int index = 0;
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			Assert.assertEquals(expected[index], edge.getTargetVertexId().get());
-			index++;
-		}
-		Assert.assertEquals(expected.length, index);
-	}
+  private static void assertEdges(IndexedBitArrayEdges edges, int... expected) {
+    int index = 0;
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      Assert.assertEquals(expected[index], edge.getTargetVertexId().get());
+      index++;
+    }
+    Assert.assertEquals(expected.length, index);
+  }
 
-	private IndexedBitArrayEdges getEdges() {
-		GiraphConfiguration gc = new GiraphConfiguration();
-		GiraphConstants.VERTEX_ID_CLASS.set(gc, IntWritable.class);
-		GiraphConstants.EDGE_VALUE_CLASS.set(gc, NullWritable.class);
-		ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable> conf = new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
-				gc);
-		IndexedBitArrayEdges ret = new IndexedBitArrayEdges();
-		ret.setConf(new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(conf));
-		return ret;
-	}
+  private IndexedBitArrayEdges getEdges() {
+    GiraphConfiguration gc = new GiraphConfiguration();
+    GiraphConstants.VERTEX_ID_CLASS.set(gc, IntWritable.class);
+    GiraphConstants.EDGE_VALUE_CLASS.set(gc, NullWritable.class);
+    ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable> conf = new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
+        gc);
+    IndexedBitArrayEdges ret = new IndexedBitArrayEdges();
+    ret.setConf(
+        new ImmutableClassesGiraphConfiguration<IntWritable, Writable, NullWritable>(
+            conf));
+    return ret;
+  }
 
-	@Test
-	public void testEdges() {
-		IndexedBitArrayEdges edges = getEdges();
+  @Test
+  public void testEdges() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(1), createEdge(2),
-				createEdge(4));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(1), createEdge(2), createEdge(4));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 1, 2, 4);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 1, 2, 4);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(3)));
-		assertEdges(edges, 1, 2, 3, 4); // order matters, it's an array
+    edges.add(EdgeFactory.createReusable(new IntWritable(3)));
+    assertEdges(edges, 1, 2, 3, 4); // order matters, it's an array
 
-		edges.remove(new IntWritable(2));
-		assertEdges(edges, 1, 3, 4);
-	}
+    edges.remove(new IntWritable(2));
+    assertEdges(edges, 1, 3, 4);
+  }
 
-	@Test
-	public void testInitialize() {
-		IndexedBitArrayEdges edges = getEdges();
+  @Test
+  public void testInitialize() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(1), createEdge(2),
-				createEdge(4));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(1), createEdge(2), createEdge(4));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 1, 2, 4);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 1, 2, 4);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(3)));
-		assertEdges(edges, 1, 2, 3, 4);
+    edges.add(EdgeFactory.createReusable(new IntWritable(3)));
+    assertEdges(edges, 1, 2, 3, 4);
 
-		edges.initialize();
-		assertEquals(0, edges.size());
-	}
+    edges.initialize();
+    assertEquals(0, edges.size());
+  }
 
-	@Test
-	public void testInitializeUnsorted() {
-		IndexedBitArrayEdges edges = getEdges();
+  @Test
+  public void testInitializeUnsorted() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(3), createEdge(4),
-				createEdge(1));
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(3), createEdge(4), createEdge(1));
 
-		edges.initialize(initialEdges);
-		assertEdges(edges, 1, 3, 4);
+    edges.initialize(initialEdges);
+    assertEdges(edges, 1, 3, 4);
 
-		edges.add(EdgeFactory.createReusable(new IntWritable(2)));
-		
-		assertEdges(edges, 1, 2, 3, 4);
+    edges.add(EdgeFactory.createReusable(new IntWritable(2)));
 
-		edges.initialize();
-		assertEquals(0, edges.size());
-	}
+    assertEdges(edges, 1, 2, 3, 4);
 
-	@Test
-	public void testMutateEdges() {
-		IndexedBitArrayEdges edges = getEdges();
+    edges.initialize();
+    assertEquals(0, edges.size());
+  }
 
-		edges.initialize();
+  @Test
+  public void testMutateEdges() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		// Add 10 edges with id i, for i = 0..9
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
+    edges.initialize();
 
-		// Remove edges with even id
-		for (int i = 0; i < 10; i += 2) {
-			edges.remove(new IntWritable(i));
-		}
+    // Add 10 edges with id i, for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
 
-		// We should now have 5 edges
-		assertEquals(5, edges.size());
-		// The edge ids should be all odd
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			assertEquals(1, edge.getTargetVertexId().get() % 2);
-		}
-	}
+    // Remove edges with even id
+    for (int i = 0; i < 10; i += 2) {
+      edges.remove(new IntWritable(i));
+    }
 
-	@Test
-	public void testSerialization() throws IOException {
-		IndexedBitArrayEdges edges = getEdges();
+    // We should now have 5 edges
+    assertEquals(5, edges.size());
+    // The edge ids should be all odd
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      assertEquals(1, edge.getTargetVertexId().get() % 2);
+    }
+  }
 
-		edges.initialize();
+  @Test
+  public void testSerialization() throws IOException {
+    IndexedBitArrayEdges edges = getEdges();
 
-		// Add 10 edges with id i, for i = 0..9
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
+    edges.initialize();
 
-		// Remove edges with even id
-		for (int i = 0; i < 10; i += 2) {
-			edges.remove(new IntWritable(i));
-		}
+    // Add 10 edges with id i, for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
 
-		// We should now have 5 edges
-		assertEdges(edges, 1, 3, 5, 7, 9); // id order matter because of the implementation
+    // Remove edges with even id
+    for (int i = 0; i < 10; i += 2) {
+      edges.remove(new IntWritable(i));
+    }
 
-		ByteArrayOutputStream arrayStream = new ByteArrayOutputStream();
-		DataOutputStream tempBuffer = new DataOutputStream(arrayStream);
+    // We should now have 5 edges
+    assertEdges(edges, 1, 3, 5, 7, 9); // id order matter because of the
+                                       // implementation
 
-		edges.write(tempBuffer);
-		tempBuffer.close();
+    ByteArrayOutputStream arrayStream = new ByteArrayOutputStream();
+    DataOutputStream tempBuffer = new DataOutputStream(arrayStream);
 
-		byte[] binary = arrayStream.toByteArray();
+    edges.write(tempBuffer);
+    tempBuffer.close();
 
-		assertTrue("Serialized version should not be empty ", binary.length > 0);
+    byte[] binary = arrayStream.toByteArray();
 
-		edges = getEdges();
-		edges.readFields(new DataInputStream(new ByteArrayInputStream(binary)));
+    assertTrue("Serialized version should not be empty ", binary.length > 0);
 
-		assertEquals(5, edges.size());
+    edges = getEdges();
+    edges.readFields(new DataInputStream(new ByteArrayInputStream(binary)));
 
-		int[] ids = new int[] { 1, 3, 5, 7, 9 };
-		int index = 0;
+    assertEquals(5, edges.size());
 
-		for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
-			assertEquals(ids[index], edge.getTargetVertexId().get());
-			index++;
-		}
-		assertEquals(ids.length, index);
-	}
+    int[] ids = new int[] { 1, 3, 5, 7, 9 };
+    int index = 0;
 
-	@Test
-	public void testParallelEdges() {
-		IndexedBitArrayEdges edges = getEdges();
+    for (Edge<IntWritable, NullWritable> edge : (Iterable<Edge<IntWritable, NullWritable>>) edges) {
+      assertEquals(ids[index], edge.getTargetVertexId().get());
+      index++;
+    }
+    assertEquals(ids.length, index);
+  }
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(2), createEdge(2),
-				createEdge(2));
+  @Test(expected = IllegalArgumentException.class)
+  public void testParallelEdges() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		edges.initialize(initialEdges);
-		
-		assertEquals(1, edges.size());
-	}
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(2), createEdge(2), createEdge(2));
 
-	@Test
-	public void testEdgeValues() {
-		IndexedBitArrayEdges edges = getEdges();
-		Set<Integer> testValues = new HashSet<Integer>();
-		testValues.add(0);
-		testValues.add(Integer.MAX_VALUE / 2);
-		testValues.add(Integer.MAX_VALUE);
+    edges.initialize(initialEdges);
+  }
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = new ArrayList<Edge<IntWritable, NullWritable>>();
-		for (Integer id : testValues) {
-			initialEdges.add(createEdge(id));
-		}
+  @Test
+  public void testEdgeValues() {
+    IndexedBitArrayEdges edges = getEdges();
+    Set<Integer> testValues = new HashSet<Integer>();
+    testValues.add(0);
+    testValues.add(Integer.MAX_VALUE / 2);
+    testValues.add(Integer.MAX_VALUE);
 
-		edges.initialize(initialEdges);
+    List<Edge<IntWritable, NullWritable>> initialEdges = new ArrayList<Edge<IntWritable, NullWritable>>();
+    for (Integer id : testValues) {
+      initialEdges.add(createEdge(id));
+    }
 
-		Iterator<Edge<IntWritable, NullWritable>> edgeIt = edges.iterator();
-		while (edgeIt.hasNext()) {
-			int value = edgeIt.next().getTargetVertexId().get();
-			assertTrue("Unknown edge found " + value, testValues.remove(value));
-		}
-	}
+    edges.initialize(initialEdges);
 
-	@Test
-	public void testAddedSmallerValues() {
-		IndexedBitArrayEdges edges = getEdges();
+    Iterator<Edge<IntWritable, NullWritable>> edgeIt = edges.iterator();
+    while (edgeIt.hasNext()) {
+      int value = edgeIt.next().getTargetVertexId().get();
+      assertTrue("Unknown edge found " + value, testValues.remove(value));
+    }
+  }
 
-		List<Edge<IntWritable, NullWritable>> initialEdges = Lists.newArrayList(createEdge(100));
+  @Test
+  public void testAddedSmallerValues() {
+    IndexedBitArrayEdges edges = getEdges();
 
-		edges.initialize(initialEdges);
+    List<Edge<IntWritable, NullWritable>> initialEdges = Lists
+        .newArrayList(createEdge(100));
 
-		for (int i = 0; i < 16; i++) {
-			edges.add(createEdge(i));
-		}
+    edges.initialize(initialEdges);
 
-		assertEquals(17, edges.size());
-	}
+    for (int i = 0; i < 16; i++) {
+      edges.add(createEdge(i));
+    }
 
-	@Test
-	public void testCompressedSize() throws IOException {
-		IndexedBitArrayEdges edges = getEdges();
+    assertEquals(17, edges.size());
+  }
 
-		edges.initialize();
-		
-		// Add 10 edges with id i, for i = 0..9
-		// to create on large interval
-		for (int i = 0; i < 10; ++i) {
-			edges.add(createEdge(i));
-		}
-		
-		// Add a residual edge
-		edges.add(createEdge(23));
-		
-		assertEquals(11, edges.size());
-		
-		DataOutput dataOutput = Mockito.mock(DataOutput.class);
-		edges.write(dataOutput);
+  @Test
+  public void testCompressedSize() throws IOException {
+    IndexedBitArrayEdges edges = getEdges();
 
-		// size of serializedEdges byte array should be equal to 15:
-		// 5 (bucket 0: 0-7) + 5 (bucket 1: 8-10) + 5 (bucket 2: 23)
-		ArgumentCaptor<byte[]> serializedEdgesCaptop = ArgumentCaptor.forClass(byte[].class);
-		Mockito.verify(dataOutput).write(serializedEdgesCaptop.capture(), Mockito.anyInt(), Mockito.anyInt());
-		assertEquals(15, serializedEdgesCaptop.getValue().length);
-	}
+    edges.initialize();
+
+    // Add 10 edges with id i, for i = 0..9
+    // to create on large interval
+    for (int i = 0; i < 10; ++i) {
+      edges.add(createEdge(i));
+    }
+
+    // Add a residual edge
+    edges.add(createEdge(23));
+
+    assertEquals(11, edges.size());
+
+    DataOutput dataOutput = Mockito.mock(DataOutput.class);
+    edges.write(dataOutput);
+
+    // size of serializedEdges byte array should be equal to 15:
+    // 5 (bucket 0: 0-7) + 5 (bucket 1: 8-10) + 5 (bucket 2: 23)
+    ArgumentCaptor<byte[]> serializedEdgesCaptop = ArgumentCaptor
+        .forClass(byte[].class);
+    Mockito.verify(dataOutput).write(serializedEdgesCaptop.capture(),
+        Mockito.anyInt(), Mockito.anyInt());
+    assertEquals(15, serializedEdgesCaptop.getValue().length);
+  }
 }

@@ -328,9 +328,10 @@ under the License.
     <dep.commons-io.version>2.1</dep.commons-io.version>
     <dep.commons-net.version>3.1</dep.commons-net.version>
     <dep.commons-lang3.version>3.4</dep.commons-lang3.version>
+    <dep.dsiutils.version>2.4.2</dep.dsiutils.version>
     <dep.facebook-swift.version>0.14.0</dep.facebook-swift.version>
     <dep.fasterxml-jackson.version>2.1.2</dep.fasterxml-jackson.version>
-    <dep.fastutil.version>6.5.4</dep.fastutil.version>
+    <dep.fastutil.version>8.1.0</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
     <dep.guava.version>18.0</dep.guava.version>
     <dep.hbase.version>0.94.16</dep.hbase.version>
@@ -1784,6 +1785,37 @@ under the License.
       </dependency>
       <dependency>
         <groupId>it.unimi.dsi</groupId>
+        <artifactId>dsiutils</artifactId>
+        <version>${dep.dsiutils.version}</version>
+         <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>it.unimi.dsi</groupId>
         <artifactId>fastutil</artifactId>
         <version>${dep.fastutil.version}</version>
       </dependency>
@@ -1791,6 +1823,44 @@ under the License.
 	    <groupId>it.unimi.dsi</groupId>
         <artifactId>webgraph</artifactId>
         <version>${dep.webgraph.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+          </exclusion>
+          <!-- <exclusion>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
+          </exclusion> -->
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>

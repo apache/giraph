@@ -519,6 +519,10 @@ under the License.
       <artifactId>base64</artifactId>
     </dependency>
     <dependency>
+        <groupId>it.unimi.dsi</groupId>
+        <artifactId>dsiutils</artifactId>
+      </dependency>
+    <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil</artifactId>
     </dependency>
