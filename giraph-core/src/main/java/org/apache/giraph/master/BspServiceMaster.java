@@ -1379,9 +1379,15 @@ public class BspServiceMaster<I extends WritableComparable,
 
       // Wait for a signal or timeout
       boolean eventTriggered = event.waitMsecs(eventLoopTimeout);
+
+      // If the event was triggered, we reset it. In the next loop run, we will
+      // read ZK to get the new hosts.
+      if (eventTriggered) {
+        event.reset();
+      }
+
       long elapsedTimeSinceRegularRunMsec = System.currentTimeMillis() -
           lastRegularRunTimeMsec;
-      event.reset();
       getContext().progress();
 
       if (eventTriggered ||
