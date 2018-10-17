@@ -25,8 +25,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -168,6 +171,41 @@ public class KryoWritableWrapperTest {
       assertTrue(res.get(0) == res.get(1));
       assertTrue(res.get(2) == res.get(3));
     }
+  }
+
+  @Test
+  public void testImmutableMapSerialization() throws IOException {
+    Map original = ImmutableMap.of("x", "y", "y", "z");
+    Map copy = kryoSerDeser(original);
+    assertEquals(original, copy);
+  }
+
+  @Test
+  public void testImmutableMapSinglePairSerialization() throws IOException {
+    Map original = ImmutableMap.of("x", "y");
+    Map copy = kryoSerDeser(original);
+    assertEquals(original, copy);
+  }
+
+  @Test
+  public void testImmutableBiMap() throws IOException {
+    Map original = ImmutableBiMap.of("x", "y", "z", "w");
+    Map copy = kryoSerDeser(original);
+    assertEquals(original, copy);
+  }
+
+  @Test
+  public void testSingletonImmutableBiMapSerialization() throws IOException {
+    Map original = ImmutableBiMap.of("x", "y");
+    Map copy = kryoSerDeser(original);
+    assertEquals(original, copy);
+  }
+
+  @Test
+  public void testEmptyImmutableBiMap() throws IOException {
+    Map original = ImmutableBiMap.of();
+    Map copy = kryoSerDeser(original);
+    assertEquals(original, copy);
   }
 
   @Test

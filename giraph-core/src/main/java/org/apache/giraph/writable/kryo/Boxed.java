@@ -15,26 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.writable.kryo.serializers;
-
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.serializers.MapSerializer;
-import com.google.common.collect.ImmutableMap;
-
-import java.util.HashMap;
-import java.util.Map;
+package org.apache.giraph.writable.kryo;
 
 /**
- * Serializer for {@link ImmutableMap}
+ * Boxed interface
+ * @param <T>
  */
-public class ImmutableMapSerializer extends MapSerializer {
-  @Override
-  public Map read(Kryo kryo, Input input, Class<Map> type) {
-    Map map = super.read(kryo, input,
-        (Class<Map>) ((Object) HashMap.class));
-    return ImmutableMap.copyOf(map);
-  }
+public interface Boxed<T> {
+  /**
+   * Gets the boxed value.
+   * @return Boxed object.
+   */
+  T get();
+
+  /**
+   * Sets the boxed value.
+   * @param value Value
+   */
+  void set(T value);
 }

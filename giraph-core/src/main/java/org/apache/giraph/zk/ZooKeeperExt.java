@@ -42,10 +42,10 @@ import org.apache.zookeeper.ZooKeeper;
  * should be thread-safe.
  */
 public class ZooKeeperExt {
+  /** Length of the ZK sequence number */
+  public static final int SEQUENCE_NUMBER_LENGTH = 10;
   /** Internal logger */
   private static final Logger LOG = Logger.getLogger(ZooKeeperExt.class);
-  /** Length of the ZK sequence number */
-  private static final int SEQUENCE_NUMBER_LENGTH = 10;
   /** Internal ZooKeeper */
   private final ZooKeeper zooKeeper;
   /** Ensure we have progress */

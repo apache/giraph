@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.requests;
 
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -62,6 +64,14 @@ public abstract class ByteArrayRequest extends WritableRequest {
    */
   public DataInput getDataInput() {
     return new DataInputStream(new ByteArrayInputStream(data));
+  }
+
+  /**
+   * Wraps the byte array with UnsafeByteArrayInputStream stream.
+   * @return UnsafeByteArrayInputStream
+   */
+  public UnsafeByteArrayInputStream getUnsafeByteArrayInput() {
+    return new UnsafeByteArrayInputStream(data);
   }
 
   @Override

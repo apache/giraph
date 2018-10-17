@@ -990,16 +990,6 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Use message size encoding?  This feature may help with complex message
-   * objects.
-   *
-   * @return Whether to use message size encoding
-   */
-  public boolean useMessageSizeEncoding() {
-    return USE_MESSAGE_SIZE_ENCODING.get(this);
-  }
-
-  /**
    * Set the checkpoint frequeuncy of how many supersteps to wait before
    * checkpointing
    *
