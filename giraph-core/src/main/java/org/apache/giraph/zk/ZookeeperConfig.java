@@ -58,9 +58,17 @@ public class ZookeeperConfig {
     }
     return dataLogDir;
   }
-  /** minimum session timeout in milliseconds */
+  /**
+   * Minimum session timeout in milliseconds.
+   * @return Minimum session time.
+   */
   public int getMinSessionTimeout() { return minSessionTimeout; }
-  /** maximum session timeout in milliseconds */
+
+  /**
+   * Maximum session timeout in milliseconds.
+   *
+   * @return Maximum session time.
+   */
   public int getMaxSessionTimeout() { return maxSessionTimeout; }
 
   /**

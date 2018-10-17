@@ -151,6 +151,7 @@ public interface Computation<I extends WritableComparable,
    * @param id Vertex id
    * @param value Vertex value
    * @param edges Initial edges
+   * @throws IOException
    */
   void addVertexRequest(I id, V value, OutEdges<I, E> edges) throws IOException;
 
@@ -160,6 +161,7 @@ public interface Computation<I extends WritableComparable,
    *
    * @param id Vertex id
    * @param value Vertex value
+   * @throws IOException
    */
   void addVertexRequest(I id, V value) throws IOException;
 
@@ -168,6 +170,7 @@ public interface Computation<I extends WritableComparable,
    * (applied just prior to the next superstep).
    *
    * @param vertexId Id of the vertex to be removed.
+   * @throws IOException
    */
   void removeVertexRequest(I vertexId) throws IOException;
 
@@ -177,6 +180,7 @@ public interface Computation<I extends WritableComparable,
    *
    * @param sourceVertexId Source vertex id of edge
    * @param edge Edge to add
+   * @throws IOException
    */
   void addEdgeRequest(I sourceVertexId, Edge<I, E> edge) throws IOException;
 
@@ -186,6 +190,7 @@ public interface Computation<I extends WritableComparable,
    *
    * @param sourceVertexId Source vertex id
    * @param targetVertexId Target vertex id
+   * @throws IOException
    */
   void removeEdgesRequest(I sourceVertexId, I targetVertexId)
     throws IOException;

@@ -252,7 +252,7 @@ public class GiraphYarnClient {
     }
     if (giraphMem > maxCapacity) {
       LOG.info("Giraph's request of heap MB per-task is more than the " +
-        "minimum; downgrading Giraph to" + maxCapacity + "MB.");
+        "maximum; downgrading Giraph to" + maxCapacity + "MB.");
       giraphMem = maxCapacity;
     }
     /*if (giraphMem < minCapacity) { //TODO:

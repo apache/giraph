@@ -30,8 +30,8 @@ under the License.
     <section name="Summary">
       <p>We build this site with Maven using the fluido plugin.  Due to difficulties with the maven site plugin and munge working together, we build the site using a profile that does not require munge.</p>
       <ul>
-        <li>Start at the parent directory and do <source>mvn clean site -DskipTests -Phadoop_2.0.0 -Ddependency.locations.enabled=false</source></li>
-        <li>Then we need to stage this site since it has multiple modules with <source>mvn site:stage -DskipTests -Phadoop_2.0.0</source></li>
+        <li>Start at the parent directory and do <source>mvn -Phadoop_2 clean site -DskipTests</source></li>
+        <li>Then we need to stage this site since it has multiple modules with <source>mvn -Phadoop_2 site:stage -DskipTests</source></li>
         <li>You can check the results of the site building and staging in <source>target/staging</source> and then deploy as necessary.</li>
         <li>To deploy, check out the site from svn with <source>svn co https://svn.apache.org/repos/asf/giraph/site</source>.  Remove everything and then copy the staged site to the directory and then commit.  All changes should be live immediately.</li>
       </ul>

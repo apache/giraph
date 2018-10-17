@@ -46,6 +46,8 @@ public class LongDenseMatrixSumAggregator extends MatrixSumAggregator {
    *
    * @param numRows the number of rows
    * @param master the master to register the aggregators
+   * @throws InstantiationException
+   * @throws IllegalAccessException
    */
   public void register(int numRows, MasterAggregatorUsage master)
     throws InstantiationException, IllegalAccessException {

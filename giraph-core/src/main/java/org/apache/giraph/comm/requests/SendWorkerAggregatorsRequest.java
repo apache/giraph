@@ -18,12 +18,12 @@
 
 package org.apache.giraph.comm.requests;
 
-import java.io.DataInput;
 import java.io.IOException;
 
 import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -52,7 +52,7 @@ public class SendWorkerAggregatorsRequest extends
 
   @Override
   public void doRequest(ServerData serverData) {
-    DataInput input = getDataInput();
+    UnsafeByteArrayInputStream input = getUnsafeByteArrayInput();
     OwnerAggregatorServerData aggregatorData =
         serverData.getOwnerAggregatorData();
     try {

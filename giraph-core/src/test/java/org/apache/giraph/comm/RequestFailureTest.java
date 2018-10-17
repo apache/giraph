@@ -34,6 +34,7 @@ import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,6 +46,7 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
 
 /**
  * Test all the netty failure scenarios
@@ -72,6 +74,9 @@ public class RequestFailureTest {
 
     context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
+    Counter counter = mock(Counter.class);
+    when(context.getCounter(any(String.class), any(String.class))).thenReturn(
+        counter);
   }
 
   private WritableRequest getRequest() {
