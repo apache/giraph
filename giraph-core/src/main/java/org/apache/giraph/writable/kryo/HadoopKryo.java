@@ -61,9 +61,11 @@ import com.esotericsoftware.kryo.pool.KryoPool;
 import com.esotericsoftware.kryo.serializers.ClosureSerializer;
 import com.esotericsoftware.kryo.serializers.FieldSerializer;
 import com.esotericsoftware.kryo.util.ObjectMap;
-import com.google.common.base.Preconditions;
 
 import de.javakaffee.kryoserializers.guava.ImmutableListSerializer;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Kryo instance that provides serialization through DataInput/DataOutput
@@ -318,9 +320,13 @@ public class HadoopKryo extends Kryo {
               new MapReferenceResolver());
     }
 
-    String version = System.getProperty("java.version");
-    char minor = version.charAt(2);
-    if (minor >= '8') {
+    String versionString = System.getProperty("java.version");
+    checkNotNull(versionString, "java.version is null");
+    String[] versionTokens = versionString.split("\\.");
+    checkState(versionTokens.length >= 2,
+      "Unexpected format for java.version property value: " + versionString);
+    int minorVersion = Integer.parseInt(versionTokens[1]);
+    if (minorVersion >= 8) {
       try {
         kryo.register(Class.forName("java.lang.invoke.SerializedLambda"));
         kryo.register(Class.forName(
@@ -328,7 +334,7 @@ public class HadoopKryo extends Kryo {
             new ClosureSerializer());
       } catch (ClassNotFoundException e) {
         throw new IllegalStateException(
-            "Trying to use Kryo on >= Java 8 (" + version +
+            "Trying to use Kryo on >= Java 8 (" + minorVersion +
             "), but unable to find needed classes", e);
       }
     }
@@ -544,7 +550,7 @@ public class HadoopKryo extends Kryo {
    * @param object Object to fill from input
    */
   private void readIntoObject(Input input, Object object) {
-    Preconditions.checkNotNull(object);
+    checkNotNull(object);
 
     Class<?> type = object.getClass();
     ReusableFieldSerializer<Object> serializer =
@@ -553,7 +559,7 @@ public class HadoopKryo extends Kryo {
     serializer.setReadIntoObject(object);
     Object result = readObject(input, type, serializer);
 
-    Preconditions.checkState(result == object);
+    checkState(result == object);
   }
 
   /**
