@@ -4,15 +4,15 @@ package org.apache.giraph.examples;
 import org.apache.giraph.aggregators.BooleanOrAggregator;
 import org.apache.giraph.aggregators.LongMaxAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.block_app.migration.MigrationMasterCompute.MigrationFullMasterCompute;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
 
-public class DiffusionMasterCompute extends DefaultMasterCompute {
+public class DiffusionMigrationMasterCompute extends MigrationFullMasterCompute  {
 	
-	protected Logger LOG = Logger.getLogger(DiffusionMasterCompute.class); 
+	protected Logger LOG = Logger.getLogger(DiffusionMigrationMasterCompute.class); 
 	
 	public static final String convincedVerticesAggregator = "CONV_AGG_DIFF";
 	public static final String usingVerticesAggregator = "AGG_DIFF";
@@ -109,8 +109,8 @@ public class DiffusionMasterCompute extends DefaultMasterCompute {
 					setAggregatedValue(nextLabel, new LongWritable(-1));
 					setAggregatedValue(timeToSwitch, new BooleanWritable(true));
 				}else if (activeLabel!=1){//if we haven't reached the lowest coreness
-					long almostConvicedVal=((LongWritable) getAggregatedValue(DiffusionMasterCompute.almostConvincedVerticesAggregator)).get();
-					long invitedVal=((LongWritable) getAggregatedValue(DiffusionMasterCompute.invitedVerticesAggregator)).get();				
+					long almostConvicedVal=((LongWritable) getAggregatedValue(DiffusionMigrationMasterCompute .almostConvincedVerticesAggregator)).get();
+					long invitedVal=((LongWritable) getAggregatedValue(DiffusionMigrationMasterCompute .invitedVerticesAggregator)).get();				
 					//if the threshold is reached or all the invited vertices are dead, convinced or hesitant
 					if(((double)almostConvicedVal)/invitedVal>KSwitchTreshold || invitedVertices==(deadVertices+convincedVertices+hesitantVerticesAggregatorVal) ) {
 						setAggregatedValue(timeToSwitch, new BooleanWritable(true));
@@ -129,8 +129,8 @@ public class DiffusionMasterCompute extends DefaultMasterCompute {
 				
 				if ( ! ((BooleanWritable)getAggregatedValue(timeToSwitch)).get() ) {
 					if(activeLabel>0) {
-						long almostConvicedVal=((LongWritable) getAggregatedValue(DiffusionMasterCompute.almostConvincedVerticesAggregator)).get();
-						long invitedVal=((LongWritable) getAggregatedValue(DiffusionMasterCompute.invitedVerticesAggregator)).get();				
+						long almostConvicedVal=((LongWritable) getAggregatedValue(DiffusionMigrationMasterCompute .almostConvincedVerticesAggregator)).get();
+						long invitedVal=((LongWritable) getAggregatedValue(DiffusionMigrationMasterCompute .invitedVerticesAggregator)).get();				
 						//if the threshold is reached or all the invited vertices are dead, convinced or hesitant
 						if(((double)almostConvicedVal)/invitedVal>KSwitchTreshold || invitedVertices==(deadVertices+convincedVertices+hesitantVerticesAggregatorVal)) {
 							setAggregatedValue(timeToSwitch, new BooleanWritable(true));
