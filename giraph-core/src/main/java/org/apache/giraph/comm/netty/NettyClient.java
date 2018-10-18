@@ -142,7 +142,8 @@ public class NettyClient {
   public static final String NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME =
       "Network requests resent for channel failure";
   /** How many network requests were resent because connection failed */
-  public static final String NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME =
+  public static final String
+      NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME =
       "Network requests resent for connection or request failure";
 
   /** Class logger */
