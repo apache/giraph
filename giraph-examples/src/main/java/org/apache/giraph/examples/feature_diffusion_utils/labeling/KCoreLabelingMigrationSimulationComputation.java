@@ -1,8 +1,8 @@
 package org.apache.giraph.examples.feature_diffusion_utils.labeling;
 
+import org.apache.giraph.block_app.migration.MigrationAbstractComputation.MigrationFullBasicComputation;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerGlobalCommUsage;
@@ -20,12 +20,23 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import org.apache.giraph.examples.feature_diffusion_utils.datastructures.LabelingVertexValue;
+import org.apache.giraph.examples.feature_diffusion_utils.datastructures.*;
 
 @SuppressWarnings("unused")
-public class KCoreLabelingSimulationComputation extends BasicComputation<LongWritable,LabelingVertexValue, NullWritable, Text> {
+public class KCoreLabelingMigrationSimulationComputation extends MigrationFullBasicComputation<LongWritable,LabelingVertexValue, NullWritable, Text> {
 
 	Logger LOG = Logger.getLogger(this.getClass());
+
+
+	/*public void initialize(GraphState graphState,
+			WorkerClientRequestProcessor<LongWritable, DiffusionVertexValue, NullWritable> workerClientRequestProcessor,
+			CentralizedServiceWorker<LongWritable, DiffusionVertexValue, NullWritable> serviceWorker,
+			WorkerGlobalCommUsage workerGlobalCommUsage) {
+		super.initialize(graphState, workerClientRequestProcessor, serviceWorker, workerGlobalCommUsage);
+		delta = getConf().getDouble(DiffusionMasterCompute.diffusionDeltaOption, DiffusionMasterCompute.diffusionDeltaOptionDefault);
+		modelSwitch = getConf().getBoolean(DiffusionMasterCompute.diffusionListenOption, false);
+
+	}*/
 
 	@Override
 	public void compute(Vertex<LongWritable, LabelingVertexValue, NullWritable> vertex, Iterable<Text> msgs)
@@ -33,7 +44,7 @@ public class KCoreLabelingSimulationComputation extends BasicComputation<LongWri
 		//delta=Double.parseDouble(getConf().getStrings("Delta", "0.005")[0]);
 		LabelingVertexValue value = vertex.getValue();
 		if(getSuperstep()==0) {
-			value.setLabel(Integer.max(vertex.getNumEdges(),1));
+			value.setLabel(Math.max(vertex.getNumEdges(),1));
 			//value.setNeighboorsLabel(vertex.getNumEdges());
 			sendMessageToAllEdges(vertex, new Text(""+vertex.getId().get()+" "+value.getLabel()));
 			value.setChanged(false);
@@ -62,7 +73,7 @@ public class KCoreLabelingSimulationComputation extends BasicComputation<LongWri
 		for (int i = 0 ; i<coreness ; i++)
 			corenessCount[i]=0;
 		for (Entry<Long, Long> pair: neighboorsLabel.entrySet()) {
-			long corenessCandidate =Long.min( pair.getValue() , coreness);
+			long corenessCandidate =Math.min( pair.getValue() , coreness);
 			corenessCount[(int)corenessCandidate-1]++;
 		}
 		for (int i=(int) (coreness-1); i>0 ; i--)

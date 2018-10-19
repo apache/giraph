@@ -2,7 +2,7 @@ package org.apache.giraph.examples.feature_diffusion_utils.io;
 
 import com.google.common.collect.Lists;
 
-import datastructures.DiffusionVertexValue;
+import org.apache.giraph.examples.feature_diffusion_utils.datastructures.DiffusionVertexValue;
 
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
