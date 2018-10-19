@@ -1133,6 +1133,9 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
+      <modules>
+        <module>giraph-block-app-8</module>
+      </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE,STATIC_SASL_SYMBOL</munge.symbols>
@@ -2369,7 +2372,6 @@ under the License.
   <modules>
     <module>giraph-core</module>
     <module>giraph-block-app</module>
-    <module>giraph-block-app-8</module>
     <module>giraph-examples</module>
   </modules>
 
