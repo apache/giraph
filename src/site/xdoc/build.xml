@@ -33,7 +33,7 @@ under the License.
 <p>
 You can check out Giraph with <tt>git clone http://git-wip-us.apache.org/repos/asf/giraph.git</tt>. In order to build and test Giraph, you will need the following:</p>
 <ul>
-  <li>Java 1.7</li>
+  <li>Java 1.8</li>
   <li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
   <li>One of the supported versions of Apache Hadoop:
     <ul>

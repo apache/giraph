@@ -36,8 +36,6 @@ under the License.
   <properties>
     <top.dir>${project.basedir}/..</top.dir>
     <checkstyle.config.path>${top.dir}/checkstyle-relaxed-8.xml</checkstyle.config.path>
-    <project.build.targetJdk>1.8</project.build.targetJdk>
-    <project.build.javaHome>${env.JAVA_8_HOME}</project.build.javaHome>
   </properties>
 
   <build>

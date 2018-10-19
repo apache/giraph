@@ -301,9 +301,9 @@ under the License.
     <project.maven.version>3.0.0</project.maven.version>
     <project.enforcer.skip>false</project.enforcer.skip>
     <project.enforcer.fail>true</project.enforcer.fail>
-    <project.build.targetJdk>1.7</project.build.targetJdk>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
     <project.build.javaHome>${env.JAVA_HOME}</project.build.javaHome>
-    <project.enforcer.minJdk>1.7</project.enforcer.minJdk>
+    <project.enforcer.minJdk>1.8</project.enforcer.minJdk>
     <giraph.maven.dependency.plugin.skip>false</giraph.maven.dependency.plugin.skip>
     <giraph.maven.duplicate.finder.skip>false</giraph.maven.duplicate.finder.skip>
     <!-- This lets modules skip unit tests. More details: GIRAPH-957 --> 
@@ -1133,9 +1133,6 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
-      <modules>
-        <module>giraph-block-app-8</module>
-      </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE,STATIC_SASL_SYMBOL</munge.symbols>
@@ -2372,6 +2369,7 @@ under the License.
   <modules>
     <module>giraph-core</module>
     <module>giraph-block-app</module>
+    <module>giraph-block-app-8</module>
     <module>giraph-examples</module>
   </modules>
 
