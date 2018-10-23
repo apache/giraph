@@ -301,9 +301,9 @@ under the License.
     <project.maven.version>3.0.0</project.maven.version>
     <project.enforcer.skip>false</project.enforcer.skip>
     <project.enforcer.fail>true</project.enforcer.fail>
-    <project.build.targetJdk>1.7</project.build.targetJdk>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
     <project.build.javaHome>${env.JAVA_HOME}</project.build.javaHome>
-    <project.enforcer.minJdk>1.7</project.enforcer.minJdk>
+    <project.enforcer.minJdk>1.8</project.enforcer.minJdk>
     <giraph.maven.dependency.plugin.skip>false</giraph.maven.dependency.plugin.skip>
     <giraph.maven.duplicate.finder.skip>false</giraph.maven.duplicate.finder.skip>
     <!-- This lets modules skip unit tests. More details: GIRAPH-957 --> 

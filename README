@@ -87,7 +87,7 @@ at this time.
 Building and testing:
 
 You will need the following:
-- Java 1.6
+- Java 1.8
 - Maven 3 or higher. Giraph uses the munge plugin
   (http://sonatype.github.com/munge-maven-plugin/),
   which requires Maven 3, to support multiple versions of Hadoop. Also, the
