@@ -22,7 +22,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -31,7 +30,6 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
 
 import com.google.common.collect.MapMaker;
 
@@ -48,12 +46,6 @@ import com.google.common.collect.MapMaker;
 public class LongByteMappingStore
   extends DefaultImmutableClassesGiraphConfigurable<LongWritable, Writable,
   Writable> implements MappingStore<LongWritable, ByteWritable> {
-  /** Logger instance */
-  private static final Logger LOG = Logger.getLogger(
-    LongByteMappingStore.class);
-
-  /** Counts number of entries added */
-  private final AtomicLong numEntries = new AtomicLong(0);
 
   /** Id prefix to bytesArray index mapping */
   private ConcurrentMap<Long, byte[]> concurrentIdToBytes;
@@ -114,7 +106,6 @@ public class LongByteMappingStore
       }
     }
     bytes[(int) (vertexId.get() & lowerBitMask)] = target.get();
-    numEntries.getAndIncrement(); // increment count
   }
 
   @Override
@@ -140,6 +131,6 @@ public class LongByteMappingStore
 
   @Override
   public long getStats() {
-    return numEntries.longValue();
+    return concurrentIdToBytes.size();
   }
 }
