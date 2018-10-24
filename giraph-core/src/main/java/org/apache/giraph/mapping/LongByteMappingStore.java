@@ -129,8 +129,15 @@ public class LongByteMappingStore
     concurrentIdToBytes = null;
   }
 
+  /**
+   * Returns the number of entries in the mapping store. This is updated only
+   * after the mapping has finished loading after {@link #postFilling()} has
+   * been called.
+   *
+   * @return
+   */
   @Override
   public long getStats() {
-    return concurrentIdToBytes.size();
+    return idToBytes.size();
   }
 }
