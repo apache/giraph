@@ -76,6 +76,7 @@ public class LongByteMappingStore
         .concurrencyLevel(getConf().getNumInputSplitsThreads())
         .makeMap();
     idToBytes = new Long2ObjectOpenHashMap<>(upper);
+    idToBytes.defaultReturnValue(null);
   }
 
   /**
@@ -86,11 +87,12 @@ public class LongByteMappingStore
    */
   public byte getByteTarget(LongWritable vertexId) {
     long key = vertexId.get() >>> lowerOrder;
-    int suffix = (int) (vertexId.get() & lowerBitMask);
-    if (!idToBytes.containsKey(key)) {
+    byte[] bs = idToBytes.get(key);
+    if (bs == null) {
       return -1;
     }
-    return idToBytes.get(key)[suffix];
+    int suffix = (int) (vertexId.get() & lowerBitMask);
+    return bs[suffix];
   }
 
   @Override
