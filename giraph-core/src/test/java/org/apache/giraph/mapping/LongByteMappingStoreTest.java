@@ -33,6 +33,7 @@ public class LongByteMappingStoreTest {
       store.getTarget(new LongWritable(1), new ByteWritable((byte) 777)));
     assertEquals(new ByteWritable((byte) 2),
       store.getTarget(new LongWritable(2), new ByteWritable((byte) 888)));
-    assertNull(store.getTarget(new LongWritable(3), new ByteWritable((byte) 555)));
+    assertNull(store.getTarget(new LongWritable(3),
+      new ByteWritable((byte) 555)));
   }
 }
