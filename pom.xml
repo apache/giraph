@@ -1206,48 +1206,6 @@ under the License.
       </dependencies>
     </profile>
 
-    <profile>
-       <id>2.1.1-SNAPSHOT</id>
-       <modules>
-         <module>giraph-dist</module>
-       </modules>
-       <properties>
-         <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
-         <munge.symbols>STATIC_SASL_SYMBOL</munge.symbols>
-         <!-- TODO: add these checks eventually -->
-         <project.enforcer.skip>true</project.enforcer.skip>
-         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-       </properties>
-       <dependencies>
-         <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-configuration</groupId>
-          <artifactId>commons-configuration</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-core</artifactId>
-         </dependency>
-       </dependencies>
-     </profile>
-
     <!-- Help keep future Hadoop versions munge-free:
          All profiles below are munge-free: avoid introducing any munge
          flags on any of the following profiles. -->
