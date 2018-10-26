@@ -50,8 +50,6 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
 
     if (conf.hasVertexOutputFormat()) {
       conf.createWrappedVertexOutputFormat().checkOutputSpecs(context);
-      /*end[HADOOP_NON_COMMIT_JOB]*/
-
     }
     if (conf.hasEdgeOutputFormat()) {
       conf.createWrappedEdgeOutputFormat().checkOutputSpecs(context);
