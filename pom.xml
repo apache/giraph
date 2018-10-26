@@ -1084,67 +1084,6 @@ under the License.
       </dependencies>
     </profile>
 
-    <profile>
-      <id>hadoop_cdh4.1.2</id>
-      <modules>
-        <module>giraph-dist</module>
-      </modules>
-      <properties>
-        <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
-        <munge.symbols>HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
-        <!-- TODO: add these checks eventually -->
-        <project.enforcer.skip>true</project.enforcer.skip>
-        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-hs</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-
     <!-- This profile runs on Hadoop-2.0.3-alpha by default, but does not
       use Hadoop MapReduce v2 to set up the Giraph job. This means the Giraph
       worker/master tasks are not Mappers. Tasks are run in YARN-managed execution
