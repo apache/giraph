@@ -690,6 +690,15 @@ public interface GiraphConstants {
       new IntConfOption("giraph.maxRequestMilliseconds", MINUTES.toMillis(10),
           "Milliseconds for a request to complete (or else resend)");
 
+  /**
+   * Whether to resend request which timed out or fail the job if timeout
+   * happens
+   */
+  BooleanConfOption RESEND_TIMED_OUT_REQUESTS =
+      new BooleanConfOption("giraph.resendTimedOutRequests", true,
+          "Whether to resend request which timed out or fail the job if " +
+              "timeout happens");
+
   /** Netty max connection failures */
   IntConfOption NETTY_MAX_CONNECTION_FAILURES =
       new IntConfOption("giraph.nettyMaxConnectionFailures", 1000,
