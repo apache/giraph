@@ -26,9 +26,7 @@ import org.apache.giraph.job.HadoopUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
-/*if_not[HADOOP_NON_COMMIT_JOB]*/
 import org.apache.hadoop.mapreduce.JobStatus;
-/*end[HADOOP_NON_COMMIT_JOB]*/
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -149,7 +147,6 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
             HadoopUtils.makeJobContext(getConf(), context));
       }
 
-/*if_not[HADOOP_NON_COMMIT_JOB]*/
       @Override
       public void commitJob(JobContext context) throws IOException {
         outputCommitter.commitJob(
@@ -162,7 +159,6 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
         outputCommitter.abortJob(
             HadoopUtils.makeJobContext(getConf(), context), state);
       }
-/*end[HADOOP_NON_COMMIT_JOB]*/
     };
   }
 }

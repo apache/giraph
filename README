@@ -48,14 +48,6 @@ Secure Hadoop versions:
   to MapReduce) Giraph could use. You may tell maven to use this version
   with "mvn -Phadoop_2 <goals>".
 
-- Apache Hadoop 0.23.1
-
-  You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
-
-- Apache Hadoop 0.20.203.0
-
-  You may tell maven to use this version with "mvn -Phadoop_0.20.203 <goals>".
-
 - Apache Hadoop Yarn with 2.2.0
 
   You may tell maven to use this version with "mvn -Phadoop_yarn -Dhadoop.version=2.2.0 <goals>".
@@ -65,10 +57,6 @@ Secure Hadoop versions:
   You may tell maven to use this version with "mvn -Phadoop_snapshot <goals>".
 
 Unsecure Hadoop versions:
-
-- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
-
-  You may tell maven to use 0.20.2 with "mvn -Phadoop_non_secure <goals>".
 
 - Facebook Hadoop releases: https://github.com/facebook/hadoop-20, Master branch
 

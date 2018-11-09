@@ -996,56 +996,6 @@ under the License.
         </plugins>
       </build>
     </profile>
-    <profile>
-      <id>hadoop_0.20.203</id>
-      <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
-        <module>giraph-gora</module>
-        <module>giraph-rexster</module>
-        <module>giraph-dist</module>
-      </modules>
-      <properties>
-        <hadoop.version>0.20.203.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.mortbay.jetty</groupId>
-              <artifactId>jetty</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.mortbay.jetty</groupId>
-              <artifactId>jsp-api-2.1</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>tomcat</groupId>
-              <artifactId>jasper-compiler</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>tomcat</groupId>
-              <artifactId>jasper-runtime</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
-    </profile>
 
     <profile>
       <id>hadoop_1</id>
@@ -1104,34 +1054,6 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_non_secure</id>
-      <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
-        <module>giraph-rexster</module>
-        <module>giraph-dist</module>
-      </modules>
-      <properties>
-        <hadoop.version>0.20.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_NON_COMMIT_JOB,STATIC_SASL_SYMBOL</munge.symbols>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-collections</groupId>
-          <artifactId>commons-collections</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
       <id>hadoop_facebook</id>
       <modules>
         <module>giraph-block-app-8</module>
@@ -1158,101 +1080,6 @@ under the License.
           <groupId>commons-httpclient</groupId>
           <artifactId>commons-httpclient</artifactId>
           <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_0.23</id>
-      <modules>
-        <module>giraph-dist</module>
-      </modules>
-      <properties>
-        <hadoop.version>0.23.1</hadoop.version>
-        <munge.symbols>HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
-        <!-- TODO: add these checks eventually -->
-        <project.enforcer.skip>true</project.enforcer.skip>
-        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_cdh4.1.2</id>
-      <modules>
-        <module>giraph-dist</module>
-      </modules>
-      <properties>
-        <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
-        <munge.symbols>HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
-        <!-- TODO: add these checks eventually -->
-        <project.enforcer.skip>true</project.enforcer.skip>
-        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-hs</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-          <version>${hadoop.version}</version>
         </dependency>
       </dependencies>
     </profile>
@@ -1317,48 +1144,6 @@ under the License.
         </dependency>
       </dependencies>
     </profile>
-
-    <profile>
-       <id>2.1.1-SNAPSHOT</id>
-       <modules>
-         <module>giraph-dist</module>
-       </modules>
-       <properties>
-         <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
-         <munge.symbols>STATIC_SASL_SYMBOL</munge.symbols>
-         <!-- TODO: add these checks eventually -->
-         <project.enforcer.skip>true</project.enforcer.skip>
-         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
-         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-       </properties>
-       <dependencies>
-         <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-configuration</groupId>
-          <artifactId>commons-configuration</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-common</artifactId>
-         </dependency>
-         <dependency>
-           <groupId>org.apache.hadoop</groupId>
-           <artifactId>hadoop-mapreduce-client-core</artifactId>
-         </dependency>
-       </dependencies>
-     </profile>
 
     <!-- Help keep future Hadoop versions munge-free:
          All profiles below are munge-free: avoid introducing any munge
