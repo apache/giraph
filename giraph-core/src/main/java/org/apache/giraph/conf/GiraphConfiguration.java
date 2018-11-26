@@ -671,6 +671,16 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * How many mappers is job asking for, taking into account whether master
+   * is running on the same mapper as worker or not
+   *
+   * @return How many mappers is job asking for
+   */
+  public final int getMaxMappers() {
+    return getMaxWorkers() + (SPLIT_MASTER_WORKER.get(this) ? 1 : 0);
+  }
+
+  /**
    * Utilize an existing ZooKeeper service.  If this is not set, ZooKeeper
    * will be dynamically started by Giraph for this job.
    *
