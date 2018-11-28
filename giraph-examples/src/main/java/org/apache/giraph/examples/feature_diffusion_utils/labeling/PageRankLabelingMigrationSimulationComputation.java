@@ -9,7 +9,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.examples.feature_diffusion_utils.datastructures.LabelingVertexValue;
+import org.apache.giraph.examples.feature_diffusion_utils.datastructures.*;
 
 public class PageRankLabelingMigrationSimulationComputation extends MigrationFullBasicComputation<LongWritable,LabelingVertexValue, NullWritable, Text> {
 
@@ -29,20 +29,16 @@ public class PageRankLabelingMigrationSimulationComputation extends MigrationFul
 
 	@Override
 	public void compute(Vertex<LongWritable, LabelingVertexValue, NullWritable> vertex, Iterable<Text> msgs)
-			throws IOException {		
-		//delta=Double.parseDouble(getConf().getStrings("Delta", "0.005")[0]);
+			throws IOException {
 		LabelingVertexValue value = vertex.getValue();
 		if (getSuperstep() >= 1) {
-		      double sum = 0;
-		      for (Text message : msgs) {
-		        sum += Double.parseDouble(message.toString());
-		      }
-		      double pr=((0.15f / getTotalNumVertices()) + 0.85f * sum);
-		      value.setTemp(pr);//to change, removing inty
-		    
-		     System.out.println("SIamo al SS "+getSuperstep()+" sono il vertice "+vertex.getId()+" e ho pr "+pr);
-		      
-		      
+			double sum = 0;
+			for (Text message : msgs) {
+				sum += Double.parseDouble(message.toString());
+			}
+			double pr=((0.15f / getTotalNumVertices()) + 0.85f * sum);
+			value.setTemp(pr);//to change, removing
+
 		}
 		if (getSuperstep() < 50) {
 			sendMessageToAllEdges(vertex, new Text(	""+ (value.getTemp() / vertex.getNumEdges())	)	);

@@ -46,7 +46,7 @@ public class DiffusionMigrationSimulationComputation extends MigrationFullBasicC
 					aggregate(DiffusionMigrationMasterCompute.nextLabel, new LongWritable(value.getLabel()));
 			if(value.isVertexInvited(currentLabel)) {
 				if (byLabel) {
-					if(!value.isVertexDead()) {		//Update the using probability, if not dead
+					if(!value.isVertexDead() && getSuperstep()!=1) {		//Update the using probability, if not dead
 						int activeNeighbors = checkMsgsAndUpdateProbability(msgs, value);					
 						if(activeNeighbors==value.getVertexThreshold())
 							aggregate(DiffusionMigrationMasterCompute.hesitantVerticesAggregator,new LongWritable(1));

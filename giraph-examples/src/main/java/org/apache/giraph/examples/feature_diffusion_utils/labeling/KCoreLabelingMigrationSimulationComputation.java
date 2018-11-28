@@ -40,22 +40,20 @@ public class KCoreLabelingMigrationSimulationComputation extends MigrationFullBa
 
 	@Override
 	public void compute(Vertex<LongWritable, LabelingVertexValue, NullWritable> vertex, Iterable<Text> msgs)
-			throws IOException {		
-		//delta=Double.parseDouble(getConf().getStrings("Delta", "0.005")[0]);
+			throws IOException {
 		LabelingVertexValue value = vertex.getValue();
 		if(getSuperstep()==0) {
 			value.setLabel(Math.max(vertex.getNumEdges(),1));
-			//value.setNeighboorsLabel(vertex.getNumEdges());
 			sendMessageToAllEdges(vertex, new Text(""+vertex.getId().get()+" "+value.getLabel()));
 			value.setChanged(false);
 		}else {
-			
+
 			for(Text msg: msgs) {
 				long id = Long.parseLong(msg.toString().split(" ")[0]);
 				int coreness = Integer.parseInt(msg.toString().split(" ")[1]);
 				value.updateNeighboorLabel(id, coreness);
 			}
-			
+
 			int tempLabel = computeIndex(value.getNeighboorsLabel(),value.getLabel());
 			if (tempLabel<value.getLabel())
 				value.setLabel(tempLabel);

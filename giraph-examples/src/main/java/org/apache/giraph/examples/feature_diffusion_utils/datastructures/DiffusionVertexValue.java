@@ -23,7 +23,7 @@ public class DiffusionVertexValue implements Writable {
         this.vertexThreshold=1;
         this.label=1;
     }
-    
+
     public DiffusionVertexValue(int label) {
         this.vertexThreshold=1;
         this.label=label;
@@ -45,7 +45,7 @@ public class DiffusionVertexValue implements Writable {
         out.writeInt(label);
         out.writeDouble(currentActivationProbability);
     }
-    
+
     public double getCurrentActivationProbability() {
         return currentActivationProbability;
     }
@@ -76,7 +76,7 @@ public class DiffusionVertexValue implements Writable {
     public void setVertexThreshold(int threshold) {
     	this.vertexThreshold=threshold;
     }
-    
+
     public int getVertexThreshold() {
         return vertexThreshold;
     }
