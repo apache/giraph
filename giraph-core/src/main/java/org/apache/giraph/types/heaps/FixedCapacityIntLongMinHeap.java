@@ -81,7 +81,8 @@ public class FixedCapacityIntLongMinHeap
    * @param value Value
    */
   public void add(int key, long value) {
-    if (size == capacity && compare(keys[0], values[0], key, value) >= 0) {
+    if (capacity == 0 ||
+        (size == capacity && compare(keys[0], values[0], key, value) >= 0)) {
       // If the heap is full and smallest element in it is not smaller
       // than value, do nothing
       return;
