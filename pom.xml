@@ -39,9 +39,9 @@ under the License.
   <inceptionYear>2011</inceptionYear>
 
   <scm>
-    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/giraph.git</connection>
-    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/giraph.git</developerConnection>
-    <url>https://git-wip-us.apache.org/repos/asf/giraph.git</url>
+    <connection>scm:git:http://gitbox.apache.org/repos/asf/giraph.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/giraph.git</developerConnection>
+    <url>https://gitbox.apache.org/repos/asf/giraph.git</url>
   </scm>
 
   <ciManagement>
