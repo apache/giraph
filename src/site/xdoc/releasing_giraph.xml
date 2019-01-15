@@ -31,7 +31,7 @@ under the License.
     <p>Releasing new version of Apache Giraph may take 2 weeks or more. Please, plan accordingly.</p>
     <p>Follow these steps to release new version of Apache Giraph.</p>
     <ul>
-      <li>Check out the Giraph source from the <a href="http://git-wip-us.apache.org/repos/asf/giraph.git">git repository</a>.</li>
+      <li>Check out the Giraph source from the <a href="http://gitbox.apache.org/repos/asf/giraph.git">git repository</a>.</li>
       <li>Make a release branch <tt>git checkout -b release-1.2; git push origin release-1.2</tt></li>
       <li>Once you have a release branch, setup continuous integration in Jenkins. <a href="https://builds.apache.org/job/Giraph-1.2/">See for example a setup for Giraph 1.2 release</a></li>
       <li>Fix test cases and build errors until you have a clean build for both hadoop_1 and hadoop_2 profiles</li>
