@@ -110,10 +110,6 @@ under the License.
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-    </dependency>
 
     <!-- runtime dependency -->
     <dependency>

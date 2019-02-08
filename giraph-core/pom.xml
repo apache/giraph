@@ -476,7 +476,11 @@ under the License.
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

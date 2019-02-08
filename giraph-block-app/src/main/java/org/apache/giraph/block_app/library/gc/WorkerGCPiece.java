@@ -23,8 +23,6 @@ import org.apache.giraph.types.NoMessage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 /**
  * Dummy piece to hint System.gc()
  */
@@ -32,7 +30,6 @@ public class WorkerGCPiece extends PieceWithWorkerContext<WritableComparable,
     Writable, Writable, NoMessage, Object, NoMessage, Object>  {
 
   @Override
-  @SuppressFBWarnings(value = "DM_GC")
   public void workerContextSend(
       BlockWorkerContextSendApi<WritableComparable, NoMessage> workerContextApi,
       Object executionStage,
