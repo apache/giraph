@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.types;
 
+import com.google.common.base.MoreObjects;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -136,7 +137,7 @@ public class JavaWritablePair<W extends Writable, J> {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("javaClass", javaClass.getSimpleName())
         .add("writableClass", writableClass.getSimpleName())
         .toString();
