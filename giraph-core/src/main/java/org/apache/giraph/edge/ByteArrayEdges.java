@@ -18,7 +18,6 @@
 
 package org.apache.giraph.edge;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
@@ -34,6 +33,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Collections;
 
 /**
  * {@link OutEdges} implementation backed by a byte array.
@@ -177,7 +177,7 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
   @Override
   public Iterator<Edge<I, E>> iterator() {
     if (edgeCount == 0) {
-      return Iterators.emptyIterator();
+      return Collections.emptyListIterator();
     } else {
       return new ByteArrayEdgeIterator();
     }
