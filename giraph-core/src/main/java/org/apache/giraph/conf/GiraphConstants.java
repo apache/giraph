@@ -653,15 +653,6 @@ public interface GiraphConstants {
       new StrConfOption("giraph.nettyCompressionAlgorithm", "",
           "Which compression algorithm to use in netty");
 
-  /**
-   * Whether netty should pro-actively read requests and feed them to its
-   * processing pipeline
-   */
-  BooleanConfOption NETTY_AUTO_READ =
-      new BooleanConfOption("giraph.nettyAutoRead", true,
-          "Whether netty should pro-actively read requests and feed them to " +
-              "its processing pipeline");
-
   /** Max resolve address attempts */
   IntConfOption MAX_RESOLVE_ADDRESS_ATTEMPTS =
       new IntConfOption("giraph.maxResolveAddressAttempts", 5,
