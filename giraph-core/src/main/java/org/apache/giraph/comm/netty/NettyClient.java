@@ -82,6 +82,7 @@ import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.AttributeKey;
 /*end[HADOOP_NON_SECURE]*/
+import io.netty.util.concurrent.BlockingOperationException;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
@@ -94,6 +95,7 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_AFTE
 import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS;
 import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER;
 import static org.apache.giraph.conf.GiraphConstants.NETTY_MAX_CONNECTION_FAILURES;
+import static org.apache.giraph.conf.GiraphConstants.RESEND_TIMED_OUT_REQUESTS;
 import static org.apache.giraph.conf.GiraphConstants.WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS;
 import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 
@@ -141,6 +143,10 @@ public class NettyClient {
   /** How many network requests were resent because channel failed */
   public static final String NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME =
       "Network requests resent for channel failure";
+  /** How many network requests were resent because connection failed */
+  public static final String
+      NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME =
+      "Network requests resent for connection or request failure";
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
@@ -184,6 +190,11 @@ public class NettyClient {
   private final long waitTimeBetweenConnectionRetriesMs;
   /** Maximum number of milliseconds for a request */
   private final int maxRequestMilliseconds;
+  /**
+   * Whether to resend request which timed out or fail the job if timeout
+   * happens
+   */
+  private final boolean resendTimedOutRequests;
   /** Waiting interval for checking outstanding requests msecs */
   private final int waitingRequestMsecs;
   /** Timed logger for printing request debugging */
@@ -221,6 +232,8 @@ public class NettyClient {
   private final GiraphHadoopCounter networkRequestsResentForTimeout;
   /** How many network requests were resent because channel failed */
   private final GiraphHadoopCounter networkRequestsResentForChannelFailure;
+  /** How many network requests were resent because connection failed */
+  private final GiraphHadoopCounter networkRequestsResentForConnectionFailure;
 
   /**
    * Only constructor
@@ -266,8 +279,13 @@ public class NettyClient {
         new GiraphHadoopCounter(context.getCounter(
             NETTY_COUNTERS_GROUP,
             NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME));
+    networkRequestsResentForConnectionFailure =
+      new GiraphHadoopCounter(context.getCounter(
+        NETTY_COUNTERS_GROUP,
+        NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME));
 
     maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
+    resendTimedOutRequests = RESEND_TIMED_OUT_REQUESTS.get(conf);
     maxConnectionFailures = NETTY_MAX_CONNECTION_FAILURES.get(conf);
     waitTimeBetweenConnectionRetriesMs =
         WAIT_TIME_BETWEEN_CONNECTION_RETRIES_MS.get(conf);
@@ -738,7 +756,11 @@ public class NettyClient {
     int reconnectFailures = 0;
     while (reconnectFailures < maxConnectionFailures) {
       ChannelFuture connectionFuture = bootstrap.connect(remoteServer);
-      ProgressableUtils.awaitChannelFuture(connectionFuture, context);
+      try {
+        ProgressableUtils.awaitChannelFuture(connectionFuture, context);
+      } catch (BlockingOperationException e) {
+        LOG.warn("getNextChannel: Failed connecting to " + remoteServer, e);
+      }
       if (connectionFuture.isSuccess()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("getNextChannel: Connected to " + remoteServer + "!");
@@ -984,14 +1006,19 @@ public class NettyClient {
     resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
       @Override
       public boolean apply(RequestInfo requestInfo) {
-        ChannelFuture writeFuture = requestInfo.getWriteFuture();
-        // If not connected anymore, request failed, or the request is taking
-        // too long, re-establish and resend
-        return (writeFuture != null && (!writeFuture.channel().isActive() ||
-            (writeFuture.isDone() && !writeFuture.isSuccess()))) ||
-            (requestInfo.getElapsedMsecs() > maxRequestMilliseconds);
+        // If the request is taking too long, re-establish and resend
+        return requestInfo.getElapsedMsecs() > maxRequestMilliseconds;
       }
-    }, networkRequestsResentForTimeout);
+    }, networkRequestsResentForTimeout, resendTimedOutRequests);
+    resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
+      @Override
+      public boolean apply(RequestInfo requestInfo) {
+        ChannelFuture writeFuture = requestInfo.getWriteFuture();
+        // If not connected anymore or request failed re-establish and resend
+        return writeFuture != null && (!writeFuture.channel().isActive() ||
+            (writeFuture.isDone() && !writeFuture.isSuccess()));
+      }
+    }, networkRequestsResentForConnectionFailure, true);
   }
 
   /**
@@ -999,10 +1026,13 @@ public class NettyClient {
    *  @param shouldResendRequestPredicate Predicate to use to check whether
    *                                     request should be resent
    * @param counter Counter to increment for every resent network request
+   * @param resendProblematicRequest Whether to resend problematic request or
+   *                                fail the job if such request is found
    */
   private void resendRequestsWhenNeeded(
       Predicate<RequestInfo> shouldResendRequestPredicate,
-      GiraphHadoopCounter counter) {
+      GiraphHadoopCounter counter,
+      boolean resendProblematicRequest) {
     // Check if there are open requests which have been sent a long time ago,
     // and if so, resend them.
     List<ClientRequestId> addedRequestIds = Lists.newArrayList();
@@ -1013,6 +1043,11 @@ public class NettyClient {
       RequestInfo requestInfo = entry.getValue();
       // If request should be resent
       if (shouldResendRequestPredicate.apply(requestInfo)) {
+        if (!resendProblematicRequest) {
+          throw new IllegalStateException("Problem with request id " +
+              entry.getKey() + " for " + requestInfo.getDestinationAddress() +
+              ", failing the job");
+        }
         ChannelFuture writeFuture = requestInfo.getWriteFuture();
         String logMessage;
         if (writeFuture == null) {
@@ -1022,7 +1057,8 @@ public class NettyClient {
               writeFuture.channel().isActive() +
               ", future done = " + writeFuture.isDone() + ", " +
               "success = " + writeFuture.isSuccess() + ", " +
-              "cause = " + writeFuture.cause();
+              "cause = " + writeFuture.cause() + ", " +
+              "channelId = " + writeFuture.channel().hashCode();
         }
         LOG.warn("checkRequestsForProblems: Problem with request id " +
             entry.getKey() + ", " + logMessage + ", " +
@@ -1050,6 +1086,11 @@ public class NettyClient {
         LOG.info("checkRequestsForProblems: Re-issuing request " + requestInfo);
       }
       writeRequestToChannel(requestInfo);
+      if (LOG.isInfoEnabled()) {
+        LOG.info("checkRequestsForProblems: Request " + requestId +
+            " was resent through channelId=" +
+            requestInfo.getWriteFuture().channel().hashCode());
+      }
     }
     addedRequestIds.clear();
     addedRequestInfos.clear();
@@ -1117,10 +1158,13 @@ public class NettyClient {
     resendRequestsWhenNeeded(new Predicate<RequestInfo>() {
       @Override
       public boolean apply(RequestInfo requestInfo) {
-        return requestInfo.getDestinationAddress().equals(
-            channel.remoteAddress());
+        if (requestInfo.getWriteFuture() == null ||
+            requestInfo.getWriteFuture().channel() == null) {
+          return false;
+        }
+        return requestInfo.getWriteFuture().channel().equals(channel);
       }
-    }, networkRequestsResentForChannelFailure);
+    }, networkRequestsResentForChannelFailure, true);
   }
 
   /**
@@ -1133,7 +1177,8 @@ public class NettyClient {
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
       if (future.isDone() && !future.isSuccess()) {
-        LOG.error("Request failed", future.cause());
+        LOG.error("Channel failed channelId=" + future.channel().hashCode(),
+            future.cause());
         checkRequestsAfterChannelFailure(future.channel());
       }
     }

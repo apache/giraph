@@ -106,8 +106,9 @@ public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     throws Exception {
-    LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.channel().remoteAddress(), cause);
+    LOG.warn("exceptionCaught: Channel channelId=" +
+        ctx.channel().hashCode() + " failed with remote address " +
+        ctx.channel().remoteAddress(), cause);
   }
 }
 

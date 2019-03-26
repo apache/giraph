@@ -18,6 +18,9 @@
 package org.apache.giraph.block_app.library.internal;
 
 import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
@@ -39,7 +42,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 
 /**
  * Piece that sends a message provided through messageProducer to given set of
@@ -103,14 +105,10 @@ public class SendMessageWithCombinerPiece<I extends WritableComparable,
                   new SupplierFromVertex<I, V, E, Iterator<I>>() {
                     @Override
                     public Iterator<I> get(Vertex<I, V, E> vertex) {
-                      return Iterators.filter(
-                          targetsSupplier.get(vertex),
-                          new com.google.common.base.Predicate<I>() {
-                            @Override
-                            public boolean apply(I targetId) {
-                              return stripePredicate.apply(targetId);
-                            }
-                          });
+                      return StreamSupport.stream(
+                        Spliterators.spliteratorUnknownSize(
+                          targetsSupplier.get(vertex), Spliterator.ORDERED),
+                        false).filter(stripePredicate::apply).iterator();
                     }
                   },
                   messagesConsumer));

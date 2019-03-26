@@ -318,19 +318,16 @@ public class HadoopKryo extends Kryo {
               new MapReferenceResolver());
     }
 
-    String version = System.getProperty("java.version");
-    char minor = version.charAt(2);
-    if (minor >= '8') {
-      try {
-        kryo.register(Class.forName("java.lang.invoke.SerializedLambda"));
-        kryo.register(Class.forName(
-          "com.esotericsoftware.kryo.serializers.ClosureSerializer$Closure"),
-            new ClosureSerializer());
-      } catch (ClassNotFoundException e) {
-        throw new IllegalStateException(
-            "Trying to use Kryo on >= Java 8 (" + version +
-            "), but unable to find needed classes", e);
-      }
+    try {
+      kryo.register(Class.forName("java.lang.invoke.SerializedLambda"));
+      kryo.register(Class.forName(
+        "com.esotericsoftware.kryo.serializers.ClosureSerializer$Closure"),
+        new ClosureSerializer());
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException(
+        "Trying to use Kryo on Java version " +
+          System.getProperty("java.version") +
+          ", but unable to find needed classes", e);
     }
 
     kryo.register(Arrays.asList().getClass(), new ArraysAsListSerializer());
