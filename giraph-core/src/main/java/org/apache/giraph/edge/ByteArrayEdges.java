@@ -94,6 +94,9 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
     } catch (IOException e) {
       throw new IllegalStateException("add: Failed to write to the new " +
           "byte array");
+    } catch (NegativeArraySizeException negativeArraySizeException) {
+      throw new IllegalStateException("add: Too many edges for a vertex, " +
+        "hence failed to write to byte array");
     }
     serializedEdges = extendedDataOutput.getByteArray();
     serializedEdgesBytesUsed = extendedDataOutput.getPos();
