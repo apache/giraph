@@ -69,7 +69,7 @@ public class RetryableJobProgressTrackerClient
   /** Job progress tracker */
   private JobProgressTracker jobProgressTracker;
   /** Cached value for number of retries */
-  private int numRetries = 1;
+  private int numRetries;
   /** Cached value for wait time between retries */
   private int retryWaitMsec;
 
