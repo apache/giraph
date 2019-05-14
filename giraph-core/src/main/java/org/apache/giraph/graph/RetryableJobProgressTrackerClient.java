@@ -201,14 +201,22 @@ public class RetryableJobProgressTrackerClient
           retry(runnable);
           break; // If the retry succeeded, we simply break from the loop
 
-          // CHECKSTYLE: stop IllegalCatch
-        } catch (Exception e) {
-          // CHECKSTYLE: resume IllegalCatch
+        } catch (RuntimeTTransportException | RejectedExecutionException e) {
+          // If a RuntimeTTTransportException happened, then we will retry
           if (LOG.isInfoEnabled()) {
             LOG.info("Exception occurred while talking to " +
               "JobProgressTracker server after retry " + i +
               " of " + numRetries, e);
           }
+          // CHECKSTYLE: stop IllegalCatch
+        } catch (Exception e) {
+          // CHECKSTYLE: resume IllegalCatch
+          // If any other exception happened (e.g. application-specific),
+          // then we stop.
+          LOG.info("Exception occurred while talking to " +
+            "JobProgressTracker server after retry " + i +
+            " of " + numRetries + ", giving up", e);
+          break;
         }
       }
       // CHECKSTYLE: stop IllegalCatch
