@@ -195,7 +195,7 @@ public class RetryableJobProgressTrackerClient
         LOG.debug(te.getClass() + " occurred while talking to " +
           "JobProgressTracker server, trying to reconnect", te);
       }
-      for (int i = 0; i < numRetries; i++) {
+      for (int i = 1; i <= numRetries; i++) {
         try {
           ThreadUtils.trySleep(retryWaitMsec);
           retry(runnable);
