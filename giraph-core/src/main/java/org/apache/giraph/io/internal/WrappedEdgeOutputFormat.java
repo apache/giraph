@@ -164,4 +164,14 @@ public class WrappedEdgeOutputFormat<I extends WritableComparable,
       }
     };
   }
+
+  @Override
+  public void preWriting(TaskAttemptContext context) {
+    originalOutputFormat.preWriting(context);
+  }
+
+  @Override
+  public void postWriting(TaskAttemptContext context) {
+    originalOutputFormat.postWriting(context);
+  }
 }

@@ -20,11 +20,8 @@ package org.apache.giraph.io;
 
 import java.io.IOException;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
@@ -38,7 +35,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class EdgeOutputFormat<
     I extends WritableComparable, V extends Writable,
     E extends Writable> extends
-    DefaultImmutableClassesGiraphConfigurable<I, V, E> {
+    OutputFormat<I, V, E> {
   /**
    * Create an edge writer for a given split. The framework will call
    * {@link EdgeWriter#initialize(TaskAttemptContext)} before
@@ -50,33 +47,5 @@ public abstract class EdgeOutputFormat<
    * @throws InterruptedException
    */
   public abstract EdgeWriter<I, V, E> createEdgeWriter(
-    TaskAttemptContext context) throws IOException, InterruptedException;
-
-  /**
-   * Check for validity of the output-specification for the job.
-   * (Copied from Hadoop OutputFormat)
-   *
-   * <p>This is to validate the output specification for the job when it is
-   * a job is submitted.  Typically checks that it does not already exist,
-   * throwing an exception when it already exists, so that output is not
-   * overwritten.</p>
-   *
-   * @param  context information about the job
-   * @throws IOException when output should not be attempted
-   */
-  public abstract void checkOutputSpecs(JobContext context)
-    throws IOException, InterruptedException;
-
-  /**
-   * Get the output committer for this output format. This is responsible
-   * for ensuring the output is committed correctly.
-   * (Copied from Hadoop OutputFormat)
-   *
-   * @param context the task context
-   * @return an output committer
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  public abstract OutputCommitter getOutputCommitter(
     TaskAttemptContext context) throws IOException, InterruptedException;
 }
