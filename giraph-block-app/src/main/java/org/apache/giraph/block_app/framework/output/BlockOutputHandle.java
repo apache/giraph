@@ -52,6 +52,7 @@ public class BlockOutputHandle implements BlockOutputApi {
     outputDescMap = BlockOutputFormat.createInitAndCheckOutputDescsMap(
         conf, jobIdentifier);
     for (String confOption : outputDescMap.keySet()) {
+      outputDescMap.get(confOption).preWriting();
       freeWriters.put(confOption,
           new ConcurrentLinkedQueue<BlockOutputWriter>());
       occupiedWriters.put(confOption,
@@ -127,5 +128,9 @@ public class BlockOutputHandle implements BlockOutputApi {
     ProgressableUtils.getResultsWithNCallables(callableFactory,
         Math.min(GiraphConstants.NUM_OUTPUT_THREADS.get(conf),
             allWriters.size()), "close-writers-%d", progressable);
+    // Close all output formats
+    for (BlockOutputDesc outputDesc : outputDescMap.values()) {
+      outputDesc.postWriting();
+    }
   }
 }

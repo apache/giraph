@@ -22,6 +22,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.io.VertexWriter;
+import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -43,6 +44,8 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Main vertex writer */
   private final VertexWriter<I, V, E> vertexWriter;
+  /** Vertex output format */
+  private final WrappedVertexOutputFormat<I, V, E> vertexOutputFormat;
   /**
    * Simple vertex writer, wrapper for {@link #vertexWriter}.
    * Call to writeVertex is thread-safe.
@@ -61,8 +64,9 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context) {
     this.context = context;
     try {
-      vertexWriter =
-          conf.createWrappedVertexOutputFormat().createVertexWriter(context);
+      vertexOutputFormat = conf.createWrappedVertexOutputFormat();
+      vertexOutputFormat.preWriting(context);
+      vertexWriter = vertexOutputFormat.createVertexWriter(context);
       vertexWriter.setConf(conf);
       vertexWriter.initialize(context);
     } catch (IOException e) {
@@ -93,5 +97,6 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
   @Override
   public void postApplication() throws IOException, InterruptedException {
     vertexWriter.close(context);
+    vertexOutputFormat.postWriting(context);
   }
 }
