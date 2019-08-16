@@ -44,6 +44,18 @@ public interface BlockOutputDesc<OW extends BlockOutputWriter> {
   OW createOutputWriter(Configuration conf, Progressable hadoopProgressable);
 
   /**
+   * This method will be called before creating any writers
+   */
+  default void preWriting() {
+  }
+
+  /**
+   * This method will be called after all writers are closed
+   */
+  default void postWriting() {
+  }
+
+  /**
    * Commit everything
    */
   void commit();

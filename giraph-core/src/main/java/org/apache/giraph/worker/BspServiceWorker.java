@@ -976,6 +976,7 @@ else[HADOOP_NON_SECURE]*/
             "using " + numThreads + " threads");
     final VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createWrappedVertexOutputFormat();
+    vertexOutputFormat.preWriting(getContext());
 
     getPartitionStore().startIteration();
 
@@ -1050,6 +1051,8 @@ else[HADOOP_NON_SECURE]*/
     ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
         "save-vertices-%d", getContext());
 
+    vertexOutputFormat.postWriting(getContext());
+
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
       "saveVertices: Done saving vertices.");
     // YARN: must complete the commit the "task" output, Hadoop isn't there.
@@ -1100,6 +1103,7 @@ else[HADOOP_NON_SECURE]*/
         numThreads + " threads");
     final EdgeOutputFormat<I, V, E> edgeOutputFormat =
         conf.createWrappedEdgeOutputFormat();
+    edgeOutputFormat.preWriting(getContext());
 
     getPartitionStore().startIteration();
 
@@ -1158,6 +1162,8 @@ else[HADOOP_NON_SECURE]*/
     };
     ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
         "save-vertices-%d", getContext());
+
+    edgeOutputFormat.postWriting(getContext());
 
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
       "saveEdges: Done saving edges.");
