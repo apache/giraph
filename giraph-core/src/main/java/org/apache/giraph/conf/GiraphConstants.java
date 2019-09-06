@@ -690,6 +690,15 @@ public interface GiraphConstants {
       new IntConfOption("giraph.maxRequestMilliseconds", MINUTES.toMillis(10),
           "Milliseconds for a request to complete (or else resend)");
 
+  /**
+   * Whether to resend request which timed out or fail the job if timeout
+   * happens
+   */
+  BooleanConfOption RESEND_TIMED_OUT_REQUESTS =
+      new BooleanConfOption("giraph.resendTimedOutRequests", true,
+          "Whether to resend request which timed out or fail the job if " +
+              "timeout happens");
+
   /** Netty max connection failures */
   IntConfOption NETTY_MAX_CONNECTION_FAILURES =
       new IntConfOption("giraph.nettyMaxConnectionFailures", 1000,
@@ -1292,5 +1301,15 @@ public interface GiraphConstants {
   /** Number of supersteps job will run for */
   IntConfOption SUPERSTEP_COUNT = new IntConfOption("giraph.numSupersteps", -1,
       "Number of supersteps job will run for");
+
+  /** Whether to disable GiraphClassResolver which is an efficient
+   * implementation of kryo class resolver. By default this resolver is used by
+   * KryoSimpleWritable and KryoSimpleWrapper, and can be disabled with this
+   * option */
+  BooleanConfOption DISABLE_GIRAPH_CLASS_RESOLVER =
+          new BooleanConfOption("giraph.disableGiraphClassResolver", false,
+            "Disables GiraphClassResolver, which is a custom implementation " +
+            "of kryo class resolver that avoids writing class names to the " +
+            "underlying stream for faster serialization.");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

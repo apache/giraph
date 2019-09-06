@@ -80,6 +80,7 @@ public class ZooKeeperNodeCreator implements Tool, Watcher {
   /**
    * Entry point from shell script
    * @param args the command line arguments
+   * @throws Exception
    */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(new ZooKeeperNodeCreator(), args));

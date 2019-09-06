@@ -93,7 +93,7 @@ public class DefaultJobProgressTrackerService
             MAX_ALLOWED_TIME_WITHOUT_PROGRESS_MS.get(conf);
         CombinedWorkerProgress lastProgress = null;
         while (!finished) {
-          if (mappersStarted == conf.getMaxWorkers() + 1 &&
+          if (mappersStarted == conf.getMaxMappers() &&
               !workerProgresses.isEmpty()) {
             // Combine and log
             CombinedWorkerProgress combinedWorkerProgress =
@@ -202,7 +202,7 @@ public class DefaultJobProgressTrackerService
   public synchronized void mapperStarted() {
     mappersStarted++;
     if (LOG.isInfoEnabled()) {
-      if (mappersStarted == conf.getMaxWorkers() + 1) {
+      if (mappersStarted == conf.getMaxMappers()) {
         LOG.info("Got all " + mappersStarted + " mappers");
         jobGotAllMappers();
       } else {
@@ -210,7 +210,7 @@ public class DefaultJobProgressTrackerService
             UPDATE_MILLISECONDS) {
           lastTimeMappersStartedLogged = System.currentTimeMillis();
           LOG.info("Got " + mappersStarted + " but needs " +
-              (conf.getMaxWorkers() + 1) + " mappers");
+              conf.getMaxMappers() + " mappers");
         }
       }
     }

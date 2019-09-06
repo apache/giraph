@@ -92,12 +92,12 @@ public final class BlockWorkerContext extends WorkerContext
 
   @Override
   public void write(DataOutput out) throws IOException {
-    HadoopKryo.writeClassAndObject(out, workerLogic);
+    HadoopKryo.writeClassAndObj(out, workerLogic);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    workerLogic = HadoopKryo.readClassAndObject(in);
+    workerLogic = HadoopKryo.readClassAndObj(in);
     workerLogic.getOutputHandle().initialize(getConf(), getContext());
   }
 }

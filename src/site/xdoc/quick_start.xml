@@ -82,13 +82,13 @@ export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
 export HADOOP_OPTS=-Djava.net.preferIPv4Stack=true</source>
       <p>The second line will force Hadoop to use IPv4 instead of IPv6, even if IPv6 is configured on the machine. As Hadoop stores temporary files during its computation, you need to create a base temporary directorty for local FS and HDFS files as follows:</p>
       <source>
-su – hdadmin
+su - hdadmin
 sudo mkdir -p /app/hadoop/tmp
 sudo chown hduser:hadoop /app/hadoop/tmp
 sudo chmod 750 /app/hadoop/tmp</source>
       <p>Make sure the <tt>/etc/hosts</tt> file has the following lines (if not, add/update them):</p>
       <source>
-172.0.0.1       localhost
+127.0.0.1       localhost
 192.168.56.10   hdnode01</source>
       <p>Even though we can use <tt>localhost</tt> for all communication within this single-node cluster, using the hostname is generally a better practice (e.g., you might add a new node and convert your single-node, pseudo-distributed cluster to multi-node, distributed cluster).</p>
       <p>Now, edit Hadoop configuration files <tt>core-site.xml</tt>, <tt>mapred-site.xml</tt>, and <tt>hdfs-site.xml</tt> under <tt>$HADOOP_HOME/conf</tt> to reflect the current setup. Add the new lines between <tt>&lt;configuration&gt;...&lt;/configuration&gt;</tt>, as specified below:</p>
@@ -129,7 +129,7 @@ sudo chmod 750 /app/hadoop/tmp</source>
       </ul>
       <p>Next, set up SSH for user account <tt>hduser</tt> so that you do not have to enter a passcode every time an SSH connection is started:</p>
       <source>
-su – hduser
+su - hduser
 ssh-keygen -t rsa -P ""
 cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys</source>
       <p>And then SSH to <tt>hdnode01</tt> under user account <tt>hduser</tt> (this must be to <tt>hdnode01</tt>, as we used the node's hostname in Hadoop configuration). You will be asked for a password if this is the first time you SSH to the node under this user account. When prompted, do store the public RSA key into <tt>$HOME/.ssh/known_hosts</tt>. Once you make sure you can SSH without a passcode/password, edit <tt>$HADOOP_HOME/conf/masters</tt> with this line:</p>

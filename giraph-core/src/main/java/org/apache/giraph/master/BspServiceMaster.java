@@ -172,8 +172,6 @@ public class BspServiceMaster<I extends WritableComparable,
   private MasterInfo masterInfo;
   /** List of workers in current superstep, sorted by task id */
   private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
-  /** Limit locality information added to each InputSplit znode */
-  private final int localityLimit = 5;
   /** Observers over master lifecycle. */
   private final MasterObserver[] observers;
 
@@ -1299,6 +1297,7 @@ public class BspServiceMaster<I extends WritableComparable,
     String workerInfoHealthyPath =
         getWorkerInfoHealthyPath(getApplicationAttempt(), getSuperstep());
     List<String> finishedHostnameIdList = new ArrayList<>();
+    List<String> tmpFinishedHostnameIdList;
     long nextInfoMillis = System.currentTimeMillis();
     final int defaultTaskTimeoutMsec = 10 * 60 * 1000;  // from TaskTracker
     final int waitBetweenLogInfoMsec = 30 * 1000;
@@ -1311,7 +1310,7 @@ public class BspServiceMaster<I extends WritableComparable,
     while (true) {
       if (! logInfoOnlyRun) {
         try {
-          finishedHostnameIdList =
+          tmpFinishedHostnameIdList =
               getZkExt().getChildrenExt(finishedWorkerPath,
                                         true,
                                         false,
@@ -1326,14 +1325,16 @@ public class BspServiceMaster<I extends WritableComparable,
                   "children of " + finishedWorkerPath, e);
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("barrierOnWorkerList: Got finished worker list = " +
-                        finishedHostnameIdList + ", size = " +
-                        finishedHostnameIdList.size() +
-                        ", worker list = " +
-                        workerInfoList + ", size = " +
-                        workerInfoList.size() +
+          // Log the names of the new workers that have finished since last time
+          Set<String> newFinishedHostnames = Sets.difference(
+            Sets.newHashSet(tmpFinishedHostnameIdList),
+            Sets.newHashSet(finishedHostnameIdList));
+          LOG.debug("barrierOnWorkerList: Got new finished worker list = " +
+                        newFinishedHostnames + ", size = " +
+                        newFinishedHostnames.size() +
                         " from " + finishedWorkerPath);
         }
+        finishedHostnameIdList = tmpFinishedHostnameIdList;
       }
 
       if (LOG.isInfoEnabled() &&
@@ -1378,9 +1379,15 @@ public class BspServiceMaster<I extends WritableComparable,
 
       // Wait for a signal or timeout
       boolean eventTriggered = event.waitMsecs(eventLoopTimeout);
+
+      // If the event was triggered, we reset it. In the next loop run, we will
+      // read ZK to get the new hosts.
+      if (eventTriggered) {
+        event.reset();
+      }
+
       long elapsedTimeSinceRegularRunMsec = System.currentTimeMillis() -
           lastRegularRunTimeMsec;
-      event.reset();
       getContext().progress();
 
       if (eventTriggered ||

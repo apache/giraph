@@ -48,27 +48,15 @@ Secure Hadoop versions:
   to MapReduce) Giraph could use. You may tell maven to use this version
   with "mvn -Phadoop_2 <goals>".
 
-- Apache Hadoop 0.23.1
-
-  You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
-
-- Apache Hadoop 0.20.203.0
-
-  You may tell maven to use this version with "mvn -Phadoop_0.20.203 <goals>".
-
 - Apache Hadoop Yarn with 2.2.0
 
   You may tell maven to use this version with "mvn -Phadoop_yarn -Dhadoop.version=2.2.0 <goals>".
 
 - Apache Hadoop 3.0.0-SNAPSHOT
 
-  You may tell maven to use this version with "mvn -Phadoop_trunk <goals>".
+  You may tell maven to use this version with "mvn -Phadoop_snapshot <goals>".
 
 Unsecure Hadoop versions:
-
-- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
-
-  You may tell maven to use 0.20.2 with "mvn -Phadoop_non_secure <goals>".
 
 - Facebook Hadoop releases: https://github.com/facebook/hadoop-20, Master branch
 
@@ -87,7 +75,7 @@ at this time.
 Building and testing:
 
 You will need the following:
-- Java 1.6
+- Java 1.8
 - Maven 3 or higher. Giraph uses the munge plugin
   (http://sonatype.github.com/munge-maven-plugin/),
   which requires Maven 3, to support multiple versions of Hadoop. Also, the

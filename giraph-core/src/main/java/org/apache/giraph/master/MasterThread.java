@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import static org.apache.giraph.conf.GiraphConstants.SPLIT_MASTER_WORKER;
 import static org.apache.giraph.conf.GiraphConstants.USE_SUPERSTEP_COUNTERS;
 
 /**
@@ -58,6 +59,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
   private final Context context;
   /** Use superstep counters? */
   private final boolean superstepCounterOn;
+  /** Are master and worker split or not? */
+  private final boolean splitMasterWorker;
   /** Setup seconds */
   private double setupSecs = 0d;
   /** Superstep timer (in seconds) map */
@@ -78,6 +81,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     this.context = context;
     GiraphTimers.init(context);
     superstepCounterOn = USE_SUPERSTEP_COUNTERS.get(context.getConfiguration());
+    splitMasterWorker = SPLIT_MASTER_WORKER.get(context.getConfiguration());
   }
 
   /**
@@ -118,7 +122,10 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           while (!superstepState.isExecutionComplete()) {
             long startSuperstepMillis = System.currentTimeMillis();
             long cachedSuperstep = bspServiceMaster.getSuperstep();
-            GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
+            // If master and worker are running together, worker will call reset
+            if (splitMasterWorker) {
+              GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
+            }
             Class<? extends Computation> computationClass =
                 bspServiceMaster.getMasterCompute().getComputation();
             superstepState = bspServiceMaster.coordinateSuperstep();

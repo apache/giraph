@@ -88,7 +88,7 @@ public class TestRepeatUntilBlock {
       countDown
     );
     BlockTestingUtils.testSequential(
-      Iterables.concat(Collections.nCopies(outer * inner, piece)),
+      Iterables.concat(Collections.<Piece>nCopies(outer * inner, piece)),
       repeatBlock);
   }
 

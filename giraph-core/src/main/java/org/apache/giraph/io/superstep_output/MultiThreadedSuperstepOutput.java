@@ -75,6 +75,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
     this.context = context;
     availableVertexWriters = Lists.newArrayList();
     occupiedVertexWriters = Sets.newHashSet();
+    vertexOutputFormat.preWriting(context);
   }
 
   @Override
@@ -145,5 +146,6 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
     ProgressableUtils.getResultsWithNCallables(callableFactory,
         Math.min(configuration.getNumOutputThreads(),
             availableVertexWriters.size()), "close-writers-%d", context);
+    vertexOutputFormat.postWriting(context);
   }
 }

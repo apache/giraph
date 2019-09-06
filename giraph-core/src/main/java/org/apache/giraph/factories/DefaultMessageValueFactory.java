@@ -17,11 +17,10 @@
  */
 package org.apache.giraph.factories;
 
+import com.google.common.base.MoreObjects;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
-
-import com.google.common.base.Objects;
 
 /**
  * Factory class to create default message values.
@@ -51,7 +50,7 @@ public class DefaultMessageValueFactory<M extends Writable>
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("messageValueClass", messageValueClass)
         .toString();
   }
