@@ -1311,5 +1311,11 @@ public interface GiraphConstants {
             "Disables GiraphClassResolver, which is a custom implementation " +
             "of kryo class resolver that avoids writing class names to the " +
             "underlying stream for faster serialization.");
+
+  /**
+   * Path where jmap exists
+   */
+  StrConfOption JMAP_PATH = new StrConfOption("giraph.jmapPath", "jmap",
+          "Path to use for invoking jmap");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

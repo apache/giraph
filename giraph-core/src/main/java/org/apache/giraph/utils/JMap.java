@@ -30,8 +30,6 @@ import java.util.Date;
  * Helper to run jmap and print the output
  */
 public class JMap {
-  /** The command to run */
-  public static final String CMD = "jmap ";
   /** Arguments to pass in to command */
   public static final String ARGS = " -histo ";
   /** This option will print out onlu live objects */
@@ -58,19 +56,22 @@ public class JMap {
    *
    * @param numLines Number of lines to print
    * @param liveObjectsOnly Should we only print non GC-able objects?
+   * @param jmapPath Path to jmap binary
    */
   public static void heapHistogramDump(int numLines,
-                                       boolean liveObjectsOnly) {
-    heapHistogramDump(numLines, liveObjectsOnly, System.err);
+                                       boolean liveObjectsOnly,
+                                       String jmapPath) {
+    heapHistogramDump(numLines, liveObjectsOnly, System.err, jmapPath);
   }
 
   /**
    * Run jmap, print numLines of output from it to stderr.
    *
    * @param numLines Number of lines to print
+   * @param jmapPath Path to jmap binary
    */
-  public static void heapHistogramDump(int numLines) {
-    heapHistogramDump(numLines, System.err);
+  public static void heapHistogramDump(int numLines, String jmapPath) {
+    heapHistogramDump(numLines, System.err, jmapPath);
   }
 
   /**
@@ -78,9 +79,11 @@ public class JMap {
    *
    * @param numLines Number of lines to print
    * @param printStream Stream to print to
+   * @param jmapPath Path to jmap binary
    */
-  public static void heapHistogramDump(int numLines, PrintStream printStream) {
-    heapHistogramDump(numLines, false, printStream);
+  public static void heapHistogramDump(int numLines, PrintStream printStream,
+                                       String jmapPath) {
+    heapHistogramDump(numLines, false, printStream, jmapPath);
   }
 
   /**
@@ -89,13 +92,15 @@ public class JMap {
    * @param numLines Number of lines to print
    * @param liveObjectsOnly Should we only print non GC-able objects?
    * @param printStream Stream to print to
+   * @param jmapPath Path to jmap binary
    */
   private static void heapHistogramDump(int numLines,
                                         boolean liveObjectsOnly,
-                                        PrintStream printStream) {
+                                        PrintStream printStream,
+                                        String jmapPath) {
     try {
       String args = liveObjectsOnly ? LIVE_HISTO_OPTION : ARGS;
-      Process p = Runtime.getRuntime().exec(CMD + args + getProcessId());
+      Process p = Runtime.getRuntime().exec(jmapPath + args + getProcessId());
       BufferedReader in = new BufferedReader(
           new InputStreamReader(p.getInputStream(), Charset.defaultCharset()));
       printStream.println("JMap " +
