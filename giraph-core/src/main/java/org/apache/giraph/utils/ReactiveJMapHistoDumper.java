@@ -54,6 +54,8 @@ public class ReactiveJMapHistoDumper extends
   private Thread thread;
   /** Halt jmap thread */
   private volatile boolean stop = false;
+  /** Path to jmap*/
+  private String jmapPath;
 
   @Override
   public void preLoad() {
@@ -100,7 +102,7 @@ public class ReactiveJMapHistoDumper extends
           long potentialMemory = (runtime.maxMemory() -
               runtime.totalMemory()) + runtime.freeMemory();
           if (potentialMemory / MB < minFreeMemory) {
-            JMap.heapHistogramDump(linesToPrint);
+            JMap.heapHistogramDump(linesToPrint, jmapPath);
           }
           ThreadUtils.trySleep(sleepMillis);
         }
@@ -127,5 +129,6 @@ public class ReactiveJMapHistoDumper extends
     sleepMillis = GiraphConstants.JMAP_SLEEP_MILLIS.get(configuration);
     linesToPrint = GiraphConstants.JMAP_PRINT_LINES.get(configuration);
     minFreeMemory = GiraphConstants.MIN_FREE_MBS_ON_HEAP.get(configuration);
+    jmapPath = GiraphConstants.JMAP_PATH.get(configuration);
   }
 }
