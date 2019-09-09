@@ -47,6 +47,8 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private Thread thread;
   /** Halt jmap thread */
   private volatile boolean stop = false;
+  /** Path to jmap*/
+  private String jmapPath;
 
   @Override
   public void preLoad() {
@@ -90,7 +92,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
       @Override
       public void run() {
         while (!stop) {
-          JMap.heapHistogramDump(linesToPrint, liveObjectsOnly);
+          JMap.heapHistogramDump(linesToPrint, liveObjectsOnly, jmapPath);
           ThreadUtils.trySleep(sleepMillis);
         }
       }
@@ -116,6 +118,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
     sleepMillis = GiraphConstants.JMAP_SLEEP_MILLIS.get(configuration);
     linesToPrint = GiraphConstants.JMAP_PRINT_LINES.get(configuration);
     liveObjectsOnly = GiraphConstants.JMAP_LIVE_ONLY.get(configuration);
+    jmapPath = GiraphConstants.JMAP_PATH.get(configuration);
   }
 
   @Override
