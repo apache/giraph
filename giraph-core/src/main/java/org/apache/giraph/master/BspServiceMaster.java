@@ -629,7 +629,7 @@ public class BspServiceMaster<I extends WritableComparable,
     List<InputSplit> splitList = generateInputSplits(inputFormat,
         minSplitCountHint, inputSplitType);
 
-    if (splitList.isEmpty()) {
+    if (splitList.isEmpty() && GiraphConstants.FAIL_ON_EMPTY_INPUT.get(conf)) {
       LOG.fatal(logPrefix + ": Failing job due to 0 input splits, " +
           "check input of " + inputFormat.getClass().getName() + "!");
       getContext().setStatus("Failing job due to 0 input splits, " +

@@ -1317,5 +1317,12 @@ public interface GiraphConstants {
    */
   StrConfOption JMAP_PATH = new StrConfOption("giraph.jmapPath", "jmap",
           "Path to use for invoking jmap");
+
+  /**
+   * Whether to fail the job or just warn when input is empty
+   */
+  BooleanConfOption FAIL_ON_EMPTY_INPUT = new BooleanConfOption(
+      "giraph.failOnEmptyInput", true,
+      "Whether to fail the job or just warn when input is empty");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck
