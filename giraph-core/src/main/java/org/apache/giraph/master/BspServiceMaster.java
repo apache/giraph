@@ -37,7 +37,10 @@ import org.apache.giraph.comm.requests.AddressesAndPartitionsRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounters;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.counters.GiraphStats;
+import org.apache.giraph.counters.GiraphTimers;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphFunctions;
@@ -78,6 +81,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -97,8 +101,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -967,6 +974,7 @@ public class BspServiceMaster<I extends WritableComparable,
             "aggregateWorkerStats: IOException", e);
       }
     }
+    // TODO: get periodic counter updates here
 
     allPartitionStatsList.clear();
     Iterable<PartitionStats> statsList = globalCommHandler.getAllPartitionStats(
@@ -1795,6 +1803,128 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
+   * Receive the counters from the workers, and aggregate them with the
+   * master counters.
+   * Send the aggregated value to the job client via Thrift call
+   */
+  private void aggregateCountersFromWorkersAndMaster() {
+    CustomCounters customCounters = new CustomCounters();
+    // Get the stats from the all the worker selected nodes
+    String workerFinishedPath =
+            getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
+    List<String> workerFinishedPathList = null;
+    // Subtract 1 for the master
+    // TODO - what happens when there is only 1 worker?
+    int numWorkers = BspInputFormat.getMaxTasks(getConfiguration()) - 1;
+    if (numWorkers == 0) {
+      numWorkers += 1;
+    }
+    // Get the counter values from the zookeeper, written by the workers
+    // We keep retrying until all the workers have written
+    try {
+      while (true) {
+        try {
+          workerFinishedPathList = getZkExt().getChildrenExt(
+                  workerFinishedPath, true,
+                  false, true);
+          LOG.info(String.format("Fetching counter values from " +
+                          "workers. Got %d out of %d",
+                  workerFinishedPathList.size(), numWorkers));
+          if (workerFinishedPathList.size() == numWorkers) {
+            break;
+          }
+        } catch (KeeperException e) {
+          LOG.info("Got Keeper exception, but will retry: ", e);
+        } catch (InterruptedException e) {
+          throw new IllegalStateException(
+                  "aggregateWorkerStats: InterruptedException", e);
+        }
+        Thread.sleep(1000);
+      }
+    } catch (InterruptedException ie) {
+      LOG.info("Interrupted exception");
+    }
+    for (String finishedPath : workerFinishedPathList) {
+      JSONObject workerFinishedInfoObj = null;
+      try {
+        byte [] zkData =
+                getZkExt().getData(finishedPath, false, null);
+        workerFinishedInfoObj = new JSONObject(new String(zkData,
+                Charset.defaultCharset()));
+        Map<String, Map<String, Long>> workerCounters = new HashMap<>();
+        Iterator<String> keys = workerFinishedInfoObj.keys();
+        while (keys.hasNext()) {
+          String groupName = keys.next();
+          JSONObject jsonCounter =
+                  workerFinishedInfoObj.getJSONObject(groupName);
+          Iterator<String> counterNames = jsonCounter.keys();
+          Map<String, Long> counters = new HashMap<>();
+          LOG.info(groupName);
+          while (counterNames.hasNext()) {
+            String counterName = counterNames.next();
+            Long value = jsonCounter.getLong(counterName);
+            counters.put(counterName, value);
+            LOG.info(counterName + ": " + value);
+          }
+          workerCounters.put(groupName, counters);
+        }
+        customCounters.mergeCounters(workerCounters);
+      } catch (JSONException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: JSONException", e);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: KeeperException", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: InterruptedException", e);
+      }
+    }
+    // Add master counters too
+    if (numWorkers != 1) {
+      Mapper.Context context = getContext();
+      Counter counter;
+      Map<String, Set<String>> masterCounterNames =
+              CustomCounters.getCustomCounters();
+      Map<String, Map<String, Long>> masterCounters = new HashMap<>();
+      for (Map.Entry<String, Set<String>> entry :
+              masterCounterNames.entrySet()) {
+        String groupName = entry.getKey();
+        Set<String> counterNames = entry.getValue();
+        LOG.info(groupName);
+        Map<String, Long> counters = new HashMap<>();
+        for (String counterName : counterNames) {
+          counter = context.getCounter(groupName, counterName);
+          counters.put(counterName, counter.getValue());
+          LOG.info(counterName + ": " + counter.getValue());
+        }
+        masterCounters.put(groupName, counters);
+      }
+      customCounters.mergeCounters(masterCounters);
+    }
+    // Add GiraphStats
+    Map<String, Map<String, Long>> allCounters = new HashMap<>();
+    for (Map.Entry<String, Map<String, Long>> entry:
+            GiraphStats.getInstance().getCounterMap().entrySet()) {
+      allCounters.put(entry.getKey(), entry.getValue());
+    }
+    // GiraphTimers
+    for (Map.Entry<String, Map<String, Long>> entry:
+            GiraphTimers.getInstance().getCounterMap().entrySet()) {
+      allCounters.put(entry.getKey(), entry.getValue());
+    }
+    // Custom counters
+    for (Map.Entry<String, Map<String, Long>> entry :
+            customCounters.getCounterMap().entrySet()) {
+      allCounters.put(entry.getKey(), entry.getValue());
+    }
+    // Send to the client
+    GiraphCountersThriftStruct.get().setCounters(allCounters);
+    getJobProgressTracker().sendMasterCounters(
+            GiraphCountersThriftStruct.get());
+  }
+
+  /**
    * Need to clean up ZooKeeper nicely.  Make sure all the masters and workers
    * have reported ending their ZooKeeper connections.
    */
@@ -1950,6 +2080,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     if (isMaster) {
       getGraphTaskManager().setIsMaster(true);
+      aggregateCountersFromWorkersAndMaster();
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE &&

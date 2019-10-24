@@ -23,6 +23,7 @@ import org.apache.giraph.block_app.framework.api.Counter;
 import org.apache.giraph.block_app.framework.api.StatusReporter;
 import org.apache.giraph.block_app.framework.internal.BlockMasterLogic.TimeStatsPerEvent;
 
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /** Utility class for Blocks Framework related counters */
@@ -49,6 +50,8 @@ public class BlockCounters {
         for (Field field : fields) {
           try {
             long value = field.getLong(stage);
+            String counterName = prefix + field.getName();
+            CustomCounters.addCustomCounter(GROUP, counterName);
             reporter.getCounter(
                 GROUP, prefix + field.getName()).setValue(value);
 
@@ -67,11 +70,11 @@ public class BlockCounters {
       long millis, StatusReporter reporter,
       TimeStatsPerEvent timeStats) {
     String name = masterPiece.getPiece().toString();
-    reporter.getCounter(
-        GROUP + " Master Timers",
-        String.format(
-            "In %6.1f %s (s)", superstep - 0.5, name)
-    ).setValue(millis / 1000);
+    String groupName = GROUP + " Master Timers";
+    String counterName = String.format(
+            "In %6.1f %s (s)", superstep - 0.5, name);
+    CustomCounters.addCustomCounter(groupName, counterName);
+    reporter.getCounter(groupName, counterName).setValue(millis / 1000);
     timeStats.inc(name, millis);
   }
 
@@ -80,10 +83,10 @@ public class BlockCounters {
       long millis, StatusReporter reporter,
       TimeStatsPerEvent timeStats) {
     String name = workerPieces.toStringShort();
-    reporter.getCounter(
-        GROUP + " Worker Timers",
-        String.format("In %6d %s (s)", superstep, name)
-    ).setValue(millis / 1000);
+    String groupName = GROUP + " Worker Timers";
+    String counterName = String.format("In %6d %s (s)", superstep, name);
+    CustomCounters.addCustomCounter(groupName, counterName);
+    reporter.getCounter(groupName, counterName).setValue(millis / 1000);
     timeStats.inc(name, millis);
   }
 

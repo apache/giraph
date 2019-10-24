@@ -256,4 +256,15 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    */
   void addressesAndPartitionsReceived(
       AddressesAndPartitionsWritable addressesAndPartitions);
+
+  /**
+   * Send the counter values to the master once all supersteps are done
+   * This is called before closing the zookeeper
+   */
+  void sendCountersToMaster();
+
+  /**
+   * Close zookeeper
+   */
+  void closeZooKeeper();
 }

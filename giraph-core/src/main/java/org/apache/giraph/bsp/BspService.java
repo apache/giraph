@@ -20,6 +20,7 @@ package org.apache.giraph.bsp;
 
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.partition.GraphPartitionerFactory;
@@ -248,6 +249,8 @@ public abstract class BspService<I extends WritableComparable,
     this.graphPartitionerFactory = conf.createGraphPartitioner();
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
+    CustomCounters.addCustomCounter(
+            GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP, basePath);
     getContext().getCounter(GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP,
         basePath);
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;
@@ -271,6 +274,9 @@ public abstract class BspService<I extends WritableComparable,
     String serverPortList = graphTaskManager.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
     memoryObserverPath = basePath + MEMORY_OBSERVER_DIR;
+    CustomCounters.addCustomCounter(
+            GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
+            haltComputationPath);
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
         haltComputationPath);
     if (LOG.isInfoEnabled()) {

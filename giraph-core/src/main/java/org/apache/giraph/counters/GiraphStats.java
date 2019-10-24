@@ -21,7 +21,9 @@ package org.apache.giraph.counters;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Hadoop Counters in group "Giraph Stats". General statistics about job.
@@ -149,6 +151,24 @@ public class GiraphStats extends HadoopCountersBase {
    */
   public static GiraphStats getInstance() {
     return INSTANCE;
+  }
+
+
+  /**
+   * Get a map of counter names, and values
+   * To be used by the master to send to the job client
+   *
+   * @return Map of counter names and values
+   */
+  public Map<String, Map<String, Long>> getCounterMap() {
+    Map<String, Map<String, Long>> finalCounterMap = new HashMap<>();
+    Map<String, Long> giraphStatsCounters = new HashMap<>();
+    for (int i = 0; i < counters.length; i++) {
+      giraphStatsCounters.put(
+              counters[i].getDisplayName(), counters[i].getValue());
+    }
+    finalCounterMap.put(GROUP_NAME, giraphStatsCounters);
+    return finalCounterMap;
   }
 
   /**

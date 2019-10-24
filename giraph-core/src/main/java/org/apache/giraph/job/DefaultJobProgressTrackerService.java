@@ -21,6 +21,7 @@ package org.apache.giraph.job;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.worker.WorkerProgress;
@@ -244,6 +245,21 @@ public class DefaultJobProgressTrackerService
   @Override
   public void updateMasterProgress(MasterProgress masterProgress) {
     this.masterProgress.set(masterProgress);
+  }
+
+  @Override
+  public void sendMasterCounters(GiraphCountersThriftStruct giraphCounters) {
+    if (LOG.isInfoEnabled()) {
+      Map<String, Map<String, Long>> counterMap = giraphCounters.getCounters();
+      for (Map.Entry<String, Map<String, Long>> entry : counterMap.entrySet()) {
+        String groupName = entry.getKey();
+        Map<String, Long> counterValues = entry.getValue();
+        LOG.info(groupName);
+        for (Map.Entry<String, Long> counter : counterValues.entrySet()) {
+          LOG.info(counter.getKey() + ": " + counter.getValue());
+        }
+      }
+    }
   }
 
   @Override

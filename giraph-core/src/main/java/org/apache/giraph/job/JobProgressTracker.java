@@ -21,6 +21,7 @@ package org.apache.giraph.job;
 import com.facebook.swift.service.ThriftMethod;
 import com.facebook.swift.service.ThriftService;
 
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.worker.WorkerProgress;
 
@@ -78,5 +79,14 @@ public interface JobProgressTracker {
    */
   @ThriftMethod
   void updateMasterProgress(MasterProgress masterProgress);
+
+  /**
+   * Master should call this method after all supersteps are finished,
+   * and send the aggregated counters to the job client
+   *
+   * @param giraphCounters Giraph-based counters
+   */
+  @ThriftMethod
+  void sendMasterCounters(GiraphCountersThriftStruct giraphCounters);
 }
 

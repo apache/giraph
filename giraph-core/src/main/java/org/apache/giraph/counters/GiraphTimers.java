@@ -24,6 +24,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -179,5 +180,24 @@ public class GiraphTimers extends HadoopCountersBase {
   public Iterator<GiraphHadoopCounter> iterator() {
     return Iterators.concat(jobCounters().iterator(),
         superstepCounters().values().iterator());
+  }
+
+  /**
+   * Get a map of counter names and values
+   *
+   * @return Map of counter names and values
+   */
+  public Map<String, Map<String, Long>> getCounterMap() {
+    Map<String, Long> counters = new HashMap<>();
+    for (GiraphHadoopCounter counter: jobCounters) {
+      counters.put(counter.getName(), counter.getValue());
+    }
+    for (Map.Entry<Long, GiraphHadoopCounter> entry :
+            superstepMsec.entrySet()) {
+      counters.put(entry.getValue().getName(), entry.getValue().getValue());
+    }
+    Map<String, Map<String, Long>> giraphTimerCounters = new HashMap<>();
+    giraphTimerCounters.put(GROUP_NAME, counters);
+    return giraphTimerCounters;
   }
 }

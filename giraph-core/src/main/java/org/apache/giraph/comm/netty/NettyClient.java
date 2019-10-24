@@ -38,6 +38,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.counters.GiraphHadoopCounter;
 import org.apache.giraph.function.Predicate;
 import org.apache.giraph.graph.TaskInfo;
@@ -271,6 +272,7 @@ public class NettyClient {
       flowControl = new NoOpFlowControl(this);
     }
 
+    initialiseCounters();
     networkRequestsResentForTimeout =
         new GiraphHadoopCounter(context.getCounter(
             NETTY_COUNTERS_GROUP,
@@ -440,6 +442,18 @@ public class NettyClient {
         }
       }
     }, "open-requests-observer");
+  }
+
+  /**
+   * Put the Netty-related counters in the CustomCounter
+   */
+  private void initialiseCounters() {
+    CustomCounters.addCustomCounter(
+            NETTY_COUNTERS_GROUP, NETWORK_REQUESTS_RESENT_FOR_TIMEOUT_NAME);
+    CustomCounters.addCustomCounter(NETTY_COUNTERS_GROUP,
+            NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME);
+    CustomCounters.addCustomCounter(NETTY_COUNTERS_GROUP,
+            NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME);
   }
 
   /**
