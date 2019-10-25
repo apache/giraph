@@ -91,6 +91,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
       graphTaskManager.setup(null); // defaults GTM to "assume fatjar mode"
       graphTaskManager.execute();
       graphTaskManager.cleanup();
+      graphTaskManager.sendWorkerCountersAndFinishCleanup();
     } catch (InterruptedException ie) {
       LOG.error("run() caught an unrecoverable InterruptedException.", ie);
     } catch (IOException ioe) {

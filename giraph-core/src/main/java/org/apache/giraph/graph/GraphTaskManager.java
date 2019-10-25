@@ -43,6 +43,8 @@ import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.ClassConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounter;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.master.BspServiceMaster;
 import org.apache.giraph.master.MasterThread;
@@ -212,6 +214,9 @@ end[PURE_YARN]*/
    */
   private void createZooKeeperCounter(String serverPortList) {
     // Getting the counter will actually create it.
+    CustomCounters.addCustomCounter(
+            GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
+            serverPortList, CustomCounter.AGGREGATION.SUM);
     context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
         serverPortList);
   }
@@ -985,7 +990,18 @@ end[PURE_YARN]*/
 
     if (serviceWorker != null) {
       serviceWorker.cleanup(finishedSuperstepStats);
+    }
+  }
+
+  /**
+   * Method to send the counter values from the worker to the master,
+   * after all supersteps are done, and finish cleanup
+   */
+  public void sendWorkerCountersAndFinishCleanup() {
+    if (serviceWorker != null) {
       postSaveOnWorkerObservers();
+      serviceWorker.sendCountersToMaster();
+      serviceWorker.closeZooKeeper();
     }
     try {
       if (masterThread != null) {
@@ -1000,15 +1016,15 @@ end[PURE_YARN]*/
       LOG.info("cleanup: Offlining ZooKeeper servers");
       try {
         zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
-      // We need this here cause apparently exceptions are eaten by Hadoop
-      // when they come from the cleanup lifecycle and it's useful to know
-      // if something is wrong.
-      //
-      // And since it's cleanup nothing too bad should happen if we don't
-      // propagate and just allow the job to finish normally.
-      // CHECKSTYLE: stop IllegalCatch
+        // We need this here cause apparently exceptions are eaten by Hadoop
+        // when they come from the cleanup lifecycle and it's useful to know
+        // if something is wrong.
+        //
+        // And since it's cleanup nothing too bad should happen if we don't
+        // propagate and just allow the job to finish normally.
+        // CHECKSTYLE: stop IllegalCatch
       } catch (Throwable e) {
-      // CHECKSTYLE: resume IllegalCatch
+        // CHECKSTYLE: resume IllegalCatch
         LOG.error("cleanup: Error offlining zookeeper", e);
       }
     }

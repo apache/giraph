@@ -21,6 +21,8 @@ package org.apache.giraph.master.input;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.requests.ReplyWithInputSplitRequest;
 import org.apache.giraph.conf.StrConfOption;
+import org.apache.giraph.counters.CustomCounter;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.InputType;
 import org.apache.giraph.worker.WorkerInfo;
@@ -225,7 +227,10 @@ public class MasterInputSplitsHandler {
    */
   public static Counter getSplitFractionDoneTimestampCounter(
       InputType inputType, double fraction, Mapper.Context context) {
-    return context.getCounter(inputType.name() + " input",
-        String.format("%.2f%% done time (ms)", fraction * 100));
+    String groupName = inputType.name() + " input";
+    String counterName = String.format("%.2f%% done time (ms)", fraction * 100);
+    CustomCounters.addCustomCounter(groupName, counterName,
+            CustomCounter.AGGREGATION.SUM);
+    return context.getCounter(groupName, counterName);
   }
 }

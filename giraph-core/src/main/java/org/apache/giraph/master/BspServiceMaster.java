@@ -37,7 +37,11 @@ import org.apache.giraph.comm.requests.AddressesAndPartitionsRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounter;
+import org.apache.giraph.counters.CustomCounters;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.counters.GiraphStats;
+import org.apache.giraph.counters.GiraphTimers;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphFunctions;
@@ -78,6 +82,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -86,6 +91,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -1795,6 +1801,117 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
+   * Receive the counters from the workers, and aggregate them with the
+   * master counters.
+   * Send the aggregated value to the job client via Thrift call
+   */
+  private void aggregateCountersFromWorkersAndMaster() {
+    CustomCounters customCounters = new CustomCounters();
+    // Get the stats from the all the worker selected nodes
+    String workerFinishedPath =
+            getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
+    List<String> workerFinishedPathList = null;
+    // Subtract 1 for the master
+    // TODO - what happens when there is only 1 worker?
+    int numWorkers = BspInputFormat.getMaxTasks(getConfiguration()) - 1;
+    if (numWorkers == 0) {
+      numWorkers += 1;
+    }
+    // Get the counter values from the zookeeper, written by the workers
+    // We keep retrying until all the workers have written
+    try {
+      while (true) {
+        try {
+          workerFinishedPathList = getZkExt().getChildrenExt(
+                  workerFinishedPath, true,
+                  false, true);
+          LOG.info(String.format("Fetching counter values from " +
+                          "workers. Got %d out of %d",
+                  workerFinishedPathList.size(), numWorkers));
+          if (workerFinishedPathList.size() == numWorkers) {
+            break;
+          }
+        } catch (KeeperException e) {
+          LOG.info("Got Keeper exception, but will retry: ", e);
+        } catch (InterruptedException e) {
+          throw new IllegalStateException(
+                  "aggregateWorkerStats: InterruptedException", e);
+        }
+        Thread.sleep(1000);
+      }
+    } catch (InterruptedException ie) {
+      LOG.info("Interrupted exception");
+    }
+    for (String finishedPath : workerFinishedPathList) {
+      JSONArray jsonCounters = null;
+      try {
+        byte [] zkData =
+                getZkExt().getData(finishedPath, false, null);
+        jsonCounters = new JSONArray(new String(zkData,
+                Charset.defaultCharset()));
+        Set<CustomCounter> workerCounters = new HashSet<>();
+        for (int i = 0; i < jsonCounters.length(); i++) {
+          CustomCounter customCounter = new CustomCounter();
+          WritableUtils.readFieldsFromByteArray(Base64.decode(
+                  jsonCounters.getString(i)), customCounter);
+          workerCounters.add(customCounter);
+        }
+        customCounters.mergeCounters(workerCounters);
+      } catch (JSONException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: JSONException", e);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: KeeperException", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+                "aggregateWorkerStats: InterruptedException", e);
+      } catch (IOException e) {
+        throw new IllegalStateException("aggregateWorkerStats: IOException", e);
+      }
+    }
+    // Add master counters too
+    if (numWorkers != 1) {
+      Mapper.Context context = getContext();
+      Counter counter;
+      Set<CustomCounter> masterCounterNames =
+              CustomCounters.getCustomCounters();
+      Set<CustomCounter> masterCounters = new HashSet<>();
+      for (CustomCounter customCounter : masterCounterNames) {
+        String groupName = customCounter.getGroupName();
+        String counterName = customCounter.getCounterName();
+        counter = context.getCounter(groupName, counterName);
+        customCounter.setValue(counter.getValue());
+        masterCounters.add(customCounter);
+      }
+      customCounters.mergeCounters(masterCounters);
+    }
+    // Add GiraphStats
+    List<CustomCounter> allCounters = new ArrayList<>();
+    allCounters.addAll(GiraphStats.getInstance().getCounterMap());
+    // Custom counters
+    allCounters.addAll(customCounters.getCounterList());
+    // Store in Thrift Struct
+    GiraphCountersThriftStruct.get().setCounters(allCounters);
+  }
+
+  /**
+   * We add the Giraph Timers separately, because we need to include
+   * the time required for shutdown and cleanup
+   * This will fetch the final Giraph Timers, and send all the counters
+   * to the job client
+   *
+   */
+  public void addGiraphTimers() {
+    List<CustomCounter> giraphCounters =
+            GiraphCountersThriftStruct.get().getCounters();
+    giraphCounters.addAll(GiraphTimers.getInstance().getCounterMap());
+    GiraphCountersThriftStruct.get().setCounters(giraphCounters);
+    getJobProgressTracker().sendMasterCounters(
+            GiraphCountersThriftStruct.get());
+  }
+
+  /**
    * Need to clean up ZooKeeper nicely.  Make sure all the masters and workers
    * have reported ending their ZooKeeper connections.
    */
@@ -1950,6 +2067,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     if (isMaster) {
       getGraphTaskManager().setIsMaster(true);
+      aggregateCountersFromWorkersAndMaster();
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE &&

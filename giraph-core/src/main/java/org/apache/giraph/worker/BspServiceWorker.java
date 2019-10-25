@@ -55,6 +55,8 @@ import org.apache.giraph.comm.netty.NettyWorkerServer;
 import org.apache.giraph.comm.requests.PartitionStatsRequest;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.counters.CustomCounter;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.FinishedSuperstepStats;
@@ -101,6 +103,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.log4j.Level;
@@ -621,14 +624,8 @@ else[HADOOP_NON_SECURE]*/
 
   /**
    * Register the health of this worker for a given superstep
-   *
-   * @param superstep Superstep to register health on
    */
-  private void registerHealth(long superstep) {
-    JSONArray hostnamePort = new JSONArray();
-    hostnamePort.put(getHostname());
-
-    hostnamePort.put(workerInfo.getPort());
+  private void registerHealth() {
 
     String myHealthPath = null;
     if (isHealthy()) {
@@ -712,7 +709,7 @@ else[HADOOP_NON_SECURE]*/
       workerServer.prepareSuperstep();
     }
 
-    registerHealth(getSuperstep());
+    registerHealth();
 
     AddressesAndPartitionsWritable addressesAndPartitions =
         addressesAndPartitionsHolder.getElement(getContext());
@@ -1236,6 +1233,57 @@ else[HADOOP_NON_SECURE]*/
       LOG.error("cleanup: Got InterruptedException on notification " +
           "to master about cleanup", e);
     }
+  }
+
+  /**
+   * Method to send the counter values to the master using the zookeeper
+   * This is called after finishing all the supersteps
+   *
+   */
+  public void sendCountersToMaster() {
+    Set<CustomCounter> additionalCounters =
+            CustomCounters.getCustomCounters();
+
+    JSONArray jsonCounters = new JSONArray();
+    Mapper.Context context = getContext();
+    Counter counter;
+    for (CustomCounter customCounter : additionalCounters) {
+      String groupName = customCounter.getGroupName();
+      String counterName = customCounter.getCounterName();
+      counter = context.getCounter(groupName, counterName);
+      customCounter.setValue(counter.getValue());
+      jsonCounters.put(Base64.encodeBytes(
+              WritableUtils.writeToByteArray(customCounter)));
+    }
+    String finishedWorkerPath =
+            getWorkerFinishedPath(
+                    getApplicationAttempt(), getSuperstep() + 1) +
+                    "/" + workerInfo.getHostnameId();
+    try {
+      getZkExt().createExt(finishedWorkerPath,
+              jsonCounters.toString().getBytes(
+                      Charset.defaultCharset()),
+              Ids.OPEN_ACL_UNSAFE,
+              CreateMode.PERSISTENT,
+              true);
+    } catch (KeeperException.NodeExistsException e) {
+      LOG.warn("finishSuperstep: finished worker path " +
+              finishedWorkerPath + " already exists!");
+    } catch (KeeperException e) {
+      throw new IllegalStateException("Creating " + finishedWorkerPath +
+              " failed with KeeperException", e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException("Creating " + finishedWorkerPath +
+              " failed with InterruptedException", e);
+    }
+  }
+
+  /**
+   * Method to close the zookeeper connection, after the worker has sent
+   * the counters to the master
+   *
+   */
+  public void closeZooKeeper() {
     try {
       getZkExt().close();
     } catch (InterruptedException e) {
