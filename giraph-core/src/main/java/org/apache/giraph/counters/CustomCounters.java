@@ -29,8 +29,6 @@ import java.util.Set;
  */
 public class CustomCounters {
 
-
-
   /** Unique counter groups and names populated during execution of the job */
   private static Set<CustomCounter> COUNTER_NAMES = new HashSet<>();
 

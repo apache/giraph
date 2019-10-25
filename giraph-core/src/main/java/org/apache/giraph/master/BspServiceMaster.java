@@ -973,6 +973,7 @@ public class BspServiceMaster<I extends WritableComparable,
             "aggregateWorkerStats: IOException", e);
       }
     }
+    // TODO: get periodic counter updates here
 
     allPartitionStatsList.clear();
     Iterable<PartitionStats> statsList = globalCommHandler.getAllPartitionStats(
