@@ -92,6 +92,10 @@ public abstract class BspService<I extends WritableComparable,
   public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
   /** Superstep scope */
   public static final String SUPERSTEP_DIR = "/_superstepDir";
+  /** Counter sub directory */
+  public static final String COUNTERS_DIR = "/_counters";
+  /** Metrics sub directory */
+  public static final String METRICS_DIR = "/_metrics";
   /** Healthy workers register here. */
   public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
   /** Unhealthy workers register here. */
@@ -248,8 +252,10 @@ public abstract class BspService<I extends WritableComparable,
     this.graphPartitionerFactory = conf.createGraphPartitioner();
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
-    getContext().getCounter(GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP,
-        basePath);
+    if (LOG.isInfoEnabled()) {
+      LOG.info(String.format("%s: %s",
+              GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP, basePath));
+    }
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;
     inputSplitsWorkerDonePath = basePath + INPUT_SPLITS_WORKER_DONE_DIR;
     inputSplitsAllDonePath = basePath + INPUT_SPLITS_ALL_DONE_NODE;
@@ -425,11 +431,20 @@ public abstract class BspService<I extends WritableComparable,
    *
    * @param attempt application attempt number
    * @param superstep superstep to use
+   * @param readWriteCounters Boolean to denote whether we are
+   *                          reading/writing counters
    * @return directory path based on the a superstep
    */
-  public final String getWorkerFinishedPath(long attempt, long superstep) {
-    return applicationAttemptsPath + "/" + attempt +
+  public final String getWorkerFinishedPath(long attempt, long superstep,
+                                            boolean readWriteCounters) {
+    String finishedDir = applicationAttemptsPath + "/" + attempt +
         SUPERSTEP_DIR + "/" + superstep + WORKER_FINISHED_DIR;
+    if (readWriteCounters) {
+      finishedDir += COUNTERS_DIR;
+    } else {
+      finishedDir += METRICS_DIR;
+    }
+    return finishedDir;
   }
 
   /**

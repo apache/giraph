@@ -180,4 +180,10 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    */
   void cleanup(SuperstepState superstepState)
     throws IOException, InterruptedException;
+
+  /**
+   * Add the Giraph Timers to thirft counter struct, and send to the job client
+   *
+   */
+  void addGiraphTimersAndSendCounters();
 }

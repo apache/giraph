@@ -987,7 +987,18 @@ end[PURE_YARN]*/
 
     if (serviceWorker != null) {
       serviceWorker.cleanup(finishedSuperstepStats);
+    }
+  }
+
+  /**
+   * Method to send the counter values from the worker to the master,
+   * after all supersteps are done, and finish cleanup
+   */
+  public void sendWorkerCountersAndFinishCleanup() {
+    if (serviceWorker != null) {
       postSaveOnWorkerObservers();
+      serviceWorker.storeCountersInZooKeeper(true);
+      serviceWorker.closeZooKeeper();
     }
     try {
       if (masterThread != null) {
@@ -1002,15 +1013,15 @@ end[PURE_YARN]*/
       LOG.info("cleanup: Offlining ZooKeeper servers");
       try {
         zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
-      // We need this here cause apparently exceptions are eaten by Hadoop
-      // when they come from the cleanup lifecycle and it's useful to know
-      // if something is wrong.
-      //
-      // And since it's cleanup nothing too bad should happen if we don't
-      // propagate and just allow the job to finish normally.
-      // CHECKSTYLE: stop IllegalCatch
+        // We need this here cause apparently exceptions are eaten by Hadoop
+        // when they come from the cleanup lifecycle and it's useful to know
+        // if something is wrong.
+        //
+        // And since it's cleanup nothing too bad should happen if we don't
+        // propagate and just allow the job to finish normally.
+        // CHECKSTYLE: stop IllegalCatch
       } catch (Throwable e) {
-      // CHECKSTYLE: resume IllegalCatch
+        // CHECKSTYLE: resume IllegalCatch
         LOG.error("cleanup: Error offlining zookeeper", e);
       }
     }
