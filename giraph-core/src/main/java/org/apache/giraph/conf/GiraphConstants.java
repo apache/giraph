@@ -1211,8 +1211,9 @@ public interface GiraphConstants {
           "Class to use to make calls to the job progress tracker service");
 
   /** Class to use to track job progress on client */
-  ClassConfOption<JobProgressTrackerService> JOB_PROGRESS_TRACKER_CLASS =
-      ClassConfOption.create("giraph.jobProgressTrackerClass",
+  ClassConfOption<JobProgressTrackerService>
+    JOB_PROGRESS_TRACKER_SERVICE_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerServiceClass",
           DefaultJobProgressTrackerService.class,
           JobProgressTrackerService.class,
           "Class to use to track job progress on client");

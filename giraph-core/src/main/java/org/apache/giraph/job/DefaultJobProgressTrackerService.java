@@ -270,7 +270,7 @@ public class DefaultJobProgressTrackerService
     }
 
     JobProgressTrackerService jobProgressTrackerService =
-        GiraphConstants.JOB_PROGRESS_TRACKER_CLASS.newInstance(conf);
+        GiraphConstants.JOB_PROGRESS_TRACKER_SERVICE_CLASS.newInstance(conf);
     jobProgressTrackerService.init(conf, jobObserver);
     return jobProgressTrackerService;
   }
