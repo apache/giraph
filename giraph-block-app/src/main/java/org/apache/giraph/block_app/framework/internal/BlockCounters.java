@@ -53,7 +53,7 @@ public class BlockCounters {
             long value = field.getLong(stage);
             String counterName = prefix + field.getName();
             CustomCounters.addCustomCounter(GROUP, counterName,
-                    CustomCounter.AGGREGATION.SUM);
+                    CustomCounter.Aggregation.SUM);
             reporter.getCounter(
                 GROUP, prefix + field.getName()).setValue(value);
 
@@ -76,7 +76,7 @@ public class BlockCounters {
     String counterName = String.format(
             "In %6.1f %s (s)", superstep - 0.5, name);
     CustomCounters.addCustomCounter(groupName, counterName,
-            CustomCounter.AGGREGATION.SUM);
+            CustomCounter.Aggregation.SUM);
     reporter.getCounter(groupName, counterName).setValue(millis / 1000);
     timeStats.inc(name, millis);
   }
@@ -89,7 +89,7 @@ public class BlockCounters {
     String groupName = GROUP + " Worker Timers";
     String counterName = String.format("In %6d %s (s)", superstep, name);
     CustomCounters.addCustomCounter(groupName, counterName,
-            CustomCounter.AGGREGATION.SUM);
+            CustomCounter.Aggregation.SUM);
     reporter.getCounter(groupName, counterName).setValue(millis / 1000);
     timeStats.inc(name, millis);
   }

@@ -153,6 +153,9 @@ public class BspServiceMaster<I extends WritableComparable,
   private final int eventWaitMsecs;
   /** Max msecs to wait for a superstep to get enough workers */
   private final int maxSuperstepWaitMsecs;
+  /** Max msecs to wait for the workers to write their counters for a
+   * superstep*/
+  private final int maxCounterWaitMsecs;
   /** Min number of long tails before printing */
   private final int partitionLongTailMinPrint;
   /** Last finalized checkpoint */
@@ -218,6 +221,7 @@ public class BspServiceMaster<I extends WritableComparable,
     minPercentResponded = GiraphConstants.MIN_PERCENT_RESPONDED.get(conf);
     eventWaitMsecs = conf.getEventWaitMsecs();
     maxSuperstepWaitMsecs = conf.getMaxMasterSuperstepWaitMsecs();
+    maxCounterWaitMsecs = conf.getMaxCounterWaitMsecs();
     partitionLongTailMinPrint = PARTITION_LONG_TAIL_MIN_PRINT.get(conf);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
@@ -911,7 +915,7 @@ public class BspServiceMaster<I extends WritableComparable,
     GlobalStats globalStats = new GlobalStats();
     // Get the stats from the all the worker selected nodes
     String workerFinishedPath =
-        getWorkerFinishedPath(getApplicationAttempt(), superstep, false);
+        getWorkerMetricsFinishedPath(getApplicationAttempt(), superstep);
     List<String> workerFinishedPathList = null;
     try {
       workerFinishedPathList =
@@ -1650,7 +1654,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     String finishedWorkerPath =
-        getWorkerFinishedPath(getApplicationAttempt(), getSuperstep(), false);
+        getWorkerMetricsFinishedPath(getApplicationAttempt(), getSuperstep());
     if (!barrierOnWorkerList(finishedWorkerPath,
         chosenWorkerInfoList,
         getSuperstepStateChangedEvent(),
@@ -1820,7 +1824,7 @@ public class BspServiceMaster<I extends WritableComparable,
       String groupName = entry.getKey();
       for (String counterName: entry.getValue()) {
         CustomCounter customCounter = new CustomCounter(groupName, counterName,
-                CustomCounter.AGGREGATION.SUM);
+                CustomCounter.Aggregation.SUM);
         counter = context.getCounter(groupName, counterName);
         customCounter.setValue(counter.getValue());
         counters.add(customCounter);
@@ -1831,45 +1835,48 @@ public class BspServiceMaster<I extends WritableComparable,
   /**
    * Receive the counters from the workers, and aggregate them with the
    * master counters.
+   * This method is called at the end of each superstep, and after the job
+   * finishes successfully. In order to ensure best-effort counter values
+   * in case of a job failure, we call this at the end of every superstep
    * The aggregated counters are stored in a thrift struct
    */
   private void aggregateCountersFromWorkersAndMaster() {
     CustomCounters customCounters = new CustomCounters();
     // Get the stats from the all the worker selected nodes
-    String workerFinishedPath = getWorkerFinishedPath(getApplicationAttempt(),
-            getSuperstep(), true);
+    String workerFinishedPath = getWorkerCountersFinishedPath(
+            getApplicationAttempt(), getSuperstep());
     List<String> workerFinishedPathList = null;
+    long waitForCountersTimeout =
+            SystemTime.get().getMilliseconds() + maxCounterWaitMsecs;
     // Subtract 1 for the master
-    // TODO - what happens when there is only 1 worker?
     int numWorkers = BspInputFormat.getMaxTasks(getConfiguration()) - 1;
     if (numWorkers == 0) {
+      // When the job is run with 1 worker, numWorkers would be 0,
+      // and thus add 1 to it, to get the worker-related counters
       numWorkers += 1;
     }
     // Get the counter values from the zookeeper, written by the workers
     // We keep retrying until all the workers have written
-    // TODO- wait for definite time only
-    try {
-      while (true) {
-        try {
-          workerFinishedPathList = getZkExt().getChildrenExt(
-                  workerFinishedPath, true,
-                  false, true);
-          LOG.info(String.format("Fetching counter values from " +
-                          "workers. Got %d out of %d",
-                  workerFinishedPathList.size(), numWorkers));
-          if (workerFinishedPathList.size() == numWorkers) {
-            break;
-          }
-        } catch (KeeperException e) {
-          LOG.info("Got Keeper exception, but will retry: ", e);
-        } catch (InterruptedException e) {
-          throw new IllegalStateException(
-                  "aggregateWorkerStats: InterruptedException", e);
+    while (SystemTime.get().getMilliseconds() < waitForCountersTimeout) {
+      try {
+        workerFinishedPathList = getZkExt().getChildrenExt(
+                workerFinishedPath, true,
+                false, true);
+        LOG.info(String.format("Fetching counter values from " +
+                        "workers. Got %d out of %d",
+                workerFinishedPathList.size(), numWorkers));
+        if (workerFinishedPathList.size() == numWorkers) {
+          break;
         }
-        Thread.sleep(1000);
+      } catch (KeeperException e) {
+        LOG.info("Got Keeper exception, but will retry: ", e);
+      } catch (InterruptedException e) {
+        LOG.warn("aggregateCounters: InterruptedException", e);
       }
-    } catch (InterruptedException ie) {
-      LOG.info("Interrupted exception");
+      if (getWrittenCountersToZKEvent().waitMsecs(eventWaitMsecs)) {
+        getWrittenCountersToZKEvent().reset();
+        continue;
+      }
     }
     for (String finishedPath : workerFinishedPathList) {
       JSONArray jsonCounters = null;
@@ -1887,29 +1894,25 @@ public class BspServiceMaster<I extends WritableComparable,
         }
         customCounters.mergeCounters(workerCounters);
       } catch (JSONException e) {
-        throw new IllegalStateException(
-                "aggregateWorkerStats: JSONException", e);
+        LOG.warn("aggregateCounters: JSONException", e);
       } catch (KeeperException e) {
-        throw new IllegalStateException(
-                "aggregateWorkerStats: KeeperException", e);
+        LOG.warn("aggregateCounters: KeeperException", e);
       } catch (InterruptedException e) {
-        throw new IllegalStateException(
-                "aggregateWorkerStats: InterruptedException", e);
+        LOG.warn("aggregateCounters: InterruptedException", e);
       } catch (IOException e) {
-        throw new IllegalStateException("aggregateWorkerStats: IOException", e);
+        LOG.warn("aggregateCounters: IOException", e);
       }
     }
+    Mapper.Context context = getContext();
+    Set<CustomCounter> masterCounters = new HashSet<>();
     // Add master counters too
-    // TODO: ensure counters related to master only also appear with w=1
     if (numWorkers != 1) {
       // If numWorkers=1, then the master and worker share the counters
       // Since we have already added the counters from the worker,
       // we should not add them again here.
-      Mapper.Context context = getContext();
       Counter counter;
       Set<CustomCounter> masterCounterNames =
               CustomCounters.getCustomCounters();
-      Set<CustomCounter> masterCounters = new HashSet<>();
       for (CustomCounter customCounter : masterCounterNames) {
         String groupName = customCounter.getGroupName();
         String counterName = customCounter.getCounterName();
@@ -1921,12 +1924,14 @@ public class BspServiceMaster<I extends WritableComparable,
       Map<String, Set<String>> nettyCounters =
               NettyClient.getCounterGroupsAndNames();
       populateCountersFromContext(context, nettyCounters, masterCounters);
-      // Adding counters from MasterInputSplitsHandler
-      Map<String, Set<String>> inputSplitCounter =
-              MasterInputSplitsHandler.getCounterGroupAndNames();
-      populateCountersFromContext(context, inputSplitCounter, masterCounters);
-      customCounters.mergeCounters(masterCounters);
     }
+    // Adding counters from MasterInputSplitsHandler
+    // Even if number of workers = 1, we still need to add these counters
+    // explicitly because it exists only on the master
+    Map<String, Set<String>> inputSplitCounter =
+            MasterInputSplitsHandler.getCounterGroupAndNames();
+    populateCountersFromContext(context, inputSplitCounter, masterCounters);
+    customCounters.mergeCounters(masterCounters);
     // Add GiraphStats
     List<CustomCounter> allCounters = new ArrayList<>();
     allCounters.addAll(GiraphStats.getInstance().getCounterList());
@@ -2061,7 +2066,6 @@ public class BspServiceMaster<I extends WritableComparable,
 
   @Override
   public void failureCleanup(Exception e) {
-    addGiraphTimersAndSendCounters();
     for (MasterObserver observer : observers) {
       try {
         observer.applicationFailed(e);

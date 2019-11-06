@@ -19,9 +19,9 @@
 package org.apache.giraph.counters;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Custom counters created by the client or app
@@ -38,8 +38,12 @@ public class CustomCounters {
 
 
 
-  /** Unique counter groups and names populated during execution of the job */
-  private static Set<CustomCounter> COUNTER_NAMES = new HashSet<>();
+  /** Unique counter groups and names populated during execution of the job
+   * Since multiple threads can access this variable to perform read/write
+   * operations, we use a ConcurrentHashMap.newKeySet() to
+   * establish synchronisation */
+  private static Set<CustomCounter> COUNTER_NAMES =
+          ConcurrentHashMap.newKeySet();
 
   /** Aggregated counter values updated by master */
   private final List<CustomCounter> counterList;
@@ -61,7 +65,7 @@ public class CustomCounters {
    * @param aggregation Type of aggregation for the counter
    */
   public static void addCustomCounter(String groupName, String counterName,
-                                      CustomCounter.AGGREGATION aggregation) {
+                                      CustomCounter.Aggregation aggregation) {
     CustomCounter counter = new CustomCounter(
             groupName, counterName, aggregation);
     COUNTER_NAMES.add(counter);
@@ -75,7 +79,7 @@ public class CustomCounters {
   public static Set<CustomCounter> getCustomCounters() {
     // Create a new HashSet and return that to avoid
     // ConcurrentModificationException
-    return new HashSet<>(COUNTER_NAMES);
+    return COUNTER_NAMES;
   }
 
   /**

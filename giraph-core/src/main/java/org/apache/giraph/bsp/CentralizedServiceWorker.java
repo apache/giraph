@@ -258,7 +258,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
       AddressesAndPartitionsWritable addressesAndPartitions);
 
   /**
-   * Send the counter values to the master after every superstep
+   * Store the counter values in the zookeeper after every superstep
    * and also after all supersteps are done. This is called before closing
    * the zookeeper. We need to call this method after calling cleanup on the
    * worker, since some counters are updated during cleanup

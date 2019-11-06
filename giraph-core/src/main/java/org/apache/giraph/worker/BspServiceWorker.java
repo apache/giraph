@@ -795,6 +795,9 @@ else[HADOOP_NON_SECURE]*/
     }
     writeFinshedSuperstepInfoToZK(partitionStatsList,
       workerSentMessages, workerSentMessageBytes);
+    // Store the counters uptil the end of the current superstep to the
+    // zookeeper, as best-effort so that the master has some counter values
+    // in case of a job failure
     storeCountersInZooKeeper(false);
 
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
@@ -921,7 +924,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     String finishedWorkerPath =
-        getWorkerFinishedPath(getApplicationAttempt(), getSuperstep(), false) +
+        getWorkerMetricsFinishedPath(getApplicationAttempt(), getSuperstep()) +
         "/" + workerInfo.getHostnameId();
     try {
       getZkExt().createExt(finishedWorkerPath,
@@ -1238,8 +1241,9 @@ else[HADOOP_NON_SECURE]*/
   }
 
   /**
-   * Method to send the counter values to the master using the zookeeper
-   * This is called after finishing all the supersteps
+   * Method to store the counter values in the zookeeper
+   * This is called at the end of each superstep and after finishing all the
+   * supersteps
    * @param allSuperstepsDone Whether the job has finished all supersteps
    * This is needed to ensure the superstep number is the same for master and
    * worker, when all supersteps are finished
@@ -1267,7 +1271,7 @@ else[HADOOP_NON_SECURE]*/
       String groupName = entry.getKey();
       for (String counterName: entry.getValue()) {
         CustomCounter customCounter = new CustomCounter(groupName, counterName,
-                CustomCounter.AGGREGATION.SUM);
+                CustomCounter.Aggregation.SUM);
         counter = context.getCounter(groupName, counterName);
         customCounter.setValue(counter.getValue());
         jsonCounters.put(Base64.encodeBytes(
@@ -1276,10 +1280,8 @@ else[HADOOP_NON_SECURE]*/
     }
     long superStep = getSuperstep() + (allSuperstepsDone ? 1 : 0);
     String finishedWorkerPath =
-            getWorkerFinishedPath(
-                    getApplicationAttempt(), superStep, true) +
+            getWorkerCountersFinishedPath(getApplicationAttempt(), superStep) +
                     "/" + workerInfo.getHostnameId();
-    LOG.info("worker finished path: " + finishedWorkerPath);
     try {
       getZkExt().createExt(finishedWorkerPath,
               jsonCounters.toString().getBytes(
@@ -1291,10 +1293,10 @@ else[HADOOP_NON_SECURE]*/
       LOG.warn("finishSuperstep: finished worker path " +
               finishedWorkerPath + " already exists!");
     } catch (KeeperException e) {
-      throw new IllegalStateException("Creating " + finishedWorkerPath +
+      LOG.warn("Creating " + finishedWorkerPath +
               " failed with KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("Creating " + finishedWorkerPath +
+      LOG.warn("Creating " + finishedWorkerPath +
               " failed with InterruptedException", e);
     }
   }

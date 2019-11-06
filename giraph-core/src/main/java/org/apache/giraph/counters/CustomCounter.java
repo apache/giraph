@@ -40,13 +40,13 @@ public class CustomCounter implements Writable, Comparable {
   private String counterName;
 
   /** Type of aggregation for counter */
-  private AGGREGATION aggregation;
+  private Aggregation aggregation;
 
   /** Counter value */
   private long value;
 
   /** To store the type of aggregation to be done on the counters */
-  public enum AGGREGATION {
+  public enum Aggregation {
     /** Sum */
     SUM,
     /** Max */
@@ -64,7 +64,7 @@ public class CustomCounter implements Writable, Comparable {
   public CustomCounter() {
     groupName = "";
     counterName = "";
-    aggregation = AGGREGATION.NOOP;
+    aggregation = Aggregation.NOOP;
     value = 0;
   }
 
@@ -77,7 +77,7 @@ public class CustomCounter implements Writable, Comparable {
    * @param aggregation Aggregation type
    */
   public CustomCounter(String groupName, String counterName,
-                       AGGREGATION aggregation) {
+                       Aggregation aggregation) {
     this(groupName, counterName, aggregation, 0);
   }
 
@@ -89,7 +89,7 @@ public class CustomCounter implements Writable, Comparable {
    * @param value Value
    */
   public CustomCounter(String groupName, String counterName,
-                       AGGREGATION aggregation, long value) {
+                       Aggregation aggregation, long value) {
     this.groupName = groupName;
     this.counterName = counterName;
     this.aggregation = aggregation;
@@ -117,12 +117,12 @@ public class CustomCounter implements Writable, Comparable {
   }
 
   @ThriftField(3)
-  public AGGREGATION getAggregation() {
+  public Aggregation getAggregation() {
     return aggregation;
   }
 
   @ThriftField
-  public void setAggregation(AGGREGATION aggregation) {
+  public void setAggregation(Aggregation aggregation) {
     this.aggregation = aggregation;
   }
 
@@ -172,7 +172,7 @@ public class CustomCounter implements Writable, Comparable {
   public void readFields(DataInput input) throws IOException {
     groupName = input.readUTF();
     counterName = input.readUTF();
-    aggregation = AGGREGATION.valueOf(input.readUTF());
+    aggregation = Aggregation.valueOf(input.readUTF());
     value = input.readLong();
   }
 

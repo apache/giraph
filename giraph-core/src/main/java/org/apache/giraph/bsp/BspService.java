@@ -182,6 +182,9 @@ public abstract class BspService<I extends WritableComparable,
   private final BspEvent masterElectionChildrenChanged;
   /** Cleaned up directory children changed*/
   private final BspEvent cleanedUpChildrenChanged;
+  /** Event to synchronize when workers have written their counters to the
+   * zookeeper*/
+  private final BspEvent writtenCountersToZK;
   /** Registered list of BspEvents */
   private final List<BspEvent> registeredBspEvents =
       new ArrayList<BspEvent>();
@@ -227,6 +230,7 @@ public abstract class BspService<I extends WritableComparable,
     this.superstepFinished = new PredicateLock(context);
     this.masterElectionChildrenChanged = new PredicateLock(context);
     this.cleanedUpChildrenChanged = new PredicateLock(context);
+    this.writtenCountersToZK = new PredicateLock(context);
 
     registerBspEvent(connectedEvent);
     registerBspEvent(workerHealthRegistrationChanged);
@@ -236,6 +240,7 @@ public abstract class BspService<I extends WritableComparable,
     registerBspEvent(superstepFinished);
     registerBspEvent(masterElectionChildrenChanged);
     registerBspEvent(cleanedUpChildrenChanged);
+    registerBspEvent(writtenCountersToZK);
 
     this.context = context;
     this.graphTaskManager = graphTaskManager;
@@ -427,24 +432,31 @@ public abstract class BspService<I extends WritableComparable,
 
   /**
    * Generate the worker "finished" directory path for a
-   * superstep
+   * superstep, for storing the superstep-related metrics
    *
    * @param attempt application attempt number
    * @param superstep superstep to use
-   * @param readWriteCounters Boolean to denote whether we are
-   *                          reading/writing counters
    * @return directory path based on the a superstep
    */
-  public final String getWorkerFinishedPath(long attempt, long superstep,
-                                            boolean readWriteCounters) {
-    String finishedDir = applicationAttemptsPath + "/" + attempt +
-        SUPERSTEP_DIR + "/" + superstep + WORKER_FINISHED_DIR;
-    if (readWriteCounters) {
-      finishedDir += COUNTERS_DIR;
-    } else {
-      finishedDir += METRICS_DIR;
-    }
-    return finishedDir;
+  public final String getWorkerMetricsFinishedPath(
+          long attempt, long superstep) {
+    return applicationAttemptsPath + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_FINISHED_DIR + METRICS_DIR;
+  }
+
+  /**
+   * Generate the worker "finished" directory path for a
+   * superstep, for storing the superstep-related counters
+   *
+   * @param attempt application attempt number
+   * @param superstep superstep to use
+   * @return directory path based on the a superstep
+   */
+  public final String getWorkerCountersFinishedPath(
+          long attempt, long superstep) {
+    return applicationAttemptsPath + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep +
+            WORKER_FINISHED_DIR + COUNTERS_DIR;
   }
 
   /**
@@ -598,6 +610,10 @@ public abstract class BspService<I extends WritableComparable,
 
   public final BspEvent getCleanedUpChildrenChangedEvent() {
     return cleanedUpChildrenChanged;
+  }
+
+  public final BspEvent getWrittenCountersToZKEvent() {
+    return writtenCountersToZK;
   }
 
   /**
@@ -925,6 +941,10 @@ public abstract class BspService<I extends WritableComparable,
         LOG.info("process: cleanedUpChildrenChanged signaled");
       }
       cleanedUpChildrenChanged.signal();
+      eventProcessed = true;
+    } else if (event.getPath().endsWith(COUNTERS_DIR) &&
+            event.getType() == EventType.NodeChildrenChanged) {
+      writtenCountersToZK.signal();
       eventProcessed = true;
     }
 

@@ -148,12 +148,12 @@ public class BlockWorkerPieces<S> {
     LOG.info("Next worker piece - total serialized size: " + data.length +
         ", split into " + splittedData.size());
     CustomCounters.addCustomCounter(PASSED_WORKER_STATS_GROUP,
-            TOTAL_SERIALISED_SIZE_NAME, CustomCounter.AGGREGATION.SUM);
+            TOTAL_SERIALISED_SIZE_NAME, CustomCounter.Aggregation.SUM);
     master.getContext().getCounter(PASSED_WORKER_STATS_GROUP,
             TOTAL_SERIALISED_SIZE_NAME)
         .increment(data.length);
     CustomCounters.addCustomCounter(PASSED_WORKER_STATS_GROUP,
-            SPLIT_PARTS_NAME, CustomCounter.AGGREGATION.SUM);
+            SPLIT_PARTS_NAME, CustomCounter.Aggregation.SUM);
     master.getContext().getCounter(PASSED_WORKER_STATS_GROUP, SPLIT_PARTS_NAME)
         .increment(splittedData.size());
 

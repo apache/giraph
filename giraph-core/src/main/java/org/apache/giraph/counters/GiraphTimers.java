@@ -193,14 +193,14 @@ public class GiraphTimers extends HadoopCountersBase {
     for (GiraphHadoopCounter counter: jobCounters) {
       CustomCounter customCounter = new CustomCounter(
               GROUP_NAME, counter.getName(),
-              CustomCounter.AGGREGATION.SUM, counter.getValue());
+              CustomCounter.Aggregation.SUM, counter.getValue());
       countersList.add(customCounter);
     }
     for (Map.Entry<Long, GiraphHadoopCounter> entry :
             superstepMsec.entrySet()) {
       CustomCounter customCounter = new CustomCounter(
               GROUP_NAME, entry.getValue().getName(),
-              CustomCounter.AGGREGATION.SUM, entry.getValue().getValue());
+              CustomCounter.Aggregation.SUM, entry.getValue().getValue());
       countersList.add(customCounter);
     }
     return countersList;

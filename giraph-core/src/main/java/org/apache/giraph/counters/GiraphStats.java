@@ -165,7 +165,7 @@ public class GiraphStats extends HadoopCountersBase {
     for (int i = 0; i < counters.length; i++) {
       counterList.add(new CustomCounter(GROUP_NAME,
               counters[i].getDisplayName(),
-              CustomCounter.AGGREGATION.SUM, counters[i].getValue()));
+              CustomCounter.Aggregation.SUM, counters[i].getValue()));
     }
     return counterList;
   }
