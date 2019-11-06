@@ -63,7 +63,7 @@ public class RetryableJobProgressTrackerClient
   private static final Logger LOG =
       Logger.getLogger(RetryableJobProgressTrackerClient.class);
   /** Configuration */
-  private final GiraphConfiguration conf;
+  private GiraphConfiguration conf;
   /** Thrift client manager to use to connect to job progress tracker */
   private ThriftClientManager clientManager;
   /** Job progress tracker */
@@ -80,6 +80,14 @@ public class RetryableJobProgressTrackerClient
    */
   public RetryableJobProgressTrackerClient(GiraphConfiguration conf) throws
       ExecutionException, InterruptedException {
+    this.conf = conf;
+    numRetries = RETRYABLE_JOB_PROGRESS_CLIENT_NUM_RETRIES.get(conf);
+    retryWaitMsec = RETRYABLE_JOB_PROGRESS_CLIENT_RETRY_WAIT_MS.get(conf);
+    resetConnection();
+  }
+
+  @Override
+  public void init(GiraphConfiguration conf) throws Exception {
     this.conf = conf;
     numRetries = RETRYABLE_JOB_PROGRESS_CLIENT_NUM_RETRIES.get(conf);
     retryWaitMsec = RETRYABLE_JOB_PROGRESS_CLIENT_RETRY_WAIT_MS.get(conf);
