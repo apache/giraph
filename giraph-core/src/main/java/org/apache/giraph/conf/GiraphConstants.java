@@ -49,8 +49,10 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueCombiner;
+import org.apache.giraph.graph.JobProgressTrackerClient;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.MapperObserver;
+import org.apache.giraph.graph.RetryableJobProgressTrackerClient;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
@@ -1201,9 +1203,17 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.trackJobProgressOnClient", false,
           "Whether to track job progress on client or not");
 
+  /** Class to use as the job progress client */
+  ClassConfOption<JobProgressTrackerClient> JOB_PROGRESS_TRACKER_CLIENT_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerClientClass",
+        RetryableJobProgressTrackerClient.class,
+          JobProgressTrackerClient.class,
+          "Class to use to make calls to the job progress tracker service");
+
   /** Class to use to track job progress on client */
-  ClassConfOption<JobProgressTrackerService> JOB_PROGRESS_TRACKER_CLASS =
-      ClassConfOption.create("giraph.jobProgressTrackerClass",
+  ClassConfOption<JobProgressTrackerService>
+    JOB_PROGRESS_TRACKER_SERVICE_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerServiceClass",
           DefaultJobProgressTrackerService.class,
           JobProgressTrackerService.class,
           "Class to use to track job progress on client");

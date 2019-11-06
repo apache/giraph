@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
@@ -287,12 +286,15 @@ end[PURE_YARN]*/
     if (!conf.trackJobProgressOnClient()) {
       jobProgressTracker = new JobProgressTrackerClientNoOp();
     } else {
+      jobProgressTracker =
+        GiraphConstants.JOB_PROGRESS_TRACKER_CLIENT_CLASS.newInstance(conf);
       try {
-        jobProgressTracker = new RetryableJobProgressTrackerClient(conf);
-      } catch (InterruptedException | ExecutionException e) {
-        LOG.warn("createJobProgressClient: Exception occurred while trying to" +
-            " connect to JobProgressTracker - not reporting progress", e);
-        jobProgressTracker = new JobProgressTrackerClientNoOp();
+        jobProgressTracker.init(conf);
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        throw new RuntimeException(
+          "Failed to initialize JobProgressTrackerClient", e);
       }
     }
     jobProgressTracker.mapperStarted();
