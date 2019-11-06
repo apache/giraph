@@ -74,6 +74,13 @@ public class RetryableJobProgressTrackerClient
   private int retryWaitMsec;
 
   /**
+   * Default constructor. Typically once an instance is created it should be
+   * initialized by calling {@link #init(GiraphConfiguration)}.
+   */
+  public RetryableJobProgressTrackerClient() {
+  }
+
+  /**
    * Constructor
    *
    * @param conf Giraph configuration
