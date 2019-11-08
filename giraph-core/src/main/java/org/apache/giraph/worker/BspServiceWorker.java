@@ -1290,7 +1290,7 @@ else[HADOOP_NON_SECURE]*/
               CreateMode.PERSISTENT,
               true);
     } catch (KeeperException.NodeExistsException e) {
-      LOG.warn("finishSuperstep: finished worker path " +
+      LOG.warn("storeCountersInZookeeper: finished worker path " +
               finishedWorkerPath + " already exists!");
     } catch (KeeperException e) {
       LOG.warn("Creating " + finishedWorkerPath +

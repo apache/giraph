@@ -196,6 +196,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private CheckpointStatus checkpointStatus;
   /** Checks if checkpointing supported */
   private final CheckpointSupportedChecker checkpointSupportedChecker;
+  /** Thrift struct to store the aggregate counters */
+  private final GiraphCountersThriftStruct giraphCountersThriftStruct;
 
   /**
    * Constructor for setting up the master.
@@ -238,6 +240,7 @@ public class BspServiceMaster<I extends WritableComparable,
     this.checkpointSupportedChecker =
         ReflectionUtils.newInstance(
             GiraphConstants.CHECKPOINT_SUPPORTED_CHECKER.get(conf));
+    this.giraphCountersThriftStruct = new GiraphCountersThriftStruct();
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
     GiraphStats.init(context);
@@ -1845,7 +1848,20 @@ public class BspServiceMaster<I extends WritableComparable,
     // Get the stats from the all the worker selected nodes
     String workerFinishedPath = getWorkerCountersFinishedPath(
             getApplicationAttempt(), getSuperstep());
-    List<String> workerFinishedPathList = null;
+    try {
+      getZkExt().createOnceExt(workerFinishedPath,
+              null,
+              Ids.OPEN_ACL_UNSAFE,
+              CreateMode.PERSISTENT,
+              true);
+    } catch (KeeperException e) {
+      LOG.warn("aggregateCounters: KeeperException - " +
+              "Couldn't create " + workerFinishedPath, e);
+    } catch (InterruptedException e) {
+      LOG.warn("barrierOnWorkerList: InterruptedException - " +
+              "Couldn't create " + workerFinishedPath, e);
+    }
+    List<String> workerFinishedPathList = new ArrayList<>();
     long waitForCountersTimeout =
             SystemTime.get().getMilliseconds() + maxCounterWaitMsecs;
     // Subtract 1 for the master
@@ -1869,14 +1885,12 @@ public class BspServiceMaster<I extends WritableComparable,
           break;
         }
       } catch (KeeperException e) {
-        LOG.info("Got Keeper exception, but will retry: ", e);
+        LOG.warn("Got Keeper exception, but will retry: ", e);
       } catch (InterruptedException e) {
         LOG.warn("aggregateCounters: InterruptedException", e);
       }
-      if (getWrittenCountersToZKEvent().waitMsecs(eventWaitMsecs)) {
-        getWrittenCountersToZKEvent().reset();
-        continue;
-      }
+      getWrittenCountersToZKEvent().waitMsecs(eventWaitMsecs);
+      getWrittenCountersToZKEvent().reset();
     }
     for (String finishedPath : workerFinishedPathList) {
       JSONArray jsonCounters = null;
@@ -1938,7 +1952,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // Custom counters
     allCounters.addAll(customCounters.getCounterList());
     // Store in Thrift Struct
-    GiraphCountersThriftStruct.get().setCounters(allCounters);
+    giraphCountersThriftStruct.setCounters(allCounters);
   }
 
   /**
@@ -1950,11 +1964,10 @@ public class BspServiceMaster<I extends WritableComparable,
    */
   public void addGiraphTimersAndSendCounters() {
     List<CustomCounter> giraphCounters =
-            GiraphCountersThriftStruct.get().getCounters();
+            giraphCountersThriftStruct.getCounters();
     giraphCounters.addAll(GiraphTimers.getInstance().getCounterList());
-    GiraphCountersThriftStruct.get().setCounters(giraphCounters);
-    getJobProgressTracker().sendMasterCounters(
-            GiraphCountersThriftStruct.get());
+    giraphCountersThriftStruct.setCounters(giraphCounters);
+    getJobProgressTracker().sendMasterCounters(giraphCountersThriftStruct);
   }
 
   /**
@@ -2113,8 +2126,8 @@ public class BspServiceMaster<I extends WritableComparable,
 
     if (isMaster) {
       getGraphTaskManager().setIsMaster(true);
-      aggregateCountersFromWorkersAndMaster();
       cleanUpZooKeeper();
+      aggregateCountersFromWorkersAndMaster();
       // If desired, cleanup the checkpoint directory
       if (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE &&
           GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {
@@ -2209,7 +2222,7 @@ public class BspServiceMaster<I extends WritableComparable,
       checkHealthyWorkerFailure(event.getPath());
       superstepStateChanged.signal();
       foundEvent = true;
-    } else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
+    } else if (event.getPath().endsWith(METRICS_DIR) &&
         event.getType() == EventType.NodeChildrenChanged) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("processEvent: Worker finished (node change) " +

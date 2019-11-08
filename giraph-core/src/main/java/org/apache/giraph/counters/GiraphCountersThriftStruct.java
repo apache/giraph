@@ -29,9 +29,6 @@ import java.util.List;
  */
 @ThriftStruct
 public final class GiraphCountersThriftStruct {
-  /** Singleton instance for everyone to use */
-  private static final GiraphCountersThriftStruct INSTANCE =
-          new GiraphCountersThriftStruct();
 
   /** Map of counter names and values */
   private List<CustomCounter> counters = new ArrayList<>();
@@ -41,15 +38,6 @@ public final class GiraphCountersThriftStruct {
    * Please use GiraphCountersThriftStruct.get() to get the static instance.
    */
   public GiraphCountersThriftStruct() {
-  }
-
-  /**
-   * Get singleton instance of GiraphCountersThriftStruct.
-   *
-   * @return GiraphCountersThriftStruct singleton instance
-   */
-  public static GiraphCountersThriftStruct get() {
-    return INSTANCE;
   }
 
   @ThriftField(1)

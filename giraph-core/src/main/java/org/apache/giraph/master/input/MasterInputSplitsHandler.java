@@ -34,11 +34,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -61,7 +61,7 @@ public class MasterInputSplitsHandler {
           "these fractions of input");
   /** Map of counter group and names */
   private static Map<String, Set<String>> COUNTER_GROUP_AND_NAMES =
-          new HashMap<>();
+          new ConcurrentHashMap<>();
 
   /** Whether to use locality information */
   private final boolean useLocality;

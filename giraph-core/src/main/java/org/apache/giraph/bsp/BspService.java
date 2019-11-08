@@ -944,7 +944,8 @@ public abstract class BspService<I extends WritableComparable,
       eventProcessed = true;
     } else if (event.getPath().endsWith(COUNTERS_DIR) &&
             event.getType() == EventType.NodeChildrenChanged) {
-      writtenCountersToZK.signal();
+      LOG.info("process: writtenCountersToZK signaled");
+      getWrittenCountersToZKEvent().signal();
       eventProcessed = true;
     }
 

@@ -77,8 +77,6 @@ public class CustomCounters {
    * @return Map of unique counter names
    */
   public static Set<CustomCounter> getCustomCounters() {
-    // Create a new HashSet and return that to avoid
-    // ConcurrentModificationException
     return COUNTER_NAMES;
   }
 
