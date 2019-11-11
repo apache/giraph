@@ -1845,9 +1845,10 @@ public class BspServiceMaster<I extends WritableComparable,
    */
   private void aggregateCountersFromWorkersAndMaster() {
     CustomCounters customCounters = new CustomCounters();
+    long superstep = getSuperstep();
     // Get the stats from the all the worker selected nodes
     String workerFinishedPath = getWorkerCountersFinishedPath(
-            getApplicationAttempt(), getSuperstep());
+            getApplicationAttempt(), superstep);
     try {
       getZkExt().createOnceExt(workerFinishedPath,
               null,
@@ -1879,8 +1880,8 @@ public class BspServiceMaster<I extends WritableComparable,
                 workerFinishedPath, true,
                 false, true);
         LOG.info(String.format("Fetching counter values from " +
-                        "workers. Got %d out of %d",
-                workerFinishedPathList.size(), numWorkers));
+                        "workers for superstep %d. Got %d out of %d",
+                superstep, workerFinishedPathList.size(), numWorkers));
         if (workerFinishedPathList.size() == numWorkers) {
           break;
         }
@@ -1971,10 +1972,10 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
-   * Need to clean up ZooKeeper nicely.  Make sure all the masters and workers
-   * have reported ending their ZooKeeper connections.
+   * Need to clean up ZooKeeper nicely. This function ensures all the
+   * masters and workers have reported ending their ZooKeeper connections.
    */
-  private void cleanUpZooKeeper() {
+  private void waitForWorkersToCleanup() {
     try {
       getZkExt().createExt(cleanedUpPath,
           null,
@@ -2038,26 +2039,32 @@ public class BspServiceMaster<I extends WritableComparable,
               getConfiguration()));
       getCleanedUpChildrenChangedEvent().reset();
     }
+  }
 
+  /**
+   * This will perform the final cleanup of the zookeeper i.e.
+   * delete the basePath directory
+   */
+  private void cleanUpZooKeeper() {
     // At this point, all processes have acknowledged the cleanup,
     // and the master can do any final cleanup if the ZooKeeper service was
     // provided (not dynamically started) and we don't want to keep the data
     try {
       if (getConfiguration().isZookeeperExternal() &&
-          KEEP_ZOOKEEPER_DATA.isFalse(getConfiguration())) {
+              KEEP_ZOOKEEPER_DATA.isFalse(getConfiguration())) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
-              "and all children - " + basePath + " from ZooKeeper list " +
-              getConfiguration().getZookeeperList());
+                  "and all children - " + basePath + " from ZooKeeper list " +
+                  getConfiguration().getZookeeperList());
         }
         getZkExt().deleteExt(basePath, -1, true);
       }
     } catch (KeeperException e) {
       LOG.error("cleanupZooKeeper: Failed to do cleanup of " +
-          basePath + " due to KeeperException", e);
+              basePath + " due to KeeperException", e);
     } catch (InterruptedException e) {
       LOG.error("cleanupZooKeeper: Failed to do cleanup of " +
-          basePath + " due to InterruptedException", e);
+              basePath + " due to InterruptedException", e);
     }
   }
 
@@ -2126,8 +2133,9 @@ public class BspServiceMaster<I extends WritableComparable,
 
     if (isMaster) {
       getGraphTaskManager().setIsMaster(true);
-      cleanUpZooKeeper();
+      waitForWorkersToCleanup();
       aggregateCountersFromWorkersAndMaster();
+      cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE &&
           GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {

@@ -1282,6 +1282,8 @@ else[HADOOP_NON_SECURE]*/
     String finishedWorkerPath =
             getWorkerCountersFinishedPath(getApplicationAttempt(), superStep) +
                     "/" + workerInfo.getHostnameId();
+    LOG.info(String.format("Writing counters to zookeeper for superstep: %d",
+            superStep));
     try {
       getZkExt().createExt(finishedWorkerPath,
               jsonCounters.toString().getBytes(
