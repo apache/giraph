@@ -191,6 +191,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         GiraphTimers.getInstance().getTotalMs().
           increment(System.currentTimeMillis() - initializeMillis);
       }
+      bspServiceMaster.addGiraphTimersAndSendCounters();
       bspServiceMaster.postApplication();
       // CHECKSTYLE: stop IllegalCatchCheck
     } catch (Exception e) {

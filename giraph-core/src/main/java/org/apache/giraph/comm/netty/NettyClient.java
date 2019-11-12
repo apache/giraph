@@ -60,8 +60,11 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -150,6 +153,9 @@ public class NettyClient {
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
+  /** Netty related counter names */
+  private static Map<String, Set<String>> COUNTER_GROUP_AND_NAMES =
+          new HashMap<>();
   /** Context used to report progress */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Client bootstrap */
@@ -235,6 +241,7 @@ public class NettyClient {
   /** How many network requests were resent because connection failed */
   private final GiraphHadoopCounter networkRequestsResentForConnectionFailure;
 
+
   /**
    * Only constructor
    *
@@ -271,6 +278,7 @@ public class NettyClient {
       flowControl = new NoOpFlowControl(this);
     }
 
+    initialiseCounters();
     networkRequestsResentForTimeout =
         new GiraphHadoopCounter(context.getCounter(
             NETTY_COUNTERS_GROUP,
@@ -440,6 +448,23 @@ public class NettyClient {
         }
       }
     }, "open-requests-observer");
+  }
+
+  /**
+   * Put the Netty-related counters in a single map which will be accessed
+   * from the worker/master
+   */
+  private void initialiseCounters() {
+    Set<String> counters = COUNTER_GROUP_AND_NAMES.getOrDefault(
+            NETTY_COUNTERS_GROUP, new HashSet<>());
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_TIMEOUT_NAME);
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME);
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME);
+    COUNTER_GROUP_AND_NAMES.put(NETTY_COUNTERS_GROUP, counters);
+  }
+
+  public static Map<String, Set<String>> getCounterGroupsAndNames() {
+    return COUNTER_GROUP_AND_NAMES;
   }
 
   /**

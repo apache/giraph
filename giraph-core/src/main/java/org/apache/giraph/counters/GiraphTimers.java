@@ -23,8 +23,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -179,5 +181,28 @@ public class GiraphTimers extends HadoopCountersBase {
   public Iterator<GiraphHadoopCounter> iterator() {
     return Iterators.concat(jobCounters().iterator(),
         superstepCounters().values().iterator());
+  }
+
+  /**
+   * Get a map of counter names and values
+   *
+   * @return Map of counter names and values
+   */
+  public List<CustomCounter> getCounterList() {
+    List<CustomCounter> countersList = new ArrayList<>();
+    for (GiraphHadoopCounter counter: jobCounters) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, counter.getName(),
+              CustomCounter.Aggregation.SUM, counter.getValue());
+      countersList.add(customCounter);
+    }
+    for (Map.Entry<Long, GiraphHadoopCounter> entry :
+            superstepMsec.entrySet()) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, entry.getValue().getName(),
+              CustomCounter.Aggregation.SUM, entry.getValue().getValue());
+      countersList.add(customCounter);
+    }
+    return countersList;
   }
 }

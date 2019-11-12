@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.job.ClientThriftServer;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.master.MasterProgress;
@@ -192,6 +193,16 @@ public class RetryableJobProgressTrackerClient
       @Override
       public void run() {
         jobProgressTracker.updateMasterProgress(masterProgress);
+      }
+    }, numRetries);
+  }
+
+  @Override
+  public void sendMasterCounters(GiraphCountersThriftStruct giraphCounters) {
+    executeWithRetry(new Runnable() {
+      @Override
+      public void run() {
+        jobProgressTracker.sendMasterCounters(giraphCounters);
       }
     }, numRetries);
   }

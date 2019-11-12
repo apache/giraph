@@ -27,6 +27,8 @@ import org.apache.giraph.conf.DefaultMessageClasses;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.MessageClasses;
+import org.apache.giraph.counters.CustomCounter;
+import org.apache.giraph.counters.CustomCounters;
 import org.apache.giraph.factories.DefaultMessageValueFactory;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.types.NoMessage;
@@ -50,6 +52,16 @@ public class BlockWorkerPieces<S> {
   /** Aggregator holding next worker computation */
   private static final
   String NEXT_WORKER_PIECES = "giraph.blocks.next_worker_pieces";
+
+  /** Passed worker stats counter group */
+  private static final String PASSED_WORKER_STATS_GROUP = "PassedWorker Stats";
+
+  /** Total serialised size counter name */
+  private static final String TOTAL_SERIALISED_SIZE_NAME =
+          "total serialized size";
+
+  /** Split parts counter name */
+  private static final String SPLIT_PARTS_NAME = "split parts";
 
   private final PairedPieceAndStage<S> receiver;
   private final PairedPieceAndStage<S> sender;
@@ -135,11 +147,14 @@ public class BlockWorkerPieces<S> {
 
     LOG.info("Next worker piece - total serialized size: " + data.length +
         ", split into " + splittedData.size());
-    master.getContext().getCounter(
-        "PassedWorker Stats", "total serialized size")
+    CustomCounters.addCustomCounter(PASSED_WORKER_STATS_GROUP,
+            TOTAL_SERIALISED_SIZE_NAME, CustomCounter.Aggregation.SUM);
+    master.getContext().getCounter(PASSED_WORKER_STATS_GROUP,
+            TOTAL_SERIALISED_SIZE_NAME)
         .increment(data.length);
-    master.getContext().getCounter(
-        "PassedWorker Stats", "split parts")
+    CustomCounters.addCustomCounter(PASSED_WORKER_STATS_GROUP,
+            SPLIT_PARTS_NAME, CustomCounter.Aggregation.SUM);
+    master.getContext().getCounter(PASSED_WORKER_STATS_GROUP, SPLIT_PARTS_NAME)
         .increment(splittedData.size());
 
     master.broadcast(NEXT_WORKER_PIECES, new IntWritable(splittedData.size()));

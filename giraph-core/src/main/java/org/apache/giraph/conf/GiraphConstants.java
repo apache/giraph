@@ -687,6 +687,16 @@ public interface GiraphConstants {
           "Maximum milliseconds to wait before giving up trying to get the " +
           "minimum number of workers before a superstep (int).");
 
+  /**
+   * Maximum milliseconds to wait before giving up waiting for the workers to
+   * write the counters to the Zookeeper after a superstep
+   */
+  IntConfOption MAX_COUNTER_WAIT_MSECS = new IntConfOption(
+          "giraph.maxCounterWaitMsecs", MINUTES.toMillis(2),
+          "Maximum milliseconds to wait before giving up waiting for" +
+                  "the workers to write their counters to the " +
+                  "zookeeper after a superstep");
+
   /** Milliseconds for a request to complete (or else resend) */
   IntConfOption MAX_REQUEST_MILLISECONDS =
       new IntConfOption("giraph.maxRequestMilliseconds", MINUTES.toMillis(10),

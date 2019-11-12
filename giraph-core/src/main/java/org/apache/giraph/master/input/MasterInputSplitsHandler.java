@@ -34,8 +34,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -56,6 +59,9 @@ public class MasterInputSplitsHandler {
       new StrConfOption("giraph.master.input.doneFractionsToStoreInCounters",
           "0.99,1", "Store in counters timestamps when we finished reading " +
           "these fractions of input");
+  /** Map of counter group and names */
+  private static Map<String, Set<String>> COUNTER_GROUP_AND_NAMES =
+          new ConcurrentHashMap<>();
 
   /** Whether to use locality information */
   private final boolean useLocality;
@@ -225,7 +231,16 @@ public class MasterInputSplitsHandler {
    */
   public static Counter getSplitFractionDoneTimestampCounter(
       InputType inputType, double fraction, Mapper.Context context) {
-    return context.getCounter(inputType.name() + " input",
-        String.format("%.2f%% done time (ms)", fraction * 100));
+    String groupName = inputType.name() + " input";
+    String counterName = String.format("%.2f%% done time (ms)", fraction * 100);
+    Set<String> counters = COUNTER_GROUP_AND_NAMES.getOrDefault(
+            groupName, new HashSet<>());
+    counters.add(counterName);
+    COUNTER_GROUP_AND_NAMES.put(groupName, counters);
+    return context.getCounter(groupName, counterName);
+  }
+
+  public static Map<String, Set<String>> getCounterGroupAndNames() {
+    return COUNTER_GROUP_AND_NAMES;
   }
 }

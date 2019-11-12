@@ -256,4 +256,19 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    */
   void addressesAndPartitionsReceived(
       AddressesAndPartitionsWritable addressesAndPartitions);
+
+  /**
+   * Store the counter values in the zookeeper after every superstep
+   * and also after all supersteps are done. This is called before closing
+   * the zookeeper. We need to call this method after calling cleanup on the
+   * worker, since some counters are updated during cleanup
+   * @param allSuperstepsDone boolean value whether all the supersteps
+   *                          are completed
+   */
+  void storeCountersInZooKeeper(boolean allSuperstepsDone);
+
+  /**
+   * Close zookeeper
+   */
+  void closeZooKeeper();
 }

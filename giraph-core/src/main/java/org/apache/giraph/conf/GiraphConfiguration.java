@@ -1088,6 +1088,10 @@ public class GiraphConfiguration extends Configuration
     return MAX_MASTER_SUPERSTEP_WAIT_MSECS.get(this);
   }
 
+  public int getMaxCounterWaitMsecs() {
+    return MAX_COUNTER_WAIT_MSECS.get(this);
+  }
+
   /**
    * Set the maximum milliseconds to wait before giving up trying to get the
    * minimum number of workers before a superstep.
