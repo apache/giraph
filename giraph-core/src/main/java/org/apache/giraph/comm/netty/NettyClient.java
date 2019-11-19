@@ -340,7 +340,6 @@ public class NettyClient {
 /*if_not[HADOOP_NON_SECURE]*/
             if (conf.authenticate()) {
               LOG.info("Using Netty with authentication.");
-
               PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
                 new FlushConsolidationHandler(FlushConsolidationHandler
                   .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
