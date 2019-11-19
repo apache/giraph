@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import io.netty.handler.flush.FlushConsolidationHandler;
 import org.apache.giraph.comm.flow_control.CreditBasedFlowControl;
 import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.flow_control.NoOpFlowControl;
@@ -252,9 +253,9 @@ public class NettyClient {
    *                         terminate job.
    */
   public NettyClient(Mapper<?, ?, ?, ?>.Context context,
-                     final ImmutableClassesGiraphConfiguration conf,
-                     TaskInfo myTaskInfo,
-                     final Thread.UncaughtExceptionHandler exceptionHandler) {
+    final ImmutableClassesGiraphConfiguration conf, TaskInfo myTaskInfo,
+    final Thread.UncaughtExceptionHandler exceptionHandler) {
+
     this.context = context;
     this.myTaskInfo = myTaskInfo;
     this.channelsPerServer = GiraphConstants.CHANNELS_PER_SERVER.get(conf);
@@ -280,16 +281,13 @@ public class NettyClient {
 
     initialiseCounters();
     networkRequestsResentForTimeout =
-        new GiraphHadoopCounter(context.getCounter(
-            NETTY_COUNTERS_GROUP,
+        new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
             NETWORK_REQUESTS_RESENT_FOR_TIMEOUT_NAME));
     networkRequestsResentForChannelFailure =
-        new GiraphHadoopCounter(context.getCounter(
-            NETTY_COUNTERS_GROUP,
+        new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
             NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME));
     networkRequestsResentForConnectionFailure =
-      new GiraphHadoopCounter(context.getCounter(
-        NETTY_COUNTERS_GROUP,
+      new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
         NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME));
 
     maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
@@ -343,6 +341,10 @@ public class NettyClient {
             if (conf.authenticate()) {
               LOG.info("Using Netty with authentication.");
 
+              PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+                new FlushConsolidationHandler(FlushConsolidationHandler
+                  .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+                handlerToUseExecutionGroup, executionGroup, ch);
               // Our pipeline starts with just byteCounter, and then we use
               // addLast() to incrementally add pipeline elements, so that we
               // can name them for identification for removal or replacement
@@ -394,6 +396,10 @@ public class NettyClient {
             } else {
               LOG.info("Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
+              PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+                new FlushConsolidationHandler(FlushConsolidationHandler
+                    .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+                handlerToUseExecutionGroup, executionGroup, ch);
               PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
                   inboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
@@ -864,13 +870,17 @@ public class NettyClient {
   }
 
   /**
-   * Write request to a channel for its destination
+   * Write request to a channel for its destination.
+   *
+   * Whenever we write to the channel, we also call flush, but we have added a
+   * {@link FlushConsolidationHandler} in the pipeline, which batches the
+   * flushes.
    *
    * @param requestInfo Request info
    */
   private void writeRequestToChannel(RequestInfo requestInfo) {
     Channel channel = getNextChannel(requestInfo.getDestinationAddress());
-    ChannelFuture writeFuture = channel.write(requestInfo.getRequest());
+    ChannelFuture writeFuture = channel.writeAndFlush(requestInfo.getRequest());
     requestInfo.setWriteFuture(writeFuture);
     writeFuture.addListener(logErrorListener);
   }

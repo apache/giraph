@@ -350,7 +350,7 @@ under the License.
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
     <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
-    <dep.netty.version>4.0.14.Final</dep.netty.version>
+    <dep.netty.version>4.1.36.Final</dep.netty.version>
     <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
     <dep.objenesis.version>2.2</dep.objenesis.version>
     <dep.openhft-compiler.version>2.2.1</dep.openhft-compiler.version>

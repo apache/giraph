@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import io.netty.handler.flush.FlushConsolidationHandler;
 import org.apache.giraph.comm.flow_control.FlowControl;
 /*if_not[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.AuthorizeServerHandler;
@@ -257,6 +258,10 @@ public class NettyServer {
           // pipeline components SaslServerHandler and ResponseEncoder are
           // removed, leaving the pipeline the same as in the non-authenticated
           // configuration except for the presence of the Authorize component.
+          PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+            new FlushConsolidationHandler(FlushConsolidationHandler
+              .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+            handlerToUseExecutionGroup, executionGroup, ch);
           PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
               inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
           if (conf.doCompression()) {
@@ -307,6 +312,10 @@ public class NettyServer {
                   ctx.fireChannelActive();
                 }
               });
+          PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+            new FlushConsolidationHandler(FlushConsolidationHandler
+              .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+            handlerToUseExecutionGroup, executionGroup, ch);
           PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
               inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
           if (conf.doCompression()) {
