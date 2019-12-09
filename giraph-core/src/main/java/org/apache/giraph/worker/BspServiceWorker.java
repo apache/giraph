@@ -1251,7 +1251,7 @@ else[HADOOP_NON_SECURE]*/
    */
   public void storeCountersInZooKeeper(boolean allSuperstepsDone) {
     Set<CustomCounter> additionalCounters =
-            CustomCounters.getCustomCounters();
+            CustomCounters.getAndClearCustomCounters();
 
     JSONArray jsonCounters = new JSONArray();
     Mapper.Context context = getContext();

@@ -184,11 +184,13 @@ public class GiraphTimers extends HadoopCountersBase {
   }
 
   /**
-   * Get a map of counter names and values
-   *
+   * Get a map of counter names and values for the given superstep
+   * Counters include Setup, Initialise, Shutdown, Total, and time for
+   * the given superstep
+   * @param superstep superstep for which to fetch the GiraphTimer
    * @return Map of counter names and values
    */
-  public List<CustomCounter> getCounterList() {
+  public List<CustomCounter> getCounterList(long superstep) {
     List<CustomCounter> countersList = new ArrayList<>();
     for (GiraphHadoopCounter counter: jobCounters) {
       CustomCounter customCounter = new CustomCounter(
@@ -196,11 +198,12 @@ public class GiraphTimers extends HadoopCountersBase {
               CustomCounter.Aggregation.SUM, counter.getValue());
       countersList.add(customCounter);
     }
-    for (Map.Entry<Long, GiraphHadoopCounter> entry :
-            superstepMsec.entrySet()) {
+    GiraphHadoopCounter giraphHadoopCounter = superstepMsec.get(superstep);
+    if (giraphHadoopCounter != null) {
       CustomCounter customCounter = new CustomCounter(
-              GROUP_NAME, entry.getValue().getName(),
-              CustomCounter.Aggregation.SUM, entry.getValue().getValue());
+              GROUP_NAME, giraphHadoopCounter.getName(),
+              CustomCounter.Aggregation.SUM,
+              giraphHadoopCounter.getValue());
       countersList.add(customCounter);
     }
     return countersList;

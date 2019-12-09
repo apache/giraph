@@ -147,6 +147,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               GiraphTimers.getInstance().getSuperstepMs(cachedSuperstep,
                   computationName).increment(superstepMillis);
             }
+            bspServiceMaster.addGiraphTimersAndSendCounters(cachedSuperstep);
 
             bspServiceMaster.postSuperstep();
 
@@ -191,7 +192,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         GiraphTimers.getInstance().getTotalMs().
           increment(System.currentTimeMillis() - initializeMillis);
       }
-      bspServiceMaster.addGiraphTimersAndSendCounters();
+      bspServiceMaster.addGiraphTimersAndSendCounters(
+              bspServiceMaster.getSuperstep());
       bspServiceMaster.postApplication();
       // CHECKSTYLE: stop IllegalCatchCheck
     } catch (Exception e) {

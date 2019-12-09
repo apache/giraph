@@ -183,7 +183,10 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
 
   /**
    * Add the Giraph Timers to thirft counter struct, and send to the job client
+   * Counters include the Giraph Timers for setup, initialise, shutdown, total,
+   * and time for the given superstep
+   * @param superstep superstep for which the GiraphTimer will be sent
    *
    */
-  void addGiraphTimersAndSendCounters();
+  void addGiraphTimersAndSendCounters(long superstep);
 }

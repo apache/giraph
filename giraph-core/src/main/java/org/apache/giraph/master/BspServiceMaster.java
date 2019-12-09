@@ -1678,7 +1678,6 @@ public class BspServiceMaster<I extends WritableComparable,
     // are no more messages in the system, stop the computation
     GlobalStats globalStats = aggregateWorkerStats(getSuperstep());
     aggregateCountersFromWorkersAndMaster();
-    addGiraphTimersAndSendCounters();
     if (masterCompute.isHalted() ||
         (globalStats.getFinishedVertexCount() ==
         globalStats.getVertexCount() &&
@@ -1927,7 +1926,7 @@ public class BspServiceMaster<I extends WritableComparable,
       // we should not add them again here.
       Counter counter;
       Set<CustomCounter> masterCounterNames =
-              CustomCounters.getCustomCounters();
+              CustomCounters.getAndClearCustomCounters();
       for (CustomCounter customCounter : masterCounterNames) {
         String groupName = customCounter.getGroupName();
         String counterName = customCounter.getCounterName();
@@ -1961,12 +1960,13 @@ public class BspServiceMaster<I extends WritableComparable,
    * the time required for shutdown and cleanup
    * This will fetch the final Giraph Timers, and send all the counters
    * to the job client
+   * @param superstep superstep for which the GiraphTimer will be sent
    *
    */
-  public void addGiraphTimersAndSendCounters() {
+  public void addGiraphTimersAndSendCounters(long superstep) {
     List<CustomCounter> giraphCounters =
             giraphCountersThriftStruct.getCounters();
-    giraphCounters.addAll(GiraphTimers.getInstance().getCounterList());
+    giraphCounters.addAll(GiraphTimers.getInstance().getCounterList(superstep));
     giraphCountersThriftStruct.setCounters(giraphCounters);
     getJobProgressTracker().sendMasterCounters(giraphCountersThriftStruct);
   }

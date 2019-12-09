@@ -19,6 +19,7 @@
 package org.apache.giraph.counters;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,11 +74,16 @@ public class CustomCounters {
 
   /**
    * Get the unique counter group and names
+   * This will also clear the counters list, to avoid duplicate
+   * counters from the previous superstep from being sent to the
+   * zookeeper again
    *
    * @return Map of unique counter names
    */
-  public static Set<CustomCounter> getCustomCounters() {
-    return COUNTER_NAMES;
+  public static Set<CustomCounter> getAndClearCustomCounters() {
+    Set<CustomCounter> counterNamesCopy = new HashSet<>(COUNTER_NAMES);
+    COUNTER_NAMES.clear();
+    return counterNamesCopy;
   }
 
   /**
