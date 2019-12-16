@@ -1075,6 +1075,18 @@ end[PURE_YARN]*/
             getConf()), getJobProgressTracker());
   }
 
+  /**
+   * Creates exception handler with the passed implementation of
+   * {@link CheckerIfWorkerShouldFailAfterException}.
+   *
+   * @param checker Instance that checks whether the job should fail.
+   * @return Exception handler.
+   */
+  public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler(
+    CheckerIfWorkerShouldFailAfterException checker) {
+    return new OverrideExceptionHandler(checker, getJobProgressTracker());
+  }
+
   public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
   }
@@ -1128,6 +1140,9 @@ end[PURE_YARN]*/
     @Override
     public void uncaughtException(final Thread t, final Throwable e) {
       if (!checker.checkIfWorkerShouldFail(t, e)) {
+        LOG.error(
+          "uncaughtException: OverrideExceptionHandler on thread " +
+            t.getName() + ", msg = " +  e.getMessage(), e);
         return;
       }
       try {
@@ -1168,5 +1183,18 @@ end[PURE_YARN]*/
     public boolean checkIfWorkerShouldFail(Thread thread, Throwable exception) {
       return true;
     }
+  }
+
+  /**
+   * Checks the message of a throwable, and checks whether it is a
+   * "connection reset by peer" type of exception.
+   *
+   * @param throwable Throwable
+   * @return True if the throwable is a "connection reset by peer",
+   * false otherwise.
+   */
+  public static boolean isConnectionResetByPeer(Throwable throwable) {
+    return throwable.getMessage().startsWith(
+      "Connection reset by peer") ? true : false;
   }
 }

@@ -121,6 +121,8 @@ import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
 
+import static org.apache.giraph.graph.GraphTaskManager.isConnectionResetByPeer;
+
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
  *
@@ -217,7 +219,15 @@ public class BspServiceWorker<I extends WritableComparable,
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
     workerInfo = new WorkerInfo();
     workerServer = new NettyWorkerServer<I, V, E>(conf, this, context,
-        graphTaskManager.createUncaughtExceptionHandler());
+        graphTaskManager.createUncaughtExceptionHandler(
+          (thread, throwable) -> {
+            // If the connection was closed by the client, then we just log
+            // the error, we do not fail the job, since the client will
+            // attempt to reconnect.
+            return !isConnectionResetByPeer(throwable);
+          }
+        )
+    );
     workerInfo.setInetSocketAddress(workerServer.getMyAddress(),
         workerServer.getLocalHostOrIp());
     workerInfo.setTaskId(getTaskId());
