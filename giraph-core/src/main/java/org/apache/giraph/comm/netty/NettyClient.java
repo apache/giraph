@@ -242,6 +242,11 @@ public class NettyClient {
   /** How many network requests were resent because connection failed */
   private final GiraphHadoopCounter networkRequestsResentForConnectionFailure;
 
+  /**
+   * Keeps track of the number of reconnect failures. Once this exceeds the
+   * value of {@link #maxConnectionFailures}, the job will fail.
+   */
+  private int reconnectFailures = 0;
 
   /**
    * Only constructor
@@ -765,9 +770,7 @@ public class NettyClient {
     Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
       LOG.warn("getNextChannel: No channel exists for " + remoteServer);
-    }
-
-    if (channel != null) {
+    } else {
       // Return this channel if it is connected
       if (channel.isActive()) {
         return channel;
@@ -785,7 +788,6 @@ public class NettyClient {
       }
     }
 
-    int reconnectFailures = 0;
     while (reconnectFailures < maxConnectionFailures) {
       ChannelFuture connectionFuture = bootstrap.connect(remoteServer);
       try {
