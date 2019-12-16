@@ -25,12 +25,15 @@ import com.google.common.collect.Lists;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import org.apache.log4j.Logger;
 
 
 /**
  * Maintains multiple channels and rotates between them.  This is thread-safe.
  */
 public class ChannelRotater {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(ChannelRotater.class);
   /** Index of last used channel */
   private int index = 0;
   /** Channel list */
@@ -73,9 +76,9 @@ public class ChannelRotater {
    */
   public synchronized Channel nextChannel() {
     if (channelList.isEmpty()) {
-      throw new IllegalArgumentException(
-          "nextChannel: No channels exist for hostname " +
-              address.getHostName());
+      LOG.warn("nextChannel: No channels exist for hostname " +
+        address.getHostName());
+      return null;
     }
 
     ++index;

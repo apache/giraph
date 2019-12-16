@@ -764,25 +764,27 @@ public class NettyClient {
   private Channel getNextChannel(InetSocketAddress remoteServer) {
     Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
-      throw new IllegalStateException(
-          "getNextChannel: No channel exists for " + remoteServer);
+      LOG.warn("getNextChannel: No channel exists for " + remoteServer);
     }
 
-    // Return this channel if it is connected
-    if (channel.isActive()) {
-      return channel;
-    }
+    if (channel != null) {
+      // Return this channel if it is connected
+      if (channel.isActive()) {
+        return channel;
+      }
 
-    // Get rid of the failed channel
-    if (addressChannelMap.get(remoteServer).removeChannel(channel)) {
-      LOG.warn("getNextChannel: Unlikely event that the channel " +
+      // Get rid of the failed channel
+      if (addressChannelMap.get(remoteServer).removeChannel(channel)) {
+        LOG.warn("getNextChannel: Unlikely event that the channel " +
           channel + " was already removed!");
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getNextChannel: Fixing disconnected channel to " +
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("getNextChannel: Fixing disconnected channel to " +
           remoteServer + ", open = " + channel.isOpen() + ", " +
           "bound = " + channel.isRegistered());
+      }
     }
+
     int reconnectFailures = 0;
     while (reconnectFailures < maxConnectionFailures) {
       ChannelFuture connectionFuture = bootstrap.connect(remoteServer);
@@ -1205,7 +1207,7 @@ public class NettyClient {
    * This listener class just dumps exception stack traces if
    * something happens.
    */
-  private class LogOnErrorChannelFutureListener
+  private static class LogOnErrorChannelFutureListener
       implements ChannelFutureListener {
 
     @Override
@@ -1213,7 +1215,6 @@ public class NettyClient {
       if (future.isDone() && !future.isSuccess()) {
         LOG.error("Channel failed channelId=" + future.channel().hashCode(),
             future.cause());
-        checkRequestsAfterChannelFailure(future.channel());
       }
     }
   }
