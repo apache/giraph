@@ -1184,4 +1184,17 @@ end[PURE_YARN]*/
       return true;
     }
   }
+
+  /**
+   * Checks the message of a throwable, and checks whether it is a
+   * "connection reset by peer" type of exception.
+   *
+   * @param throwable Throwable
+   * @return True if the throwable is a "connection reset by peer",
+   * false otherwise.
+   */
+  public static boolean isConnectionResetByPeer(Throwable throwable) {
+    return throwable.getMessage().startsWith(
+      "Connection reset by peer") ? true : false;
+  }
 }
