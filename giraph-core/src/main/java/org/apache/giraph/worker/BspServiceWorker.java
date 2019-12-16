@@ -224,7 +224,7 @@ public class BspServiceWorker<I extends WritableComparable,
             // If the connection was closed by the client, then we just log
             // the error, we do not fail the job, since the client will
             // attempt to reconnect.
-            return isConnectionResetByPeer(throwable) ? false : true;
+            return !isConnectionResetByPeer(throwable);
           }
         )
     );
