@@ -103,10 +103,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>
-      <artifactId>giraph-hcatalog</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.giraph</groupId>
       <artifactId>giraph-examples</artifactId>
     </dependency>
     <dependency>
