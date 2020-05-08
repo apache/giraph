@@ -331,7 +331,6 @@ under the License.
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
     <dep.guava.version>21.0</dep.guava.version>
-    <dep.hiveio.version>0.26</dep.hiveio.version>
     <dep.jaxb-impl.version>2.2.4-1</dep.jaxb-impl.version>
     <dep.jersey.version>1.17</dep.jersey.version>
     <dep.jetty.version>6.1.26</dep.jetty.version>
@@ -1209,58 +1208,6 @@ under the License.
         <version>${dep.asm.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.facebook.hiveio</groupId>
-        <artifactId>hive-io-exp-core</artifactId>
-        <version>${dep.hiveio.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.airlift</groupId>
-            <artifactId>units</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-          </exclusion>
-          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
-          <exclusion>
-            <groupId>com.esotericsoftware.reflectasm</groupId>
-            <artifactId>reflectasm</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.facebook.hiveio</groupId>
-        <artifactId>hive-io-exp-testing</artifactId>
-        <version>${dep.hiveio.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.zookeeper</groupId>
-            <artifactId>zookeeper</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.airlift</groupId>
-            <artifactId>units</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-          </exclusion>
-          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
-          <exclusion>
-            <groupId>com.esotericsoftware.reflectasm</groupId>
-            <artifactId>reflectasm</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${dep.guava.version}</version>
@@ -1651,31 +1598,6 @@ under the License.
           <exclusion>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.facebook.hiveio</groupId>
-        <artifactId>hive-io-exp-core</artifactId>
-        <version>${dep.hiveio.version}</version>
-        <type>test-jar</type>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.airlift</groupId>
-            <artifactId>units</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-          </exclusion>
-          <!-- ReflectASM changed groupId, Kryo in giraph-core is using new version -->
-          <exclusion>
-            <groupId>com.esotericsoftware.reflectasm</groupId>
-            <artifactId>reflectasm</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
