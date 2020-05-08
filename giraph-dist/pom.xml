@@ -95,14 +95,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>
-<<<<<<< HEAD
-      <artifactId>giraph-accumulo</artifactId>
-=======
-      <artifactId>giraph-hcatalog</artifactId>
->>>>>>> 8bf0c60fad64676bc6181dac7320df8d3bbedcbf
-    </dependency>
-    <dependency>
-      <groupId>org.apache.giraph</groupId>
       <artifactId>giraph-examples</artifactId>
     </dependency>
   </dependencies>
