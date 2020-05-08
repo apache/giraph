@@ -99,10 +99,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>
-      <artifactId>giraph-accumulo</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.giraph</groupId>
       <artifactId>giraph-hcatalog</artifactId>
     </dependency>
     <dependency>
