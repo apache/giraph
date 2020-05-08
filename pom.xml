@@ -314,7 +314,6 @@ under the License.
     <dep.avro.version>1.7.6</dep.avro.version>
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
     <dep.asm.version>3.2</dep.asm.version>
-    <dep.gora.version>0.5</dep.gora.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
     <dep.cli-parser.version>1.1</dep.cli-parser.version>
@@ -774,7 +773,6 @@ under the License.
                 <!-- test resources (for Giraph on YARN profile) -->
                 <exclude>**/test/resources/**</exclude>
                 <!-- Gora configs -->
-                <exclude>giraph-gora/conf/**</exclude>
                 <!-- Rexster resource -->
                 <exclude>giraph-rexster/giraph-kibble/src/main/resources/META-INF/services/com.tinkerpop.rexster.extension.RexsterExtension</exclude> 
                 <!-- site images -->
@@ -984,7 +982,6 @@ under the License.
       <modules>
         <module>giraph-accumulo</module>
         <module>giraph-hcatalog</module>
-        <module>giraph-gora</module>
         <module>giraph-dist</module>
       </modules>
       <activation>
@@ -1136,7 +1133,6 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
-        <module>giraph-gora</module>
         <module>giraph-dist</module>
       </modules>
        <properties>
@@ -1607,26 +1603,6 @@ under the License.
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-kibble</artifactId>
         <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.giraph</groupId>
-        <artifactId>giraph-gora</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.gora</groupId>
-        <artifactId>gora-core</artifactId>
-        <version>${dep.gora.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hcatalog</groupId>
