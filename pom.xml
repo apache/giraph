@@ -352,7 +352,6 @@ under the License.
     <dep.openhft-compiler.version>2.2.1</dep.openhft-compiler.version>
     <dep.paranamer.version>2.5.2</dep.paranamer.version>
     <dep.slf4j.version>1.7.6</dep.slf4j.version>
-    <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
     <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
     <dep.yourkit-api.version>11.0.10</dep.yourkit-api.version>
@@ -1297,47 +1296,6 @@ under the License.
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>annotations</artifactId>
         <version>${dep.google.findbugs.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.tinkerpop.blueprints</groupId>
-        <artifactId>blueprints-core</artifactId>
-        <version>${dep.tinkerpop.rexter.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.tinkerpop.blueprints</groupId>
-        <artifactId>blueprints-orient-graph</artifactId>
-        <version>${dep.tinkerpop.rexter.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.tinkerpop.blueprints</groupId>
-        <artifactId>blueprints-neo4j-graph</artifactId>
-        <version>${dep.tinkerpop.rexter.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
