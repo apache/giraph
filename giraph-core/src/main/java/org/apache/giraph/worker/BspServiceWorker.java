@@ -121,7 +121,7 @@ import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
 
-import static org.apache.giraph.graph.GraphTaskManager.isConnectionResetByPeer;
+import static org.apache.giraph.graph.GraphTaskManager.isConnectionFailure;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
@@ -224,7 +224,7 @@ public class BspServiceWorker<I extends WritableComparable,
             // If the connection was closed by the client, then we just log
             // the error, we do not fail the job, since the client will
             // attempt to reconnect.
-            return !isConnectionResetByPeer(throwable);
+            return !isConnectionFailure(throwable);
           }
         )
     );
