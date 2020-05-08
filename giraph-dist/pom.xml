@@ -105,9 +105,5 @@
       <groupId>org.apache.giraph</groupId>
       <artifactId>giraph-examples</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.giraph</groupId>
-      <artifactId>giraph-gora</artifactId>
-    </dependency>
   </dependencies>
 </project>
