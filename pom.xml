@@ -311,7 +311,6 @@ under the License.
 
     <checkstyle.config.path>${top.dir}/checkstyle.xml</checkstyle.config.path>
 
-    <dep.avro.version>1.7.6</dep.avro.version>
     <dep.asm.version>3.2</dep.asm.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
@@ -344,9 +343,7 @@ under the License.
     <dep.libthrift.version>0.9.0</dep.libthrift.version>
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
-    <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
     <dep.netty.version>4.1.36.Final</dep.netty.version>
-    <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
     <dep.objenesis.version>2.2</dep.objenesis.version>
     <dep.openhft-compiler.version>2.2.1</dep.openhft-compiler.version>
     <dep.paranamer.version>2.5.2</dep.paranamer.version>
@@ -1566,17 +1563,6 @@ under the License.
         <artifactId>commons-net</artifactId>
         <scope>provided</scope>
         <version>${dep.commons-net.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>avro</artifactId>
-        <version>${dep.avro.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
