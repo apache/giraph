@@ -312,7 +312,6 @@ under the License.
     <checkstyle.config.path>${top.dir}/checkstyle.xml</checkstyle.config.path>
 
     <dep.avro.version>1.7.6</dep.avro.version>
-    <dep.accumulo.version>1.4.0</dep.accumulo.version>
     <dep.asm.version>3.2</dep.asm.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
@@ -987,8 +986,12 @@ under the License.
     <profile>
       <id>hadoop_1</id>
       <modules>
+<<<<<<< HEAD
         <module>giraph-accumulo</module>
 <<<<<<< HEAD
+=======
+        <module>giraph-hcatalog</module>
+>>>>>>> 8bf0c60fad64676bc6181dac7320df8d3bbedcbf
         <module>giraph-gora</module>
 =======
         <module>giraph-hcatalog</module>
@@ -1141,8 +1144,11 @@ under the License.
     <profile>
        <id>hadoop_2</id>
       <modules>
+<<<<<<< HEAD
         <module>giraph-accumulo</module>
 <<<<<<< HEAD
+=======
+>>>>>>> 8bf0c60fad64676bc6181dac7320df8d3bbedcbf
         <module>giraph-hbase</module>
 <<<<<<< HEAD
 =======
@@ -1525,12 +1531,15 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
+<<<<<<< HEAD
         <artifactId>giraph-accumulo</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
 <<<<<<< HEAD
+=======
+>>>>>>> 8bf0c60fad64676bc6181dac7320df8d3bbedcbf
         <artifactId>giraph-rexster-io</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1796,26 +1805,6 @@ under the License.
         <artifactId>commons-net</artifactId>
         <scope>provided</scope>
         <version>${dep.commons-net.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.accumulo</groupId>
-        <artifactId>accumulo-core</artifactId>
-        <version>${dep.accumulo.version}</version>
-        <scope>provided</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging-api</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
