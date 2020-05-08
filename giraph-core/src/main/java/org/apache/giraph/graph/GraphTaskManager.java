@@ -540,38 +540,6 @@ end[PURE_YARN]*/
   }
 
   /**
-   * Copied from JobConf to get the location of this jar.  Workaround for
-   * things like Oozie map-reduce jobs. NOTE: Pure YARN profile cannot
-   * make use of this, as the jars are unpacked at each container site.
-   *
-   * @param myClass Class to search the class loader path for to locate
-   *        the relevant jar file
-   * @return Location of the jar file containing myClass
-   */
-  private static String findContainingJar(Class<?> myClass) {
-    ClassLoader loader = myClass.getClassLoader();
-    String classFile =
-        myClass.getName().replaceAll("\\.", "/") + ".class";
-    try {
-      for (Enumeration<?> itr = loader.getResources(classFile);
-          itr.hasMoreElements();) {
-        URL url = (URL) itr.nextElement();
-        if ("jar".equals(url.getProtocol())) {
-          String toReturn = url.getPath();
-          if (toReturn.startsWith("file:")) {
-            toReturn = toReturn.substring("file:".length());
-          }
-          toReturn = URLDecoder.decode(toReturn, "UTF-8");
-          return toReturn.replaceAll("!.*$", "");
-        }
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return null;
-  }
-
-  /**
    * Figure out what roles this BSP compute node should take on in the job.
    * Basic logic is as follows:
    * 1) If not split master, everyone does the everything and/or running
