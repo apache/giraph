@@ -331,7 +331,7 @@ under the License.
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
     <dep.guava.version>21.0</dep.guava.version>
-    <dep.hive.version>0.11.0</dep.hive.version>
+    <dep.hive.version>3.1.2000.7.0.3.0-79</dep.hive.version>
     <dep.hiveio.version>0.26</dep.hiveio.version>
     <dep.jaxb-impl.version>2.2.4-1</dep.jaxb-impl.version>
     <dep.jersey.version>1.17</dep.jersey.version>
