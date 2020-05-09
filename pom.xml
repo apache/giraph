@@ -311,7 +311,6 @@ under the License.
 
     <checkstyle.config.path>${top.dir}/checkstyle.xml</checkstyle.config.path>
 
-    <dep.avro.version>1.7.6</dep.avro.version>
     <dep.asm.version>3.2</dep.asm.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
@@ -1513,17 +1512,6 @@ under the License.
         <artifactId>commons-net</artifactId>
         <scope>provided</scope>
         <version>${dep.commons-net.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>avro</artifactId>
-        <version>${dep.avro.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
