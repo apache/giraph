@@ -29,7 +29,7 @@ import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.python.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 /**
  * Default implementation of MessageClasses

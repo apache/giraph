@@ -26,7 +26,7 @@ import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.writable.tuple.PairWritable;
 import org.apache.hadoop.io.Writable;
-import org.python.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 /**
  * Combines two individual reducers, to create a single reducer of pairs that

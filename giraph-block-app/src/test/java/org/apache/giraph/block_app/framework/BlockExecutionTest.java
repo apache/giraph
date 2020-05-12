@@ -46,7 +46,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.junit.Assert;
 import org.junit.Test;
-import org.python.google.common.collect.Iterables;
+import com.google.common.collect.Iterables;
 
 /**
  * Test of barebones of Blocks Framework.
