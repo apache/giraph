@@ -37,7 +37,7 @@ import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-import org.python.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 /**
  * Holds Computation and MessageCombiner class.
