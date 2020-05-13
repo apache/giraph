@@ -20,7 +20,7 @@ package org.apache.giraph.worker;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.python.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
