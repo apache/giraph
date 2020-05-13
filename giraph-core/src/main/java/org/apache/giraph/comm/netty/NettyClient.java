@@ -646,11 +646,13 @@ public class NettyClient {
   public void authenticate() {
     LOG.info("authenticate: NettyClient starting authentication with " +
         "servers.");
-    for (InetSocketAddress address: addressChannelMap.keySet()) {
+    for (Map.Entry<InetSocketAddress, ChannelRotater> entry :
+      addressChannelMap.entrySet()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("authenticate: Authenticating with address:" + address);
+        LOG.debug("authenticate: Authenticating with address:" +
+          entry.getKey());
       }
-      ChannelRotater channelRotater = addressChannelMap.get(address);
+      ChannelRotater channelRotater = entry.getValue();
       for (Channel channel: channelRotater.getChannels()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("authenticate: Authenticating with server on channel: " +

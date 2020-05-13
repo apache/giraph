@@ -109,6 +109,8 @@ public class LocalDiskDataAccessor implements OutOfCoreDataAccessor {
   public void initialize() { }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   public void shutdown() {
     for (String path : basePaths) {
       File file = new File(path);

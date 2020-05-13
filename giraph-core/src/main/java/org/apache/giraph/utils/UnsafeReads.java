@@ -27,6 +27,8 @@ import java.io.UTFDataFormatException;
  * Byte array input stream that uses Unsafe methods to deserialize
  * much faster
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+  "RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
 public abstract class UnsafeReads extends Input implements ExtendedDataInput {
 
   /**
