@@ -207,6 +207,8 @@ public class AnnotationUtils {
      * @param directory Directory from which we are adding files
      * @param files List we add files to
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
     private void addAllClassFiles(File directory, List<File> files) {
       for (File file : directory.listFiles()) {
         if (file.isDirectory()) {

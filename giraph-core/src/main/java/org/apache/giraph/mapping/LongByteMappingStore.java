@@ -21,6 +21,7 @@ package org.apache.giraph.mapping;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -131,8 +132,8 @@ public class LongByteMappingStore
   @Override
   public void postFilling() {
     // not thread-safe
-    for (Long id : concurrentIdToBytes.keySet()) {
-      idToBytes.put(id, concurrentIdToBytes.get(id));
+    for (Map.Entry<Long, byte[]> entry : concurrentIdToBytes.entrySet()) {
+      idToBytes.put(entry.getKey(), entry.getValue());
     }
     concurrentIdToBytes.clear();
     concurrentIdToBytes = null;
