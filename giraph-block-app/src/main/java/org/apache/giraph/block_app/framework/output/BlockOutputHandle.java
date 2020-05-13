@@ -51,11 +51,11 @@ public class BlockOutputHandle implements BlockOutputApi {
       Progressable hadoopProgressable) {
     outputDescMap = BlockOutputFormat.createInitAndCheckOutputDescsMap(
         conf, jobIdentifier);
-    for (String confOption : outputDescMap.keySet()) {
-      outputDescMap.get(confOption).preWriting();
-      freeWriters.put(confOption,
+    for (Map.Entry<String, BlockOutputDesc> entry : outputDescMap.entrySet()) {
+      entry.getValue().preWriting();
+      freeWriters.put(entry.getKey(),
           new ConcurrentLinkedQueue<BlockOutputWriter>());
-      occupiedWriters.put(confOption,
+      occupiedWriters.put(entry.getKey(),
           new ConcurrentLinkedQueue<BlockOutputWriter>());
     }
     initialize(conf, hadoopProgressable);
