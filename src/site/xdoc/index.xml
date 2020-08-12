@@ -32,11 +32,12 @@ under the License.
       <p><i>Apache Giraph</i> is an iterative graph processing system built for high scalability. For example, it is currently used at Facebook to analyze the social graph formed by users and their connections. Giraph originated as the open-source counterpart to <i>Pregel</i>, the graph processing architecture developed at Google and described in a 2010 <a href="http://dl.acm.org/citation.cfm?id=1807184">paper</a>. Both systems are inspired by the <a href="http://en.wikipedia.org/wiki/Bulk_synchronous_parallel">Bulk Synchronous Parallel</a> model of distributed computation introduced by Leslie Valiant. Giraph adds several features beyond the basic Pregel model, including master computation, sharded aggregators, edge-oriented input, out-of-core computation, and more. With a steady development cycle and a growing community of users worldwide, Giraph is a natural choice for unleashing the potential of structured datasets at a massive scale. To learn more, consult the <i>User Docs</i> section above.</p>
 
       <subsection name="Download">
-        <p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Pre-built packages will soon be available through Apache's Maven repositories, making it easier to include Giraph in your projects.</p>        
+        <p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Pre-built packages are also available through Apache's Maven repositories, making it easier to include Giraph in your projects.</p>        
       </subsection>
 
       <subsection name="News">
         <ul>
+          <li><strong>June 11, 2020: Giraph 1.3.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.3.0">here</a>.</li>
           <li><strong>Oct 20, 2016: Giraph 1.2.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.2.0">here</a>.</li>
           <li><strong>Oct 28, 2015: Practical Graph Analytics with Apache Giraph is now available from Apress.</strong> More details in our books section <a href="literature.html">here</a>.</li>
           <li><strong>Nov 19, 2014: Giraph 1.1.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.1.0">here</a>.</li>
