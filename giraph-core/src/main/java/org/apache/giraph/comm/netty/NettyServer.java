@@ -226,7 +226,18 @@ public class NettyServer {
   }
 
   /**
-   * Start the server with the appropriate port
+   * Start the server with the appropriate port.
+   *
+   * When the server starts, it will try to bind the port set in
+   * {@link GiraphConstants#IPC_INITIAL_PORT}. If the binding fails, we increase
+   * the port number and try again, until a maximum number of attempts,
+   * controlled by the {@link GiraphConstants#MAX_IPC_PORT_BIND_ATTEMPTS}
+   * option.
+   *
+   * If {@link GiraphConstants#IPC_INITIAL_PORT} is set to 0, then the server
+   * will bind port 0, which results in binding the first available port. In
+   * this case, every attempt will try to bind port 0.
+   *
    */
   public void start() {
     bootstrap = new ServerBootstrap();
@@ -352,7 +363,8 @@ public class NettyServer {
     int numServers = conf.getInt(GiraphConstants.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
-    int bindPort = GiraphConstants.IPC_INITIAL_PORT.get(conf) + taskId;
+    int initialPort = GiraphConstants.IPC_INITIAL_PORT.get(conf);
+    int bindPort = initialPort == 0 ? 0 : initialPort + taskId;
     int bindAttempts = 0;
     final int maxIpcPortBindAttempts = MAX_IPC_PORT_BIND_ATTEMPTS.get(conf);
     final boolean failFirstPortBindingAttempt =
@@ -377,6 +389,15 @@ public class NettyServer {
 
       try {
         ChannelFuture f = bootstrap.bind(myAddress).sync();
+
+        // If port 0 was specified, then the bound port will be the first port
+        // free, so we re-initialize myAddress to reflect the port that was
+        // actually bound.
+        if (this.myAddress.getPort() == 0) {
+          this.myAddress = new InetSocketAddress(localHostOrIp,
+            ((InetSocketAddress) f.channel().localAddress()).getPort());
+        }
+
         accepted.add(f.channel());
         break;
       } catch (InterruptedException e) {
@@ -387,7 +408,8 @@ public class NettyServer {
         LOG.warn("start: Likely failed to bind on attempt " +
             bindAttempts + " to port " + bindPort, e.getCause());
         ++bindAttempts;
-        bindPort += portIncrementConstant;
+        // If initial port is set to 0, then keep trying to bind the same port
+        bindPort = (initialPort == 0) ? 0 : (bindPort + portIncrementConstant);
       }
     }
     if (bindAttempts == maxIpcPortBindAttempts || myAddress == null) {
