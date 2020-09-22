@@ -1161,8 +1161,12 @@ end[PURE_YARN]*/
    * @return True if the throwable is a "connection reset by peer",
    * false otherwise.
    */
-  public static boolean isConnectionResetByPeer(Throwable throwable) {
-    return throwable.getMessage().startsWith(
-      "Connection reset by peer") ? true : false;
+  public static boolean isConnectionFailure(Throwable throwable) {
+    String throwableMessage = throwable.getMessage().toLowerCase();
+    if (throwableMessage.startsWith("connection reset by peer") ||
+      throwableMessage.startsWith("connection timed out")) {
+      return true;
+    }
+    return false;
   }
 }
