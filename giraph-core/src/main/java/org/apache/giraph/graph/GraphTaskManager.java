@@ -642,7 +642,7 @@ end[PURE_YARN]*/
                   info.getGcCause() + ", duration = " +
                   info.getGcInfo().getDuration() + "ms");
             }
-            if (gcTimeMetrics != null) {
+            if (gcTimeMetric != null) {
               gcTimeMetric.inc(info.getGcInfo().getDuration());
             }
             GiraphMetrics.get().getGcTracker().gcOccurred(info.getGcInfo());
