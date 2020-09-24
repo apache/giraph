@@ -118,6 +118,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
                 bspServiceMaster.createEdgeInputSplits() != -1)) {
           long setupMillis = System.currentTimeMillis() - initializeMillis;
           GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
+          GiraphTimers.getInstance().getTotalMs().increment(setupMillis);
           setupSecs = setupMillis / 1000.0d;
           while (!superstepState.isExecutionComplete()) {
             long startSuperstepMillis = System.currentTimeMillis();
@@ -147,6 +148,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               GiraphTimers.getInstance().getSuperstepMs(cachedSuperstep,
                   computationName).increment(superstepMillis);
             }
+            GiraphTimers.getInstance().getTotalMs().increment(superstepMillis);
             bspServiceMaster.addGiraphTimersAndSendCounters(cachedSuperstep);
 
             bspServiceMaster.postSuperstep();
@@ -163,8 +165,9 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
       }
       bspServiceMaster.cleanup(superstepState);
       if (!superstepSecsMap.isEmpty()) {
-        GiraphTimers.getInstance().getShutdownMs().
-          increment(System.currentTimeMillis() - endMillis);
+        long shutdownMs = System.currentTimeMillis() - endMillis;
+        GiraphTimers.getInstance().getShutdownMs().increment(shutdownMs);
+        GiraphTimers.getInstance().getTotalMs().increment(shutdownMs);
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Took " + setupSecs + " seconds.");
         }
@@ -183,14 +186,11 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         }
         if (LOG.isInfoEnabled()) {
           LOG.info("shutdown: Took " +
-              (System.currentTimeMillis() - endMillis) /
-              1000.0d + " seconds.");
+              shutdownMs / 1000.0d + " seconds.");
           LOG.info("total: Took " +
-              ((System.currentTimeMillis() - initializeMillis) /
+              (GiraphTimers.getInstance().getTotalMs().getValue() /
               1000.0d) + " seconds.");
         }
-        GiraphTimers.getInstance().getTotalMs().
-          increment(System.currentTimeMillis() - initializeMillis);
       }
       bspServiceMaster.addGiraphTimersAndSendCounters(
               bspServiceMaster.getSuperstep());
