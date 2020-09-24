@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.master.MasterProgress;
 import org.apache.giraph.worker.WorkerProgress;
 
@@ -28,6 +30,10 @@ import org.apache.giraph.worker.WorkerProgress;
 public class JobProgressTrackerClientNoOp implements JobProgressTrackerClient {
   @Override
   public void cleanup() {
+  }
+
+  @Override
+  public void init(GiraphConfiguration conf) {
   }
 
   @Override
@@ -52,5 +58,9 @@ public class JobProgressTrackerClientNoOp implements JobProgressTrackerClient {
 
   @Override
   public void updateMasterProgress(MasterProgress masterProgress) {
+  }
+
+  @Override
+  public void sendMasterCounters(GiraphCountersThriftStruct giraphCounters) {
   }
 }

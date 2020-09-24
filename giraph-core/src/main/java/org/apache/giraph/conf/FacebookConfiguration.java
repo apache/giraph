@@ -132,8 +132,6 @@ public class FacebookConfiguration implements BulkConfigurator {
     StaticFlowControl.MAX_NUMBER_OF_OPEN_REQUESTS.setIfUnset(conf, 100);
     // Pooled allocator in netty is faster
     GiraphConstants.NETTY_USE_POOLED_ALLOCATOR.setIfUnset(conf, true);
-    // Turning off auto read is faster
-    GiraphConstants.NETTY_AUTO_READ.setIfUnset(conf, false);
 
     // Synchronize full gc calls across workers
     MemoryObserver.USE_MEMORY_OBSERVER.setIfUnset(conf, true);

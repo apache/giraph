@@ -72,7 +72,8 @@ mvn clean install -Phadoop_2
 
       </li>
       <li>Finally make files available in dist SVN:
-          <tt>svn checkout https://dist.apache.org/repos/dist/dev/giraph/</tt>
+          <tt>svn checkout https://dist.apache.org/repos/dist/dev/giraph/</tt>, and 
+          <tt>svn checkout https://dist.apache.org/repos/dist/release/giraph/</tt>
           Make sure that the content there looks ok (try to build and run Giraph just from those tarballs).
       </li>
       <li>

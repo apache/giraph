@@ -15,7 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package org.apache.giraph.counters;
+
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Gora Utils for Giraph
+ * Stores the information about the counter names and values
  */
-package org.apache.giraph.io.gora.utils;
+@ThriftStruct
+public final class GiraphCountersThriftStruct {
+
+  /** Map of counter names and values */
+  private List<CustomCounter> counters = new ArrayList<>();
+
+  /**
+   * Public constructor for thrift to create us.
+   * Please use GiraphCountersThriftStruct.get() to get the static instance.
+   */
+  public GiraphCountersThriftStruct() {
+  }
+
+  @ThriftField(1)
+  public List<CustomCounter> getCounters() {
+    return counters;
+  }
+
+  @ThriftField
+  public void setCounters(List<CustomCounter> counters) {
+    this.counters = counters;
+  }
+}

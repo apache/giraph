@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.JobProgressTracker;
 
 import java.io.IOException;
@@ -30,4 +31,11 @@ import java.io.IOException;
 public interface JobProgressTrackerClient extends JobProgressTracker {
   /** Close the connections if any */
   void cleanup() throws IOException;
+
+  /**
+   * Initialize the client.
+   * @param conf Job configuration
+   * @throws Exception
+   */
+  void init(GiraphConfiguration conf) throws Exception;
 }

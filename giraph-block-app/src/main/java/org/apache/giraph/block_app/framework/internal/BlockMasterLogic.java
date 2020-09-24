@@ -36,7 +36,7 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.function.Consumer;
 import org.apache.giraph.writable.tuple.IntLongWritable;
 import org.apache.log4j.Logger;
-import org.python.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 
 /**
  * Block execution logic on master, iterating over Pieces of the

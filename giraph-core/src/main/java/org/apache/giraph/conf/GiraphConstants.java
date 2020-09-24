@@ -49,8 +49,10 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueCombiner;
+import org.apache.giraph.graph.JobProgressTrackerClient;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.MapperObserver;
+import org.apache.giraph.graph.RetryableJobProgressTrackerClient;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
@@ -651,15 +653,6 @@ public interface GiraphConstants {
       new StrConfOption("giraph.nettyCompressionAlgorithm", "",
           "Which compression algorithm to use in netty");
 
-  /**
-   * Whether netty should pro-actively read requests and feed them to its
-   * processing pipeline
-   */
-  BooleanConfOption NETTY_AUTO_READ =
-      new BooleanConfOption("giraph.nettyAutoRead", true,
-          "Whether netty should pro-actively read requests and feed them to " +
-              "its processing pipeline");
-
   /** Max resolve address attempts */
   IntConfOption MAX_RESOLVE_ADDRESS_ATTEMPTS =
       new IntConfOption("giraph.maxResolveAddressAttempts", 5,
@@ -684,6 +677,16 @@ public interface GiraphConstants {
           MINUTES.toMillis(10),
           "Maximum milliseconds to wait before giving up trying to get the " +
           "minimum number of workers before a superstep (int).");
+
+  /**
+   * Maximum milliseconds to wait before giving up waiting for the workers to
+   * write the counters to the Zookeeper after a superstep
+   */
+  IntConfOption MAX_COUNTER_WAIT_MSECS = new IntConfOption(
+          "giraph.maxCounterWaitMsecs", MINUTES.toMillis(2),
+          "Maximum milliseconds to wait before giving up waiting for" +
+                  "the workers to write their counters to the " +
+                  "zookeeper after a superstep");
 
   /** Milliseconds for a request to complete (or else resend) */
   IntConfOption MAX_REQUEST_MILLISECONDS =
@@ -1201,9 +1204,17 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.trackJobProgressOnClient", false,
           "Whether to track job progress on client or not");
 
+  /** Class to use as the job progress client */
+  ClassConfOption<JobProgressTrackerClient> JOB_PROGRESS_TRACKER_CLIENT_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerClientClass",
+        RetryableJobProgressTrackerClient.class,
+          JobProgressTrackerClient.class,
+          "Class to use to make calls to the job progress tracker service");
+
   /** Class to use to track job progress on client */
-  ClassConfOption<JobProgressTrackerService> JOB_PROGRESS_TRACKER_CLASS =
-      ClassConfOption.create("giraph.jobProgressTrackerClass",
+  ClassConfOption<JobProgressTrackerService>
+    JOB_PROGRESS_TRACKER_SERVICE_CLASS =
+      ClassConfOption.create("giraph.jobProgressTrackerServiceClass",
           DefaultJobProgressTrackerService.class,
           JobProgressTrackerService.class,
           "Class to use to track job progress on client");
@@ -1311,5 +1322,18 @@ public interface GiraphConstants {
             "Disables GiraphClassResolver, which is a custom implementation " +
             "of kryo class resolver that avoids writing class names to the " +
             "underlying stream for faster serialization.");
+
+  /**
+   * Path where jmap exists
+   */
+  StrConfOption JMAP_PATH = new StrConfOption("giraph.jmapPath", "jmap",
+          "Path to use for invoking jmap");
+
+  /**
+   * Whether to fail the job or just warn when input is empty
+   */
+  BooleanConfOption FAIL_ON_EMPTY_INPUT = new BooleanConfOption(
+      "giraph.failOnEmptyInput", true,
+      "Whether to fail the job or just warn when input is empty");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck
