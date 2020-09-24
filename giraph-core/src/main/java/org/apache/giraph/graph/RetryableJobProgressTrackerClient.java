@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.counters.GiraphCountersThriftStruct;
 import org.apache.giraph.job.ClientThriftServer;
 import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.master.MasterProgress;
@@ -63,7 +64,7 @@ public class RetryableJobProgressTrackerClient
   private static final Logger LOG =
       Logger.getLogger(RetryableJobProgressTrackerClient.class);
   /** Configuration */
-  private final GiraphConfiguration conf;
+  private GiraphConfiguration conf;
   /** Thrift client manager to use to connect to job progress tracker */
   private ThriftClientManager clientManager;
   /** Job progress tracker */
@@ -74,12 +75,27 @@ public class RetryableJobProgressTrackerClient
   private int retryWaitMsec;
 
   /**
+   * Default constructor. Typically once an instance is created it should be
+   * initialized by calling {@link #init(GiraphConfiguration)}.
+   */
+  public RetryableJobProgressTrackerClient() {
+  }
+
+  /**
    * Constructor
    *
    * @param conf Giraph configuration
    */
   public RetryableJobProgressTrackerClient(GiraphConfiguration conf) throws
       ExecutionException, InterruptedException {
+    this.conf = conf;
+    numRetries = RETRYABLE_JOB_PROGRESS_CLIENT_NUM_RETRIES.get(conf);
+    retryWaitMsec = RETRYABLE_JOB_PROGRESS_CLIENT_RETRY_WAIT_MS.get(conf);
+    resetConnection();
+  }
+
+  @Override
+  public void init(GiraphConfiguration conf) throws Exception {
     this.conf = conf;
     numRetries = RETRYABLE_JOB_PROGRESS_CLIENT_NUM_RETRIES.get(conf);
     retryWaitMsec = RETRYABLE_JOB_PROGRESS_CLIENT_RETRY_WAIT_MS.get(conf);
@@ -177,6 +193,16 @@ public class RetryableJobProgressTrackerClient
       @Override
       public void run() {
         jobProgressTracker.updateMasterProgress(masterProgress);
+      }
+    }, numRetries);
+  }
+
+  @Override
+  public void sendMasterCounters(GiraphCountersThriftStruct giraphCounters) {
+    executeWithRetry(new Runnable() {
+      @Override
+      public void run() {
+        jobProgressTracker.sendMasterCounters(giraphCounters);
       }
     }, numRetries);
   }

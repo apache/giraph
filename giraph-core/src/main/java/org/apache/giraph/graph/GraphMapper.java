@@ -77,6 +77,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   public void cleanup(Context context)
     throws IOException, InterruptedException {
     graphTaskManager.cleanup();
+    graphTaskManager.sendWorkerCountersAndFinishCleanup();
   }
 
   @Override

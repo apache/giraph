@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import io.netty.handler.flush.FlushConsolidationHandler;
 import org.apache.giraph.comm.flow_control.CreditBasedFlowControl;
 import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.flow_control.NoOpFlowControl;
@@ -60,8 +61,11 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -150,6 +154,9 @@ public class NettyClient {
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
+  /** Netty related counter names */
+  private static Map<String, Set<String>> COUNTER_GROUP_AND_NAMES =
+          new HashMap<>();
   /** Context used to report progress */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Client bootstrap */
@@ -236,6 +243,12 @@ public class NettyClient {
   private final GiraphHadoopCounter networkRequestsResentForConnectionFailure;
 
   /**
+   * Keeps track of the number of reconnect failures. Once this exceeds the
+   * value of {@link #maxConnectionFailures}, the job will fail.
+   */
+  private int reconnectFailures = 0;
+
+  /**
    * Only constructor
    *
    * @param context Context for progress
@@ -245,9 +258,9 @@ public class NettyClient {
    *                         terminate job.
    */
   public NettyClient(Mapper<?, ?, ?, ?>.Context context,
-                     final ImmutableClassesGiraphConfiguration conf,
-                     TaskInfo myTaskInfo,
-                     final Thread.UncaughtExceptionHandler exceptionHandler) {
+    final ImmutableClassesGiraphConfiguration conf, TaskInfo myTaskInfo,
+    final Thread.UncaughtExceptionHandler exceptionHandler) {
+
     this.context = context;
     this.myTaskInfo = myTaskInfo;
     this.channelsPerServer = GiraphConstants.CHANNELS_PER_SERVER.get(conf);
@@ -271,17 +284,15 @@ public class NettyClient {
       flowControl = new NoOpFlowControl(this);
     }
 
+    initialiseCounters();
     networkRequestsResentForTimeout =
-        new GiraphHadoopCounter(context.getCounter(
-            NETTY_COUNTERS_GROUP,
+        new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
             NETWORK_REQUESTS_RESENT_FOR_TIMEOUT_NAME));
     networkRequestsResentForChannelFailure =
-        new GiraphHadoopCounter(context.getCounter(
-            NETTY_COUNTERS_GROUP,
+        new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
             NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME));
     networkRequestsResentForConnectionFailure =
-      new GiraphHadoopCounter(context.getCounter(
-        NETTY_COUNTERS_GROUP,
+      new GiraphHadoopCounter(context.getCounter(NETTY_COUNTERS_GROUP,
         NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME));
 
     maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
@@ -334,7 +345,10 @@ public class NettyClient {
 /*if_not[HADOOP_NON_SECURE]*/
             if (conf.authenticate()) {
               LOG.info("Using Netty with authentication.");
-
+              PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+                new FlushConsolidationHandler(FlushConsolidationHandler
+                  .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+                handlerToUseExecutionGroup, executionGroup, ch);
               // Our pipeline starts with just byteCounter, and then we use
               // addLast() to incrementally add pipeline elements, so that we
               // can name them for identification for removal or replacement
@@ -386,6 +400,10 @@ public class NettyClient {
             } else {
               LOG.info("Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
+              PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
+                new FlushConsolidationHandler(FlushConsolidationHandler
+                    .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
+                handlerToUseExecutionGroup, executionGroup, ch);
               PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
                   inboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
@@ -440,6 +458,23 @@ public class NettyClient {
         }
       }
     }, "open-requests-observer");
+  }
+
+  /**
+   * Put the Netty-related counters in a single map which will be accessed
+   * from the worker/master
+   */
+  private void initialiseCounters() {
+    Set<String> counters = COUNTER_GROUP_AND_NAMES.getOrDefault(
+            NETTY_COUNTERS_GROUP, new HashSet<>());
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_TIMEOUT_NAME);
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_CHANNEL_FAILURE_NAME);
+    counters.add(NETWORK_REQUESTS_RESENT_FOR_CONNECTION_FAILURE_NAME);
+    COUNTER_GROUP_AND_NAMES.put(NETTY_COUNTERS_GROUP, counters);
+  }
+
+  public static Map<String, Set<String>> getCounterGroupsAndNames() {
+    return COUNTER_GROUP_AND_NAMES;
   }
 
   /**
@@ -611,11 +646,13 @@ public class NettyClient {
   public void authenticate() {
     LOG.info("authenticate: NettyClient starting authentication with " +
         "servers.");
-    for (InetSocketAddress address: addressChannelMap.keySet()) {
+    for (Map.Entry<InetSocketAddress, ChannelRotater> entry :
+      addressChannelMap.entrySet()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("authenticate: Authenticating with address:" + address);
+        LOG.debug("authenticate: Authenticating with address:" +
+          entry.getKey());
       }
-      ChannelRotater channelRotater = addressChannelMap.get(address);
+      ChannelRotater channelRotater = entry.getValue();
       for (Channel channel: channelRotater.getChannels()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("authenticate: Authenticating with server on channel: " +
@@ -734,26 +771,25 @@ public class NettyClient {
   private Channel getNextChannel(InetSocketAddress remoteServer) {
     Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
-      throw new IllegalStateException(
-          "getNextChannel: No channel exists for " + remoteServer);
-    }
+      LOG.warn("getNextChannel: No channel exists for " + remoteServer);
+    } else {
+      // Return this channel if it is connected
+      if (channel.isActive()) {
+        return channel;
+      }
 
-    // Return this channel if it is connected
-    if (channel.isActive()) {
-      return channel;
-    }
-
-    // Get rid of the failed channel
-    if (addressChannelMap.get(remoteServer).removeChannel(channel)) {
-      LOG.warn("getNextChannel: Unlikely event that the channel " +
+      // Get rid of the failed channel
+      if (addressChannelMap.get(remoteServer).removeChannel(channel)) {
+        LOG.warn("getNextChannel: Unlikely event that the channel " +
           channel + " was already removed!");
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getNextChannel: Fixing disconnected channel to " +
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("getNextChannel: Fixing disconnected channel to " +
           remoteServer + ", open = " + channel.isOpen() + ", " +
           "bound = " + channel.isRegistered());
+      }
     }
-    int reconnectFailures = 0;
+
     while (reconnectFailures < maxConnectionFailures) {
       ChannelFuture connectionFuture = bootstrap.connect(remoteServer);
       try {
@@ -839,13 +875,17 @@ public class NettyClient {
   }
 
   /**
-   * Write request to a channel for its destination
+   * Write request to a channel for its destination.
+   *
+   * Whenever we write to the channel, we also call flush, but we have added a
+   * {@link FlushConsolidationHandler} in the pipeline, which batches the
+   * flushes.
    *
    * @param requestInfo Request info
    */
   private void writeRequestToChannel(RequestInfo requestInfo) {
     Channel channel = getNextChannel(requestInfo.getDestinationAddress());
-    ChannelFuture writeFuture = channel.write(requestInfo.getRequest());
+    ChannelFuture writeFuture = channel.writeAndFlush(requestInfo.getRequest());
     requestInfo.setWriteFuture(writeFuture);
     writeFuture.addListener(logErrorListener);
   }
@@ -1171,7 +1211,7 @@ public class NettyClient {
    * This listener class just dumps exception stack traces if
    * something happens.
    */
-  private class LogOnErrorChannelFutureListener
+  private static class LogOnErrorChannelFutureListener
       implements ChannelFutureListener {
 
     @Override
@@ -1179,7 +1219,6 @@ public class NettyClient {
       if (future.isDone() && !future.isSuccess()) {
         LOG.error("Channel failed channelId=" + future.channel().hashCode(),
             future.cause());
-        checkRequestsAfterChannelFailure(future.channel());
       }
     }
   }

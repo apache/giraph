@@ -33,15 +33,10 @@ under the License.
 <p>
 Here are our stable releases of Giraph.</p>
 <ul>
+  <li><strong>1.3.0</strong> - Download <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.3.0">here</a>.</li>
   <li><strong>1.2.0</strong> - Download <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.2.0">here</a>.</li>
   <li><strong>1.1.0</strong> - Download <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.1.0">here</a>.</li>
   <li><strong>1.0.0</strong> - Download <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
-</ul>
-
-<p>
-Giraph is also part of <b>grafos.ml</b>, which is the Real-Time graph processing framework, developed at Telefonica.</p>
-<ul>
-  <li><strong>0.3.2</strong> - Download <a href="http://grafos.ml/Download.html">here</a>.</li>
 </ul>
 
 

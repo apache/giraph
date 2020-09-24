@@ -20,8 +20,10 @@ package org.apache.giraph.counters;
 
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Hadoop Counters in group "Giraph Stats". General statistics about job.
@@ -149,6 +151,23 @@ public class GiraphStats extends HadoopCountersBase {
    */
   public static GiraphStats getInstance() {
     return INSTANCE;
+  }
+
+
+  /**
+   * Get a map of counter names, and values
+   * To be used by the master to send to the job client
+   *
+   * @return Map of counter names and values
+   */
+  public List<CustomCounter> getCounterList() {
+    List<CustomCounter> counterList = new ArrayList<>();
+    for (int i = 0; i < counters.length; i++) {
+      counterList.add(new CustomCounter(GROUP_NAME,
+              counters[i].getDisplayName(),
+              CustomCounter.Aggregation.SUM, counters[i].getValue()));
+    }
+    return counterList;
   }
 
   /**

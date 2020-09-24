@@ -34,6 +34,8 @@ import static org.apache.giraph.utils.ByteUtils.SIZE_OF_DOUBLE;
  * Byte array input stream that uses Unsafe methods to deserialize
  * much faster
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+  "RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
 public class UnsafeArrayReads extends UnsafeReads {
   /** Access to the unsafe class */
   private static final sun.misc.Unsafe UNSAFE;

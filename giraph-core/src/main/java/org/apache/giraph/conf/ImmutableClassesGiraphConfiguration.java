@@ -1355,7 +1355,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   public ByteToMessageDecoder getNettyCompressionDecoder() {
     switch (GiraphConstants.NETTY_COMPRESSION_ALGORITHM.get(this)) {
     case "SNAPPY":
-      return new SnappyFramedDecoder(true);
+      return new SnappyFramedDecoder();
     case "INFLATE":
       return new JdkZlibDecoder();
     default:

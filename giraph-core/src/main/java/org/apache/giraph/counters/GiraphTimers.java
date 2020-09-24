@@ -23,8 +23,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -179,5 +181,31 @@ public class GiraphTimers extends HadoopCountersBase {
   public Iterator<GiraphHadoopCounter> iterator() {
     return Iterators.concat(jobCounters().iterator(),
         superstepCounters().values().iterator());
+  }
+
+  /**
+   * Get a map of counter names and values for the given superstep
+   * Counters include Setup, Initialise, Shutdown, Total, and time for
+   * the given superstep
+   * @param superstep superstep for which to fetch the GiraphTimer
+   * @return Map of counter names and values
+   */
+  public List<CustomCounter> getCounterList(long superstep) {
+    List<CustomCounter> countersList = new ArrayList<>();
+    for (GiraphHadoopCounter counter: jobCounters) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, counter.getName(),
+              CustomCounter.Aggregation.SUM, counter.getValue());
+      countersList.add(customCounter);
+    }
+    GiraphHadoopCounter giraphHadoopCounter = superstepMsec.get(superstep);
+    if (giraphHadoopCounter != null) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, giraphHadoopCounter.getName(),
+              CustomCounter.Aggregation.SUM,
+              giraphHadoopCounter.getValue());
+      countersList.add(customCounter);
+    }
+    return countersList;
   }
 }

@@ -21,14 +21,11 @@ package org.apache.giraph.graph;
 import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.net.URL;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
@@ -287,12 +284,15 @@ end[PURE_YARN]*/
     if (!conf.trackJobProgressOnClient()) {
       jobProgressTracker = new JobProgressTrackerClientNoOp();
     } else {
+      jobProgressTracker =
+        GiraphConstants.JOB_PROGRESS_TRACKER_CLIENT_CLASS.newInstance(conf);
       try {
-        jobProgressTracker = new RetryableJobProgressTrackerClient(conf);
-      } catch (InterruptedException | ExecutionException e) {
-        LOG.warn("createJobProgressClient: Exception occurred while trying to" +
-            " connect to JobProgressTracker - not reporting progress", e);
-        jobProgressTracker = new JobProgressTrackerClientNoOp();
+        jobProgressTracker.init(conf);
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        throw new RuntimeException(
+          "Failed to initialize JobProgressTrackerClient", e);
       }
     }
     jobProgressTracker.mapperStarted();
@@ -538,38 +538,6 @@ end[PURE_YARN]*/
   }
 
   /**
-   * Copied from JobConf to get the location of this jar.  Workaround for
-   * things like Oozie map-reduce jobs. NOTE: Pure YARN profile cannot
-   * make use of this, as the jars are unpacked at each container site.
-   *
-   * @param myClass Class to search the class loader path for to locate
-   *        the relevant jar file
-   * @return Location of the jar file containing myClass
-   */
-  private static String findContainingJar(Class<?> myClass) {
-    ClassLoader loader = myClass.getClassLoader();
-    String classFile =
-        myClass.getName().replaceAll("\\.", "/") + ".class";
-    try {
-      for (Enumeration<?> itr = loader.getResources(classFile);
-          itr.hasMoreElements();) {
-        URL url = (URL) itr.nextElement();
-        if ("jar".equals(url.getProtocol())) {
-          String toReturn = url.getPath();
-          if (toReturn.startsWith("file:")) {
-            toReturn = toReturn.substring("file:".length());
-          }
-          toReturn = URLDecoder.decode(toReturn, "UTF-8");
-          return toReturn.replaceAll("!.*$", "");
-        }
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return null;
-  }
-
-  /**
    * Figure out what roles this BSP compute node should take on in the job.
    * Basic logic is as follows:
    * 1) If not split master, everyone does the everything and/or running
@@ -674,7 +642,9 @@ end[PURE_YARN]*/
                   info.getGcCause() + ", duration = " +
                   info.getGcInfo().getDuration() + "ms");
             }
-            gcTimeMetric.inc(info.getGcInfo().getDuration());
+            if (gcTimeMetric != null) {
+              gcTimeMetric.inc(info.getGcInfo().getDuration());
+            }
             GiraphMetrics.get().getGcTracker().gcOccurred(info.getGcInfo());
             for (GcObserver gcObserver : gcObservers) {
               gcObserver.gcOccurred(info);
@@ -985,7 +955,18 @@ end[PURE_YARN]*/
 
     if (serviceWorker != null) {
       serviceWorker.cleanup(finishedSuperstepStats);
+    }
+  }
+
+  /**
+   * Method to send the counter values from the worker to the master,
+   * after all supersteps are done, and finish cleanup
+   */
+  public void sendWorkerCountersAndFinishCleanup() {
+    if (serviceWorker != null) {
       postSaveOnWorkerObservers();
+      serviceWorker.storeCountersInZooKeeper(true);
+      serviceWorker.closeZooKeeper();
     }
     try {
       if (masterThread != null) {
@@ -1000,15 +981,15 @@ end[PURE_YARN]*/
       LOG.info("cleanup: Offlining ZooKeeper servers");
       try {
         zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
-      // We need this here cause apparently exceptions are eaten by Hadoop
-      // when they come from the cleanup lifecycle and it's useful to know
-      // if something is wrong.
-      //
-      // And since it's cleanup nothing too bad should happen if we don't
-      // propagate and just allow the job to finish normally.
-      // CHECKSTYLE: stop IllegalCatch
+        // We need this here cause apparently exceptions are eaten by Hadoop
+        // when they come from the cleanup lifecycle and it's useful to know
+        // if something is wrong.
+        //
+        // And since it's cleanup nothing too bad should happen if we don't
+        // propagate and just allow the job to finish normally.
+        // CHECKSTYLE: stop IllegalCatch
       } catch (Throwable e) {
-      // CHECKSTYLE: resume IllegalCatch
+        // CHECKSTYLE: resume IllegalCatch
         LOG.error("cleanup: Error offlining zookeeper", e);
       }
     }
@@ -1060,6 +1041,18 @@ end[PURE_YARN]*/
     return new OverrideExceptionHandler(
         CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS.newInstance(
             getConf()), getJobProgressTracker());
+  }
+
+  /**
+   * Creates exception handler with the passed implementation of
+   * {@link CheckerIfWorkerShouldFailAfterException}.
+   *
+   * @param checker Instance that checks whether the job should fail.
+   * @return Exception handler.
+   */
+  public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler(
+    CheckerIfWorkerShouldFailAfterException checker) {
+    return new OverrideExceptionHandler(checker, getJobProgressTracker());
   }
 
   public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
@@ -1115,6 +1108,9 @@ end[PURE_YARN]*/
     @Override
     public void uncaughtException(final Thread t, final Throwable e) {
       if (!checker.checkIfWorkerShouldFail(t, e)) {
+        LOG.error(
+          "uncaughtException: OverrideExceptionHandler on thread " +
+            t.getName() + ", msg = " +  e.getMessage(), e);
         return;
       }
       try {
@@ -1155,5 +1151,22 @@ end[PURE_YARN]*/
     public boolean checkIfWorkerShouldFail(Thread thread, Throwable exception) {
       return true;
     }
+  }
+
+  /**
+   * Checks the message of a throwable, and checks whether it is a
+   * "connection reset by peer" type of exception.
+   *
+   * @param throwable Throwable
+   * @return True if the throwable is a "connection reset by peer",
+   * false otherwise.
+   */
+  public static boolean isConnectionFailure(Throwable throwable) {
+    String erroMessage = throwable.getMessage().toLowerCase();
+    if (erroMessage.startsWith("connection reset by peer") ||
+      erroMessage.startsWith("connection timed out")) {
+      return true;
+    }
+    return false;
   }
 }

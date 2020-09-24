@@ -418,7 +418,7 @@ public class GiraphApplicationMaster {
    */
   public static void main(final String[] args) {
     boolean result = false;
-    LOG.info("Starting GitaphAM ");
+    LOG.info("Starting GiraphAM ");
     String containerIdString =  System.getenv().get(
       Environment.CONTAINER_ID.name());
     if (containerIdString == null) {
