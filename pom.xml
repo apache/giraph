@@ -1121,7 +1121,7 @@ under the License.
         <module>giraph-dist</module>
       </modules>
        <properties>
-         <hadoop.version>2.5.1</hadoop.version>
+         <hadoop.version>2.9.2</hadoop.version>
          <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
          <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
