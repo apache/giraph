@@ -26,6 +26,7 @@ import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.netty.SSLEventHandler;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.DefaultCreateSourceVertexCallback;
 import org.apache.giraph.edge.CreateSourceVertexCallback;
@@ -1073,6 +1074,15 @@ public interface GiraphConstants {
           "Whether to use SASL with DIGEST and Hadoop Job Tokens to " +
           "authenticate and authorize Netty BSP Clients to Servers.");
 
+  /**
+   * Whether to use SSL to authenticate and authorize "
+   * Netty BSP Clients to Servers.
+   */
+  BooleanConfOption SSL_ENCRYPT =
+    new BooleanConfOption("giraph.sslEncrypt", false,
+        "Whether to use SSL to authenticate and authorize " +
+            "Netty BSP Clients to Servers.");
+
   /** Use unsafe serialization? */
   BooleanConfOption USE_UNSAFE_SERIALIZATION =
       new BooleanConfOption("giraph.useUnsafeSerialization", true,
@@ -1335,5 +1345,11 @@ public interface GiraphConstants {
   BooleanConfOption FAIL_ON_EMPTY_INPUT = new BooleanConfOption(
       "giraph.failOnEmptyInput", true,
       "Whether to fail the job or just warn when input is empty");
+
+  /** SSLEventHandler class - optional */
+  ClassConfOption<SSLEventHandler> SSL_EVENT_HANDLER_CLASS =
+    ClassConfOption.create("giraph.sslEventHandler",
+      null, SSLEventHandler.class,
+      "SSLEventHandler class - optional");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

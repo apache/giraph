@@ -127,7 +127,8 @@ public class NettyServer {
   private final String handlerToUseExecutionGroup;
   /** Handles all uncaught exceptions in netty threads */
   private final Thread.UncaughtExceptionHandler exceptionHandler;
-
+  /** Netty SSL Handler class */
+  private final NettySSLHandler nettySSLHandler;
 
   /**
    * Constructor for creating the server
@@ -191,6 +192,12 @@ public class NettyServer {
       }
     } else {
       executionGroup = null;
+    }
+
+    if (conf.sslAuthenticate()) {
+      nettySSLHandler = new NettySSLHandler(false, conf);
+    } else {
+      nettySSLHandler = null;
     }
   }
 
@@ -311,6 +318,13 @@ public class NettyServer {
         } else {
           LOG.info("start: Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
+
+          if (conf.sslAuthenticate()) {
+            PipelineUtils.addLastWithExecutorCheck("sslHandler",
+              nettySSLHandler.getSslHandler(ch.alloc()),
+              handlerToUseExecutionGroup, executionGroup, ch);
+          }
+
           // Store all connected channels in order to ensure that we can close
           // them on stop(), or else stop() may hang waiting for the
           // connections to close on their own

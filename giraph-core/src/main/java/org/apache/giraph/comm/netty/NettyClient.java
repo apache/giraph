@@ -241,6 +241,8 @@ public class NettyClient {
   private final GiraphHadoopCounter networkRequestsResentForChannelFailure;
   /** How many network requests were resent because connection failed */
   private final GiraphHadoopCounter networkRequestsResentForConnectionFailure;
+  /** Netty SSL Handler class */
+  private final NettySSLHandler nettySSLHandler;
 
   /**
    * Keeps track of the number of reconnect failures. Once this exceeds the
@@ -325,6 +327,12 @@ public class NettyClient {
       executionGroup = null;
     }
 
+    if (conf.sslAuthenticate()) {
+      nettySSLHandler = new NettySSLHandler(true, conf);
+    } else {
+      nettySSLHandler = null;
+    }
+
     workerGroup = new NioEventLoopGroup(maxPoolSize,
         ThreadUtils.createThreadFactory(
             "netty-client-worker-%d", exceptionHandler));
@@ -395,11 +403,19 @@ public class NettyClient {
                   new SaslClientHandler(conf), handlerToUseExecutionGroup,
                   executionGroup, ch);
               PipelineUtils.addLastWithExecutorCheck("response-handler",
-                  new ResponseClientHandler(NettyClient.this, conf),
+                  new ResponseClientHandler(
+                    NettyClient.this, conf, exceptionHandler),
                   handlerToUseExecutionGroup, executionGroup, ch);
             } else {
               LOG.info("Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
+
+              if (conf.sslAuthenticate()) {
+                PipelineUtils.addLastWithExecutorCheck("sslHandler",
+                  nettySSLHandler.getSslHandler(ch.alloc()),
+                  handlerToUseExecutionGroup, executionGroup, ch);
+              }
+
               PipelineUtils.addLastWithExecutorCheck("flushConsolidation",
                 new FlushConsolidationHandler(FlushConsolidationHandler
                     .DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true),
@@ -429,8 +445,11 @@ public class NettyClient {
               PipelineUtils.addLastWithExecutorCheck("request-encoder",
                     new RequestEncoder(conf), handlerToUseExecutionGroup,
                   executionGroup, ch);
+              // ResponseClientHandler is the last handler in channel pipeline
+              // It handles the SSL Exception in a special way
               PipelineUtils.addLastWithExecutorCheck("response-handler",
-                  new ResponseClientHandler(NettyClient.this, conf),
+                  new ResponseClientHandler(
+                    NettyClient.this, conf, exceptionHandler),
                   handlerToUseExecutionGroup, executionGroup, ch);
 
 /*if_not[HADOOP_NON_SECURE]*/

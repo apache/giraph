@@ -27,6 +27,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
+import javax.net.ssl.SSLException;
+
 import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_RESPONSE_FAILED;
 
 /**
@@ -42,15 +44,22 @@ public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
   private final boolean dropFirstResponse;
   /** Netty client that does the actual I/O and keeps track of open requests */
   private final NettyClient nettyClient;
+  /** Handler for uncaught exceptions */
+  private final Thread.UncaughtExceptionHandler exceptionHandler;
 
   /**
    * Constructor.
    * @param nettyClient Client that does the actual I/O
    * @param conf Configuration
+   * @param exceptionHandler Handles uncaught exceptions
    */
-  public ResponseClientHandler(NettyClient nettyClient, Configuration conf) {
+  public ResponseClientHandler(
+    NettyClient nettyClient,
+    Configuration conf,
+    Thread.UncaughtExceptionHandler exceptionHandler) {
     this.nettyClient = nettyClient;
     dropFirstResponse = NETTY_SIMULATE_FIRST_RESPONSE_FAILED.get(conf);
+    this.exceptionHandler = exceptionHandler;
   }
 
   @Override
@@ -106,9 +115,14 @@ public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     throws Exception {
-    LOG.warn("exceptionCaught: Channel channelId=" +
+    // If SSLException, fail the client
+    if (cause instanceof SSLException) {
+      exceptionHandler.uncaughtException(Thread.currentThread(), cause);
+    } else {
+      LOG.warn("exceptionCaught: Channel channelId=" +
         ctx.channel().hashCode() + " failed with remote address " +
         ctx.channel().remoteAddress(), cause);
+    }
   }
 }
 
