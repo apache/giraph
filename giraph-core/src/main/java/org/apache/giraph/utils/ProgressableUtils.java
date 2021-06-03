@@ -20,18 +20,23 @@ package org.apache.giraph.utils;
 
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.group.ChannelGroupFuture;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.group.ChannelGroupFuture;
+import io.netty.util.concurrent.EventExecutorGroup;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -41,10 +46,29 @@ public class ProgressableUtils {
   private static final Logger LOG =
       Logger.getLogger(ProgressableUtils.class);
   /** Msecs to refresh the progress meter (one minute) */
-  private static final int MSEC_PERIOD = 60 * 1000;
+  private static final int DEFUALT_MSEC_PERIOD = 60 * 1000;
+  /**
+   * When getting results with many threads, how many milliseconds to wait
+   * on each when looping through them
+   */
+  private static final int MSEC_TO_WAIT_ON_EACH_FUTURE = 10;
 
   /** Do not instantiate. */
   private ProgressableUtils() {
+  }
+
+  /**
+   * Wait for executor tasks to terminate, while periodically reporting
+   * progress.
+   *
+   * @param executor     Executor which we are waiting for
+   * @param progressable Progressable for reporting progress (Job context)
+   * @param msecsPeriod How often to report progress
+   */
+  public static void awaitExecutorTermination(ExecutorService executor,
+      Progressable progressable, int msecsPeriod) {
+    waitForever(new ExecutorServiceWaitable(executor), progressable,
+        msecsPeriod);
   }
 
   /**
@@ -57,6 +81,17 @@ public class ProgressableUtils {
   public static void awaitExecutorTermination(ExecutorService executor,
       Progressable progressable) {
     waitForever(new ExecutorServiceWaitable(executor), progressable);
+  }
+
+  /**
+   * Wait for executorgroup to terminate, while periodically reporting progress
+   *
+   * @param group ExecutorGroup whose termination we are awaiting
+   * @param progressable Progressable for reporting progress (Job context)
+   */
+  public static void awaitTerminationFuture(EventExecutorGroup group,
+                                            Progressable progressable) {
+    waitForever(new FutureWaitable<>(group.terminationFuture()), progressable);
   }
 
   /**
@@ -98,6 +133,26 @@ public class ProgressableUtils {
   }
 
   /**
+   * Wait to acquire enough permits from {@link Semaphore}, while periodically
+   * reporting progress.
+   *
+   * @param semaphore    Semaphore
+   * @param permits      How many permits to acquire
+   * @param progressable Progressable for reporting progress (Job context)
+   */
+  public static void awaitSemaphorePermits(final Semaphore semaphore,
+      int permits, Progressable progressable) {
+    while (true) {
+      waitForever(new SemaphoreWaitable(semaphore, permits), progressable);
+      // Verify permits were not taken by another thread,
+      // if they were keep looping
+      if (semaphore.tryAcquire(permits)) {
+        return;
+      }
+    }
+  }
+
+  /**
    * Wait forever for waitable to finish. Periodically reports progress.
    *
    * @param waitable Waitable which we wait for
@@ -107,8 +162,22 @@ public class ProgressableUtils {
    */
   private static <T> T waitForever(Waitable<T> waitable,
       Progressable progressable) {
+    return waitForever(waitable, progressable, DEFUALT_MSEC_PERIOD);
+  }
+
+  /**
+   * Wait forever for waitable to finish. Periodically reports progress.
+   *
+   * @param waitable Waitable which we wait for
+   * @param progressable Progressable for reporting progress (Job context)
+   * @param msecsPeriod How often to report progress
+   * @param <T> Result type
+   * @return Result of waitable
+   */
+  private static <T> T waitForever(Waitable<T> waitable,
+      Progressable progressable, int msecsPeriod) {
     while (true) {
-      waitFor(waitable, progressable, MSEC_PERIOD);
+      waitFor(waitable, progressable, msecsPeriod, msecsPeriod);
       if (waitable.isFinished()) {
         try {
           return waitable.getResult();
@@ -130,15 +199,17 @@ public class ProgressableUtils {
    * @param waitable Waitable which we wait for
    * @param progressable Progressable for reporting progress (Job context)
    * @param msecs Number of milliseconds to wait for
+   * @param msecsPeriod How often to report progress
    * @param <T> Result type
    * @return Result of waitable
    */
   private static <T> T waitFor(Waitable<T> waitable, Progressable progressable,
-      int msecs) {
+      int msecs, int msecsPeriod) {
     long timeoutTimeMsecs = System.currentTimeMillis() + msecs;
     int currentWaitMsecs;
     while (true) {
-      currentWaitMsecs = Math.min(msecs, MSEC_PERIOD);
+      progressable.progress();
+      currentWaitMsecs = Math.min(msecs, msecsPeriod);
       try {
         waitable.waitFor(currentWaitMsecs);
         if (waitable.isFinished()) {
@@ -157,7 +228,6 @@ public class ProgressableUtils {
       if (System.currentTimeMillis() >= timeoutTimeMsecs) {
         return waitable.getTimeoutResult();
       }
-      progressable.progress();
       msecs = Math.max(0, msecs - currentWaitMsecs);
     }
   }
@@ -176,21 +246,50 @@ public class ProgressableUtils {
   public static <R> List<R> getResultsWithNCallables(
       CallableFactory<R> callableFactory, int numThreads,
       String threadNameFormat, Progressable progressable) {
-    ExecutorService executorService =
-        Executors.newFixedThreadPool(numThreads,
-            new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
-    List<Future<R>> futures = Lists.newArrayListWithCapacity(numThreads);
+    ExecutorService executorService = Executors.newFixedThreadPool(numThreads,
+        ThreadUtils.createThreadFactory(threadNameFormat));
+    HashMap<Integer, Future<R>> futures = new HashMap<>(numThreads);
     for (int i = 0; i < numThreads; i++) {
       Callable<R> callable = callableFactory.newCallable(i);
       Future<R> future = executorService.submit(
           new LogStacktraceCallable<R>(callable));
-      futures.add(future);
+      futures.put(i, future);
     }
     executorService.shutdown();
-    List<R> futureResults = Lists.newArrayListWithCapacity(numThreads);
-    for (Future<R> future : futures) {
-      R result = ProgressableUtils.getFutureResult(future, progressable);
-      futureResults.add(result);
+    List<R> futureResults =
+        new ArrayList<>(Collections.<R>nCopies(numThreads, null));
+    // Loop through the futures until all are finished
+    // We do this in order to get any exceptions from the futures early
+    while (!futures.isEmpty()) {
+      Iterator<Map.Entry<Integer, Future<R>>> iterator =
+          futures.entrySet().iterator();
+      while (iterator.hasNext()) {
+        Map.Entry<Integer, Future<R>> entry = iterator.next();
+        R result;
+        try {
+          // Try to get result from the future
+          result = entry.getValue().get(
+              MSEC_TO_WAIT_ON_EACH_FUTURE, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          throw new IllegalStateException("Interrupted", e);
+        } catch (ExecutionException e) {
+          // Execution exception wraps the actual cause
+          if (e.getCause() instanceof RuntimeException) {
+            throw (RuntimeException) e.getCause();
+          } else {
+            throw new IllegalStateException("Exception occurred", e.getCause());
+          }
+
+        } catch (TimeoutException e) {
+          // If result is not ready yet just keep waiting
+          continue;
+        }
+        // Result is ready, put it to final results
+        futureResults.set(entry.getKey(), result);
+        // Remove current future since we are done with it
+        iterator.remove();
+      }
+      progressable.progress();
     }
     return futureResults;
   }
@@ -373,6 +472,43 @@ public class ProgressableUtils {
     @Override
     public boolean isFinished() {
       return future.isDone();
+    }
+  }
+
+  /**
+   * {@link Waitable} for waiting on required number of permits in a
+   * {@link Semaphore} to become available.
+   */
+  private static class SemaphoreWaitable extends WaitableWithoutResult {
+    /** Semaphore to wait on */
+    private final Semaphore semaphore;
+    /** How many permits to wait on */
+    private final int permits;
+
+    /**
+     * Constructor
+     *
+     * @param semaphore Semaphore to wait on
+     * @param permits How many permits to wait on
+     */
+    public SemaphoreWaitable(Semaphore semaphore, int permits) {
+      this.semaphore = semaphore;
+      this.permits = permits;
+    }
+
+    @Override
+    public void waitFor(int msecs) throws InterruptedException {
+      boolean acquired =
+          semaphore.tryAcquire(permits, msecs, TimeUnit.MILLISECONDS);
+      // Return permits if we managed to acquire them
+      if (acquired) {
+        semaphore.release(permits);
+      }
+    }
+
+    @Override
+    public boolean isFinished() {
+      return semaphore.availablePermits() >= permits;
     }
   }
 }

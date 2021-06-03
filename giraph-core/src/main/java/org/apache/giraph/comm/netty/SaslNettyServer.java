@@ -19,12 +19,18 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.classification.InterfaceStability;
+/*if_not[STATIC_SASL_SYMBOL]*/
+import org.apache.hadoop.conf.Configuration;
+/*end[STATIC_SASL_SYMBOL]*/
 /*if[HADOOP_1_SECURITY]
 else[HADOOP_1_SECURITY]*/
 import org.apache.hadoop.ipc.StandbyException;
 /*end[HADOOP_1_SECURITY]*/
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+/*if_not[STATIC_SASL_SYMBOL]*/
+import org.apache.hadoop.security.SaslPropertiesResolver;
+/*end[STATIC_SASL_SYMBOL]*/
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.log4j.Logger;
 
@@ -39,6 +45,8 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 
 /**
  * Encapsulates SASL server logic for Giraph BSP worker servers.
@@ -58,9 +66,26 @@ public class SaslNettyServer extends SaslRpcServer {
    *
    * @param secretManager supplied by SaslServerHandler.
    */
-  public SaslNettyServer(JobTokenSecretManager secretManager) {
+  public SaslNettyServer(JobTokenSecretManager secretManager)
+    throws IOException {
+    this(secretManager, AuthMethod.SIMPLE);
+  }
+
+  /**
+   * Constructor
+   *
+   * @param secretManager supplied by SaslServerHandler.
+   * @param authMethod Authentication method
+   */
+  public SaslNettyServer(JobTokenSecretManager secretManager,
+    AuthMethod authMethod) throws IOException {
+/*if[HADOOP_1_SECRET_MANAGER]
+else[HADOOP_1_SECRET_MANAGER]*/
+    super(authMethod);
+/*end[HADOOP_1_SECRET_MANAGER]*/
     if (LOG.isDebugEnabled()) {
-      LOG.debug("SaslNettyServer: Secret manager is: " + secretManager);
+      LOG.debug("SaslNettyServer: Secret manager is: " + secretManager +
+        " with authmethod " + authMethod);
     }
 /*if[HADOOP_1_SECRET_MANAGER]
 else[HADOOP_1_SECRET_MANAGER]*/
@@ -73,9 +98,20 @@ else[HADOOP_1_SECRET_MANAGER]*/
     try {
       SaslDigestCallbackHandler ch =
           new SaslNettyServer.SaslDigestCallbackHandler(secretManager);
-      saslServer = Sasl.createSaslServer(SaslNettyServer.AuthMethod.DIGEST
-          .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
-          SaslRpcServer.SASL_PROPS, ch);
+/*if[STATIC_SASL_SYMBOL]
+      saslServer =
+          Sasl.createSaslServer(
+              SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
+              SaslRpcServer.SASL_DEFAULT_REALM, SaslRpcServer.SASL_PROPS, ch);
+else[STATIC_SASL_SYMBOL]*/
+      SaslPropertiesResolver saslPropsResolver =
+          SaslPropertiesResolver.getInstance(new Configuration());
+      saslServer =
+          Sasl.createSaslServer(
+              SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
+              SaslRpcServer.SASL_DEFAULT_REALM,
+              saslPropsResolver.getDefaultProperties(), ch);
+/*end[STATIC_SASL_SYMBOL]*/
     } catch (SaslException e) {
       LOG.error("SaslNettyServer: Could not create SaslServer: " + e);
     }
@@ -120,7 +156,8 @@ else[HADOOP_1_SECRET_MANAGER]*/
    * @return Base64-encoded string
    */
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier));
+    return new String(Base64.encodeBase64(identifier),
+        Charset.defaultCharset());
   }
 
   /**
@@ -129,7 +166,8 @@ else[HADOOP_1_SECRET_MANAGER]*/
    * @return password as a char array.
    */
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password)).toCharArray();
+    return new String(Base64.encodeBase64(password),
+        Charset.defaultCharset()).toCharArray();
   }
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */

@@ -1,0 +1,10 @@
+    TestGraph<$vertexIdClass, $vertexValueClass, $edgeValueClass> graph 
+         = new TestGraph<>(new GiraphConfiguration());
+    graph      
+#foreach ($vertex in $vertices)
+    .addVertex($helper.formatWritable($vertex.id), $helper.formatWritable($vertex.value))
+#foreach ($neighbor in $vertex.neighbors)
+    .addEdge($helper.formatWritable($vertex.id), $helper.formatWritable($neighbor.id), $helper.formatWritable($neighbor.edgeValue))
+#end 
+#end
+    ;

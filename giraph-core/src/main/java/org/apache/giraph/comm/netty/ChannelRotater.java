@@ -18,30 +18,40 @@
 
 package org.apache.giraph.comm.netty;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import com.google.common.collect.Lists;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import org.apache.log4j.Logger;
+
 
 /**
  * Maintains multiple channels and rotates between them.  This is thread-safe.
  */
 public class ChannelRotater {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(ChannelRotater.class);
   /** Index of last used channel */
   private int index = 0;
   /** Channel list */
   private final List<Channel> channelList = Lists.newArrayList();
   /** Task id of this channel */
   private final Integer taskId;
+  /** Address these channels are associated with */
+  private final InetSocketAddress address;
 
   /**
    * Constructor
    *
    * @param taskId Id of the task these channels as associated with
+   * @param address Address these channels are associated with
    */
-  public ChannelRotater(Integer taskId) {
+  public ChannelRotater(Integer taskId, InetSocketAddress address) {
     this.taskId = taskId;
+    this.address = address;
   }
 
   public Integer getTaskId() {
@@ -66,7 +76,9 @@ public class ChannelRotater {
    */
   public synchronized Channel nextChannel() {
     if (channelList.isEmpty()) {
-      throw new IllegalArgumentException("nextChannel: No channels exist!");
+      LOG.warn("nextChannel: No channels exist for hostname " +
+        address.getHostName());
+      return null;
     }
 
     ++index;

@@ -19,9 +19,14 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.metrics.AggregatedMetrics;
+import org.apache.giraph.partition.PartitionStats;
+
+import java.util.List;
 
 /**
  * Observer for Master.
+ * It can implement ContextSettable if it needs to access job counters.
  */
 public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
   /**
@@ -54,4 +59,15 @@ public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
    * @param superstep The superstep number
    */
   void postSuperstep(long superstep);
+
+  /**
+   * Called after each superstep with aggregated metrics from workers
+   *
+   * @param superstep Supsertep number
+   * @param aggregatedMetrics Metrics
+   * @param partitionStatsList List of partition stats
+   */
+  void superstepMetricsUpdate(
+      long superstep, AggregatedMetrics aggregatedMetrics,
+      List<PartitionStats> partitionStatsList);
 }

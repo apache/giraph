@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.iterables;
 
-import java.io.IOException;
-
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
@@ -27,6 +25,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import java.io.IOException;
 
 /**
  * Wraps {@link GiraphReader} for vertices into {@link VertexReader}
@@ -38,23 +38,23 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class VertexReaderWrapper<I extends WritableComparable,
     V extends Writable, E extends Writable> extends VertexReader<I, V, E> {
   /** Wrapped vertex reader */
-  private GiraphReader<Vertex<I, V, E, ?>> vertexReader;
+  private GiraphReader<Vertex<I, V, E>> vertexReader;
   /** {@link VertexReader}-like wrapper of {@link #vertexReader} */
-  private IteratorToReaderWrapper<Vertex<I, V, E, ?>> iterator;
+  private IteratorToReaderWrapper<Vertex<I, V, E>> iterator;
 
   /**
    * Constructor
    *
    * @param vertexReader GiraphReader for vertices to wrap
    */
-  public VertexReaderWrapper(GiraphReader<Vertex<I, V, E, ?>> vertexReader) {
+  public VertexReaderWrapper(GiraphReader<Vertex<I, V, E>> vertexReader) {
     this.vertexReader = vertexReader;
-    iterator = new IteratorToReaderWrapper<Vertex<I, V, E, ?>>(vertexReader);
+    iterator = new IteratorToReaderWrapper<Vertex<I, V, E>>(vertexReader);
   }
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     conf.configureIfPossible(vertexReader);
   }
@@ -65,7 +65,7 @@ public class VertexReaderWrapper<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
+  public Vertex<I, V, E> getCurrentVertex() throws IOException,
       InterruptedException {
     return iterator.getCurrentObject();
   }

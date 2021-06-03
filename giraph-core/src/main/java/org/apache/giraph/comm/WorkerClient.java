@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.WritableRequest;
 
 import org.apache.giraph.partition.PartitionOwner;
@@ -33,11 +34,10 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface WorkerClient<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
 
   /**
    *  Setup the client.
@@ -74,7 +74,7 @@ else[HADOOP_NON_SECURE]*/
    * @param destTaskId Destination worker id
    * @param request Request to send
    */
-  void sendWritableRequest(Integer destTaskId, WritableRequest request);
+  void sendWritableRequest(int destTaskId, WritableRequest request);
 
   /**
    * Wait until all the outstanding requests are completed.
@@ -97,4 +97,9 @@ else[HADOOP_NON_SECURE]*/
    */
   void authenticate() throws IOException;
 /*end[HADOOP_NON_SECURE]*/
+
+  /**
+   * @return the flow control used in sending requests
+   */
+  FlowControl getFlowControl();
 }

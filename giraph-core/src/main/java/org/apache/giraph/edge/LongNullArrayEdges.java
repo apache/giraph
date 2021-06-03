@@ -20,42 +20,33 @@ package org.apache.giraph.edge;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+
 /**
- * Implementation of {@link VertexEdges} with long ids and null edge
+ * Implementation of {@link OutEdges} with long ids and null edge
  * values, backed by a dynamic primitive array.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but random access and edge removals are expensive.
  */
 public class LongNullArrayEdges
-    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
-    MutableVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
+    MutableOutEdges<LongWritable, NullWritable>, Trimmable {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the arrays with the expected capacity.
-    if (edges instanceof Collection) {
-      int numEdges =
-          ((Collection<Edge<LongWritable, NullWritable>>) edges).size();
-      initialize(numEdges);
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, NullWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override
@@ -77,7 +68,7 @@ public class LongNullArrayEdges
    * If the backing array is more than four times as big as the number of
    * elements, halve its size.
    */
-  private void trim() {
+  private void trimBack() {
     if (neighbors.elements().length > 4 * neighbors.size()) {
       neighbors.trim(neighbors.elements().length / 2);
     }
@@ -98,7 +89,7 @@ public class LongNullArrayEdges
       neighbors.set(i, neighbors.popLong());
     }
     // If needed after the removal, trim the array.
-    trim();
+    trimBack();
   }
 
   @Override
@@ -106,7 +97,7 @@ public class LongNullArrayEdges
     // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
-      if (neighbors.get(i) == targetVertexId.get()) {
+      if (neighbors.getLong(i) == targetVertexId.get()) {
         removeAt(i);
       }
     }
@@ -131,16 +122,17 @@ public class LongNullArrayEdges
       /** Current position in the array. */
       private int offset = 0;
       /** Representative edge object. */
-      private MutableEdge<LongWritable, NullWritable> representativeEdge =
+      private final MutableEdge<LongWritable, NullWritable> representativeEdge =
           EdgeFactory.createReusable(new LongWritable());
 
+      @Override
       public boolean hasNext() {
         return offset < neighbors.size();
       }
 
       @Override
       public MutableEdge<LongWritable, NullWritable> next() {
-        representativeEdge.getTargetVertexId().set(neighbors.get(offset++));
+        representativeEdge.getTargetVertexId().set(neighbors.getLong(offset++));
         return representativeEdge;
       }
 
@@ -170,6 +162,11 @@ public class LongNullArrayEdges
     for (int i = 0; i < numEdges; ++i) {
       neighbors.add(in.readLong());
     }
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
   }
 }
 

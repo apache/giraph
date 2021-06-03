@@ -1,0 +1,18 @@
+package org.apache.giraph.debugger;
+
+// Stores a list of messages that are violating an
+// integrity constraint designed by the user.
+message MessageIntegrityViolation {
+  required string vertexIdClass = 1;
+  required string outgoingMessageClass = 2; 
+  required int64 superstepNo = 3;
+  // Called Extended because in scenario.proto there is another
+  // message called OutgoingMessage, which does not have the srcId.
+  repeated ExtendedOutgoingMessage message = 4;
+
+  message ExtendedOutgoingMessage {
+    required bytes srcId = 1;
+    required bytes destinationId = 2;
+    required bytes msgData = 3;
+  }
+}

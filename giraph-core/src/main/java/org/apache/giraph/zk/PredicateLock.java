@@ -134,8 +134,12 @@ public class PredicateLock implements BspEvent {
   }
 
   @Override
-  public void waitForever() {
+  public void waitForTimeoutOrFail(long timeout) {
+    long t0 = System.currentTimeMillis();
     while (!waitMsecs(msecPeriod)) {
+      if (System.currentTimeMillis() > t0 + timeout) {
+        throw new RuntimeException("Timeout waiting");
+      }
       progressable.progress();
     }
   }

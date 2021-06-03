@@ -28,17 +28,22 @@ public class FloatConfOption extends AbstractConfOption {
 
   /**
    * Constructor
+   *
    * @param key Configuration key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public FloatConfOption(String key, float defaultValue) {
-    super(key);
+  public FloatConfOption(String key, float defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public float getDefaultValue() {
     return defaultValue;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return Float.compare(get(conf), defaultValue) == 0;
   }
 
   @Override public String getDefaultValueStr() {
@@ -51,6 +56,7 @@ public class FloatConfOption extends AbstractConfOption {
 
   /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return value for key, or defaultValue if not present
    */
@@ -60,6 +66,7 @@ public class FloatConfOption extends AbstractConfOption {
 
   /**
    * Set value
+   *
    * @param conf Configuration
    * @param value to set
    */
@@ -69,11 +76,12 @@ public class FloatConfOption extends AbstractConfOption {
 
   /**
    * Set value if it's not already present
+   *
    * @param conf Configuration
    * @param value to set
    */
   public void setIfUnset(Configuration conf, float value) {
-    if (conf.get(getKey()) == null) {
+    if (!contains(conf)) {
       conf.setFloat(getKey(), value);
     }
   }

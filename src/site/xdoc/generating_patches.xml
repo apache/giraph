@@ -30,7 +30,7 @@ under the License.
   <section name="Generating patches" id="Generatingpatches">
     <p>Follow these steps to generate a patch that can be attached to a JIRA issue for review.</p>
     <ul>
-      <li>Check out the Giraph source from the <a href="http://git-wip-us.apache.org/repos/asf/giraph.git">git repository</a>.</li>
+      <li>Check out the Giraph source from the <a href="http://gitbox.apache.org/repos/asf/giraph.git">git repository</a>.</li>
       <li>Make the changes necessary for your particular issue while following the code conventions found in <tt>CODE_CONVENTIONS</tt>.  Try to avoid unnecessary changes, such as extra whitespace or formatting changes. Include a unit test, or be ready to justify in the JIRA why one isn't necessary.</li>
       <li>Verify the new and existing tests continue to pass via <tt>mvn clean verify</tt>.  This maven lifecycle will do checkstyle, findbugs, license checks (Apache Rat), and unittests.  Verify the change works as expected on a real cluster, if possible. If one's not available for testing, mention it on the JIRA so another contributor can verify.</li>
       <li>Generate a patch with <tt>git diff --no-prefix trunk > GIRAPH-{ISSUE_NUMBER}.patch</tt> (the <tt>--no-prefix</tt> option is necessary to make the patch compatible with Apache's subversion repository). For subsequent patches, if necessary, number each version to make it easier for reviewers to track their progress.</li>

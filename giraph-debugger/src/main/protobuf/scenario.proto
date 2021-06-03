@@ -1,0 +1,81 @@
+package org.apache.giraph.debugger;
+
+import "giraph_aggregator.proto";
+
+// GiraphVertexScenario captures necessary information to replicate
+// the environment under which user's Computation.compute() function was
+// called on a particular vertex and superstep.
+message GiraphVertexScenario {  
+  required VertexScenarioClasses vertexScenarioClasses = 1; 
+  required VertexContext context = 2;
+  optional Exception exception = 3;
+
+  // VertexScenarioClasses contains the names of the user's Computation,
+  // Vertex, Vertex ID, Vertex Value, Edge Value, Incoming Message,
+  // and Outgoing Message.
+  message VertexScenarioClasses {
+    // The class under test. Must implement org.apache.giraph.graph.Computation interface.
+    required string classUnderTest = 1;
+    // The vertex ID class (usually denoted as I). Must implement org.apache.hadoop.io.WritableComparable.
+    required string vertexIdClass = 2;
+    // The vertex value class (usually denoted as V). Must implement org.apache.hadoop.io.Writable.
+    required string vertexValueClass = 3;
+    // The edge value class (usually denoted as E). Must implement org.apache.hadoop.io.Writable.
+    required string edgeValueClass = 4;
+    // The incoming message class (usually denoted as M1). Must implement org.apache.hadoop.io.Writable.
+    required string incomingMessageClass = 5;
+    // The outgoing message class (usually denoted as M2). Must implement org.apache.hadoop.io.Writable.
+   required string outgoingMessageClass = 6;
+  }
+
+ // VertexContext encapsulates a particular pair of inputs and outputs of Computation.compute().
+ message VertexContext {
+   required CommonVertexMasterContext commonContext = 1;
+   required bytes vertexId = 2;
+   required bytes vertexValueBefore = 3;
+   optional bytes vertexValueAfter = 4;
+   // TODO: We might have to break neighbor also to
+   // neighborsBefore and neighborsAfter.
+   repeated Neighbor neighbor = 5;
+   repeated bytes inMessage = 6;
+   repeated OutgoingMessage outMessage = 7;
+
+   // Messages sent by the current vertex.
+   message OutgoingMessage {
+     required bytes destinationId = 1;
+     required bytes msgData = 2;
+   }
+
+   // The outgoing neighbors of the current vertex.
+   message Neighbor {
+     required bytes neighborId = 1;
+     optional bytes edgeValue = 2;
+   }
+ }
+}
+
+
+// GiraphMasterScenario captures the necessary information to
+// replicate the environment under which user's Master.compute()
+// function was called.
+message GiraphMasterScenario {
+  required string masterClassUnderTest = 1;
+  required CommonVertexMasterContext commonContext = 2;
+  optional Exception exception = 3;
+}
+
+// Information related to the exception thrown.
+message Exception {
+  required string message = 1;
+  required string stackTrace = 2;
+}
+
+// Contains common fiels between GiraphVertexScenario.VertexContext
+// and GiraphMasterScenario.
+message CommonVertexMasterContext {
+  required bytes conf = 1;
+  required int64 superstepNo = 2;
+  required int64 totalNumVertices = 3;
+  required int64 totalNumEdges = 4;
+  repeated AggregatedValue previousAggregatedValue = 5;
+}

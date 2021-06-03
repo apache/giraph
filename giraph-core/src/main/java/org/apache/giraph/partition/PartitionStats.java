@@ -38,6 +38,15 @@ public class PartitionStats implements Writable {
   private long edgeCount = 0;
   /** Messages sent from this partition */
   private long messagesSentCount = 0;
+  /** Message byetes sent from this partition */
+  private long messageBytesSentCount = 0;
+  /**
+   * How long did compute take on this partition
+   * (excluding time spent in GC) (TODO and waiting on open requests)
+   */
+  private long computeMs;
+  /** Hostname and id of worker owning this partition */
+  private String workerHostnameId;
 
   /**
    * Default constructor for reflection.
@@ -52,17 +61,23 @@ public class PartitionStats implements Writable {
    * @param finishedVertexCount Finished vertex count.
    * @param edgeCount Edge count.
    * @param messagesSentCount Number of messages sent
+   * @param messageBytesSentCount Number of message bytes sent
+   * @param workerHostnameId Hostname and id of worker owning this partition
    */
   public PartitionStats(int partitionId,
       long vertexCount,
       long finishedVertexCount,
       long edgeCount,
-      long messagesSentCount) {
+      long messagesSentCount,
+      long messageBytesSentCount,
+      String workerHostnameId) {
     this.partitionId = partitionId;
     this.vertexCount = vertexCount;
     this.finishedVertexCount = finishedVertexCount;
     this.edgeCount = edgeCount;
     this.messagesSentCount = messagesSentCount;
+    this.messageBytesSentCount = messageBytesSentCount;
+    this.workerHostnameId = workerHostnameId;
   }
 
   /**
@@ -151,6 +166,36 @@ public class PartitionStats implements Writable {
     return messagesSentCount;
   }
 
+  /**
+   * Add message bytes to messageBytesSentCount.
+   *
+   * @param messageBytesSentCount Number of message bytes to add.
+   */
+  public void addMessageBytesSentCount(long messageBytesSentCount) {
+    this.messageBytesSentCount += messageBytesSentCount;
+  }
+
+  /**
+   * Get the message bytes sent count.
+   *
+   * @return Message bytes sent count.
+   */
+  public long getMessageBytesSentCount() {
+    return messageBytesSentCount;
+  }
+
+  public long getComputeMs() {
+    return computeMs;
+  }
+
+  public void setComputeMs(long computeMs) {
+    this.computeMs = computeMs;
+  }
+
+  public String getWorkerHostnameId() {
+    return workerHostnameId;
+  }
+
   @Override
   public void readFields(DataInput input) throws IOException {
     partitionId = input.readInt();
@@ -158,6 +203,9 @@ public class PartitionStats implements Writable {
     finishedVertexCount = input.readLong();
     edgeCount = input.readLong();
     messagesSentCount = input.readLong();
+    messageBytesSentCount = input.readLong();
+    computeMs = input.readLong();
+    workerHostnameId = input.readUTF();
   }
 
   @Override
@@ -167,12 +215,17 @@ public class PartitionStats implements Writable {
     output.writeLong(finishedVertexCount);
     output.writeLong(edgeCount);
     output.writeLong(messagesSentCount);
+    output.writeLong(messageBytesSentCount);
+    output.writeLong(computeMs);
+    output.writeUTF(workerHostnameId);
   }
 
   @Override
   public String toString() {
     return "(id=" + partitionId + ",vtx=" + vertexCount + ",finVtx=" +
         finishedVertexCount + ",edges=" + edgeCount + ",msgsSent=" +
-        messagesSentCount + ")";
+        messagesSentCount + ",msgBytesSent=" +
+        messageBytesSentCount + ",computeMs=" + computeMs +
+        ")";
   }
 }

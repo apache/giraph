@@ -18,11 +18,19 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.util.List;
+
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.MessageClasses;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
@@ -36,20 +44,22 @@ import org.apache.hadoop.mapreduce.Mapper;
  * master.compute() is called. This means aggregator values used by the workers
  * are consistent with aggregator values from the master from the same
  * superstep and aggregator used by the master are consistent with aggregator
- * values from the workers from the previous superstep. Note that the master
- * has to register its own aggregators (it does not call {@link WorkerContext}
- * functions), but it uses all aggregators by default, so useAggregator does
- * not have to be called.
+ * values from the workers from the previous superstep.
  */
-@SuppressWarnings("rawtypes")
-public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
-    ImmutableClassesGiraphConfigurable {
+public abstract class MasterCompute
+    extends DefaultImmutableClassesGiraphConfigurable
+    implements MasterAggregatorUsage, MasterGlobalCommUsage, Writable {
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt = false;
-  /** Global graph state **/
+  /** Master aggregator usage */
+  private CentralizedServiceMaster serviceMaster;
+  /** Graph state */
   private GraphState graphState;
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration conf;
+  /**
+   * Computation and MessageCombiner classes used, which can be
+   * switched by master
+   */
+  private SuperstepClasses superstepClasses;
 
   /**
    * Must be defined by user to specify what the master has to do.
@@ -59,6 +69,9 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
   /**
    * Initialize the MasterCompute class, this is the place to register
    * aggregators.
+   *
+   * @throws InstantiationException
+   * @throws IllegalAccessException
    */
   public abstract void initialize() throws InstantiationException,
     IllegalAccessException;
@@ -68,8 +81,8 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
    *
    * @return Current superstep
    */
-  public long getSuperstep() {
-    return getGraphState().getSuperstep();
+  public final long getSuperstep() {
+    return graphState.getSuperstep();
   }
 
   /**
@@ -78,8 +91,8 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getTotalNumVertices() {
-    return getGraphState().getTotalNumVertices();
+  public final long getTotalNumVertices() {
+    return graphState.getTotalNumVertices();
   }
 
   /**
@@ -88,15 +101,15 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getTotalNumEdges() {
-    return getGraphState().getTotalNumEdges();
+  public final long getTotalNumEdges() {
+    return graphState.getTotalNumEdges();
   }
 
   /**
    * After this is called, the computation will stop, even if there are
    * still messages in the system or vertices that have not voted to halt.
    */
-  public void haltComputation() {
+  public final void haltComputation() {
     halt = true;
   }
 
@@ -105,26 +118,8 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
    *
    * @return True if halted, false otherwise.
    */
-  public boolean isHalted() {
+  public final boolean isHalted() {
     return halt;
-  }
-
-  /**
-   * Get the graph state for all workers.
-   *
-   * @return Graph state for all workers
-   */
-  GraphState getGraphState() {
-    return graphState;
-  }
-
-  /**
-   * Set the graph state for all workers
-   *
-   * @param graphState Graph state for all workers
-   */
-  void setGraphState(GraphState graphState) {
-    this.graphState = graphState;
   }
 
   /**
@@ -132,16 +127,128 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
    *
    * @return Mapper context
    */
-  public Mapper.Context getContext() {
-    return getGraphState().getContext();
+  public final Mapper.Context getContext() {
+    return graphState.getContext();
+  }
+
+  /**
+   * Get list of workers
+   *
+   * @return List of workers
+   */
+  public final List<WorkerInfo> getWorkerInfoList() {
+    return serviceMaster.getWorkerInfoList();
+  }
+
+  /**
+   * Set Computation class to be used
+   *
+   * @param computationClass Computation class
+   */
+  public final void setComputation(
+      Class<? extends Computation> computationClass) {
+    superstepClasses.setComputationClass(computationClass);
+  }
+
+  /**
+   * Get Computation class to be used
+   *
+   * @return Computation class
+   */
+  public final Class<? extends Computation> getComputation() {
+    // Might be called prior to classes being set, do not return NPE
+    if (superstepClasses == null) {
+      return null;
+    }
+
+    return superstepClasses.getComputationClass();
+  }
+
+  /**
+   * Set MessageCombiner class to be used
+   *
+   * @param combinerClass MessageCombiner class
+   */
+  public final void setMessageCombiner(
+      Class<? extends MessageCombiner> combinerClass) {
+    superstepClasses.setMessageCombinerClass(combinerClass);
+  }
+
+  /**
+   * Get MessageCombiner class to be used
+   *
+   * @return MessageCombiner class
+   */
+  public final Class<? extends MessageCombiner> getMessageCombiner() {
+    // Might be called prior to classes being set, do not return NPE
+    if (superstepClasses == null) {
+      return null;
+    }
+
+    return superstepClasses.getMessageCombinerClass();
+  }
+
+  /**
+   * Set incoming message class to be used
+   *
+   * @param incomingMessageClass incoming message class
+   */
+  @Deprecated
+  public final void setIncomingMessage(
+      Class<? extends Writable> incomingMessageClass) {
+    superstepClasses.setIncomingMessageClass(incomingMessageClass);
+  }
+
+  /**
+   * Set outgoing message class to be used
+   *
+   * @param outgoingMessageClass outgoing message class
+   */
+  public final void setOutgoingMessage(
+      Class<? extends Writable> outgoingMessageClass) {
+    superstepClasses.setOutgoingMessageClass(outgoingMessageClass);
+  }
+
+  /**
+   * Set outgoing message classes to be used
+   *
+   * @param outgoingMessageClasses outgoing message classes
+   */
+  public void setOutgoingMessageClasses(
+      MessageClasses<? extends WritableComparable, ? extends Writable>
+        outgoingMessageClasses) {
+    superstepClasses.setOutgoingMessageClasses(outgoingMessageClasses);
+  }
+
+  @Override
+  public final <S, R extends Writable> void registerReducer(
+      String name, ReduceOperation<S, R> reduceOp) {
+    serviceMaster.getGlobalCommHandler().registerReducer(name, reduceOp);
+  }
+
+  @Override
+  public final <S, R extends Writable> void registerReducer(
+      String name, ReduceOperation<S, R> reduceOp, R globalInitialValue) {
+    serviceMaster.getGlobalCommHandler().registerReducer(
+        name, reduceOp, globalInitialValue);
+  }
+
+  @Override
+  public final <T extends Writable> T getReduced(String name) {
+    return serviceMaster.getGlobalCommHandler().getReduced(name);
+  }
+
+  @Override
+  public final void broadcast(String name, Writable object) {
+    serviceMaster.getGlobalCommHandler().broadcast(name, object);
   }
 
   @Override
   public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
-        registerAggregator(name, aggregatorClass);
+    return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
+        name, aggregatorClass);
   }
 
   @Override
@@ -149,29 +256,42 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
       String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
-        registerPersistentAggregator(name, aggregatorClass);
+    return serviceMaster.getAggregatorTranslationHandler()
+        .registerPersistentAggregator(name, aggregatorClass);
   }
 
   @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
-        <A>getAggregatedValue(name);
+  public final <A extends Writable> A getAggregatedValue(String name) {
+    return serviceMaster.getAggregatorTranslationHandler()
+        .<A>getAggregatedValue(name);
   }
 
   @Override
-  public <A extends Writable> void setAggregatedValue(String name, A value) {
-    getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
-        setAggregatedValue(name, value);
+  public final <A extends Writable> void setAggregatedValue(
+      String name, A value) {
+    serviceMaster.getAggregatorTranslationHandler()
+        .setAggregatedValue(name, value);
   }
 
-  @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
+  /**
+   * Call this to log a line to command line of the job. Use in moderation -
+   * it's a synchronous call to Job client
+   *
+   * @param line Line to print
+   */
+  public void logToCommandLine(String line) {
+    serviceMaster.getJobProgressTracker().logInfo(line);
   }
 
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration conf) {
-    this.conf = conf;
+  public final void setGraphState(GraphState graphState) {
+    this.graphState = graphState;
+  }
+
+  public final void setMasterService(CentralizedServiceMaster serviceMaster) {
+    this.serviceMaster = serviceMaster;
+  }
+
+  public final void setSuperstepClasses(SuperstepClasses superstepClasses) {
+    this.superstepClasses = superstepClasses;
   }
 }

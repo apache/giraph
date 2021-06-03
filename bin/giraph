@@ -23,7 +23,7 @@ if [ $# = 0 ]; then
 fi
 
 # locate and run the giraph-env script to populate env vars, classpath, etc.
-GIRAPH_ENV_DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+GIRAPH_ENV_DIR="$( cd -P "$( dirname "${BASH_SOURCE:-0}" )" && pwd )"
 source $GIRAPH_ENV_DIR/giraph-env
 
 exec "$HADOOP_HOME/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"

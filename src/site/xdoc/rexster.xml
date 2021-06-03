@@ -1,0 +1,650 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/XDOC/2.0
+    http://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+  <properties>
+    <title>Rexster Input with Giraph</title>
+  </properties>
+
+  <body>
+    <section name="Overview">
+      Giraph can use the <a href="http://rexster.tinkerpop.com">Rexster</a>
+      REST API to load and store graphs from graph databases like
+      <a href="http://www.neo4j.org/">Neo4j</a>,
+      <a href="http://www.orientdb.org/">OrientDB</a> and others to perform a
+      computation. Graph databases that are supported by
+      <a href="http://blueprints.tinkerpop.com">Blueprints</a> are also
+      available via Rexster. Additionally, a subset of the input graph can
+      be injected by means of <a href="http://rexster.tinkerpop.com">
+        Gremlin</a> scripts. This page is intended to get you started with the
+      Giraph API for Rexster I/O.
+    </section>
+
+    <section name="Quick Start For Inpatients">
+      Since not everyone is interested in the whole story, here you can find
+      some easy steps to get quickly started using the Rexster I/O API. We are
+      assuming you already have a working Hadoop/Giraph setup. If it is not
+      so, start <a href="/quick_start.html">here</a> and then come back. This
+      is important since the <code>OutputFormat</code> example is based on the
+      same example provided by the Quick Start guide.<br />
+      Below you can find a single script to prepare the environment and a
+      small example to use the <code>OutputFormat</code>. The only step required
+      to make the example work is to adjust the configuration variables to your
+      environment settings. For more details, read the rest of the
+      document :)<br/>
+      The script below also assumes that Hadoop is up and running
+      based on the Quick Start guide and the <code>tiny_graph.txt</code>
+      input graph is in-place in the input directory.
+      <div class="source"><pre class="prettyprint">
+#!/bin/bash
+# Configuration
+export REXSTER_VERSION=2.4.0
+export HADOOP_VERSION=1.0.2
+export GIRAPH_VERSION=1.2.0-SNAPSHOT
+export GIRAPH_DIR=/path/to/giraph
+export REXSTER_DIR=/path/to/rexster
+export HADOOP_DIR=/path/to/hadoop
+
+# Constants
+export GIRAPH_REXSTER=${GIRAPH_DIR}/giraph-rexster/giraph-rexster-io
+export GIRAPH_CORE=${GIRAPH_DIR}/giraph-core
+export GIRAPH_EXAMPLES=${GIRAPH_DIR}/giraph-examples
+export GIRAPH_KIBBLE=${GIRAPH_DIR}/giraph-rexster/giraph-kibble
+
+export GIRAPH_REXSTER_JAR=${GIRAPH_REXSTER}/target/giraph-rexster-io-${GIRAPH_VERSION}.jar
+export GIRAPH_CORE_JAR=${GIRAPH_CORE}/target/giraph-${GIRAPH_VERSION}-for-hadoop-${HADOOP_VERSION}-jar-with-dependencies.jar
+export GIRAPH_EXAMPLES_JAR=${GIRAPH_EXAMPLES}/target/giraph-examples-${GIRAPH_VERSION}-for-hadoop-${HADOOP_VERSION}-jar-with-dependencies.jar
+export GIRAPH_KIBBLE_JAR=${GIRAPH_KIBBLE}/target/giraph-kibble-${GIRAPH_VERSION}.jar
+
+export HADOOP_CLASSPATH=${GIRAPH_REXSTER_JAR}:${GIRAPH_EXAMPLES_JAR}:${GIRAPH_CORE_JAR}
+
+# Main
+# prepare rexster
+mkdir ${REXSTER_DIR}
+cd ${REXSTER_DIR}
+wget http://tinkerpop.com/downloads/rexster/rexster-server-${REXSTER_VERSION}.zip
+unzip rexster-server-${REXSTER_VERSION}.zip
+REXSTER_DIR=${REXSTER_DIR}/rexster-server-${REXSTER_VERSION}
+
+# copy the compiled kibble, prepare the rexster configuration, and start rexster
+cp ${GIRAPH_KIBBLE_JAR} ${REXSTER_DIR}/ext/
+lines=$(wc -l ${REXSTER_DIR}/config/rexster.xml | cut -d" " -f1)
+head -n +$(( lines - 2 )) ${REXSTER_DIR}/config/rexster.xml >\
+  ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "        &lt;graph&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;graph-name&gt;giraphgraph&lt;/graph-name&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;graph-location&gt;/tmp/giraphgraph&lt;/graph-location&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;graph-type&gt;tinkergraph&lt;/graph-type&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;graph-storage&gt;graphson&lt;/graph-storage&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;extensions&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "                &lt;allows&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "                    &lt;allow&gt;tp:gremlin&lt;/allow&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "                    &lt;allow&gt;tp:giraph&lt;/allow&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "                &lt;/allows&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "            &lt;/extensions&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "        &lt;/graph&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "    &lt;/graphs&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+echo "&lt;/rexster&gt;" &gt;&gt; ${REXSTER_DIR}/config/rexster.giraph.xml
+${REXSTER_DIR}/bin/rexster.sh -s -c ${REXSTER_DIR}/config/rexster.giraph.xml &#26;
+
+# start a Giraph Job
+su - hduser
+${HADOOP_DIR}/bin/hadoop jar ${GIRAPH_EXAMPLES_JAR} org.apache.giraph.GiraphRunner \
+  -Dgiraph.rexster.output.graph=giraphgraph \
+  -Dgiraph.rexster.hostname=127.0.0.1 \
+  -libjars ${GIRAPH_REXSTER_JAR},${GIRAPH_CORE_JAR} \
+  org.apache.giraph.examples.SimpleShortestPathsComputation \
+  -vif org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat \
+  -vip input/ \
+  -vof org.apache.giraph.rexster.io.formats.RexsterLongDoubleFloatVertexOutputFormat \
+  -eof org.apache.giraph.rexster.io.formats.RexsterLongDoubleFloatEdgeOutputFormat \
+  -w 1
+exit
+    </pre></div>
+    </section>
+
+    <section name="Architectrue">
+      The Rexster I/O Format is composed by three main components, namely
+      the <b>Rexster Input Format</b> and the <b>Rexster Output
+        Format</b> which are part of the Giraph code. Both components are
+      split into <b>Vertex</b> and <b>Edge</b> interfaces. Additionally,
+      the architecture provides the <b>Giraph Kibble</b>, which is a Rexster
+      extension to provide the needed facilities to load and store the data
+      from and to the graph databases. The figure below shows the architecture
+      in a high level fashion.<br/>
+
+      <p style="text-align: center">
+        <img syle="align: center" src="images/RexsterIO.svg" />
+      </p>
+    </section>
+
+    <section name="The API">
+      Because of how the
+      <a href="https://github.com/tinkerpop/rexster/wiki/Basic-REST-API">Basic
+      Rexster API</a> is organized, the Giraph API requires the user to specify
+      both an <b>Vertex</b> and a <b>Edge</b> format in both the input and
+      the output format. Even though such a step is required, the user does
+      not have to deal with the Rexster connection, which can be easily
+      configured using the Giraph options provided.<br />
+      In the next sections, you will be guided in the peculiarities of the
+      API, starting from the
+      <a href="#Configuration_Options">configurations</a>. Afterwards, we
+      will provide you with a short descriptionof how to prepare Rexster to be
+      used with Giraph. Finally, we will walk you through Input and the Output
+      format APIs and we will conclude presenting some cavet related to the
+      system.
+    </section>
+
+    <section name="Configuration Options">
+      The configuration options which can be specified by the user of the
+      Rexster input format are the following. The configurations are group
+      in three different categories. <b>General Configurations</b>, <b>Input
+        Format Configurations</b>, and <b>Output Format Configurations</b>.<br />
+      <h3>General Configurations</h3>
+      <table border='0'>
+       <tr>
+        <th>label</th>
+        <th>type</th>
+        <th>default value</th>
+        <th>description</th>
+       </tr>
+       <tr>
+         <td>giraph.rexster.hostname</td>
+         <td>string</td>
+         <td>127.0.0.1</td>
+         <td>Rexster hostname which provides the REST API - required</td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.port</td>
+         <td>integer</td>
+         <td>8182</td>
+         <td>Rexster port where to contact the REST API.</td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.ssl</td>
+         <td>boolean</td>
+         <td>false</td>
+         <td>
+           Rexster flag to set the connection over SSL instaed of clear-text.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.username</td>
+         <td>string</td>
+         <td></td>
+         <td>Rexster username to access the REST API.</td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.password</td>
+         <td>string</td>
+         <td></td>
+         <td>Rexster password to access the REST API.</td>
+       </tr>
+       </table><br/><br/>
+
+      <h3>Input Format Configurations</h3>
+      <table border='0'>
+       <tr>
+        <th>label</th>
+        <th>type</th>
+        <th>default value</th>
+        <th>description</th>
+       </tr>
+       <tr>
+         <td>giraph.rexster.input.graph</td>
+         <td>graphdb</td>
+         <td>string</td>
+         <td>
+           Rexster input graph.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.input.vertex</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster number of estimated vertices in the graph to be loaded.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.input.edge</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster number of estimated vertices in the graph to be loaded.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.vertices.gremlinScript</td>
+         <td>string</td>
+         <td></td>
+         <td>
+           If the database is Gremlin enabled, the script will be used to
+           retrieve the vertices from the Rexster exposed database.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.edges.gremlinScript</td>
+         <td>string</td>
+         <td></td>
+         <td>
+           If the database is Gremlin enabled, the script will be used to
+           retrieve the edges from the Rexster exposed database.
+         </td>
+       </tr>
+      </table>
+
+
+      <h3>Output Format Configurations</h3>
+      <table border='0'>
+       <tr>
+        <th>label</th>
+        <th>type</th>
+        <th>default value</th>
+        <th>description</th>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.graph</td>
+         <td>graphdb</td>
+         <td>string</td>
+         <td>
+           Rexster output graph.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.vlabel</td>
+         <td>string</td>
+         <td>_vid</td>
+         <td>
+           Rexster Vertex ID label for the JSON format.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.backoffDelay</td>
+         <td>integer</td>
+         <td>5</td>
+         <td>
+           Rexster back-off delay in milliseconds which is multiplied to an
+           exponentially increasing counter. Needed to deal with deadlocks and
+           consistency raised by the graph database
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.backoffRetry</td>
+         <td>integer</td>
+         <td>20</td>
+         <td>
+           Rexster output format wait timeout (seconds). This is used to wake up
+           the thread to call progress very x seconds if not progress from the
+           ZooKeeper is detected.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.timeout</td>
+         <td>integer</td>
+         <td>10</td>
+         <td>
+           Rexster output format wait timeout (seconds). This is
+           used to wake up the thread to call progress very x
+           seconds if not progress from the ZooKeeper is
+           detected.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.vertex.txsize</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster Output format transaction size. This parameter
+           defines how many vertexes are sent for each
+           transaction.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.rexster.output.edge.txsize</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster Output format transaction size. This parameter
+           defines how many edges are sent for each
+           transaction.
+         </td>
+       </tr>
+      </table>
+    </section>
+
+    <section name="Prepare The Environment">
+    In this section we will briefly explain how to prepare a Rexster server
+    for your computation. For additional information about Rexster and
+    the configuration of the server, you can take a look at the
+    <a href="https://github.com/tinkerpop/rexster/wiki" target="_new">
+      Rexster Wiki</a>.<br />
+    As it is visible in the <a href="#Quick_Start_For_Inpatients">quick
+    start</a> above, to start a new Rexster server, it is extremely easy.
+    First of all, you need to download one of the versions available on the
+    Tinkerpop repository. We suggest you to get the most recent version, as we
+    will explain later when talking about <a href="#Cavet">cavet</a>. So, the
+    first step is to download rexster and unzip it.
+
+    <div class="source"><pre class="prettyprint">
+$ wget http://tinkerpop.com/downloads/rexster/rexster-server-2.4.0.zip
+$ unzip rexster-server-2.4.0.zip
+    </pre></div>
+
+  At this point, it is important to perpare the database you are going to
+  use, allowing the Giraph Kibble to be available for the database. This is
+  done by adding the entry <code>&lt;allow&gt;tp:giraph&lt;/allow&gt;"</code>
+  for the desired graph under the <code>&lt;extension&gt;</code> tag scope.
+  Moreover, you will need to copy the Giraph Kibble into the <code>ext/</code>
+  directory of rexster.
+
+    <br/><br/>
+    <div class="source"><pre class="prettyprint">
+$ cp /path/to/giraph/giraph-rexster/giraph-kibble/target/giraph-kibble-${hadoop.version}.jar rexster-server-2.4.0/ext/
+    </pre></div>
+
+    At this point, just enter the rexster directory and start the server.<br/>
+    <div class="source"><pre class="prettyprint">
+$ cd rexster-server-2.4.0
+$ ./bin/rexster.sh -s
+    </pre></div>
+
+    This command will automatically locate the configuration file in the
+    <code>config/</code> directory and will automatically provide you with
+    some initial database. To test the server is properly working, open
+    a browser and type the following URL.
+
+    <div class="source"><pre class="prettyprint">
+    http://localhost:8182/graphs/
+    </pre></div>
+
+    This will provide you with a JSON listing the available loaded graphs.
+    </section>
+      
+    <section name="Example explained: Input Format">
+    The first part of the API that we are presenting is the
+    <b>Rexster Input Format</b>. This API allows a Giraph computation to load
+    the graph from one database exposed by an existing 
+
+    <h4>Vertex Input Format</h4>
+    As anticipated earlier, the input API provides two required abstract
+    classes, namely <code>RexsterVertexInputFormat</code> and
+    <code>RexsterEdgeInputFormat</code>. This is required, since the Giraph
+    Kibble provides two different URIs to load the vertices and the edges.<br/>
+    NB: you need to make also sure that the rexster hostname is provided to
+    Giraph, since this is a mandatory parameter.<br/>
+    The two classes below are directly extracted from the Giraph source code
+    repository and exemplify how to implement custom
+    <code>RexsterVertexInputFormat</code> and
+    <code>RexsterEdgeInputFormat</code>.<br/>
+    <div class="source"><pre class="prettyprint">
+public class RexsterLongDoubleFloatVertexInputFormat
+  extends RexsterVertexInputFormat&lt;LongWritable, DoubleWritable,
+          FloatWritable&gt; {
+
+  @Override
+  public RexsterVertexReader createVertexReader(
+    InputSplit split, TaskAttemptContext context) throws IOException {
+
+    return new RexsterLongDoubleFloatVertexReader();
+  }
+
+  /**
+   * Rexster vertex reader
+   */
+  protected class RexsterLongDoubleFloatVertexReader
+    extends RexsterVertexReader {
+
+    @Override
+    protected Vertex&lt;LongWritable, DoubleWritable, FloatWritable&gt; parseVertex(
+      JSONObject jsonVertex) throws JSONException {
+
+      /* create the actual vertex */
+      Vertex&lt;LongWritable, DoubleWritable, FloatWritable&gt; vertex =
+        getConf().createVertex();
+
+      Long id;
+      try {
+        id = jsonVertex.getLong("_id");
+      } catch (JSONException ex) {
+        /* OrientDB compatibility; try to transform it as long */
+        String idString = jsonVertex.getString("_id");
+        String[] splits = idString.split(":");
+        id = Long.parseLong(splits[1]);
+      }
+      vertex.initialize(new LongWritable(id), new DoubleWritable(0));
+      return vertex;
+    }
+  }
+}
+    </pre></div>
+
+    <h4>Edge Input Format</h4>
+    <div class="source"><pre class="prettyprint">
+public class RexsterLongFloatEdgeInputFormat
+  extends RexsterEdgeInputFormat&lt;LongWritable, FloatWritable&gt; {
+
+  @Override
+  public RexsterEdgeReader createEdgeReader(
+      InputSplit split, TaskAttemptContext context) throws IOException {
+
+    return new RexsterLongFloatEdgeReader();
+  }
+
+  protected class RexsterLongFloatEdgeReader extends RexsterEdgeReader {
+
+    /** source vertex of the edge */
+    private LongWritable sourceId;
+
+    @Override
+    public LongWritable getCurrentSourceId()
+      throws IOException, InterruptedException {
+
+      return this.sourceId;
+    }
+
+    @Override
+    protected Edge&lt;LongWritable, FloatWritable&gt; parseEdge(JSONObject jsonEdge)
+      throws JSONException {
+
+      Long value = jsonEdge.getLong("weight");
+      Long dest;
+      try {
+        dest = jsonEdge.getLong("_outV");
+      } catch (JSONException ex) {
+        /* OrientDB compatibility; try to transform it as long */
+        String idString = jsonEdge.getString("_outV");
+        String[] splits = idString.split(":");
+        dest = Long.parseLong(splits[1]);
+      }
+      Edge&lt;LongWritable, FloatWritable&gt; edge =
+        EdgeFactory.create(new LongWritable(dest), new FloatWritable(value));
+
+      Long sid;
+      try {
+        sid = jsonEdge.getLong("_inV");
+      } catch (JSONException ex) {
+        /* OrientDB compatibility; try to transform it as long */
+        String sidString = jsonEdge.getString("_inV");
+        String[] splits = sidString.split(":");
+        sid = Long.parseLong(splits[1]);
+      }
+      this.sourceId = new LongWritable(sid);
+      return edge;
+    }
+  }
+}
+    </pre></div>
+
+    <h4>Usage</h4>
+    To use these classes, it is simple and does not require any particular
+    effort. To provide you with an example, below you can find the Hadoop
+    command issued to start a Shortest Path computation by loading the
+    graph from Rexster.
+
+    <div class="source"><pre class="prettyprint">
+hadoop jar /path/to/giraph/giraph-examples/target/giraph-examples-*-jar-with-dependencies.jar \
+  org.apache.giraph.GiraphRunner \
+  -libjars /path/to/giraph/giraph-rexster/giraph-rexster-io/target/giraph-rexster-io*-jar-with-dependencies.jar \
+  org.apache.giraph.examples.SimpleShortestPathsComputation \
+  -vif org.apache.giraph.rexster.io.formats.RexsterLongDoubleFloatVertexInputFormat \
+  -eif org.apache.giraph.rexster.io.formats.RexsterLongFloatEdgeInputFormat \
+  -vof org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat \
+  -op output \
+  -w 1
+    </pre></div>
+    </section>
+
+    <section name="Example explained: Output Format">
+    <h4>Vertex Output Format</h4>
+    Also in this case, the output API provides two required
+    classes, namely <code>RexsterVertexOutputFormat</code> and
+    <code>RexsterEdgeOutputFormat</code>. Also in this case, both are required,
+    due to the way the Giraph Kibble provides manages the sotring of the
+    edges.<br/>
+    NB: to deal with databases deadlocks and consistency issues, the
+    Kibble uses the Exponetial Backoff strategy to complete the transation.
+    Make sure that the parameters for the time daley and number of retry, suit
+    your needs. Moreover, to reduce the quantiti of memory used by rexster,
+    the size of each transaction is also provided. Make sure that also this
+    parameter suits your environment.<br/>
+    Differently from the Input format present above, in this case you can
+    directly make us of the <code>RexsterVertexOutputFormat</code> and
+    <code>RexsterEdgeOutputFormat</code> classes without the need to implement
+    your own. However, in some cases it is still reasonable to user your
+    own.<br/>
+    The two classes below are directly extracted from the Giraph source code
+    repository and exemplify how to implement custom
+    <code>RexsterVertexOutputFormat</code> and
+    <code>RexsterEdgeOutputFormat</code>.<br/>
+    <div class="source"><pre class="prettyprint">
+public class RexsterLongDoubleFloatVertexOutputFormat
+  extends RexsterVertexOutputFormat&lt;LongWritable, DoubleWritable,
+          FloatWritable&gt; {
+
+  @Override
+  public RexsterVertexWriter createVertexWriter(
+      TaskAttemptContext context) throws IOException,
+      InterruptedException {
+
+    return new RexsterLongDoubleFloatVertexWriter();
+  }
+
+  /**
+   * Rexster vertex writer.
+   */
+  protected class RexsterLongDoubleFloatVertexWriter
+    extends RexsterVertexWriter {
+
+    /** current vertex ID */
+    private LongWritable vertexId;
+
+    @Override
+    protected JSONObject getVertex(
+      Vertex&lt;LongWritable, DoubleWritable, FloatWritable&gt; vertex)
+      throws JSONException {
+
+      vertexId = vertex.getId();
+
+      double value = vertex.getValue().get();
+      JSONObject jsonVertex = new JSONObject();
+      jsonVertex.accumulate("value", value);
+
+      return jsonVertex;
+    }
+
+    @Override
+    protected LongWritable getVertexId() {
+      return vertexId;
+    }
+  }
+}
+      </pre></div>
+
+      <h4>Edge Output Format</h4>
+<div class="source"><pre class="prettyprint">
+public class RexsterLongDoubleFloatEdgeOutputFormat
+  extends RexsterEdgeOutputFormat&lt;LongWritable, DoubleWritable,
+          FloatWritable&gt; {
+
+  @Override
+  public RexsterEdgeWriter createEdgeWriter(
+      TaskAttemptContext context) throws IOException,
+      InterruptedException {
+
+    return new RexsterLongDoubleFloatEdgeWriter();
+  }
+
+  /**
+   * Rexster edge writer.
+   */
+  protected class RexsterLongDoubleFloatEdgeWriter
+    extends RexsterEdgeWriter {
+
+    @Override
+    protected JSONObject getEdge(LongWritable srcId, DoubleWritable srcValue,
+      Edge&lt;LongWritable, FloatWritable&gt; edge) throws JSONException {
+
+      long outId = srcId.get();
+      long inId = edge.getTargetVertexId().get();
+      float value = edge.getValue().get();
+      JSONObject jsonEdge = new JSONObject();
+      jsonEdge.accumulate("_outV", outId);
+      jsonEdge.accumulate("_inV",  inId);
+      jsonEdge.accumulate("value", value);
+
+      return jsonEdge;
+    }
+  }
+}
+      </pre></div>
+
+    <h4>Usage</h4>
+    Also in this case, we provide you with an example of how to use these
+    classes.
+
+    <div class="source"><pre class="prettyprint">
+hadoop jar /path/to/giraph/giraph-examples/target/giraph-examples-*-jar-with-dependencies.jar \
+  org.apache.giraph.GiraphRunner \
+  -libjars /path/to/giraph/giraph-rexster/giraph-rexster-io/target/giraph-rexster-io*-jar-with-dependencies.jar \
+  org.apache.giraph.examples.SimpleShortestPathsComputation \
+  -vif org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat \
+  -vof org.apache.giraph.rexster.io.formats.RexsterVertexOutputFormat \
+  -eof org.apache.giraph.rexster.io.formats.RexsterEdgeOutputFormat \
+  -vip input/ \
+  -w 1
+    </pre></div>
+    </section>
+
+    <section name="Cavet">
+      <h4>OrientDB</h4>
+      One of the most important details that you must be aware of is that
+      only using Rexster with a version equal or grater to 2.5.0 you will be
+      able to work with OrietnDB. Unfortunately, the previous versions of
+      Rexster include the buggy OrientDB API, which cause issues that are very
+      difficult to handle. With newer versions of OrientDB, the API has been
+      improved and the system works as expected.
+    </section>
+  </body>
+</document>

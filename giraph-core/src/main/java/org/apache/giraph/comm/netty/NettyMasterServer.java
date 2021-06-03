@@ -18,13 +18,14 @@
 
 package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
-import org.apache.giraph.comm.MasterServer;
-import org.apache.hadoop.util.Progressable;
-
 import java.net.InetSocketAddress;
+
+import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.comm.MasterServer;
+import org.apache.giraph.comm.flow_control.FlowControl;
+import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * Netty implementation of {@link MasterServer}
@@ -39,13 +40,15 @@ public class NettyMasterServer implements MasterServer {
    * @param conf Hadoop configuration
    * @param service Centralized service
    * @param progressable Progressable for reporting progress
+   * @param exceptionHandler to handle uncaught exceptions
    */
   public NettyMasterServer(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceMaster<?, ?, ?, ?> service,
-      Progressable progressable) {
+      CentralizedServiceMaster<?, ?, ?> service,
+      Progressable progressable,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     nettyServer = new NettyServer(conf,
-        new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),
-        service.getMasterInfo(), progressable);
+        new MasterRequestServerHandler.Factory(service.getGlobalCommHandler()),
+        service.getMasterInfo(), progressable, exceptionHandler);
     nettyServer.start();
   }
 
@@ -55,7 +58,17 @@ public class NettyMasterServer implements MasterServer {
   }
 
   @Override
+  public String getLocalHostOrIp() {
+    return nettyServer.getLocalHostOrIp();
+  }
+
+  @Override
   public void close() {
     nettyServer.stop();
+  }
+
+  @Override
+  public void setFlowControl(FlowControl flowControl) {
+    nettyServer.setFlowControl(flowControl);
   }
 }

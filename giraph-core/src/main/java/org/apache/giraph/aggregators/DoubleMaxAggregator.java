@@ -32,6 +32,6 @@ public class DoubleMaxAggregator extends BasicAggregator<DoubleWritable> {
 
   @Override
   public DoubleWritable createInitialValue() {
-    return new DoubleWritable(Double.MIN_VALUE);
+    return new DoubleWritable(Double.NEGATIVE_INFINITY);
   }
 }

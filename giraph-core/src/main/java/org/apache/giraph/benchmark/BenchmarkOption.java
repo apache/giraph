@@ -55,6 +55,13 @@ public class BenchmarkOption {
       new BenchmarkOption(
           "l", "localEdgesMinRatio", true,
           "Minimum ratio of partition-local edges (default is 0)");
+  /** Option for using Jython */
+  public static final BenchmarkOption JYTHON =
+      new BenchmarkOption("j", "jython", false, "Use jython implementation");
+  /** Option for path to script for computation */
+  public static final BenchmarkOption SCRIPT_PATH =
+      new BenchmarkOption("sp", "scriptPath", true,
+          "Path to script for computation, can be local or HDFS path");
 
   /** Short option */
   private String shortOption;

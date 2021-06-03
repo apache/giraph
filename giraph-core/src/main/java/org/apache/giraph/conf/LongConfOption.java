@@ -28,17 +28,22 @@ public class LongConfOption extends AbstractConfOption {
 
   /**
    * Constructor
+   *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public LongConfOption(String key, long defaultValue) {
-    super(key);
+  public LongConfOption(String key, long defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public long getDefaultValue() {
     return defaultValue;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return get(conf) == defaultValue;
   }
 
   @Override public String getDefaultValueStr() {
@@ -51,6 +56,7 @@ public class LongConfOption extends AbstractConfOption {
 
   /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return value set for key, or defaultValue
    */
@@ -59,7 +65,19 @@ public class LongConfOption extends AbstractConfOption {
   }
 
   /**
+   * Lookup value, use passed in default value if not found.
+   *
+   * @param conf Configuration
+   * @param val default value to use
+   * @return set for key, or default value passed in
+   */
+  public long getWithDefault(Configuration conf, long val) {
+    return conf.getLong(getKey(), val);
+  }
+
+  /**
    * Set value for key
+   *
    * @param conf Configuration
    * @param value to set
    */
@@ -69,11 +87,12 @@ public class LongConfOption extends AbstractConfOption {
 
   /**
    * Set value if it's not already present
+   *
    * @param conf Configuration
    * @param value to set
    */
   public void setIfUnset(Configuration conf, long value) {
-    if (conf.get(getKey()) == null) {
+    if (!contains(conf)) {
       conf.setLong(getKey(), value);
     }
   }

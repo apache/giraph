@@ -103,16 +103,6 @@ public class BasicPartitionOwner implements PartitionOwner,
   }
 
   @Override
-  public String getCheckpointFilesPrefix() {
-    return checkpointFilesPrefix;
-  }
-
-  @Override
-  public void setCheckpointFilesPrefix(String checkpointFilesPrefix) {
-    this.checkpointFilesPrefix = checkpointFilesPrefix;
-  }
-
-  @Override
   public void writeWithWorkerIds(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(workerInfo.getTaskId());

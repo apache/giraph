@@ -75,21 +75,20 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    protected Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    protected Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException {
-      String first;
-      String second;
+
+      StringBuilder str = new StringBuilder();
       if (reverseOutput) {
-        first = vertex.getValue().toString();
-        second = vertex.getId().toString();
+        str.append(vertex.getValue().toString());
+        str.append(delimiter);
+        str.append(vertex.getId().toString());
       } else {
-        first = vertex.getId().toString();
-        second = vertex.getValue().toString();
+        str.append(vertex.getId().toString());
+        str.append(delimiter);
+        str.append(vertex.getValue().toString());
       }
-      Text line = new Text(first + delimiter + second);
-      return line;
+      return new Text(str.toString());
     }
-
   }
-
 }

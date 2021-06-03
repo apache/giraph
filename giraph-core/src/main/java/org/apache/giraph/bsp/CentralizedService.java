@@ -19,6 +19,10 @@
 package org.apache.giraph.bsp;
 
 import java.util.List;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.job.JobProgressTracker;
+import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -30,13 +34,10 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedService<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
-
-
+    V extends Writable, E extends Writable> {
   /**
    * Get the current global superstep of the application to work on.
    *
@@ -52,18 +53,29 @@ public interface CentralizedService<I extends WritableComparable,
   long getRestartedSuperstep();
 
   /**
-   * Given a superstep, should it be checkpointed based on the
-   * checkpoint frequency?
-   *
-   * @param superstep superstep to check against frequency
-   * @return true if checkpoint frequency met or superstep is 1.
-   */
-  boolean checkpointFrequencyMet(long superstep);
-
-  /**
    * Get list of workers
    *
    * @return List of workers
    */
   List<WorkerInfo> getWorkerInfoList();
+
+  /**
+   * Get master info
+   *
+   * @return Master info
+   */
+  MasterInfo getMasterInfo();
+
+  /**
+   * Get JobProgressTracker to report progress to
+   *
+   * @return JobProgressTrackerClient
+   */
+  JobProgressTracker getJobProgressTracker();
+
+  /**
+   * Get configuration
+   * @return configuration
+   */
+  ImmutableClassesGiraphConfiguration<I, V, E> getConfiguration();
 }

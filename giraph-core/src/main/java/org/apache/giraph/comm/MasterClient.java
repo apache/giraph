@@ -18,10 +18,11 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.hadoop.io.Writable;
-
 import java.io.IOException;
+
+import org.apache.giraph.comm.flow_control.FlowControl;
+import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Interface for master to send messages to workers
@@ -35,19 +36,18 @@ public interface MasterClient {
   /**
    * Sends aggregator to its owner
    *
-   * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
-   * @param aggregatedValue Value of the aggregator
+   * @param name Name of the object
+   * @param type Global communication type
+   * @param value Object value
    * @throws IOException
    */
-  void sendAggregator(String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
-      Writable aggregatedValue) throws IOException;
+  void sendToOwner(String name, GlobalCommType type, Writable value)
+    throws IOException;
 
   /**
    * Flush aggregated values cache.
    */
-  void finishSendingAggregatedValues() throws IOException;
+  void finishSendingValues() throws IOException;
 
   /**
    * Flush all outgoing messages.  This will synchronously ensure that all
@@ -56,8 +56,23 @@ public interface MasterClient {
   void flush();
 
   /**
+   * Send a request to a remote server (should be already connected)
+   *
+   * @param destTaskId Destination worker id
+   * @param request Request to send
+   */
+  void sendWritableRequest(int destTaskId, WritableRequest request);
+
+  /**
    * Closes all connections.
    */
   void closeConnections();
+
+  /**
+   * Get the reference to the flow control policy used for sending requests
+   *
+   * @return reference to the flow control policy
+   */
+  FlowControl getFlowControl();
 }
 

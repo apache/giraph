@@ -17,25 +17,33 @@
  */
 package org.apache.giraph.comm.netty;
 
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.SendEdgeCache;
 import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
+import org.apache.giraph.comm.SendOneMessageToManyCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.requests.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerEdgesRequest;
-import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerVerticesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
@@ -43,9 +51,10 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -56,13 +65,6 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.util.PercentGauge;
 
-import java.io.IOException;
-import java.util.Map;
-
-import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
-import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
-import static org.apache.giraph.conf.GiraphConstants.MAX_MUTATIONS_PER_REQUEST;
-
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
  * class is not thread-safe and expected to be used and then thrown away after
@@ -71,46 +73,47 @@ import static org.apache.giraph.conf.GiraphConstants.MAX_MUTATIONS_PER_REQUEST;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("unchecked")
 public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    WorkerClientRequestProcessor<I, V, E, M> {
+    V extends Writable, E extends Writable> implements
+    WorkerClientRequestProcessor<I, V, E> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(NettyWorkerClientRequestProcessor.class);
   /** Cached partitions of vertices to send */
-  private final SendPartitionCache<I, V, E, M> sendPartitionCache;
+  private final SendPartitionCache<I, V, E> sendPartitionCache;
   /** Cached map of partitions to vertex indices to messages */
-  private final SendMessageCache<I, M> sendMessageCache;
+  private final SendMessageCache<I, Writable> sendMessageCache;
   /** Cache of edges to be sent. */
   private final SendEdgeCache<I, E> sendEdgeCache;
   /** Cached map of partitions to vertex indices to mutations */
-  private final SendMutationsCache<I, V, E, M> sendMutationsCache =
-      new SendMutationsCache<I, V, E, M>();
+  private final SendMutationsCache<I, V, E> sendMutationsCache =
+      new SendMutationsCache<I, V, E>();
   /** NettyClient that could be shared among one or more instances */
-  private final WorkerClient<I, V, E, M> workerClient;
-  /** Messages sent during the last superstep */
-  private long totalMsgsSentInSuperstep = 0;
+  private final WorkerClient<I, V, E> workerClient;
   /** Maximum size of messages per remote worker to cache before sending */
   private final int maxMessagesSizePerWorker;
+  /** Maximum size of vertices per remote worker to cache before sending. */
+  private final int maxVerticesSizePerWorker;
   /** Maximum size of edges per remote worker to cache before sending. */
   private final int maxEdgesSizePerWorker;
   /** Maximum number of mutations per partition before sending */
   private final int maxMutationsPerPartition;
   /** Giraph configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Service worker */
-  private final CentralizedServiceWorker<I, V, E, M> serviceWorker;
+  private final CentralizedServiceWorker<I, V, E> serviceWorker;
   /** Server data from the server (used for local requests) */
-  private final ServerData<I, V, E, M> serverData;
+  private final ServerData<I, V, E> serverData;
 
   // Per-Superstep Metrics
   /** Number of requests that went on the wire */
   private final Counter localRequests;
   /** Number of requests that were handled locally */
   private final Counter remoteRequests;
+  /** Cached message value factory */
+  private final MessageValueFactory messageValueFactory;
 
   /**
    * Constructor.
@@ -118,20 +121,37 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * @param context Context
    * @param conf Configuration
    * @param serviceWorker Service worker
+   * @param useOneMessageToManyIdsEncoding should use one message to many
    */
   public NettyWorkerClientRequestProcessor(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
-      CentralizedServiceWorker<I, V, E, M> serviceWorker) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
+      CentralizedServiceWorker<I, V, E> serviceWorker,
+      boolean useOneMessageToManyIdsEncoding) {
     this.workerClient = serviceWorker.getWorkerClient();
     this.configuration = conf;
 
-    sendPartitionCache = new SendPartitionCache<I, V, E, M>(context, conf);
-    sendMessageCache = new SendMessageCache<I, M>(conf, serviceWorker);
+
+    sendPartitionCache =
+        new SendPartitionCache<I, V, E>(conf, serviceWorker);
     sendEdgeCache = new SendEdgeCache<I, E>(conf, serviceWorker);
-    maxMessagesSizePerWorker = MAX_MSG_REQUEST_SIZE.get(conf);
-    maxEdgesSizePerWorker = MAX_EDGE_REQUEST_SIZE.get(conf);
-    maxMutationsPerPartition = MAX_MUTATIONS_PER_REQUEST.get(conf);
+    maxMessagesSizePerWorker =
+        GiraphConfiguration.MAX_MSG_REQUEST_SIZE.get(conf);
+    maxVerticesSizePerWorker =
+        GiraphConfiguration.MAX_VERTEX_REQUEST_SIZE.get(conf);
+    if (useOneMessageToManyIdsEncoding) {
+      sendMessageCache =
+        new SendOneMessageToManyCache<I, Writable>(conf, serviceWorker,
+          this, maxMessagesSizePerWorker);
+    } else {
+      sendMessageCache =
+        new SendMessageCache<I, Writable>(conf, serviceWorker,
+          this, maxMessagesSizePerWorker);
+    }
+    maxEdgesSizePerWorker =
+        GiraphConfiguration.MAX_EDGE_REQUEST_SIZE.get(conf);
+    maxMutationsPerPartition =
+        GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST.get(conf);
     this.serviceWorker = serviceWorker;
     this.serverData = serviceWorker.getServerData();
 
@@ -140,71 +160,47 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     SuperstepMetricsRegistry smr = GiraphMetrics.get().perSuperstep();
     localRequests = smr.getCounter(MetricNames.LOCAL_REQUESTS);
     remoteRequests = smr.getCounter(MetricNames.REMOTE_REQUESTS);
-    final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
-        new Gauge<Long>() {
-          @Override
-          public Long value() {
-            return localRequests.count() + remoteRequests.count();
-          }
-        }
-    );
-    smr.getGauge(MetricNames.PERCENT_LOCAL_REQUESTS, new PercentGauge() {
-      @Override protected double getNumerator() {
-        return localRequests.count();
-      }
-
-      @Override protected double getDenominator() {
-        return totalRequests.value();
-      }
-    });
+    setupGauges(smr, localRequests, remoteRequests);
+    messageValueFactory = configuration.createOutgoingMessageValueFactory();
   }
 
   @Override
-  public boolean sendMessageRequest(I destVertexId, M message) {
-    PartitionOwner owner =
-        serviceWorker.getVertexPartitionOwner(destVertexId);
-    WorkerInfo workerInfo = owner.getWorkerInfo();
-    final int partitionId = owner.getPartitionId();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("sendMessageRequest: Send bytes (" + message.toString() +
-          ") to " + destVertexId + " on worker " + workerInfo);
-    }
-    ++totalMsgsSentInSuperstep;
+  public void sendMessageRequest(I destVertexId, Writable message) {
+    this.sendMessageCache.sendMessageRequest(destVertexId, message);
+  }
 
-    // Add the message to the cache
-    int workerMessageSize = sendMessageCache.addMessage(
-        workerInfo, partitionId, destVertexId, message);
+  @Override
+  public void sendMessageToAllRequest(
+    Vertex<I, V, E> vertex, Writable message) {
+    this.sendMessageCache.sendMessageToAllRequest(vertex, message);
+  }
 
-    // Send a request if the cache of outgoing message to
-    // the remote worker 'workerInfo' is full enough to be flushed
-    if (workerMessageSize >= maxMessagesSizePerWorker) {
-      PairList<Integer, ByteArrayVertexIdMessages<I, M>>
-          workerMessages =
-          sendMessageCache.removeWorkerMessages(workerInfo);
-      WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, M>(workerMessages);
-      doRequest(workerInfo, writableRequest);
-      return true;
-    }
-
-    return false;
+  @Override
+  public void sendMessageToAllRequest(
+    Iterator<I> vertexIdIterator, Writable message) {
+    this.sendMessageCache.sendMessageToAllRequest(vertexIdIterator, message);
   }
 
   @Override
   public void sendPartitionRequest(WorkerInfo workerInfo,
-                                   Partition<I, V, E, M> partition) {
+                                   Partition<I, V, E> partition) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("sendVertexRequest: Sending to " + workerInfo +
           ", with partition " + partition);
     }
 
-    WritableRequest vertexRequest =
-        new SendVertexRequest<I, V, E, M>(partition);
+    WritableRequest vertexRequest = new SendVertexRequest<I, V, E>(partition);
     doRequest(workerInfo, vertexRequest);
 
     // Messages are stored separately
     if (serviceWorker.getSuperstep() != BspService.INPUT_SUPERSTEP) {
       sendPartitionMessages(workerInfo, partition);
+      ConcurrentMap<I, VertexMutations<I, V, E>> vertexMutationMap =
+          serverData.getPartitionMutations().remove(partition.getId());
+      WritableRequest partitionMutationsRequest =
+          new SendPartitionMutationsRequest<I, V, E>(partition.getId(),
+              vertexMutationMap);
+      doRequest(workerInfo, partitionMutationsRequest);
     }
   }
 
@@ -215,56 +211,65 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * @param partition Partition whose messages to send
    */
   private void sendPartitionMessages(WorkerInfo workerInfo,
-                                     Partition<I, V, E, M> partition) {
+                                     Partition<I, V, E> partition) {
     final int partitionId = partition.getId();
-    MessageStoreByPartition<I, M> messageStore =
+    MessageStore<I, Writable> messageStore =
         serverData.getCurrentMessageStore();
-    ByteArrayVertexIdMessages<I, M> vertexIdMessages =
-        new ByteArrayVertexIdMessages<I, M>();
+    ByteArrayVertexIdMessages<I, Writable> vertexIdMessages =
+        new ByteArrayVertexIdMessages<I, Writable>(
+            messageValueFactory);
     vertexIdMessages.setConf(configuration);
     vertexIdMessages.initialize();
     for (I vertexId :
         messageStore.getPartitionDestinationVertices(partitionId)) {
-      try {
-        // Messages cannot be re-used from this iterable, but add()
-        // serializes the message, making this safe
-        Iterable<M> messages = messageStore.getVertexMessages(vertexId);
-        for (M message : messages) {
-          vertexIdMessages.add(vertexId, message);
-        }
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "sendVertexRequest: Got IOException ", e);
+      // Messages cannot be re-used from this iterable, but add()
+      // serializes the message, making this safe
+      Iterable<Writable> messages = messageStore.getVertexMessages(vertexId);
+      for (Writable message : messages) {
+        vertexIdMessages.add(vertexId, message);
       }
       if (vertexIdMessages.getSize() > maxMessagesSizePerWorker) {
-        WritableRequest messagesRequest = new
-            SendPartitionCurrentMessagesRequest<I, V, E, M>(
+        WritableRequest messagesRequest =
+            new SendPartitionCurrentMessagesRequest<I, V, E, Writable>(
             partitionId, vertexIdMessages);
         doRequest(workerInfo, messagesRequest);
         vertexIdMessages =
-            new ByteArrayVertexIdMessages<I, M>();
+            new ByteArrayVertexIdMessages<I, Writable>(
+                messageValueFactory);
         vertexIdMessages.setConf(configuration);
         vertexIdMessages.initialize();
       }
     }
     if (!vertexIdMessages.isEmpty()) {
       WritableRequest messagesRequest = new
-          SendPartitionCurrentMessagesRequest<I, V, E, M>(
+          SendPartitionCurrentMessagesRequest<I, V, E, Writable>(
           partitionId, vertexIdMessages);
       doRequest(workerInfo, messagesRequest);
     }
+    messageStore.clearPartition(partitionId);
   }
 
   @Override
-  public void sendVertexRequest(PartitionOwner partitionOwner,
-                                Vertex<I, V, E, M> vertex) {
-    Partition<I, V, E, M> partition =
-        sendPartitionCache.addVertex(partitionOwner, vertex);
-    if (partition == null) {
-      return;
+  public boolean sendVertexRequest(PartitionOwner partitionOwner,
+      Vertex<I, V, E> vertex) {
+    // Add the vertex to the cache
+    int workerMessageSize = sendPartitionCache.addVertex(
+        partitionOwner, vertex);
+
+    // Send a request if the cache of outgoing message to
+    // the remote worker 'workerInfo' is full enough to be flushed
+    if (workerMessageSize >= maxVerticesSizePerWorker) {
+      PairList<Integer, ExtendedDataOutput>
+          workerPartitionVertices =
+          sendPartitionCache.removeWorkerData(partitionOwner.getWorkerInfo());
+      WritableRequest writableRequest =
+          new SendWorkerVerticesRequest<I, V, E>(
+              configuration, workerPartitionVertices);
+      doRequest(partitionOwner.getWorkerInfo(), writableRequest);
+      return true;
     }
 
-    sendPartitionRequest(partitionOwner.getWorkerInfo(), partition);
+    return false;
   }
 
   @Override
@@ -305,7 +310,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing edges to the remote worker is
     // full
     if (workerEdgesSize >= maxEdgesSizePerWorker) {
-      PairList<Integer, ByteArrayVertexIdEdges<I, E>> workerEdges =
+      PairList<Integer, VertexIdEdges<I, E>> workerEdges =
           sendEdgeCache.removeWorkerEdges(workerInfo);
       WritableRequest writableRequest =
           new SendWorkerEdgesRequest<I, E>(workerEdges);
@@ -329,10 +334,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       int partitionMutationCount) {
     // Send a request if enough mutations are there for a partition
     if (partitionMutationCount >= maxMutationsPerPartition) {
-      Map<I, VertexMutations<I, V, E, M>> partitionMutations =
+      Map<I, VertexMutations<I, V, E>> partitionMutations =
           sendMutationsCache.removePartitionMutations(partitionId);
       WritableRequest writableRequest =
-          new SendPartitionMutationsRequest<I, V, E, M>(
+          new SendPartitionMutationsRequest<I, V, E>(
               partitionId, partitionMutations);
       doRequest(partitionOwner.getWorkerInfo(), writableRequest);
     }
@@ -360,7 +365,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   }
 
   @Override
-  public void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException {
+  public void addVertexRequest(Vertex<I, V, E> vertex) throws IOException {
     PartitionOwner partitionOwner =
         serviceWorker.getVertexPartitionOwner(vertex.getId());
     int partitionId = partitionOwner.getPartitionId();
@@ -397,34 +402,30 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public void flush() throws IOException {
-    // Execute the remaining send partitions (if any)
-    for (Map.Entry<PartitionOwner, Partition<I, V, E, M>> entry :
-        sendPartitionCache.getOwnerPartitionMap().entrySet()) {
-      sendPartitionRequest(entry.getKey().getWorkerInfo(), entry.getValue());
-    }
-    sendPartitionCache.clear();
-
     // Execute the remaining sends messages (if any)
-    PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdMessages<I, M>>>
-        remainingMessageCache = sendMessageCache.removeAllMessages();
+    // including individual and compact messages.
+    sendMessageCache.flush();
+
+    // Execute the remaining sends vertices (if any)
+    PairList<WorkerInfo, PairList<Integer, ExtendedDataOutput>>
+        remainingVertexCache = sendPartitionCache.removeAllData();
     PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdMessages<I, M>>>.Iterator
-        iterator = remainingMessageCache.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
+        PairList<Integer, ExtendedDataOutput>>.Iterator
+        vertexIterator = remainingVertexCache.getIterator();
+    while (vertexIterator.hasNext()) {
+      vertexIterator.next();
       WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, M>(
-              iterator.getCurrentSecond());
-      doRequest(iterator.getCurrentFirst(), writableRequest);
+          new SendWorkerVerticesRequest(
+              configuration, vertexIterator.getCurrentSecond());
+      doRequest(vertexIterator.getCurrentFirst(), writableRequest);
     }
 
     // Execute the remaining sends edges (if any)
     PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdEdges<I, E>>>
+        VertexIdEdges<I, E>>>
         remainingEdgeCache = sendEdgeCache.removeAllEdges();
     PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdEdges<I, E>>>.Iterator
+        PairList<Integer, VertexIdEdges<I, E>>>.Iterator
         edgeIterator = remainingEdgeCache.getIterator();
     while (edgeIterator.hasNext()) {
       edgeIterator.next();
@@ -435,12 +436,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     }
 
     // Execute the remaining sends mutations (if any)
-    Map<Integer, Map<I, VertexMutations<I, V, E, M>>> remainingMutationsCache =
+    Map<Integer, Map<I, VertexMutations<I, V, E>>> remainingMutationsCache =
         sendMutationsCache.removeAllPartitionMutations();
-    for (Map.Entry<Integer, Map<I, VertexMutations<I, V, E, M>>> entry :
+    for (Map.Entry<Integer, Map<I, VertexMutations<I, V, E>>> entry :
         remainingMutationsCache.entrySet()) {
       WritableRequest writableRequest =
-          new SendPartitionMutationsRequest<I, V, E, M>(
+          new SendPartitionMutationsRequest<I, V, E>(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
           serviceWorker.getVertexPartitionOwner(
@@ -451,9 +452,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public long resetMessageCount() {
-    long messagesSentInSuperstep = totalMsgsSentInSuperstep;
-    totalMsgsSentInSuperstep = 0;
-    return messagesSentInSuperstep;
+    return this.sendMessageCache.resetMessageCount();
+  }
+
+  @Override
+  public long resetMessageBytesCount() {
+    return this.sendMessageCache.resetMessageBytesCount();
   }
 
   /**
@@ -462,7 +466,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * @param workerInfo Worker info
    * @param writableRequest Request to either submit or run locally
    */
-  private void doRequest(WorkerInfo workerInfo,
+  public void doRequest(WorkerInfo workerInfo,
                          WritableRequest writableRequest) {
     // If this is local, execute locally
     if (serviceWorker.getWorkerInfo().getTaskId() ==
@@ -474,5 +478,37 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
           workerInfo.getTaskId(), writableRequest);
       remoteRequests.inc();
     }
+  }
+
+  /**
+   * Sets up gauges for superstep metrics.
+   * This has to be static so that internal objects created here don't
+   * hold references to this$0. Otherwise we memory leaking
+   * NettyWorkerClientRequestProcessor objects.
+   *
+   * @param smr metric registry for current superstep
+   * @param localRequests counter for local requests
+   * @param remoteRequests counter for remote requests
+   */
+  private static void setupGauges(SuperstepMetricsRegistry smr,
+                                  final Counter localRequests,
+                                  final Counter remoteRequests) {
+    final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
+        new Gauge<Long>() {
+          @Override
+          public Long value() {
+            return localRequests.count() + remoteRequests.count();
+          }
+        }
+    );
+    smr.getGauge(MetricNames.PERCENT_LOCAL_REQUESTS, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return localRequests.count();
+      }
+
+      @Override protected double getDenominator() {
+        return totalRequests.value();
+      }
+    });
   }
 }

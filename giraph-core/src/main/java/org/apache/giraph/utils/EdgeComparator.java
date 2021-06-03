@@ -22,6 +22,7 @@ import com.google.common.collect.ComparisonChain;
 import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.WritableComparable;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 /**
@@ -31,7 +32,11 @@ import java.util.Comparator;
  * @param <E> Edge value (needs to be WritableComparable)
  */
 public class EdgeComparator<I extends WritableComparable,
-    E extends WritableComparable> implements Comparator<Edge<I, E>> {
+    E extends WritableComparable> implements Comparator<Edge<I, E>>,
+    Serializable {
+  /** Serialization version. */
+  private static final long serialVersionUID = 1L;
+
   @Override
   public int compare(Edge<I, E> e1, Edge<I, E> e2) {
     return compareEdges(e1, e2);

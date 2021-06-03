@@ -43,7 +43,8 @@ public interface BspEvent {
   boolean waitMsecs(int msecs);
 
   /**
-   * Wait indefinitely until the event occurs.
+   * Waits until timeout or fails with runtime exception.
+   * @param timeout Throws exception if waiting takes longer than timeout.
    */
-  void waitForever();
+  void waitForTimeoutOrFail(long timeout);
 }

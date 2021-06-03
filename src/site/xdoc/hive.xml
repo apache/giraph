@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+	  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Hive Input/Output with Giraph</title>
+  </properties>
+
+  <body>
+    <section name="Overview">
+      <p>
+        Giraph uses the <a href="https://github.com/facebook/hive-io-experimental">HiveIO</a> library written by Facebook to read and write Hive data.
+      </p>
+      <p>
+        Make sure you read the <a href="io.html">general IO</a> guide and the <a href="https://github.com/facebook/hive-io-experimental/blob/master/README.md">HiveIO README</a> before continuing here. Those two give a lot of helpful background information.
+      </p>
+    </section>
+    <section name="Input">
+      <p>
+        To read a Vertex-oriented table you will use <code>HiveVertexInputFormat</code> as your <code>VertexInputFormat</code>. To read an Edge-oriented table you will use <code>HiveEdgeInputFormat</code> as your <code>EdgeInputFormat</code>. You should not need to extend these classes, but rather just set them in the <code>GiraphConfiguration</code> and configure them as this guide describes. Under the hood these classes use <code>HiveVertexReader</code> and <code>HiveEdgeReader</code>.
+      </p>
+      <p>
+        You will need to implement the <code>HiveToVertex</code> and/or <code>HiveToEdge</code> interfaces to read vertices or edges, respectively. These interfaces extend the <code>Iterator</code> interface specialized with either <code>Vertex</code> or <code>EdgeWithSource</code> respectively. They get initialized with an <code>Iterator</code> of <code>HiveReadableRecord</code>s. You can only go through the records once (it is not an <code>Iterable</code>). It is up to you how to map records to Vertices and/or Edges. If your data fits the common use case of a single row mapping directly to a single vertex/edge, using the <code>SimpleHiveToVertex</code> and <code>SimpleHiveToEdge</code> as base classes will make things easier. We chose Java's <code>Iterator</code> interface as it is the most generic while allowing for easily plugging in existing algorithms (for example Guava's functional idioms).
+      </p>
+      <p>
+        Giraph uses HiveIO's <code>HiveInputDescription</code> to tell which Hive table to read from. This class contains the database name, table name, an optional partition filter, and an optional list of column names to fetch. The database name is "default" if you don't set it. The partition filter can be an arbitrary boolean expression like <code>date="2013-02-04" AND type="awesome"</code>. The list of columns defaults to an empty list which will grab all columns. You can specify certain columns to limit the fetching and improve performance.
+      </p>
+    </section>
+    <section name="Output">
+      <p>
+        To write to a Hive table you will use <code>HiveVertexOutputFormat</code> as your <code>VertexOutputFormat</code>. Similar to the input case above, you should not need to extend this class, but rather just use it directly and configure it. Under the hood it uses a <code>HiveVertexWriter</code>.
+      </p>
+      <p>
+        You need to implement a <code>VertexToHive</code> for Giraph to know how to convert vertices to Hive records. This interface takes a <code>Vertex</code> to write, a <code>HiveRecord</code> that you should fill, and a <code>HiveRecordSaver</code>. You must call <code>HiveRecordSaver.save()</code> after filling in the record data or no writing will occur. Once you call this the record will get serialized, so you are free to reuse the record object to write multiple rows. You can write as many records as you want for each <code>Vertex</code>, leaving it up to you how to map the vertices to Hive rows. If your data fits the common use case of a single vertex mapping directly to a single row, using the <code>SimpleVertexToHive</code> as a base class will make things easier.
+      </p>
+      <p>
+        Giraph uses HiveIO's <code>HiveOutputDescription</code> to tell which Hive table to write to. This class contains the database name, table name, and a map of partition values. The database and table name are as described in the input section above. The map of partition values is required if you are writing to a partitioned table.
+      </p>
+    </section>
+    <section name="Configuring your job">
+      <p>
+        Giraph comes with a <code>HiveGiraphRunner</code> that makes using all of the classes mentioned above easier for you. We recommend you use this instead of the regular <code>GiraphRunner</code>. You can run this class with -h or -help to see all the options.
+      </p>
+      <p>
+        Hive figures out where the metastore is using information in the <code>HiveConf</code> which reads from the environment. In our experience it works best to run your job using <code>$HIVE_HOME/bin/hive --service jar [your jar] org.apache.giraph.hive.HiveGiraphRunner [options]</code> instead of <code>$HADOOP_HOME/bin/hadoop jar ...</code> as this sets up all of the necessary variables.
+      </p>
+      <p>
+        If you choose to do it on your own you need to create and initialize the <code>HiveInputDescription</code> and <code>HiveOutputDescription</code> mentioned above. HiveIO has a notion of profiles, like namespaces, which it uses to allow reading and writing to multiple tables from the same process. In Giraph we use <code>vertex_input_profile</code>, <code>edge_input_profile</code>, and <code>vertex_output_profile</code> as our profiles. You need to register your descriptions with HiveIO using <code>HiveApiInputFormat.setProfileInputDesc</code> and <code>HiveApiOutputFormat.initProfile</code>. Additionally you will need to set the <code>HiveToVertex</code>, <code>HiveToEdge</code> and/or <code>VertexToHive</code> configuration parameters to the classes you implemented.
+      </p>
+      <p>
+        Make sure to take a look at the <a href="http://giraph.apache.org/apidocs/org/apache/giraph/hive/HiveGiraphRunner.html">HiveGiraphRunner</a> code if you are going down the DIY route.
+      </p>
+    </section>
+  </body>
+</document>

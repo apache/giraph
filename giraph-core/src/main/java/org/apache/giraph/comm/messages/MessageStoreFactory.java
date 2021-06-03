@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.MessageClasses;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -26,14 +28,25 @@ import org.apache.hadoop.io.WritableComparable;
  *
  * @param <I> Vertex id
  * @param <M> Message data
- * @param <S> Message store
+ * @param <MS> Message store
  */
 public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, S extends BasicMessageStore<I, M>> {
+    M extends Writable, MS> {
   /**
-   * Creates new message store
+   * Creates new message store.
    *
+   * @param messageClasses Message classes information to be held in the store
    * @return New message store
    */
-  S newStore();
+  MS newStore(MessageClasses<I, M> messageClasses);
+
+  /**
+   * Implementation class should use this method of initialization
+   * of any required internal state.
+   *
+   * @param partitionInfo Partition split info
+   * @param conf Configuration
+   */
+  void initialize(PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> conf);
 }

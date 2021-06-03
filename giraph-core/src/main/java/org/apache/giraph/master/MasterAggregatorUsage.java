@@ -34,6 +34,8 @@ public interface MasterAggregatorUsage extends AggregatorUsage {
    * @param aggregatorClass Class type of the aggregator
    * @param <A> Aggregator type
    * @return True iff aggregator wasn't already registered
+   * @throws InstantiationException
+   * @throws IllegalAccessException
    */
   <A extends Writable> boolean registerAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
@@ -48,6 +50,8 @@ public interface MasterAggregatorUsage extends AggregatorUsage {
    * @param aggregatorClass Class type of the aggregator
    * @param <A> Aggregator type
    * @return True iff aggregator wasn't already registered
+   * @throws InstantiationException
+   * @throws IllegalAccessException
    */
   <A extends Writable> boolean registerPersistentAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws

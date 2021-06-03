@@ -28,14 +28,13 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public interface WorkerRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Execute the request
    *
    * @param serverData Accessible data that can be mutated per the request
    */
-  void doRequest(ServerData<I, V, E, M> serverData);
+  void doRequest(ServerData<I, V, E> serverData);
 }

@@ -18,56 +18,50 @@
 package org.apache.giraph.yarn;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 import com.google.common.collect.Maps;
-import java.security.PrivilegedAction;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ContainerManager;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords
-  .FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords
-  .RegisterApplicationMasterRequest;
+  .RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,15 +92,21 @@ public class GiraphApplicationMaster {
    * the YarnClient. We will need to export this resource to the tasks also.
    * Construct the HEARTBEAT to use to ping the RM about job progress/health.
    */
+//TODO
+  /** For status update for clients - yet to be implemented\\
+  * Hostname of the container
+  */
+  private String appMasterHostname = "";
+  /** Port on which the app master listens for status updates from clients*/
+  private int appMasterRpcPort = 0;
+  /** Tracking url to which app master publishes info for clients to monitor*/
+  private String appMasterTrackingUrl = "";
+
   static {
     // pick up new conf XML file and populate it with stuff exported from client
     Configuration.addDefaultResource(GiraphConstants.GIRAPH_YARN_CONF_FILE);
   }
 
-  /** Handle to AppMaster's RPC connection to YARN and the RM. */
-  private final AMRMProtocol resourceManager;
-  /** bootstrap handle to YARN RPC service */
-  private final YarnRPC rpc;
   /** GiraphApplicationMaster's application attempt id */
   private final ApplicationAttemptId appAttemptId;
   /** GiraphApplicationMaster container id. Leave me here, I'm very useful */
@@ -117,6 +117,8 @@ public class GiraphApplicationMaster {
   private final int heapPerContainer;
   /** Giraph configuration for this job, transported here by YARN framework */
   private final ImmutableClassesGiraphConfiguration giraphConf;
+  /** Yarn configuration for this job*/
+  private final YarnConfiguration yarnConf;
   /** Completed Containers Counter */
   private final AtomicInteger completedCount;
   /** Failed Containers Counter */
@@ -127,12 +129,20 @@ public class GiraphApplicationMaster {
   private final AtomicInteger successfulCount;
   /** the ACK #'s for AllocateRequests + heartbeats == last response # */
   private AtomicInteger lastResponseId;
+  /** buffer tostore all tokens */
+  private ByteBuffer allTokens;
   /** Executor to attempt asynchronous launches of Giraph containers */
   private ExecutorService executor;
   /** YARN progress is a <code>float</code> between 0.0f and 1.0f */
-  private float progress;
-  /** An empty resource request with which to send heartbeats + progress */
-  private AllocateRequest heartbeat;
+  //Handle to communicate with the Resource Manager
+  @SuppressWarnings("rawtypes")
+  private AMRMClientAsync amRMClient;
+  /** Handle to communicate with the Node Manager */
+  private NMClientAsync nmClientAsync;
+  /** Listen to process the response from the Node Manager */
+  private NMCallbackHandler containerListener;
+  /** whether all containers finishe */
+  private volatile boolean done;
 
   /**
    * Construct the GiraphAppMaster, populate fields using env vars
@@ -144,169 +154,198 @@ public class GiraphApplicationMaster {
     throws IOException {
     containerId = cId; // future good stuff will need me to operate.
     appAttemptId = aId;
-    progress = 0.0f;
     lastResponseId = new AtomicInteger(0);
     giraphConf =
       new ImmutableClassesGiraphConfiguration(new GiraphConfiguration());
+    yarnConf = new YarnConfiguration(giraphConf);
     completedCount = new AtomicInteger(0);
     failedCount = new AtomicInteger(0);
     allocatedCount = new AtomicInteger(0);
     successfulCount = new AtomicInteger(0);
-    rpc = YarnRPC.create(giraphConf);
-    resourceManager = getHandleToRm();
     containersToLaunch = giraphConf.getMaxWorkers() + 1;
     executor = Executors.newFixedThreadPool(containersToLaunch);
     heapPerContainer = giraphConf.getYarnTaskHeapMb();
+    LOG.info("GiraphAM  for ContainerId " + cId + " ApplicationAttemptId " +
+      aId);
   }
 
   /**
    * Coordinates all requests for Giraph's worker/master task containers, and
    * manages application liveness heartbeat, completion status, teardown, etc.
+   * @return success or failure
    */
-  private void run() {
-    // register Application Master with the YARN Resource Manager so we can
-    // begin requesting resources. The response contains useful cluster info.
+  private boolean run() throws YarnException, IOException {
+    boolean success = false;
     try {
-      resourceManager.registerApplicationMaster(getRegisterAppMasterRequest());
+      getAllTokens();
+      registerRMCallBackHandler();
+      registerNMCallbackHandler();
+      registerAMToRM();
+      madeAllContainerRequestToRM();
+      LOG.info("Wait to finish ..");
+      while (!done) {
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException ex) {
+          LOG.error(ex);
+          //TODO:
+        }
+      }
+      LOG.info("Done " + done);
+    } finally {
+      // if we get here w/o problems, the executor is already long finished.
+      if (null != executor && !executor.isTerminated()) {
+        LOG.info("Forcefully terminating executors with done =:" + done);
+        executor.shutdownNow(); // force kill, especially if got here by throw
+      }
+      success = finish();
+    }
+    return success;
+  }
+
+  /**
+   * Call when the application is done
+   * @return if all containers succeed
+   */
+  private boolean finish() {
+    // When the application completes, it should stop all running containers
+    LOG.info("Application completed. Stopping running containers");
+    nmClientAsync.stop();
+
+    // When the application completes, it should send a finish application
+    // signal to the RM
+    LOG.info("Application completed. Signalling finish to RM");
+    FinalApplicationStatus appStatus;
+    String appMessage = null;
+    boolean success = true;
+    if (failedCount.get() == 0 &&
+        completedCount.get() == containersToLaunch) {
+      appStatus = FinalApplicationStatus.SUCCEEDED;
+    } else {
+      appStatus = FinalApplicationStatus.FAILED;
+      appMessage = "Diagnostics." + ", total=" + containersToLaunch +
+        ", completed=" + completedCount.get() +  ", failed=" +
+        failedCount.get();
+      success = false;
+    }
+    try {
+      amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
+    } catch (YarnException ex) {
+      LOG.error("Failed to unregister application", ex);
+    } catch (IOException e) {
+      LOG.error("Failed to unregister application", e);
+    }
+
+    amRMClient.stop();
+    return success;
+  }
+  /**
+   * Add all containers' request
+   * @return
+   */
+  private void madeAllContainerRequestToRM() {
+    // Setup ask for containers from RM
+    // Send request for containers to RM
+    // Until we get our fully allocated quota, we keep on polling RM for
+    // containers
+    // Keep looping until all the containers are launched and shell script
+    // executed on them ( regardless of success/failure).
+    for (int i = 0; i < containersToLaunch; ++i) {
+      ContainerRequest containerAsk = setupContainerAskForRM();
+      amRMClient.addContainerRequest(containerAsk);
+    }
+  }
+
+   /**
+    * Setup the request that will be sent to the RM for the container ask.
+    *
+    * @return the setup ResourceRequest to be sent to RM
+    */
+  private ContainerRequest setupContainerAskForRM() {
+    // setup requirements for hosts
+    // using * as any host will do for the distributed shell app
+    // set the priority for the request
+    Priority pri = Records.newRecord(Priority.class);
+    // TODO - what is the range for priority? how to decide?
+    pri.setPriority(GiraphConstants.GIRAPH_YARN_PRIORITY);
+
+    // Set up resource type requirements
+    // For now, only memory is supported so we set memory requirements
+    Resource capability = Records.newRecord(Resource.class);
+    capability.setMemory(heapPerContainer);
+
+    ContainerRequest request = new ContainerRequest(capability, null, null,
+      pri);
+    LOG.info("Requested container ask: " + request.toString());
+    return request;
+  }
+
+  /**
+   * Populate allTokens with the tokens received
+   * @return
+   */
+  private void getAllTokens() throws IOException {
+    Credentials credentials = UserGroupInformation.getCurrentUser()
+        .getCredentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    // Now remove the AM->RM token so that containers cannot access it.
+    Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      Token<?> token = iter.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Token type :" + token.getKind());
+      }
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+        iter.remove();
+      }
+    }
+    allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
+
+  /**
+   * Register RM callback and start listening
+   * @return
+   */
+  private void registerRMCallBackHandler() {
+    AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
+    amRMClient = AMRMClientAsync.createAMRMClientAsync(1000,
+      allocListener);
+    amRMClient.init(yarnConf);
+    amRMClient.start();
+  }
+
+  /**
+   * Register NM callback and start listening
+   * @return
+   */
+  private void registerNMCallbackHandler() {
+    containerListener = new NMCallbackHandler();
+    nmClientAsync = new NMClientAsyncImpl(containerListener);
+    nmClientAsync.init(yarnConf);
+    nmClientAsync.start();
+  }
+  /**
+   * Register AM to RM
+   * @return AM register response
+   */
+  private RegisterApplicationMasterResponse registerAMToRM()
+    throws YarnException {
+    // register Application Master with the YARN Resource Manager so we can
+    // begin requesting resources.
+    try {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        LOG.info("SECURITY ENABLED ");
+      }
+      // TODO: provide actual call back details
+      RegisterApplicationMasterResponse response = amRMClient
+        .registerApplicationMaster(appMasterHostname
+        , appMasterRpcPort, appMasterTrackingUrl);
+      return response;
     } catch (IOException ioe) {
       throw new IllegalStateException(
         "GiraphApplicationMaster failed to register with RM.", ioe);
     }
-
-    try {
-      // make the request only ONCE; only request more on container failure etc.
-      AMResponse amResponse = sendAllocationRequest();
-      logClusterResources(amResponse);
-      // loop here, waiting for TOTAL # REQUESTED containers to be available
-      // and launch them piecemeal they are reported to us in heartbeat pings.
-      launchContainersAsynchronously(amResponse);
-      // wait for the containers to finish & tally success/fails
-      awaitJobCompletion(); // all launched tasks are done before complete call
-    } finally {
-      // if we get here w/o problems, the executor is already long finished.
-      if (null != executor && !executor.isTerminated()) {
-        executor.shutdownNow(); // force kill, especially if got here by throw
-      }
-      // When the application completes, it should send a "finish request" to RM
-      try {
-        resourceManager.finishApplicationMaster(buildFinishAppMasterRequest());
-      } catch (YarnRemoteException yre) {
-        LOG.error("GiraphApplicationMaster failed to un-register with RM", yre);
-      }
-      if (null != rpc) {
-        rpc.stopProxy(resourceManager, giraphConf);
-      }
-    }
-  }
-
-  /**
-   * Reports the cluster resources in the AM response to our initial ask.
-   * @param amResponse the AM response from YARN.
-   */
-  private void logClusterResources(final AMResponse amResponse) {
-    // Check what the current available resources in the cluster are
-    Resource availableResources = amResponse.getAvailableResources();
-    LOG.info("Initial Giraph resource request for " + containersToLaunch +
-      " containers has been submitted. " +
-      "The RM reports cluster headroom is: " + availableResources);
-  }
-
-  /**
-   * Utility to build the final "job run is finished" request to the RM.
-   * @return the finish app master request, to send to the RM.
-   */
-  private FinishApplicationMasterRequest buildFinishAppMasterRequest() {
-    LOG.info("Application completed. Signalling finish to RM");
-    FinishApplicationMasterRequest finishRequest =
-      Records.newRecord(FinishApplicationMasterRequest.class);
-    finishRequest.setAppAttemptId(appAttemptId);
-    FinalApplicationStatus appStatus;
-    String appMessage = "Container Diagnostics: " +
-      " allocated=" + allocatedCount.get() +
-      ", completed=" + completedCount.get() +
-      ", succeeded=" + successfulCount.get() +
-      ", failed=" + failedCount.get();
-    if (successfulCount.get() == containersToLaunch) {
-      appStatus = FinalApplicationStatus.SUCCEEDED;
-    } else {
-      appStatus = FinalApplicationStatus.FAILED;
-    }
-    finishRequest.setDiagnostics(appMessage);
-    finishRequest.setFinishApplicationStatus(appStatus);
-    return finishRequest;
-  }
-
-  /**
-   * Loop and check the status of the containers until all are finished,
-   * logging how each container meets its end: success, error, or abort.
-   */
-  private void awaitJobCompletion() {
-    List<ContainerStatus> completedContainers;
-    do {
-      try {
-        Thread.sleep(SLEEP_BETWEEN_HEARTBEATS_MSECS);
-      } catch (InterruptedException ignored) {
-        final int notFinished = containersToLaunch - completedCount.get();
-        LOG.info("GiraphApplicationMaster interrupted from sleep while " +
-          " waiting for " + notFinished + "containers to finish job.");
-      }
-      updateProgress();
-      completedContainers =
-          sendHeartbeat().getAMResponse().getCompletedContainersStatuses();
-      for (ContainerStatus containerStatus : completedContainers) {
-        LOG.info("Got container status for containerID= " +
-          containerStatus.getContainerId() +
-          ", state=" + containerStatus.getState() +
-          ", exitStatus=" + containerStatus.getExitStatus() +
-          ", diagnostics=" + containerStatus.getDiagnostics());
-        switch (containerStatus.getExitStatus()) {
-        case YARN_SUCCESS_EXIT_STATUS:
-          successfulCount.incrementAndGet();
-          break;
-        case YARN_ABORT_EXIT_STATUS:
-          break; // not success or fail
-        default:
-          failedCount.incrementAndGet();
-          break;
-        }
-        completedCount.incrementAndGet();
-      } // end completion check loop
-    } while (completedCount.get() < containersToLaunch);
-  }
-
-  /** Update the progress value for our next heartbeat (allocate request) */
-  private void updateProgress() {
-    // set progress to "half done + ratio of completed containers so far"
-    final float ratio = completedCount.get() / (float) containersToLaunch;
-    progress = 0.5f + ratio / 2.0f;
-  }
-
-  /**
-   * Loop while checking container request status, adding each new bundle of
-   * containers allocated to our executor to launch (run Giraph BSP task) the
-   * job on each. Giraph's full resource request was sent ONCE, but these
-   * containers will become available in groups, over a period of time.
-   * @param amResponse metadata about our AllocateRequest's results.
-   */
-  private void launchContainersAsynchronously(AMResponse amResponse) {
-    List<Container> allocatedContainers;
-    do {
-      // get fresh report on # alloc'd containers, sleep between checks
-      if (null == amResponse) {
-        amResponse = sendHeartbeat().getAMResponse();
-      }
-      allocatedContainers = amResponse.getAllocatedContainers();
-      allocatedCount.addAndGet(allocatedContainers.size());
-      LOG.info("Waiting for task containers: " + allocatedCount.get() +
-        " allocated out of " + containersToLaunch + " required.");
-      startContainerLaunchingThreads(allocatedContainers);
-      amResponse = null;
-      try {
-        Thread.sleep(SLEEP_BETWEEN_HEARTBEATS_MSECS);
-      } catch (InterruptedException ignored) {
-        LOG.info("launchContainerAsynchronously() raised InterruptedException");
-      }
-    } while (containersToLaunch > allocatedCount.get());
   }
 
   /**
@@ -316,187 +355,20 @@ public class GiraphApplicationMaster {
    */
   private void startContainerLaunchingThreads(final List<Container>
     allocatedContainers) {
-    progress = allocatedCount.get() / (2.0f * containersToLaunch);
-    int placeholder = 0;
     for (Container allocatedContainer : allocatedContainers) {
-      LOG.info("Launching shell command on a new container." +
+      LOG.info("Launching command on a new container." +
         ", containerId=" + allocatedContainer.getId() +
         ", containerNode=" + allocatedContainer.getNodeId().getHost() +
         ":" + allocatedContainer.getNodeId().getPort() +
         ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress() +
-        ", containerState=" + allocatedContainer.getState() +
         ", containerResourceMemory=" +
         allocatedContainer.getResource().getMemory());
       // Launch and start the container on a separate thread to keep the main
       // thread unblocked as all containers may not be allocated at one go.
-      LaunchContainerRunnable launchThread =
-        new LaunchContainerRunnable(allocatedContainer, heapPerContainer);
-      executor.execute(launchThread);
+      LaunchContainerRunnable runnableLaunchContainer =
+        new LaunchContainerRunnable(allocatedContainer, containerListener);
+      executor.execute(runnableLaunchContainer);
     }
-  }
-
-  /**
-   * Sends heartbeat messages that include progress amounts. These are in the
-   * form of a YARN AllocateRequest object that asks for 0 resources.
-   * @return the AllocateResponse, which we may or may not need.
-   */
-  private AllocateResponse sendHeartbeat() {
-    heartbeat.setProgress(progress);
-    heartbeat.setResponseId(lastResponseId.incrementAndGet());
-    AllocateResponse allocateResponse = null;
-    try {
-      allocateResponse = resourceManager.allocate(heartbeat);
-      final int responseId = allocateResponse.getAMResponse().getResponseId();
-      if (responseId != lastResponseId.get()) {
-        lastResponseId.set(responseId);
-      }
-      checkForRebootFlag(allocateResponse.getAMResponse());
-      return allocateResponse;
-    } catch (YarnRemoteException yre) {
-      throw new IllegalStateException("sendHeartbeat() failed with " +
-        "YarnRemoteException: ", yre);
-    }
-  }
-
-  /**
-   * Compose and send the allocation request for our Giraph BSP worker/master
-   * compute nodes. Right now the requested containers are identical, mirroring
-   * Giraph's behavior when running on Hadoop MRv1. Giraph could use YARN
-   * to set fine-grained capability to each container, including host choice.
-   * @return The AM resource descriptor with our container allocations.
-   */
-  private AMResponse sendAllocationRequest() {
-    AllocateRequest allocRequest = Records.newRecord(AllocateRequest.class);
-    try {
-      List<ResourceRequest> containerList = buildResourceRequests();
-      allocRequest.addAllAsks(containerList);
-      List<ContainerId> releasedContainers = Lists.newArrayListWithCapacity(0);
-      allocRequest.setResponseId(lastResponseId.get());
-      allocRequest.setApplicationAttemptId(appAttemptId);
-      allocRequest.addAllReleases(releasedContainers);
-      allocRequest.setProgress(progress);
-      AllocateResponse allocResponse = resourceManager.allocate(allocRequest);
-      AMResponse amResponse = allocResponse.getAMResponse();
-      if (amResponse.getResponseId() != lastResponseId.get()) {
-        lastResponseId.set(amResponse.getResponseId());
-      }
-      checkForRebootFlag(amResponse);
-      // now, make THIS our new HEARTBEAT object, but with ZERO new requests!
-      initHeartbeatRequestObject(allocRequest);
-      return amResponse;
-    } catch (YarnRemoteException yre) {
-      throw new IllegalStateException("Giraph Application Master could not " +
-        "successfully allocate the specified containers from the RM.", yre);
-    }
-  }
-
-  /**
-   * If the YARN RM gets way out of sync with our App Master, its time to
-   * fail the job/restart. This should trigger the job end and cleanup.
-   * @param amResponse RPC response from YARN RM to check for reboot flag.
-   */
-  private void checkForRebootFlag(AMResponse amResponse) {
-    if (amResponse.getReboot()) {
-      LOG.error("AMResponse: " + amResponse + " raised YARN REBOOT FLAG!");
-      throw new RuntimeException("AMResponse " + amResponse +
-        " signaled GiraphApplicationMaster with REBOOT FLAG. Failing job.");
-    }
-  }
-
-
-  /**
-   * Reuses the initial container request (switched to "0 asks" so no new allocs
-   * occur) and sends all heartbeats using that request object.
-   * @param allocRequest the allocation request object to use as heartbeat.
-   */
-  private void initHeartbeatRequestObject(AllocateRequest allocRequest) {
-    allocRequest.clearAsks();
-    allocRequest.addAllAsks(Lists.<ResourceRequest>newArrayListWithCapacity(0));
-    heartbeat = allocRequest;
-  }
-
-  /**
-   * Utility to construct the ResourceRequest for our resource ask: all the
-   * Giraph containers we need, and their memory/priority requirements.
-   * @return a list of ResourceRequests to send (just one, for Giraph tasks)
-   */
-  private List<ResourceRequest> buildResourceRequests() {
-    // set up resource request for our Giraph BSP application
-    ResourceRequest resourceRequest = Records.newRecord(ResourceRequest.class);
-    resourceRequest.setHostName("*"); // hand pick our worker locality someday
-    Priority pri = Records.newRecord(Priority.class);
-    pri.setPriority(GiraphConstants.GIRAPH_YARN_PRIORITY);
-    resourceRequest.setPriority(pri);
-    Resource capability = Records.newRecord(Resource.class);
-    capability.setVirtualCores(1); // new YARN API, won't work version < 2.0.3
-    capability.setMemory(heapPerContainer);
-    resourceRequest.setCapability(capability);
-    resourceRequest.setNumContainers(containersToLaunch);
-    return ImmutableList.of(resourceRequest);
-  }
-
-  /**
-   * Obtain handle to RPC connection to Resource Manager.
-   * @return the AMRMProtocol handle to YARN RPC.
-   */
-  private AMRMProtocol getHandleToRm() {
-    YarnConfiguration yarnConf = new YarnConfiguration(giraphConf);
-    final InetSocketAddress rmAddress = yarnConf.getSocketAddr(
-      YarnConfiguration.RM_SCHEDULER_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
-    if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation currentUser;
-      try {
-        currentUser = UserGroupInformation.getCurrentUser();
-      } catch (IOException ioe) {
-        throw new IllegalStateException("Could not obtain UGI for user.", ioe);
-      }
-      String tokenURLEncodedStr = System.getenv(
-        ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-      Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-      try {
-        token.decodeFromUrlString(tokenURLEncodedStr);
-      } catch (IOException ioe) {
-        throw new IllegalStateException("Could not decode token from URL", ioe);
-      }
-      SecurityUtil.setTokenService(token, rmAddress);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("AppMasterToken is: " + token);
-      }
-      currentUser.addToken(token);
-      return currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
-        @Override
-        public AMRMProtocol run() {
-          return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
-            rmAddress, giraphConf);
-        }
-      });
-    } else { // non-secure
-      return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
-        rmAddress, yarnConf);
-    }
-  }
-
-  /**
-   * Get the request to register this Application Master with the RM.
-   * @return the populated AM request.
-   */
-  private RegisterApplicationMasterRequest getRegisterAppMasterRequest() {
-    RegisterApplicationMasterRequest appMasterRequest =
-        Records.newRecord(RegisterApplicationMasterRequest.class);
-    appMasterRequest.setApplicationAttemptId(appAttemptId);
-    try {
-      appMasterRequest.setHost(InetAddress.getLocalHost().getHostName());
-    } catch (UnknownHostException uhe) {
-      throw new IllegalStateException(
-        "Cannot resolve GiraphApplicationMaster's local hostname.", uhe);
-    }
-    // useful for a Giraph WebUI or whatever: play with these
-    // appMasterRequest.setRpcPort(appMasterRpcPort);
-    // appMasterRequest.setTrackingUrl(appMasterTrackingUrl);
-    return appMasterRequest;
   }
 
   /**
@@ -505,7 +377,7 @@ public class GiraphApplicationMaster {
    * as Giraph tasks need identical HDFS-based resources (jars etc.) to run.
    * @return the resource map for a ContainerLaunchContext
    */
-  private Map<String, LocalResource> getTaskResourceMap() {
+  private synchronized Map<String, LocalResource> getTaskResourceMap() {
     // Set the local resources: just send the copies already in HDFS
     if (null == LOCAL_RESOURCES) {
       LOCAL_RESOURCES = Maps.newHashMap();
@@ -541,40 +413,59 @@ public class GiraphApplicationMaster {
   }
 
   /**
+   * Application entry point
+   * @param args command-line args (set by GiraphYarnClient, if any)
+   */
+  public static void main(final String[] args) {
+    boolean result = false;
+    LOG.info("Starting GiraphAM ");
+    String containerIdString =  System.getenv().get(
+      Environment.CONTAINER_ID.name());
+    if (containerIdString == null) {
+      // container id should always be set in the env by the framework
+      throw new IllegalArgumentException("ContainerId not found in env vars.");
+    }
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdString);
+    ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
+    try {
+      GiraphApplicationMaster giraphAppMaster =
+        new GiraphApplicationMaster(containerId, appAttemptId);
+      result = giraphAppMaster.run();
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Throwable t) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.error("GiraphApplicationMaster caught a " +
+                  "top-level exception in main.", t);
+      System.exit(1);
+    }
+    if (result) {
+      LOG.info("Giraph Application Master completed successfully. exiting");
+      System.exit(0);
+    } else {
+      LOG.info("Giraph Application Master failed. exiting");
+      System.exit(2);
+    }
+  }
+
+  /**
    * Thread to connect to the {@link ContainerManager} and launch the container
    * that will house one of our Giraph worker (or master) tasks.
    */
   private class LaunchContainerRunnable implements Runnable {
     /** Allocated container */
     private Container container;
-    /** Handle to communicate with ContainerManager */
-    private ContainerManager containerManager;
-    /** Heap memory in MB to allocate for this JVM in the launched container */
-    private final int heapSize;
+    /** NM listener */
+    private NMCallbackHandler containerListener;
 
     /**
      * Constructor.
      * @param newGiraphTaskContainer Allocated container
-     * @param heapMb the <code>-Xmx</code> setting for each launched task.
+     * @param containerListener container listener.
      */
     public LaunchContainerRunnable(final Container newGiraphTaskContainer,
-      final int heapMb) {
+      NMCallbackHandler containerListener) {
       this.container = newGiraphTaskContainer;
-      this.heapSize = heapMb;
-    }
-
-    /**
-     * Helper function to connect to ContainerManager, which resides on the
-     * same compute node as this Giraph task's container. The CM starts tasks.
-     */
-    private void connectToCM() {
-      LOG.debug("Connecting to CM for containerid=" + container.getId());
-      String cmIpPortStr = container.getNodeId().getHost() + ":" +
-        container.getNodeId().getPort();
-      InetSocketAddress cmAddress = NetUtils.createSocketAddr(cmIpPortStr);
-      LOG.info("Connecting to CM at " + cmIpPortStr);
-      this.containerManager = (ContainerManager)
-        rpc.getProxy(ContainerManager.class, cmAddress, giraphConf);
+      this.containerListener = containerListener;
     }
 
     /**
@@ -584,18 +475,11 @@ public class GiraphApplicationMaster {
      */
     public void run() {
       // Connect to ContainerManager
-      connectToCM();
       // configure the launcher for the Giraph task it will host
-      StartContainerRequest startReq =
-        Records.newRecord(StartContainerRequest.class);
-      startReq.setContainerLaunchContext(buildContainerLaunchContext());
+      ContainerLaunchContext ctx = buildContainerLaunchContext();
       // request CM to start this container as spec'd in ContainerLaunchContext
-      try {
-        containerManager.startContainer(startReq);
-      } catch (YarnRemoteException yre) {
-        LOG.error("StartContainerRequest failed for containerId=" +
-                    container.getId(), yre);
-      }
+      containerListener.addContainer(container.getId(), container);
+      nmClientAsync.startContainerAsync(container, ctx);
     }
 
     /**
@@ -609,11 +493,17 @@ public class GiraphApplicationMaster {
         container.getId());
       ContainerLaunchContext launchContext = Records
         .newRecord(ContainerLaunchContext.class);
-      launchContext.setContainerId(container.getId());
-      launchContext.setResource(container.getResource());
       // args inject the CLASSPATH, heap MB, and TaskAttemptID for launched task
       final List<String> commands = generateShellExecCommand();
+      LOG.info("Conatain launch Commands :" + commands.get(0));
       launchContext.setCommands(commands);
+      // Set up tokens for the container too. We are
+      // populating them mainly for NodeManagers to be able to download any
+      // files in the distributed file-system. The tokens are otherwise also
+      // useful in cases, for e.g., when one is running a
+      // "hadoop dfs" like command
+      launchContext.setTokens(allTokens.slice());
+
       // add user information to the job
       String jobUserName = "ERROR_UNKNOWN_USER";
       UserGroupInformation ugi = null;
@@ -624,7 +514,7 @@ public class GiraphApplicationMaster {
         jobUserName =
           System.getenv(ApplicationConstants.Environment.USER.name());
       }
-      launchContext.setUser(jobUserName);
+      //launchContext.setUser(jobUserName);
       LOG.info("Setting username in ContainerLaunchContext to: " + jobUserName);
       // Set the environment variables to inject into remote task's container
       buildEnvironment(launchContext);
@@ -639,8 +529,8 @@ public class GiraphApplicationMaster {
      */
     private List<String> generateShellExecCommand() {
       return ImmutableList.of("java " +
-        "-Xmx" + heapSize + "M " +
-        "-Xms" + heapSize + "M " +
+        "-Xmx" + heapPerContainer + "M " +
+        "-Xms" + heapPerContainer + "M " +
         "-cp .:${CLASSPATH} " +
         "org.apache.giraph.yarn.GiraphYarnTask " +
         appAttemptId.getApplicationId().getClusterTimestamp() + " " +
@@ -671,29 +561,144 @@ public class GiraphApplicationMaster {
   }
 
   /**
-   * Application entry point
-   * @param args command-line args (set by GiraphYarnClient, if any)
+   * CallbackHandler to process RM async calls
    */
-  public static void main(final String[] args) {
-    String containerIdString =
-        System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
-    if (containerIdString == null) {
-      // container id should always be set in the env by the framework
-      throw new IllegalArgumentException("ContainerId not found in env vars.");
+  private class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void onContainersCompleted(List<ContainerStatus>
+      completedContainers) {
+      LOG.info("Got response from RM for container ask, completedCnt=" +
+        completedContainers.size());
+      for (ContainerStatus containerStatus : completedContainers) {
+        LOG.info("Got container status for containerID=" +
+          containerStatus.getContainerId() + ", state=" +
+          containerStatus.getState() + ", exitStatus=" +
+          containerStatus.getExitStatus() + ", diagnostics=" +
+          containerStatus.getDiagnostics());
+        switch (containerStatus.getExitStatus()) {
+        case YARN_SUCCESS_EXIT_STATUS:
+          successfulCount.incrementAndGet();
+          break;
+        case YARN_ABORT_EXIT_STATUS:
+          break; // not success or fail
+        default:
+          failedCount.incrementAndGet();
+          break;
+        }
+        completedCount.incrementAndGet();
+      }
+
+      if (completedCount.get() == containersToLaunch) {
+        done = true;
+        LOG.info("All container compeleted. done = " + done);
+      } else {
+        LOG.info("After completion of one conatiner. current status is:" +
+          " completedCount :" + completedCount.get() +
+          " containersToLaunch :" + containersToLaunch +
+          " successfulCount :" + successfulCount.get() +
+          " failedCount :" + failedCount.get());
+      }
     }
-    ContainerId containerId = ConverterUtils.toContainerId(containerIdString);
-    ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
-    try {
-      GiraphApplicationMaster giraphAppMaster =
-        new GiraphApplicationMaster(containerId, appAttemptId);
-      giraphAppMaster.run();
-      // CHECKSTYLE: stop IllegalCatch
-    } catch (Throwable t) {
-      // CHECKSTYLE: resume IllegalCatch
-      LOG.error("GiraphApplicationMaster caught a " +
-                  "top-level exception in main.", t);
-      System.exit(2);
+    @Override
+    public void onContainersAllocated(List<Container> allocatedContainers) {
+      LOG.info("Got response from RM for container ask, allocatedCnt=" +
+          allocatedContainers.size());
+      allocatedCount.addAndGet(allocatedContainers.size());
+      LOG.info("Total allocated # of container so far : " +
+        allocatedCount.get() +
+        " allocated out of " + containersToLaunch + " required.");
+      startContainerLaunchingThreads(allocatedContainers);
     }
-    System.exit(0);
+
+    @Override
+    public void onShutdownRequest() {
+      done = true;
+    }
+
+    @Override
+    public void onNodesUpdated(List<NodeReport> updatedNodes) {
+    }
+
+    @Override
+    public float getProgress() {
+      // set progress to deliver to RM on next heartbeat
+      float progress = (float) completedCount.get() /
+          containersToLaunch;
+      return progress;
+    }
+
+    @Override
+    public void onError(Throwable e) {
+      done = true;
+      amRMClient.stop();
+    }
+  }
+
+  /**
+   * CallbackHandler to process NM async calls
+   */
+  private class NMCallbackHandler implements NMClientAsync.CallbackHandler {
+    /** List of containers */
+    private ConcurrentMap<ContainerId, Container> containers =
+          new ConcurrentHashMap<ContainerId, Container>();
+
+    /**
+     * Add a container
+     * @param containerId id of container
+     * @param container container object
+     * @return
+     */
+    public void addContainer(ContainerId containerId, Container container) {
+      containers.putIfAbsent(containerId, container);
+    }
+
+    @Override
+    public void onContainerStopped(ContainerId containerId) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Succeeded to stop Container " + containerId);
+      }
+      containers.remove(containerId);
+    }
+
+    @Override
+    public void onContainerStatusReceived(ContainerId containerId,
+        ContainerStatus containerStatus) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Container Status: id=" + containerId + ", status=" +
+            containerStatus);
+      }
+    }
+
+    @Override
+    public void onContainerStarted(ContainerId containerId,
+        Map<String, ByteBuffer> allServiceResponse) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Succeeded to start Container " + containerId);
+      }
+      Container container = containers.get(containerId);
+      if (container != null) {
+        nmClientAsync.getContainerStatusAsync(containerId,
+          container.getNodeId());
+      }
+    }
+
+    @Override
+    public void onStartContainerError(ContainerId containerId, Throwable t) {
+      LOG.error("Failed to start Container " + containerId, t);
+      containers.remove(containerId);
+    }
+
+    @Override
+    public void onGetContainerStatusError(
+      ContainerId containerId, Throwable t) {
+      LOG.error("Failed to query the status of Container " + containerId, t);
+    }
+
+    @Override
+    public void onStopContainerError(ContainerId containerId, Throwable t) {
+      LOG.error("Failed to stop Container " + containerId);
+      containers.remove(containerId);
+    }
   }
 }

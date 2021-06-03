@@ -18,14 +18,15 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Aggregates IPC requests and sends them off
@@ -33,27 +34,42 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public interface WorkerClientRequestProcessor<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Sends a message to destination vertex.
    *
    * @param destVertexId Destination vertex id.
    * @param message Message to send.
-   * @return true if any network I/O occurred.
    */
-  boolean sendMessageRequest(I destVertexId, M message);
+  void sendMessageRequest(I destVertexId, Writable message);
+
+  /**
+   * Sends a message through all edges to all destinations.
+   *
+   * @param vertex The source vertex.
+   * @param message  Message to send.
+   */
+  void sendMessageToAllRequest(Vertex<I, V, E> vertex, Writable message);
+
+  /**
+   * Sends a message to the targets in the iterator.
+   *
+   * @param vertexIdIterator The iterator of target vertex ids.
+   * @param message  Message to send.
+   */
+  void sendMessageToAllRequest(Iterator<I> vertexIdIterator, Writable message);
 
   /**
    * Sends a vertex to the appropriate partition owner
    *
    * @param partitionOwner Owner of the vertex
    * @param vertex Vertex to send
+   * @return Returns true iff any network I/O occurred.
    */
-  void sendVertexRequest(PartitionOwner partitionOwner,
-                         Vertex<I, V, E, M> vertex);
+  boolean sendVertexRequest(PartitionOwner partitionOwner,
+                            Vertex<I, V, E> vertex);
 
   /**
    * Send a partition request (no batching).
@@ -62,7 +78,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param partition Partition to send
    */
   void sendPartitionRequest(WorkerInfo workerInfo,
-                            Partition<I, V, E, M> partition);
+                            Partition<I, V, E> partition);
 
   /**
    * Sends a request to the appropriate vertex range owner to add an edge
@@ -103,7 +119,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param vertex Vertex to be added
    * @throws IOException
    */
-  void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException;
+  void addVertexRequest(Vertex<I, V, E> vertex) throws IOException;
 
   /**
    * Sends a request to the appropriate vertex range owner to remove a vertex
@@ -127,4 +143,11 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @return Number of messages sent before the reset.
    */
   long resetMessageCount();
+
+  /**
+   * Get the message bytes sent during this superstep and clear them.
+   *
+   * @return Bytes of messages sent before the reset.
+   */
+  long resetMessageBytesCount();
 }

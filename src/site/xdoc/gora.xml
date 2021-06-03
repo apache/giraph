@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/XDOC/2.0
+    http://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+  <properties>
+    <title>Giraph Input/Output with Gora</title>
+  </properties>
+
+  <body>
+    <section name="Overview">
+      The <a class="externalLink" href="http://gora.apache.org/index.html">Apache
+      Gora</a> project is an open source framework which provides an in-memory
+      data model and persistence for big data. Gora supports persisting to column
+      stores, key value stores, document stores and RDBMSs, and
+      analyzing the data with extensive Apache Hadoop MapReduce support.
+      <br />
+
+      The integration of these two awesome Apache projects has as main motivation 
+      the possibility of turning Gora-supported-NoSQL data stores into
+      Giraph-processable graphs, and to provide Giraph the ability to store its
+      results into different data stores, letting users focus on the processing itself.
+      <br />
+
+      The way Gora works is by defining the data model how our data is going to be
+      stored using a JSON-like schema inspired in
+      <a class="externalLink" href="http://avro.apache.org/">Apache Avro</a> and 
+      doing the physical mapping to the data store using an XML file. 
+      The former one will help us generate data beans which will be read or written
+      into different data stores, and the latter one, helps us defining which data
+      bean should go where. 
+      
+      In this way, Giraph will be able to read/write data using three files:
+      <ul>
+      	<li>The generated data beans representing our data model.</li>
+		<li>The XML mapping file representing our physical mapping.</li>
+		<li>A file called <code>gora.properties</code> containing
+      configurations related to which data store Gora will use.</li>
+      </ul>
+      The image below shows how this integration works in a plain simple image:
+      <img src="images/Gora-Giraph.svg" alt="Giraph Gora integration"/>
+      
+    </section>
+    <section name="Generating DataBeans">
+      So the first thing we have to is to define our data model using a JSON-like schema. Here it is
+      a schema resembling graphs stored inside Apache HBase through Gora. The following shows a schema
+      for a vertex:
+      <div class="source"><pre class="prettyprint">
+{"type": "record",
+"name": "Vertex",
+"namespace": "org.apache.giraph.gora.generated",
+"fields" : [
+           {"name": "vertexId", "type": "long"},
+           {"name": "value", "type": "float"},
+           {"name": "edges",
+            "type": {
+                     "type":"array", "items": {
+                                     "name": "Edge",
+                                     "type": "record",
+                                     "namespace": "org.apache.giraph.gora.generated",
+                                     "fields": [
+                                             {"name": "vertexId", "type": "long"},
+                                             {"name": "edgeValue", "type": "float"}
+                                            ]
+                                     }
+                    }
+          }
+          ]
+}</pre></div>
+
+      And this other schema shows what a schema for an edge should look like.
+      <div class="source"><pre class="prettyprint">
+      {
+      "type": "record",
+      "name": "GEdge",
+      "namespace": "org.apache.giraph.gora.generated",
+      "fields" : [
+                 {"name": "edgeId", "type": "string"},
+                 {"name": "edgeWeight", "type": "float"},
+                 {"name": "vertexInId", "type": "string"},
+                 {"name": "vertexOutId", "type": "string"},
+                 {"name": "label", "type": "string"}
+                 ]
+      }
+      </pre></div>
+
+      Now we are ready to generate our data beans. To do this, we need to use gora-core.jar which
+      comes with Giraph. The gora-compiler works using three parameters:
+      <div class="source"><pre class="prettyprint">
+        &lt;schema file&gt; - REQUIRED -individual avsc file to be compiled or a directory path containing avsc files
+        &lt;output dir&gt; - REQUIRED -output directory for generated Java files
+        &lt;-license id&gt; - the preferred license header to add to the
+      </pre></div>
+
+      So by executing the gora compiler through this command, the generated data beans
+      will be created in the path set.
+
+      <div class="source"><pre class="prettyprint">
+           java -jar gora-core-0.4-SNAPSHOT.jar org.apache.gora.compiler.GoraCompiler.class vertex.avsc  gora-app/src/main/java/
+           java -jar gora-core-0.4-SNAPSHOT.jar org.apache.gora.compiler.GoraCompiler.class edge.avsc  gora-app/src/main/java/
+      </pre></div>
+      
+      <br />
+      This will result into a java class which will look something similar to this:
+      <div class="source"><pre class="prettyprint">
+      /**
+      * Class for defining a Giraph-Vertex.
+      */
+     @SuppressWarnings("all")
+     public class GVertex extends PersistentBase {
+       /**
+        * Schema used for the class.
+        */
+       public static final Schema OBJ_SCHEMA = Schema.parse(
+           "{\"type\":\"record\",\"name\":\"Vertex\"," +
+           "\"namespace\":\"org.apache.giraph.gora.generated\"," +
+           "\"fields\":[{\"name\":\"vertexId\",\"type\":\"string\"}," +
+           "{\"name\":\"value\",\"type\":\"float\"},{\"name\":\"edges\"," +
+           "\"type\":{\"type\":\"map\",\"values\":\"string\"}}]}");
+       
+       /**
+        * Vertex Id
+        */
+       private Utf8 vertexId;
+       
+       /**
+        * Gets vertexId
+        * @return Utf8 vertexId
+        */
+       public Utf8 getVertexId() {
+         return (Utf8) get(0);
+       }
+       
+       /**
+        * Sets vertexId
+        * @param value vertexId
+        */
+       public void setVertexId(Utf8 value) {
+         put(0, value);
+       }
+      . . .
+      </pre></div>
+      
+      Once this logical data modeling is done, the physical mapping between this generated
+      classes and the actual data repositories have to be made. Gora does this by using a
+      xml "mapping file". 
+      <br />
+      The file below represents a <code>gora-hbase-mapping.xml</code> i.e. the necessary
+      information to map our data model into HBase tables. Within the tags <code>table</code>
+      the necessary column families will be defined. Moreover, within the tags
+      <code>class</code>, the actual generated java bean will be mapped into the column
+      families. Inside this, each field should be mapped into their respective column
+      family, and the HBase qualifier to be used for storing this field. 
+      <br />
+      This mapping file can contain as many mappings as generated data beans our application
+      uses i.e. we can redefine more <code>table</code> tags with their own <code>class</code>
+      and <code>fields</code>.
+      
+      <div class="source"><pre class="prettyprint">
+        &lt;gora-orm&gt;
+          &lt;table name="graphGiraph"&gt;
+            &lt;family name="vertices"/&gt;
+          &lt;/table&gt;
+          &lt;class name="org.apache.giraph.io.gora.generated.GVertex" keyClass="java.lang.String" table="graphGiraph"&gt;
+            &lt;field name="vertexId" family="vertices" qualifier="vertexId"/&gt;
+            &lt;field name="value" family="vertices" qualifier="value"/&gt;
+            &lt;field name="edges" family="vertices" qualifier="edges"/&gt;
+          &lt;/class&gt;
+        &lt;/gora-orm&gt;
+      </pre></div>
+      A more complex file can be found inside <code>giraph-gora/conf</code> folder.
+      
+    </section>
+    <section name="Preparation">
+      Once the data beans have been generated, the <code>gora.properties</code> file
+      has be created. This file specifies which data store is going to be used with
+      Gora, but also contains extra information about such data store. An example of
+      such file can be found inside <code>giraph-gora/conf</code> folder. Following 
+      our example, if it has been decided to use Apache HBase so <code>gora.properties</code>
+      should contain such configuration, as shown below:<br />
+      <code>
+            # FOR HBASE DATASTORE
+            gora.datastore.default=org.apache.gora.hbase.store.HBaseStore
+      </code>
+      Then to be able to use the Gora API the user needs to prepare the Gora environment.
+      This is not more than having set up one of the data stores Gora support, having
+      the data beans generated and the <code>gora.properties</code> file set up. A more 
+      detail yet simple tutorial can be found 
+      <a href="http://gora.apache.org/current/tutorial.html">here</a>.
+      
+      <br />
+      The data definition files should be available in the classpath when the 
+      Giraph job is run. But also all configuration files needed for each specific data
+      store should also be made available across the cluster. For example, if we were
+      to use HBase along Giraph and Gora, then the hbase-site.xml file should be passed
+      along as well. There are several ways to make these files available, and one common
+      way to do this is with the <code>-file</code> option. This option would look like
+      something similar to this: <br />
+      <div class="source"><pre class="prettyprint">
+      -files ../conf/gora.properties,../conf/gora-hbase-mapping.xml,../conf/hbase-site.xml
+      </pre></div><br />
+      
+      Gora also needs to be told which serialization types it will use. This serialization
+      types could be made across the cluster, but if that is not desired, then they can be
+      passed using the <code>-D</code> option of Hadoop. This option would look like 
+      something similar to this:<br />
+      <div class="source"><pre class="prettyprint">
+      -Dio.serializations=org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization
+      </pre></div><br />
+    </section>
+    
+    <section name="Configuration Options">
+      Now that the data beans have been generated, and Gora environment ready, 
+      the configuration options for this API have to be known in order to be specified
+      by the user. These configurations are as follow: <br />
+      <table border='0'>
+       <tr>
+        <th>label</th>
+        <th>type</th>
+        <th>description</th>
+       </tr>
+       <tr>
+         <td>giraph.gora.datastore.class</td>
+         <td>string</td>
+         <td>Gora DataStore class to access to data from - required.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.key.class</td>
+         <td>String</td>
+         <td>Gora Key class to query the datastore - required.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.persistent.class</td>
+         <td>String</td>
+         <td>Gora Persistent class to read objects from Gora - required.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.start.key</td>
+         <td>String</td>
+         <td>Gora start key to query the datastore.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.end.key</td>
+         <td>String</td>
+         <td>Gora end key to query the datastore.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.keys.factory.class</td>
+         <td>String</td>
+         <td> Keys factory to convert strings into desired keys - required. </td>
+       </tr>
+       <tr>
+         <td>giraph.gora.output.datastore.class</td>
+         <td>String</td>
+         <td>Gora DataStore class to write data to - required.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.output.key.class</td>
+         <td>String</td>
+         <td>Gora Key class to write to datastore - required.</td>
+       </tr>
+       <tr>
+         <td>giraph.gora.output.persistent.class</td>
+         <td>String</td>
+         <td>Gora Persistent class to write to Gora - required.
+         </td>
+       </tr>
+      </table>
+    </section>
+    
+    <section name="Input/Output Example">
+      To make use of the Giraph input API available for Gora, it is required to extend the 
+      classes <code>GoraVertexInputFormat</code> or <code>GoraEdgeInputFormat</code>.
+      In the first class, the only method that has to be implemented is 
+      <code>transformVertex</code> to transform a <code>Gora Object</code> into a
+      Giraph's <code>Vertex</code> object. Likewise, for the second class the methods 
+      that have to be implemented are <code>transformEdge</code>, to convert a 
+      <code>Gora Edge Object</code> into a the Giraph's<code>Edge</code> object, and 
+      <code>getCurrentSourceId</code>. There are two Examples of such implementations 
+      which are <code>GoraGVertexVertexInputFormat</code> and
+      <code>GoraGEdgeEdgeInputFormat</code>. One other class that has to be implemented
+      here is the <code>KeyFactory</code> because this class is used to transform the keys
+      passed as strings throught the options into actual Gora key Objects used to query
+      the data store. The default one assumes your key type is a <code>String</code>.<br />
+
+      On the other hand, to make use of the Giraph output API available for Gora, 
+      it is required to extend the classes <code>GoraVertexOutputFormat</code> or
+      <code>GoraEdgeOutputFormat</code>.
+      In the first class, the only method that has to be implemented is 
+      <code>getGoraVertex</code> to transform a Giraph's Vertex object into a
+      Gora object, and <code>getGoraKey</code> to determine the key which will represent
+      such vertex. Likewise, for the Edge output class the methods 
+      that have to be implemented are <code>getGoraEdge</code>, to convert a Giraph's
+      Edge object into a Gora Edge object, and <code>getGoraKey</code> to determine the 
+      key which will represent such edge. There are two Examples of such implementations 
+      which are <code>GoraGVertexVertexOutputFormat</code> and 
+      <code>GoraGEdgeEdgeOutputFormat</code>.
+      <br />
+      
+      An example command showing how to put together all these classes and configurations
+      is shown below. This command is to compute the shortest path algorithm onto the 
+      graph database shown previously is provided below.
+      <br />
+      <code>
+        export GIRAPH_CORE_JAR=$GIRAPH_CORE_TARGET_DIR/giraph-$GIRAPH_VERSION-for-$HADOOP_VERSION-jar-with-dependencies.jar<br />
+        export GIRAPH_EXAMPLES_JAR=$GIRAPH_EXAMPLES_TARGET_DIR/giraph-examples-$GIRAPH_VERSION-for-$HADOOP_VERSION-jar-with-dependencies.jar<br />
+        export GIRAPH_GORA_JAR=$GIRAPH_GORA_TARGET_DIR/giraph-gora-$GIRAPH_VERSION-SNAPSHOT-jar-with-dependencies.jar<br />
+        export GORA_HBASE_JAR=$GORA_HBASE_TARGET_DIR/gora-cassandra-$GORA_VERSION.jar<br />
+        export HBASE_JAR=$GORA_DIR/gora-hbase/lib/hbase-0.90.4.jar
+        export HADOOP_CLASSPATH=$GIRAPH_CORE_JAR:$GIRAPH_EXAMPLES:$GIRAPH_GORA_JAR:$GORA_HBASE_JAR<br/><br/>
+      </code><br />
+      
+        <div class="source"><pre class="prettyprint">
+           hadoop jar $GIRAPH_EXAMPLES_JAR org.apache.giraph.GiraphRunner 
+           -files ../conf/gora.properties,../conf/gora-hbase-mapping.xml,../conf/hbase-site.xml
+           -Dio.serializations=org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.JavaSerialization
+           -Dgiraph.gora.datastore.class=org.apache.gora.hbase.store.HBaseStore
+           -Dgiraph.gora.key.class=java.lang.String
+           -Dgiraph.gora.persistent.class=org.apache.giraph.io.gora.generated.GEdge
+           -Dgiraph.gora.start.key=0
+           -Dgiraph.gora.end.key=10
+           -Dgiraph.gora.keys.factory.class=org.apache.giraph.io.gora.utils.KeyFactory
+           -Dgiraph.gora.output.datastore.class=org.apache.gora.hbase.store.HBaseStore 
+           -Dgiraph.gora.output.key.class=java.lang.String  
+           -Dgiraph.gora.output.persistent.class=org.apache.giraph.io.gora.generated.GEdgeResult 
+           -libjars $GIRAPH_GORA_JAR,$GORA_HBASE_JAR,$HBASE_JAR
+           org.apache.giraph.examples.SimpleShortestPathsComputation 
+           -eif org.apache.giraph.io.gora.GoraGEdgeEdgeInputFormat 
+           -eof org.apache.giraph.io.gora.GoraGEdgeEdgeOutputFormat 
+           -w 1
+        </pre></div><br />
+    </section>
+  </body>
+</document>

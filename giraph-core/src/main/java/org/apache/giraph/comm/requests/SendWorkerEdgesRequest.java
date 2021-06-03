@@ -22,6 +22,7 @@ import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -35,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 public class SendWorkerEdgesRequest<I extends WritableComparable,
     E extends Writable>
     extends SendWorkerDataRequest<I, Edge<I, E>,
-    ByteArrayVertexIdEdges<I, E>> {
+    VertexIdEdges<I, E>> {
   /**
    * Constructor used for reflection only
    */
@@ -44,17 +45,17 @@ public class SendWorkerEdgesRequest<I extends WritableComparable,
   /**
    * Constructor used to send request.
    *
-   * @param partVertEdges Map of remote partitions =>
+   * @param partVertEdges Map of remote partitions =&gt;
    *                     ByteArrayVertexIdEdges
    */
   public SendWorkerEdgesRequest(
-      PairList<Integer, ByteArrayVertexIdEdges<I, E>> partVertEdges) {
+      PairList<Integer, VertexIdEdges<I, E>> partVertEdges) {
     this.partitionVertexData = partVertEdges;
   }
 
   @Override
-  public ByteArrayVertexIdEdges<I, E> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdEdges<I, E>();
+  public VertexIdEdges<I, E> createVertexIdData() {
+    return new ByteArrayVertexIdEdges<>();
   }
 
   @Override
@@ -64,12 +65,12 @@ public class SendWorkerEdgesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData serverData) {
-    PairList<Integer, ByteArrayVertexIdEdges<I, E>>.Iterator
+    PairList<Integer, VertexIdEdges<I, E>>.Iterator
         iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      serverData.getEdgeStore().
-          addPartitionEdges(iterator.getCurrentFirst(),
+      serverData.getEdgeStore()
+          .addPartitionEdges(iterator.getCurrentFirst(),
               iterator.getCurrentSecond());
     }
   }

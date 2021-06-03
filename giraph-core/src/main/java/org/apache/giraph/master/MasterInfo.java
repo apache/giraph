@@ -24,6 +24,8 @@ import org.apache.giraph.graph.TaskInfo;
  * Information about the master that is sent to other workers.
  */
 public class MasterInfo extends TaskInfo {
+  /** Master task id is always -1 */
+  public static final int MASTER_TASK_ID = -1;
   /**
    * Constructor
    */
@@ -42,7 +44,7 @@ public class MasterInfo extends TaskInfo {
    */
   @Override
   public int getTaskId() {
-    return -1;
+    return MASTER_TASK_ID;
   }
 
   @Override

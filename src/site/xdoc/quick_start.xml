@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Quick Start</title>
+  </properties>
+  
+  <body>
+    <section name="Contents">
+      <p>The guide is divided into the following sections:</p>
+      <ol>
+        <li><a href="#qs_section_1">Overview</a></li>
+        <li><a href="#qs_section_2">Deploying Hadoop</a></li>
+        <li><a href="#qs_section_3">Running a map/reduce job</a></li>
+        <li><a href="#qs_section_4">Deploying Giraph</a></li>
+        <li><a href="#qs_section_5">Running a Giraph job</a></li>
+        <li><a href="#qs_section_6">Getting involved</a></li>
+        <li><a href="#qs_section_7">Optional: Setting up a virtual machine</a></li>
+      </ol>
+    </section>
+    <section name="Overview" id="qs_section_1">
+      <p>This is a step-by-step guide on getting started with <a href="http://giraph.apache.org/intro.html">Giraph</a>. The guide is targeted towards those who want to write and test patches or run Giraph jobs on a small input. It is not intended for production-class deployment.</p>
+      <p>In what follows, we will deploy a single-node, pseudo-distributed Hadoop cluster on one physical machine. This node will act as both master/slave. That is, it will run NameNode, SecondaryNameNode, JobTracker, DataNode, and TaskTracker Java processes. We will also deploy Giraph on this node. The deployment uses the following software/configuration:</p>
+      <ul>
+        <li>Ubuntu Server 12.04.2 (64-bit) with the following configuration:</li>
+        <ul>
+          <li>Hardware: Dual-core 2GHz CPU (64-bit arch), 4GB RAM, 80GB HD, 100 Mbps NIC</li>
+          <li>Admin account: <tt>hdamin</tt></li>
+          <li>Hostname: <tt>hdnode01</tt></li>
+          <li>IP address: <tt>192.168.56.10</tt></li>
+          <li>Network mask: <tt>255.255.255.0</tt></li>
+        </ul>
+        <li>Apache Hadoop 0.20.203.0-RC1</li>
+        <li>Apache Giraph 1.2.0-SNAPSHOT</li>
+      </ul>
+    </section>
+    <section name="Deploying Hadoop" id="qs_section_2">
+      <p>We will now deploy a signle-node, pseudo-distributed Hadoop cluster. First, install Java 1.6 or later and validate the installation:</p>
+      <source>
+sudo apt-get install openjdk-7-jdk
+java -version</source>
+      <p>You should see your Java version information. Notice that the complete JDK is installed in <tt>/usr/lib/jvm/java-7-openjdk-amd64</tt>, where you can find Java's <tt>bin</tt> and <tt>lib</tt> directories. After that, create a dedicated <tt>hadoop</tt> group, a new user account <tt>hduser</tt>, and then add this user account to the newly created group:</p>
+      <source>
+sudo addgroup hadoop
+sudo adduser --ingroup hadoop hduser</source>
+      <p>Next, download and extract <tt>hadoop-0.20.203.0rc1</tt> from <a href="http://archive.apache.org/dist/hadoop/core/">Apache archives</a> (this is the default version assumed in Giraph):</p>
+      <source>
+su - hdadmin
+cd /usr/local
+sudo wget http://archive.apache.org/dist/hadoop/core/hadoop-0.20.203.0/hadoop-0.20.203.0rc1.tar.gz
+sudo tar xzf hadoop-0.20.203.0rc1.tar.gz
+sudo mv hadoop-0.20.203.0 hadoop
+sudo chown -R hduser:hadoop hadoop</source>
+      <p>After installation, swich to user account <tt>hduser</tt> and edit the account's <tt>$HOME/.bashrc</tt> with the following:</p>
+      <source>
+export HADOOP_HOME=/usr/local/hadoop
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64</source>
+      <p>This will set Hadoop/Java related environment variables. After that, edit <tt>$HADOOP_HOME/conf/hadoop-env.sh</tt> with the following:</p>
+      <source>
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export HADOOP_OPTS=-Djava.net.preferIPv4Stack=true</source>
+      <p>The second line will force Hadoop to use IPv4 instead of IPv6, even if IPv6 is configured on the machine. As Hadoop stores temporary files during its computation, you need to create a base temporary directorty for local FS and HDFS files as follows:</p>
+      <source>
+su - hdadmin
+sudo mkdir -p /app/hadoop/tmp
+sudo chown hduser:hadoop /app/hadoop/tmp
+sudo chmod 750 /app/hadoop/tmp</source>
+      <p>Make sure the <tt>/etc/hosts</tt> file has the following lines (if not, add/update them):</p>
+      <source>
+127.0.0.1       localhost
+192.168.56.10   hdnode01</source>
+      <p>Even though we can use <tt>localhost</tt> for all communication within this single-node cluster, using the hostname is generally a better practice (e.g., you might add a new node and convert your single-node, pseudo-distributed cluster to multi-node, distributed cluster).</p>
+      <p>Now, edit Hadoop configuration files <tt>core-site.xml</tt>, <tt>mapred-site.xml</tt>, and <tt>hdfs-site.xml</tt> under <tt>$HADOOP_HOME/conf</tt> to reflect the current setup. Add the new lines between <tt>&lt;configuration&gt;...&lt;/configuration&gt;</tt>, as specified below:</p>
+      <ul>
+        <li>Edit <tt>core-site.xml</tt> with:
+          <source>
+&lt;property&gt;
+&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+&lt;value&gt;/app/hadoop/tmp&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;property&gt; 
+&lt;name&gt;fs.default.name&lt;/name&gt; 
+&lt;value&gt;hdfs://hdnode01:54310&lt;/value&gt; 
+&lt;/property&gt;</source></li>
+        <li>Edit <tt>mapred-site.xml</tt> with:
+          <source>
+&lt;property&gt;
+&lt;name&gt;mapred.job.tracker&lt;/name&gt; 
+&lt;value&gt;hdnode01:54311&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;property&gt;
+&lt;name&gt;mapred.tasktracker.map.tasks.maximum&lt;/name&gt;
+&lt;value&gt;4&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;property&gt;
+&lt;name&gt;mapred.map.tasks&lt;/name&gt;
+&lt;value&gt;4&lt;/value&gt;
+&lt;/property&gt;</source>By default, Hadoop allows 2 mappers to run at once. Giraph's code, however, assumes that we can run 4 mappers at the same time. Accordingly, for this single-node, pseudo-distributed deployment, we need to add the last two properties in <tt>mapred-site.xml</tt> to reflect this requirement. Otherwise, some of Giraph's unittests will fail.</li>
+        <li>Edit <tt>hdfs-site.xml</tt> with:
+          <source>
+&lt;property&gt;
+&lt;name&gt;dfs.replication&lt;/name&gt; 
+&lt;value&gt;1&lt;/value&gt; 
+&lt;/property&gt;</source>Notice that you just set the replication service to make only 1 copy of the files stored in HDFS. This is because you have only one data nodes. The default value is 3 and you will receive run-time exceptions if you do not change it!</li>
+      </ul>
+      <p>Next, set up SSH for user account <tt>hduser</tt> so that you do not have to enter a passcode every time an SSH connection is started:</p>
+      <source>
+su - hduser
+ssh-keygen -t rsa -P ""
+cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys</source>
+      <p>And then SSH to <tt>hdnode01</tt> under user account <tt>hduser</tt> (this must be to <tt>hdnode01</tt>, as we used the node's hostname in Hadoop configuration). You will be asked for a password if this is the first time you SSH to the node under this user account. When prompted, do store the public RSA key into <tt>$HOME/.ssh/known_hosts</tt>. Once you make sure you can SSH without a passcode/password, edit <tt>$HADOOP_HOME/conf/masters</tt> with this line:</p>
+      <source>hdnode01</source>
+      <p>Similarly, edit <tt>$HADOOP_HOME/conf/slaves</tt> with the following two lines:</p>
+      <source>hdnode01</source>
+      <p>These edits set a single-node, pseudo-distributed Hadoop cluster consisting of a single master and a single slave on the same physical machine. Note that if you want to deploy a multi-node, distributed Hadoop cluster, you should add other data nodes (e.g., <tt>hdnode02</tt>, <tt>hdnode03</tt>, ...) in the <tt>$HADOOP_HOME/conf/slaves</tt> file after following all of the steps above on each new node with minor changes. You can find more details on this at Apache Hadoop <a href="http://hadoop.apache.org/docs/stable/cluster_setup.html">website</a>.</p>
+      <p>Let us move on. To initialize HDFS, format it by running the following command:</p>
+      <source>$HADOOP_HOME/bin/hadoop namenode -format</source>
+      <p>And then start the HDFS and the map/reduce daemons in the following order:</p>
+      <source>
+$HADOOP_HOME/bin/start-dfs.sh
+$HADOOP_HOME/bin/start-mapred.sh</source>
+      <p>Make sure that all necessary Java processes are running on both <tt>hdnode01</tt> by running this command:</p>
+      <source>jps</source>
+      <p>Which should output the following (ignore process IDs):</p>
+      <source>
+9079 NameNode
+9560 JobTracker
+9263 DataNode
+9453 SecondaryNameNode
+16316 Jps
+9745 TaskTracker</source>
+      <p>To stop the daemons, run the equivelent <tt>$HADOOP_HOME/bin/stop-*.sh</tt> scripts in a reversed order. This is important so that you will not lose your date. You are done with deploying a single-node, pseudo-distributed Hadoop cluster.</p>
+    </section>
+
+    <section name="Running a map/reduce job" id="qs_section_3">
+      <p>Now that we have a running Hadoop cluster, we can run map/reduce jobs. We will use the <tt>WordCount</tt> example job which reads text files and counts how often words occur. The input is text files and the output is text files, each line of which contains a word and the count of how often it occurred, separated by a tab. This example is archived in <tt>$HADOOP_HOME/hadoop-examples-0.20.203.0.jar</tt>. Let us get started. First, download a large UTF-8 text into a temporary directory, copy it to HDFS, and then make sure it is was copied successfully:</p>
+      <source>
+cd /tmp/
+wget http://www.gutenberg.org/cache/epub/132/pg132.txt
+$HADOOP_HOME/bin/hadoop dfs -copyFromLocal /tmp/pg132.txt /user/hduser/input/pg132.txt
+$HADOOP_HOME/bin/hadoop dfs -ls /user/hduser/input</source>
+      <p>After that, you can run the wordcount example. To launch a map/reduce job, you use the <tt>$HADOOP_HOME/bin/hadoop jar</tt> command as follows:</p>
+      <source>$HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/hadoop-examples-0.20.203.0.jar wordcount /user/hduser/input/pg132.txt /user/hduser/output/wordcount</source>
+      <p>You can monitor the progress of your job and other cluster info using the web UI for the running daemons:</p>
+      <ul>
+        <li>NameNode daemon: <a href="http://hdnode01:50070">http://hdnode01:50070</a></li>
+        <li>JobTracker daemon: <a href="http://hdnode01:50030">http://hdnode01:50030</a></li>
+        <li>TaskTracker daemon: <a href="http://hdnode01:50060">http://hdnode01:50060</a></li>
+      </ul>
+      <p>Once the job is completed, you can check the output by running:</p>
+      <source>$HADOOP_HOME/bin/hadoop dfs -cat /user/hduser/output/wordcount/p* | less</source>
+    </section>
+
+    <section name="Deploying Giraph" id="qs_section_4">
+      <p>We will now deploy Giraph. In order to <a href="http://giraph.apache.org/build.html">build Giraph</a> from the repository, you need first to install Git and Maven 3 by running the following commands:</p>
+      <source>
+su - hdadmin
+sudo apt-get install git
+sudo apt-get install maven
+mvn -version</source>
+      <p>Make sure that you have installed Maven 3 or higher. Giraph uses the Munge plugin, which requires Mave 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3. You can now clone Giraph from its Github mirror:</p>
+      <source>
+cd /usr/local/
+sudo git clone https://github.com/apache/giraph.git
+sudo chown -R hduser:hadoop giraph
+su - hduser</source>
+      <p>After that, edit <tt>$HOME/.bashrc</tt> for user account <tt>hduser</tt> with the following line:</p>
+      <source>export GIRAPH_HOME=/usr/local/giraph</source>
+      <p>Save and close the file, and then validate, compile, test (if required), and then package Giraph into JAR files by running the following commands:</p>
+      <source>
+source $HOME/.bashrc
+cd $GIRAPH_HOME
+mvn package -DskipTests</source>
+    <p>The argument <tt>-DskipTests</tt> will skip the testing phase. This may take a while on the first run because Maven is downloading the most recent artifacts (plugin JARs and other files) into your local repository. You may also need to execute the command a couple of times before it succeeds. This is because the remote server may time out before your downloads are complete. Once the packaging is successful, you will have the Giraph core JAR <tt>$GIRAPH_HOME/giraph-core/target/giraph-1.2.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt> and Giraph examples JAR <tt>$GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt>. You are done with deploying Giraph.</p>
+    </section>
+  
+    <section name="Running a Giraph job" id="qs_section_6">
+      <p>With Giraph and Hadoop deployed, you can run your first Giraph job. We will use the <tt>SimpleShortestPathsComputation</tt> example job which reads an input file of a graph in one of the supported formats and computes the length of the shortest paths from a source node to all other nodes. The source node is always the first node in the input file. We will use <tt>JsonLongDoubleFloatDoubleVertexInputFormat</tt> input format. First, create an example graph under <tt>/tmp/tiny_graph.txt</tt> with the follwing:</p>
+      <source>
+[0,0,[[1,1],[3,3]]]
+[1,0,[[0,1],[2,2],[3,1]]]
+[2,0,[[1,2],[4,4]]]
+[3,0,[[0,3],[1,1],[4,4]]]
+[4,0,[[3,4],[2,4]]]</source>
+      <p>Save and close the file. Each line above has the format <tt>[source_id,source_value,[[dest_id, edge_value],...]]</tt>. In this graph, there are 5 nodes and 12 directed edges. Copy the input file to HDFS:</p>
+      <source>
+$HADOOP_HOME/bin/hadoop dfs -copyFromLocal /tmp/tiny_graph.txt /user/hduser/input/tiny_graph.txt
+$HADOOP_HOME/bin/hadoop dfs -ls /user/hduser/input</source>
+      <p>We will use <tt>IdWithValueTextOutputFormat</tt> output file format, where each line consists of <tt>source_id length</tt> for each node in the input graph (the source node has a length of 0, by convention). You can now run the example by:</p>
+      <source>
+$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.2.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner org.apache.giraph.examples.SimpleShortestPathsComputation -vif org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat -vip /user/hduser/input/tiny_graph.txt -vof org.apache.giraph.io.formats.IdWithValueTextOutputFormat -op /user/hduser/output/shortestpaths -w 1</source>
+      <p>Notice that the job is computed using a single worker using the argument <tt>-w</tt>. To get more information about running a Giraph job, run the following command:</p>
+      <source>$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.2.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner -h</source>
+      <p>This will output the following:</p>
+      <source>
+usage: org.apache.giraph.utils.ConfigurationUtils [-aw &lt;arg&gt;] [-c &lt;arg&gt;]
+       [-ca &lt;arg&gt;] [-cf &lt;arg&gt;] [-eif &lt;arg&gt;] [-eip &lt;arg&gt;] [-eof &lt;arg&gt;]
+       [-esd &lt;arg&gt;] [-h] [-jyc &lt;arg&gt;] [-la] [-mc &lt;arg&gt;] [-op &lt;arg&gt;] [-pc
+       &lt;arg&gt;] [-q] [-th &lt;arg&gt;] [-ve &lt;arg&gt;] [-vif &lt;arg&gt;] [-vip &lt;arg&gt;] [-vof
+       &lt;arg&gt;] [-vsd &lt;arg&gt;] [-vvf &lt;arg&gt;] [-w &lt;arg&gt;] [-wc &lt;arg&gt;] [-yh &lt;arg&gt;]
+       [-yj &lt;arg&gt;]
+ -aw,--aggregatorWriter &lt;arg&gt;           AggregatorWriter class
+ -c,--messageCombiner &lt;arg&gt;             Message messageCombiner class
+ -ca,--customArguments &lt;arg&gt;            provide custom arguments for the
+                                        job configuration in the form: -ca
+                                        &lt;param1&gt;=&lt;value1&gt;,&lt;param2&gt;=&lt;value2&gt;
+                                        -ca &lt;param3&gt;=&lt;value3&gt; etc. It
+                                        can appear multiple times, and the
+                                        last one has effect for the sameparam.
+ -cf,--cacheFile &lt;arg&gt;                  Files for distributed cache
+ -eif,--edgeInputFormat &lt;arg&gt;           Edge input format
+ -eip,--edgeInputPath &lt;arg&gt;             Edge input path
+ -eof,--vertexOutputFormat &lt;arg&gt;               Edge output format
+ -esd,--edgeSubDir &lt;arg&gt;                subdirectory to be used for the
+                                        edge output
+ -h,--help                              Help
+ -jyc,--jythonClass &lt;arg&gt;               Jython class name, used if
+                                        computation passed in is a python
+                                        script
+ -la,--listAlgorithms                   List supported algorithms
+ -mc,--masterCompute &lt;arg&gt;              MasterCompute class
+ -op,--outputPath &lt;arg&gt;                 Vertex output path
+ -pc,--partitionClass &lt;arg&gt;             Partition class
+ -q,--quiet                             Quiet output
+ -th,--typesHolder &lt;arg&gt;                Class that holds types. Needed
+                                        only if Computation is not set
+ -ve,--outEdges &lt;arg&gt;                   Vertex edges class
+ -vif,--vertexInputFormat &lt;arg&gt;         Vertex input format
+ -vip,--vertexInputPath &lt;arg&gt;           Vertex input path
+ -vof,--vertexOutputFormat &lt;arg&gt;        Vertex output format
+ -vsd,--vertexSubDir &lt;arg&gt;              subdirectory to be used for the
+                                        vertex output
+ -vvf,--vertexValueFactoryClass &lt;arg&gt;   Vertex value factory class
+ -w,--workers &lt;arg&gt;                     Number of workers
+ -wc,--workerContext &lt;arg&gt;              WorkerContext class
+ -yh,--yarnheap &lt;arg&gt;                   Heap size, in MB, for each Giraph
+                                        task (YARN only.) Defaults to
+                                        giraph.yarn.task.heap.mb => 1024
+                                        (integer) MB.
+ -yj,--yarnjars &lt;arg&gt;                   comma-separated list of JAR
+                                        filenames to distribute to Giraph
+                                        tasks and ApplicationMaster. YARN
+                                        only. Search order: CLASSPATH,
+                                        HADOOP_HOME, user current dir.</source>
+      <p>You can monitor the progress of your Giraph job from the JobTracker web GUI. Once the job is completed, you can check the results by:</p>
+      <source>$HADOOP_HOME/bin/hadoop dfs -cat /user/hduser/output/shortestpaths/p* | less</source>
+    </section>
+    
+    <section name="Getting involved" id="qs_section_6">
+    <p>Giraph is an open-source project and external contributions are extremely appreciated. There are many ways to get involved:</p>
+    <ul>
+      <li>Subscribe to the <a href="http://giraph.apache.org/mail-lists.html">mailing lists</a>, particularly the <tt>user</tt> and <tt>developer</tt> lists, where you can get a feel for the state of the project and what the community is working on.</li>
+      <li>Try out more examples and play with Giraph on your cluster. Be sure to ask questions on the user list or <a href="http://giraph.apache.org/issue-tracking.html">file an issue</a> if you run into problems with your particular configuration.</li>
+      <li>Browse the existing issues to find something you may be interested in working on. Take a look at the section on <a href="http://giraph.apache.org/generating_patches.html">generating patches</a> for detailed instructions on contributing your changes.</li>
+      <li>Make Giraph more accessable to new comers by updating this and other <a href="http://giraph.apache.org/build_site.html"> site documentation.</a></li>
+    </ul>
+    </section>
+    <section name="Optional: Setting up a virtual machine" id="qs_section_7">
+      <p>You do not have a spare physical machine for deployment? No big deal, you can follow all of the steps above on a Virtual Machine (VM)! First, install Oracle VM VirtualBox Manager 4.2 or newer then create a new VM using the software/hardware configuration specified in the <a href="#qs_section_1">Overview</a> section.</p>
+      <p>By default, VirtualBox sets up one network adapter attached to NAT for new VMs. This will enable the VM to access external networks but not other VMs or the host OS. To allow VM-to-VM and VM-to-host communication, we need to set up a new network adapter attached to a host-only adapter. To do this, go to <tt>File > Preferences > Network</tt> in VirtualBox Manager and then add a new host-only network using the defauly settings. The default IP address is <tt>192.168.56.1</tt> with network mask <tt>255.255.255.0</tt> and name <tt>vboxnet0</tt>. Next, for the Hadoop/Giraph VM, go to <tt>Settings > Network</tt>, enable Adapter 2, and then attach it to the host-only adapter <tt>vboxnet0</tt>. Finally, we need to configure the second adapter in the guest OS. To do this, boot the VM into the guest OS and then edit <tt>/etc/network/interfaces</tt> with the following:</p>
+      <source>
+auto eth1
+iface eth1 inet static
+    address 192.168.56.10
+    netmask 255.255.255.0</source>
+      <p>Save and close the file. You now have two interfaces: <tt>eth0</tt> for Adapter 1 (NAT, IP dynamically assigned), and <tt>eth1</tt> for Adapter 2 (host-only, with an IP address that can reach <tt>vboxnet0</tt> on the host OS). Finally, fire up the new interface by running:</p>
+<source>sudo ifup eth1</source>
+      <p>In order to avoid using IP addresses and use hostnames instead, update <tt>/etc/hosts</tt> file on the VM and the host OS with the following:</p>
+      <source>
+127.0.0.1       localhost
+192.168.56.1    vboxnet0
+192.168.56.10   hdnode01</source>
+      <p>Now you can ping to the VM using its hostname instead of its IP address. You are done with setting up the VM.</p> 
+    </section>
+  </body>
+</document>

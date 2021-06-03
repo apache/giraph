@@ -18,32 +18,35 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.VertexEdgeCount;
-import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MeterDesc;
-import org.apache.giraph.time.SystemTime;
-import org.apache.giraph.time.Time;
-import org.apache.giraph.time.Times;
-import org.apache.giraph.zk.ZooKeeperExt;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-
-import com.yammer.metrics.core.Meter;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.concurrent.Callable;
+
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.GiraphInputFormat;
+import org.apache.giraph.io.InputType;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.GiraphMetricsRegistry;
+import org.apache.giraph.metrics.MeterDesc;
+import org.apache.giraph.metrics.MetricNames;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.time.SystemTime;
+import org.apache.giraph.time.Time;
+import org.apache.giraph.time.Times;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
+
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.util.PercentGauge;
 
 /**
  * Abstract base class for loading vertex/edge input splits.
@@ -53,69 +56,70 @@ import java.util.concurrent.Callable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public abstract class InputSplitsCallable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements Callable<VertexEdgeCount> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
   private static final Time TIME = SystemTime.get();
   /** Configuration */
-  protected final ImmutableClassesGiraphConfiguration<I, V, E, M>
-  configuration;
+  protected final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Context */
   protected final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph state */
-  private final GraphState<I, V, E, M> graphState;
   /** Handles IPC communication */
-  private final WorkerClientRequestProcessor<I, V, E, M>
+  protected final WorkerClientRequestProcessor<I, V, E>
   workerClientRequestProcessor;
   /**
    * Stores and processes the list of InputSplits advertised
    * in a tree of child znodes by the master.
    */
-  private final InputSplitsHandler splitsHandler;
-  /** ZooKeeperExt handle */
-  private final ZooKeeperExt zooKeeperExt;
+  private final WorkerInputSplitsHandler splitsHandler;
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
   /** Whether to prioritize local input splits. */
   private final boolean useLocality;
+  /** Service worker */
+  private final CentralizedServiceWorker<I, V, E> serviceWorker;
 
-  // CHECKSTYLE: stop ParameterNumberCheck
   /**
    * Constructor.
    *
    * @param context Context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
-   * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public InputSplitsCallable(
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
-      InputSplitsHandler splitsHandler,
-      ZooKeeperExt zooKeeperExt) {
-    this.zooKeeperExt = zooKeeperExt;
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
+      WorkerInputSplitsHandler splitsHandler) {
     this.context = context;
     this.workerClientRequestProcessor =
-        new NettyWorkerClientRequestProcessor<I, V, E, M>(
-            context, configuration, bspServiceWorker);
-    this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
-        graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
-        null);
+        new NettyWorkerClientRequestProcessor<I, V, E>(
+            context, configuration, bspServiceWorker,
+            false /* useOneMessageToManyIdsEncoding, not useful for input */);
     this.useLocality = configuration.useInputSplitLocality();
     this.splitsHandler = splitsHandler;
     this.configuration = configuration;
+    this.serviceWorker = bspServiceWorker;
   }
-  // CHECKSTYLE: resume ParameterNumberCheck
+
+  /**
+   * Get input format
+   *
+   * @return Input format
+   */
+  public abstract GiraphInputFormat getInputFormat();
+
+  /**
+   * Get input type
+   *
+   * @return Input type
+   */
+  public abstract InputType getInputType();
 
   /**
    * Get Meter tracking edges loaded
@@ -125,6 +129,16 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   public static Meter getTotalEdgesLoadedMeter() {
     return GiraphMetrics.get().perJobRequired()
         .getMeter(MeterDesc.EDGES_LOADED);
+  }
+
+  /**
+   * Get Counter tracking edges filtered
+   *
+   * @return Counter tracking edges filtered
+   */
+  public static Counter getTotalEdgesFilteredCounter() {
+    return GiraphMetrics.get().perJobRequired()
+        .getCounter(MetricNames.EDGES_FILTERED);
   }
 
   /**
@@ -138,44 +152,95 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   }
 
   /**
+   * Get Counter tracking vertices filtered
+   *
+   * @return Counter tracking vertices filtered
+   */
+  public static Counter getTotalVerticesFilteredCounter() {
+    return GiraphMetrics.get().perJobRequired()
+        .getCounter(MetricNames.VERTICES_FILTERED);
+  }
+
+  /**
+   * Initialize metrics used by this class and its subclasses.
+   */
+  public static void initMetrics() {
+    GiraphMetricsRegistry metrics = GiraphMetrics.get().perJobRequired();
+
+    final Counter edgesFiltered = getTotalEdgesFilteredCounter();
+    final Meter edgesLoaded = getTotalEdgesLoadedMeter();
+
+    metrics.getGauge(MetricNames.EDGES_FILTERED_PCT, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return edgesFiltered.count();
+      }
+
+      @Override protected double getDenominator() {
+        return edgesLoaded.count();
+      }
+    });
+
+    final Counter verticesFiltered = getTotalVerticesFilteredCounter();
+    final Meter verticesLoaded = getTotalVerticesLoadedMeter();
+
+    metrics.getGauge(MetricNames.VERTICES_FILTERED_PCT, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return verticesFiltered.count();
+      }
+
+      @Override protected double getDenominator() {
+        return verticesLoaded.count();
+      }
+    });
+  }
+
+  /**
    * Load vertices/edges from the given input split.
    *
    * @param inputSplit Input split to load
-   * @param graphState Graph state
    * @return Count of vertices and edges loaded
    * @throws IOException
    * @throws InterruptedException
    */
-  protected abstract VertexEdgeCount readInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState)
+  protected abstract VertexEdgeCount readInputSplit(InputSplit inputSplit)
     throws IOException, InterruptedException;
 
   @Override
   public VertexEdgeCount call() {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
-    String inputSplitPath;
     int inputSplitsProcessed = 0;
     try {
-      while ((inputSplitPath = splitsHandler.reserveInputSplit()) != null) {
+      OutOfCoreEngine oocEngine = serviceWorker.getServerData().getOocEngine();
+      if (oocEngine != null) {
+        oocEngine.processingThreadStart();
+      }
+      while (true) {
+        byte[] serializedInputSplit = splitsHandler.reserveInputSplit(
+            getInputType(), inputSplitsProcessed == 0);
+        if (serializedInputSplit == null) {
+          // No splits left
+          break;
+        }
+        // If out-of-core mechanism is used, check whether this thread
+        // can stay active or it should temporarily suspend and stop
+        // processing and generating more data for the moment.
+        if (oocEngine != null) {
+          oocEngine.activeThreadCheckIn();
+        }
         vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
-            loadInputSplit(inputSplitPath,
-                graphState));
+            loadInputSplit(serializedInputSplit));
         context.progress();
         ++inputSplitsProcessed;
       }
-    } catch (KeeperException e) {
-      throw new IllegalStateException("call: KeeperException", e);
+      if (oocEngine != null) {
+        oocEngine.processingThreadFinish();
+      }
     } catch (InterruptedException e) {
       throw new IllegalStateException("call: InterruptedException", e);
     } catch (IOException e) {
       throw new IllegalStateException("call: IOException", e);
     } catch (ClassNotFoundException e) {
       throw new IllegalStateException("call: ClassNotFoundException", e);
-    } catch (InstantiationException e) {
-      throw new IllegalStateException("call: InstantiationException", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalStateException("call: IllegalAccessException", e);
     }
 
     if (LOG.isInfoEnabled()) {
@@ -202,28 +267,19 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * reached in readVerticeFromInputSplit.
    * Mark the input split finished when done.
    *
-   * @param inputSplitPath ZK location of input split
-   * @param graphState Current graph state
+   * @param serializedInputSplit Serialized input split
    * @return Mapping of vertex indices and statistics, or null if no data read
    * @throws IOException
    * @throws ClassNotFoundException
    * @throws InterruptedException
-   * @throws InstantiationException
-   * @throws IllegalAccessException
    */
-  private VertexEdgeCount loadInputSplit(
-      String inputSplitPath,
-      GraphState<I, V, E, M> graphState)
-    throws IOException, ClassNotFoundException, InterruptedException,
-      InstantiationException, IllegalAccessException {
-    InputSplit inputSplit = getInputSplit(inputSplitPath);
-    VertexEdgeCount vertexEdgeCount =
-        readInputSplit(inputSplit, graphState);
+  private VertexEdgeCount loadInputSplit(byte[] serializedInputSplit)
+      throws IOException, ClassNotFoundException, InterruptedException {
+    InputSplit inputSplit = getInputSplit(serializedInputSplit);
+    VertexEdgeCount vertexEdgeCount = readInputSplit(inputSplit);
     if (LOG.isInfoEnabled()) {
-      LOG.info("loadFromInputSplit: Finished loading " +
-          inputSplitPath + " " + vertexEdgeCount);
+      LOG.info("loadFromInputSplit: Finished loading " + vertexEdgeCount);
     }
-    splitsHandler.markInputSplitPathFinished(inputSplitPath);
     return vertexEdgeCount;
   }
 
@@ -231,40 +287,19 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * Talk to ZooKeeper to convert the input split path to the actual
    * InputSplit.
    *
-   * @param inputSplitPath Location in ZK of input split
+   * @param serializedInputSplit Serialized input split
    * @return instance of InputSplit
    * @throws IOException
    * @throws ClassNotFoundException
    */
-  protected InputSplit getInputSplit(String inputSplitPath)
-    throws IOException, ClassNotFoundException {
-    byte[] splitList;
-    try {
-      splitList = zooKeeperExt.getData(inputSplitPath, false, null);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "getInputSplit: KeeperException on " + inputSplitPath, e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "getInputSplit: IllegalStateException on " + inputSplitPath, e);
-    }
-    context.progress();
-
+  protected InputSplit getInputSplit(byte[] serializedInputSplit)
+      throws IOException, ClassNotFoundException {
     DataInputStream inputStream =
-        new DataInputStream(new ByteArrayInputStream(splitList));
-    if (useLocality) {
-      Text.readString(inputStream); // location data unused here, skip
-    }
-    String inputSplitClass = Text.readString(inputStream);
-    InputSplit inputSplit = (InputSplit)
-        ReflectionUtils.newInstance(
-            configuration.getClassByName(inputSplitClass),
-            configuration);
-    ((Writable) inputSplit).readFields(inputStream);
+        new DataInputStream(new ByteArrayInputStream(serializedInputSplit));
+    InputSplit inputSplit = getInputFormat().readInputSplit(inputStream);
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("getInputSplit: Reserved " + inputSplitPath +
-          " from ZooKeeper and got input split '" +
+      LOG.info("getInputSplit: Reserved input split '" +
           inputSplit.toString() + "'");
     }
     return inputSplit;

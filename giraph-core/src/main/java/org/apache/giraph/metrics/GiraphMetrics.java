@@ -18,6 +18,7 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.utils.GcTracker;
 
 import com.google.common.collect.Lists;
 
@@ -42,6 +43,9 @@ public class GiraphMetrics {
   /** registry for required per-job metrics */
   private final GiraphMetricsRegistry perJobRequired;
 
+  /** Garbage collection tracker */
+  private final GcTracker gcTracker;
+
   /** observer for per-superstep metrics re-initialization */
   private final List<ResetSuperstepMetricsObserver> observers =
       Lists.newArrayList();
@@ -53,6 +57,7 @@ public class GiraphMetrics {
     perJobOptional = GiraphMetricsRegistry.createFake();
     perSuperstep = SuperstepMetricsRegistry.createFake();
     perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
+    gcTracker = new GcTracker();
   }
 
   /**
@@ -64,6 +69,7 @@ public class GiraphMetrics {
     perJobOptional = GiraphMetricsRegistry.create(conf, "giraph", "job");
     perSuperstep = SuperstepMetricsRegistry.create(conf, INPUT_SUPERSTEP);
     perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
+    gcTracker = new GcTracker(conf);
   }
 
   /**
@@ -112,6 +118,15 @@ public class GiraphMetrics {
   }
 
   /**
+   * Get GC tracker
+   *
+   * @return Gc tracker
+   */
+  public GcTracker getGcTracker() {
+    return gcTracker;
+  }
+
+  /**
    * Anyone using per-superstep counters needs to re-initialize their Metrics
    * object on each new superstep. Otherwise they will always be updating just
    * one counter. This method allows people to easily register a callback for
@@ -119,7 +134,7 @@ public class GiraphMetrics {
    *
    * @param observer SuperstepObserver to watch
    */
-  public void addSuperstepResetObserver(
+  public synchronized void addSuperstepResetObserver(
       ResetSuperstepMetricsObserver observer) {
     observers.add(observer);
   }
@@ -129,7 +144,7 @@ public class GiraphMetrics {
    *
    * @param superstep long number of superstep
    */
-  public void resetSuperstepMetrics(long superstep) {
+  public synchronized void resetSuperstepMetrics(long superstep) {
     perSuperstep.setSuperstep(superstep);
     for (ResetSuperstepMetricsObserver observer : observers) {
       observer.newSuperstep(perSuperstep);
@@ -144,6 +159,14 @@ public class GiraphMetrics {
   public void dumpToStream(PrintStream out) {
     perJobOptional.printToStream(out);
     perJobRequired.printToStream(out);
-    perSuperstep.printToStream(out);
+  }
+
+  /**
+   * Stop using metrics (for cleanup)
+   */
+  public void shutdown() {
+    perJobOptional.shutdown();
+    perJobRequired.shutdown();
+    perSuperstep.shutdown();
   }
 }

@@ -24,6 +24,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
+/*if_not[STATIC_SASL_SYMBOL]*/
+import org.apache.hadoop.security.SaslPropertiesResolver;
+/*end[STATIC_SASL_SYMBOL]*/
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
@@ -74,9 +77,22 @@ public class SaslNettyClient {
             AuthMethod.DIGEST.getMechanismName() +
             " client to authenticate to service at " + token.getService());
       }
-      saslClient = Sasl.createSaslClient(new String[] { AuthMethod.DIGEST
-          .getMechanismName() }, null, null, SaslRpcServer.SASL_DEFAULT_REALM,
-          SaslRpcServer.SASL_PROPS, new SaslClientCallbackHandler(token));
+/*if[STATIC_SASL_SYMBOL]
+      saslClient =
+          Sasl.createSaslClient(
+              new String[] { AuthMethod.DIGEST.getMechanismName() }, null,
+              null, SaslRpcServer.SASL_DEFAULT_REALM, SaslRpcServer.SASL_PROPS,
+              new SaslClientCallbackHandler(token));
+else[STATIC_SASL_SYMBOL]*/
+      SaslPropertiesResolver saslPropsResolver =
+          SaslPropertiesResolver.getInstance(new Configuration());
+      saslClient =
+          Sasl.createSaslClient(
+              new String[] { AuthMethod.DIGEST.getMechanismName() }, null,
+              null, SaslRpcServer.SASL_DEFAULT_REALM,
+              saslPropsResolver.getDefaultProperties(),
+              new SaslClientCallbackHandler(token));
+/*end[STATIC_SASL_SYMBOL]*/
     } catch (IOException e) {
       LOG.error("SaslNettyClient: Could not obtain job token for Netty " +
           "Client to use to authenticate with a Netty Server.");

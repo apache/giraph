@@ -32,11 +32,10 @@ import java.util.Collection;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface WorkerGraphPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Instantiate the {@link PartitionOwner} implementation used to read the
    * master assignments.
@@ -67,7 +66,7 @@ public interface WorkerGraphPartitioner<I extends WritableComparable,
    */
   Collection<PartitionStats> finalizePartitionStats(
       Collection<PartitionStats> workerPartitionStats,
-      PartitionStore<I, V, E, M> partitionStore);
+      PartitionStore<I, V, E> partitionStore);
 
   /**
    * Get the partitions owners and update locally.  Returns the partitions
@@ -76,14 +75,11 @@ public interface WorkerGraphPartitioner<I extends WritableComparable,
    * @param myWorkerInfo Worker info.
    * @param masterSetPartitionOwners Master set partition owners, received
    *        prior to beginning the superstep
-   * @param partitionStore Partition store for this worker
-   *        (can be used to fill the return map of partitions to send)
    * @return Information for the partition exchange.
    */
   PartitionExchange updatePartitionOwners(
       WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore<I, V, E, M> partitionStore);
+      Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
   /**
    * Get a collection of the {@link PartitionOwner} objects.

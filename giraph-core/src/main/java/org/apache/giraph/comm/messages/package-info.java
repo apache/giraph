@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of communication related objects, IPC service.
+ * Package of classes for storing messages.
  */
 package org.apache.giraph.comm.messages;

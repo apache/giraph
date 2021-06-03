@@ -18,25 +18,25 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import org.apache.hadoop.io.Writable;
-
 import java.io.IOException;
+
+import org.apache.hadoop.io.Writable;
 
 /**
  * Aggregates worker aggregator requests and sends them off
  */
 public interface WorkerAggregatorRequestProcessor {
   /**
-   * Sends worker aggregated value to the owner of aggregator
+   * Sends worker reduced value to the owner of reducer
    *
-   * @param aggregatorName Name of the aggregator
-   * @param aggregatedValue Value of the aggregator
+   * @param name Name of the reducer
+   * @param reducedValue Reduced partial value
    * @throws java.io.IOException
-   * @return True if aggregated value will be sent, false if this worker is
-   * the owner of the aggregator
+   * @return True if reduced value will be sent, false if this worker is
+   * the owner of the reducer
    */
-  boolean sendAggregatedValue(String aggregatorName,
-      Writable aggregatedValue) throws IOException;
+  boolean sendReducedValue(String name,
+      Writable reducedValue) throws IOException;
 
   /**
    * Flush aggregated values cache.
@@ -46,19 +46,19 @@ public interface WorkerAggregatorRequestProcessor {
   void flush() throws IOException;
 
   /**
-   * Sends aggregated values to the master. This worker is the owner of these
-   * aggregators.
+   * Sends reduced values to the master. This worker is the owner of these
+   * reducers.
    *
-   * @param aggregatorData Serialized aggregator data
+   * @param data Serialized reduced values data
    * @throws IOException
    */
-  void sendAggregatedValuesToMaster(byte[] aggregatorData) throws IOException;
+  void sendReducedValuesToMaster(byte[] data) throws IOException;
 
   /**
-   * Sends aggregators to all other workers
+   * Sends reduced values to all other workers
    *
-   * @param aggregatorDataList Serialized aggregator data split into chunks
+   * @param reducedDataList Serialized reduced values data split into chunks
    */
-  void distributeAggregators(
-      Iterable<byte[]> aggregatorDataList) throws IOException;
+  void distributeReducedValues(
+      Iterable<byte[]> reducedDataList) throws IOException;
 }

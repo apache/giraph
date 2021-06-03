@@ -65,6 +65,22 @@ public class MemoryUtils {
   }
 
   /**
+   * Get free plus unallocated memory in megabytes
+   * @return free plus unallocated memory in megabytes
+   */
+  public static double freePlusUnallocatedMemoryMB() {
+    return freeMemoryMB() + maxMemoryMB() - totalMemoryMB();
+  }
+
+  /**
+   * Get fraction of memory that's free
+   * @return Fraction of memory that's free
+   */
+  public static double freeMemoryFraction() {
+    return freePlusUnallocatedMemoryMB() / maxMemoryMB();
+  }
+
+  /**
    * Initialize metrics tracked by this helper.
    */
   public static void initMetrics() {

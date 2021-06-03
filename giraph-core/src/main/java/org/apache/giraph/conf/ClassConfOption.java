@@ -17,11 +17,15 @@
  */
 package org.apache.giraph.conf;
 
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Objects;
+
 /**
  * Class configuration option
+ *
  * @param <C> interface of class
  */
 public class ClassConfOption<C> extends AbstractConfOption {
@@ -35,29 +39,34 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Private constructor
+   *
    * @param key Key
    * @param defaultClass default class
    * @param interfaceClass interface class
+   * @param description configuration description
    */
   private ClassConfOption(String key, Class<? extends C> defaultClass,
-      Class<C> interfaceClass) {
-    super(key);
+      Class<C> interfaceClass, String description) {
+    super(key, description);
     this.defaultClass = defaultClass;
     this.interfaceClass = interfaceClass;
-    AllOptions.add(this);
   }
 
   /**
    * Static create method
+   *
    * @param key key
    * @param defaultClass default class
    * @param interfaceClass interface class
+   * @param description configuration description
    * @param <T> type of class
    * @return ClassConfOption
    */
   public static <T> ClassConfOption<T> create(String key,
-      Class<? extends T> defaultClass, Class<T> interfaceClass) {
-    return new ClassConfOption<T>(key, defaultClass, interfaceClass);
+      Class<? extends T> defaultClass, Class<T> interfaceClass,
+      String description) {
+    return new ClassConfOption<T>(key, defaultClass, interfaceClass,
+                                  description);
   }
 
   public Class<? extends C> getDefaultClass() {
@@ -66,6 +75,10 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   public Class<C> getInterfaceClass() {
     return interfaceClass;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return Objects.equal(get(conf), defaultClass);
   }
 
   @Override public String getDefaultValueStr() {
@@ -86,7 +99,27 @@ public class ClassConfOption<C> extends AbstractConfOption {
   }
 
   /**
+   * Create a new instance
+   *
+   * @param conf Configuration
+   * @return new instance of class held by this key
+   */
+  public C newInstance(Configuration conf) {
+    Class<? extends C> klass = get(conf);
+    if (klass == null) {
+      return null;
+    }
+    if (conf instanceof ImmutableClassesGiraphConfiguration) {
+      return ReflectionUtils.newInstance(klass,
+          (ImmutableClassesGiraphConfiguration) conf);
+    } else {
+      return org.apache.hadoop.util.ReflectionUtils.newInstance(klass, conf);
+    }
+  }
+
+  /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return Class set for key, or defaultClass
    */
@@ -96,6 +129,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Lookup array of classes for key
+   *
    * @param conf Configuration
    * @return array of classes
    */
@@ -127,6 +161,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Lookup with user specified default value
+   *
    * @param conf Configuration
    * @param defaultValue default value
    * @return Class
@@ -138,6 +173,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Set value for key
+   *
    * @param conf Configuration
    * @param klass Class to set
    */
@@ -146,7 +182,20 @@ public class ClassConfOption<C> extends AbstractConfOption {
   }
 
   /**
+   * Set value for key if it is not already set
+   *
+   * @param conf Configuration
+   * @param klass Class to set
+   */
+  public void setIfUnset(Configuration conf, Class<? extends C> klass) {
+    if (!contains(conf)) {
+      set(conf, klass);
+    }
+  }
+
+  /**
    * Set classes for this key
+   *
    * @param conf Configuration
    * @param klasses Classes to set
    */
@@ -165,6 +214,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Add class to list for key
+   *
    * @param conf Configuration
    * @param klass Class to add
    */

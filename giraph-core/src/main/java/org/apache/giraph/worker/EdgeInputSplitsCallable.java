@@ -18,15 +18,18 @@
 
 package org.apache.giraph.worker;
 
+import java.io.IOException;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.filters.EdgeInputFilter;
+import org.apache.giraph.io.InputType;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -34,9 +37,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
-
-import java.io.IOException;
 
 /**
  * Load as many edge input splits as possible.
@@ -46,48 +48,85 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
+@SuppressWarnings("unchecked")
 public class EdgeInputSplitsCallable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends InputSplitsCallable<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends InputSplitsCallable<I, V, E> {
   /** How often to update metrics and print info */
-  public static final int VERTICES_UPDATE_PERIOD = 1000000;
+  public static final int EDGES_UPDATE_PERIOD = 1000000;
+  /** How often to update filtered metrics */
+  public static final int EDGES_FILTERED_UPDATE_PERIOD = 10000;
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(
       EdgeInputSplitsCallable.class);
+
+  /** Aggregator handler */
+  private final WorkerThreadGlobalCommUsage globalCommUsage;
+  /** Bsp service worker (only use thread-safe methods) */
+  private final BspServiceWorker<I, V, E> bspServiceWorker;
+  /** Edge input format */
+  private final EdgeInputFormat<I, E> edgeInputFormat;
   /** Input split max edges (-1 denotes all) */
   private final long inputSplitMaxEdges;
+  /** Can embedInfo in vertexIds */
+  private final boolean canEmbedInIds;
+
+  /** Filter to use */
+  private final EdgeInputFilter<I, E> edgeInputFilter;
 
   // Metrics
   /** edges loaded meter across all readers */
   private final Meter totalEdgesMeter;
+  /** edges filtered out by user */
+  private final Counter totalEdgesFiltered;
 
   /**
    * Constructor.
    *
+   * @param edgeInputFormat Edge input format
    * @param context Context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
-   * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public EdgeInputSplitsCallable(
+      EdgeInputFormat<I, E> edgeInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
-      InputSplitsHandler splitsHandler,
-      ZooKeeperExt zooKeeperExt)  {
-    super(context, graphState, configuration, bspServiceWorker,
-        splitsHandler, zooKeeperExt);
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
+      WorkerInputSplitsHandler splitsHandler)  {
+    super(context, configuration, bspServiceWorker, splitsHandler);
+    this.edgeInputFormat = edgeInputFormat;
 
+    this.bspServiceWorker = bspServiceWorker;
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
+    // Initialize aggregator usage.
+    this.globalCommUsage = bspServiceWorker.getAggregatorHandler()
+      .newThreadAggregatorUsage();
+    edgeInputFilter = configuration.getEdgeInputFilter();
+    canEmbedInIds = bspServiceWorker
+        .getLocalData()
+        .getMappingStoreOps() != null &&
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .hasEmbedding();
 
     // Initialize Metrics
     totalEdgesMeter = getTotalEdgesLoadedMeter();
+    totalEdgesFiltered = getTotalEdgesFilteredCounter();
+  }
+
+  @Override
+  public EdgeInputFormat<I, E> getInputFormat() {
+    return edgeInputFormat;
+  }
+
+  @Override
+  public InputType getInputType() {
+    return InputType.EDGE;
   }
 
   /**
@@ -95,26 +134,37 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
    * maximum number of edges to be read from an input split.
    *
    * @param inputSplit Input split to process with edge reader
-   * @param graphState Current graph state
    * @return Edges loaded from this input split
    * @throws IOException
    * @throws InterruptedException
    */
   @Override
   protected VertexEdgeCount readInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState) throws IOException,
+      InputSplit inputSplit) throws IOException,
       InterruptedException {
-    EdgeInputFormat<I, E> edgeInputFormat =
-        configuration.createEdgeInputFormat();
     EdgeReader<I, E> edgeReader =
         edgeInputFormat.createEdgeReader(inputSplit, context);
     edgeReader.setConf(
-        (ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>)
+        (ImmutableClassesGiraphConfiguration<I, Writable, E>)
             configuration);
+
     edgeReader.initialize(inputSplit, context);
+    // Set aggregator usage to edge reader
+    edgeReader.setWorkerGlobalCommUsage(globalCommUsage);
+
     long inputSplitEdgesLoaded = 0;
+    long inputSplitEdgesFiltered = 0;
+
+    int count = 0;
+    OutOfCoreEngine oocEngine = bspServiceWorker.getServerData().getOocEngine();
     while (edgeReader.nextEdge()) {
+      // If out-of-core mechanism is used, check whether this thread
+      // can stay active or it should temporarily suspend and stop
+      // processing and generating more data for the moment.
+      if (oocEngine != null &&
+          (++count & OutOfCoreEngine.CHECK_IN_INTERVAL) == 0) {
+        oocEngine.activeThreadCheckIn();
+      }
       I sourceId = edgeReader.getCurrentSourceId();
       Edge<I, E> readerEdge = edgeReader.getCurrentEdge();
       if (sourceId == null) {
@@ -132,15 +182,34 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
             "readInputSplit: Edge reader returned an edge " +
                 "without a value!  - " + readerEdge);
       }
+      if (canEmbedInIds) {
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .embedTargetInfo(sourceId);
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .embedTargetInfo(readerEdge.getTargetVertexId());
+      }
 
-      graphState.getWorkerClientRequestProcessor().sendEdgeRequest(
-          sourceId, readerEdge);
-      context.progress(); // do this before potential data transfer
       ++inputSplitEdgesLoaded;
 
-      // Update status every VERTICES_UPDATE_PERIOD edges
-      if (inputSplitEdgesLoaded % VERTICES_UPDATE_PERIOD == 0) {
-        totalEdgesMeter.mark(VERTICES_UPDATE_PERIOD);
+      if (edgeInputFilter.dropEdge(sourceId, readerEdge)) {
+        ++inputSplitEdgesFiltered;
+        if (inputSplitEdgesFiltered % EDGES_FILTERED_UPDATE_PERIOD == 0) {
+          totalEdgesFiltered.inc(inputSplitEdgesFiltered);
+          inputSplitEdgesFiltered = 0;
+        }
+        continue;
+      }
+
+      workerClientRequestProcessor.sendEdgeRequest(sourceId, readerEdge);
+
+      // Update status every EDGES_UPDATE_PERIOD edges
+      if (inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD == 0) {
+        totalEdgesMeter.mark(EDGES_UPDATE_PERIOD);
+        WorkerProgress.get().addEdgesLoaded(EDGES_UPDATE_PERIOD);
         LoggerUtils.setStatusAndLog(context, LOG, Level.INFO,
             "readEdgeInputSplit: Loaded " +
                 totalEdgesMeter.count() + " edges at " +
@@ -161,6 +230,14 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       }
     }
     edgeReader.close();
-    return new VertexEdgeCount(0, inputSplitEdgesLoaded);
+
+    totalEdgesFiltered.inc(inputSplitEdgesFiltered);
+    totalEdgesMeter.mark(inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD);
+
+    WorkerProgress.get().addEdgesLoaded(
+        inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD);
+    WorkerProgress.get().incrementEdgeInputSplitsLoaded();
+
+    return new VertexEdgeCount(0, inputSplitEdgesLoaded, 0);
   }
 }

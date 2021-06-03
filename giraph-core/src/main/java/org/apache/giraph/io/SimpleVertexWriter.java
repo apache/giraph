@@ -40,6 +40,6 @@ public interface SimpleVertexWriter<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
+  void writeVertex(Vertex<I, V, E> vertex) throws IOException,
       InterruptedException;
 }

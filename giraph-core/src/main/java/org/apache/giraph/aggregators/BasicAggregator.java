@@ -40,6 +40,15 @@ public abstract class BasicAggregator<A extends Writable> implements
     value = createInitialValue();
   }
 
+  /**
+   * Constructor
+   * @param initialValue initial value
+   */
+  public BasicAggregator(A initialValue) {
+    value = initialValue;
+  }
+
+
   @Override
   public A getAggregatedValue() {
     return value;

@@ -18,23 +18,23 @@
 
 package org.apache.giraph.comm.messages;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Abstract class for {@link MessageStoreByPartition} which allows any kind
+ * Abstract class for {@link MessageStore} which allows any kind
  * of object to hold messages for one vertex.
  * Simple in memory message store implemented with a two level concurrent
  * hash map.
@@ -44,24 +44,29 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <T> Type of object which holds messages for one vertex
  */
 public abstract class SimpleMessageStore<I extends WritableComparable,
-    M extends Writable, T> implements MessageStoreByPartition<I, M>  {
-  /** Service worker */
-  protected final CentralizedServiceWorker<I, ?, ?, M> service;
+    M extends Writable, T> implements MessageStore<I, M>  {
+  /** Message class */
+  protected final MessageValueFactory<M> messageValueFactory;
+  /** Partition split info */
+  protected final PartitionSplitInfo<I> partitionInfo;
   /** Map from partition id to map from vertex id to messages for that vertex */
   protected final ConcurrentMap<Integer, ConcurrentMap<I, T>> map;
   /** Giraph configuration */
-  protected final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+  protected final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
   /**
    * Constructor
    *
-   * @param service Service worker
+   * @param messageValueFactory Message class held in the store
+   * @param partitionInfo Partition split info
    * @param config Giraph configuration
    */
   public SimpleMessageStore(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
-    this.service = service;
+      MessageValueFactory<M> messageValueFactory,
+      PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    this.messageValueFactory = messageValueFactory;
+    this.partitionInfo = partitionInfo;
     this.config = config;
     map = new MapMaker().concurrencyLevel(
         config.getNettyServerExecutionConcurrency()).makeMap();
@@ -110,7 +115,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
    * @return Id of partiton
    */
   protected int getPartitionId(I vertexId) {
-    return service.getVertexPartitionOwner(vertexId).getPartitionId();
+    return partitionInfo.getPartitionId(vertexId);
   }
 
   /**
@@ -135,6 +140,10 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
+  public void finalizeStore() {
+  }
+
+  @Override
   public Iterable<I> getPartitionDestinationVertices(int partitionId) {
     ConcurrentMap<I, ?> partitionMap = map.get(partitionId);
     return (partitionMap == null) ? Collections.<I>emptyList() :
@@ -145,20 +154,11 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   public boolean hasMessagesForVertex(I vertexId) {
     ConcurrentMap<I, ?> partitionMap =
         map.get(getPartitionId(vertexId));
-    return (partitionMap == null) ? false : partitionMap.containsKey(vertexId);
+    return partitionMap != null && partitionMap.containsKey(vertexId);
   }
 
   @Override
-  public Iterable<I> getDestinationVertices() {
-    List<I> vertices = Lists.newArrayList();
-    for (ConcurrentMap<I, ?> partitionMap : map.values()) {
-      vertices.addAll(partitionMap.keySet());
-    }
-    return vertices;
-  }
-
-  @Override
-  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) {
     ConcurrentMap<I, T> partitionMap = map.get(getPartitionId(vertexId));
     if (partitionMap == null) {
       return Collections.<M>emptyList();
@@ -166,15 +166,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
     T messages = partitionMap.get(vertexId);
     return (messages == null) ? Collections.<M>emptyList() :
         getMessagesAsIterable(messages);
-  }
-
-  @Override
-  public int getNumberOfMessages() {
-    int numberOfMessages = 0;
-    for (ConcurrentMap<I, T> partitionMap : map.values()) {
-      numberOfMessages += getNumberOfMessagesIn(partitionMap);
-    }
-    return numberOfMessages;
   }
 
   @Override
@@ -188,15 +179,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
         entry.getKey().write(out);
         writeMessages(entry.getValue(), out);
       }
-    }
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(map.size());
-    for (int partitionId : map.keySet()) {
-      out.writeInt(partitionId);
-      writePartition(out, partitionId);
     }
   }
 
@@ -216,16 +198,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void readFields(DataInput in) throws IOException {
-    int numPartitions = in.readInt();
-    for (int p = 0; p < numPartitions; p++) {
-      int partitionId = in.readInt();
-      readFieldsForPartition(in, partitionId);
-    }
-  }
-
-  @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
+  public void clearVertexMessages(I vertexId) {
     ConcurrentMap<I, ?> partitionMap =
         map.get(getPartitionId(vertexId));
     if (partitionMap != null) {
@@ -234,12 +207,18 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
+  public void clearPartition(int partitionId) {
     map.remove(partitionId);
   }
 
   @Override
-  public void clearAll() throws IOException {
+  public boolean hasMessagesForPartition(int partitionId) {
+    ConcurrentMap<I, T> partitionMessages = map.get(partitionId);
+    return partitionMessages != null && !partitionMessages.isEmpty();
+  }
+
+  @Override
+  public void clearAll() {
     map.clear();
   }
 }

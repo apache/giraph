@@ -18,13 +18,16 @@
 
 package org.apache.giraph.bsp;
 
-import org.apache.giraph.master.MasterAggregatorHandler;
-import org.apache.giraph.master.MasterInfo;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.giraph.master.AggregatorToGlobalCommTranslation;
+import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.master.MasterGlobalCommHandler;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
 
 /**
  * At most, there will be one active master at a time, but many threads can
@@ -33,12 +36,11 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    CentralizedService<I, V, E, M> {
+    V extends Writable, E extends Writable> extends
+    CentralizedService<I, V, E> {
   /**
    * Setup (must be called prior to any other function)
    */
@@ -51,15 +53,28 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
   boolean becomeMaster();
 
   /**
-   * Get master information
+   * Check all the {@link org.apache.giraph.worker.WorkerInfo} objects to ensure
+   * that a minimum number of good workers exists out of the total that have
+   * reported.
    *
-   * @return Master information
+   * @return List of of healthy workers such that the minimum has been
+   *         met, otherwise null
    */
-  MasterInfo getMasterInfo();
+  List<WorkerInfo> checkWorkers();
 
   /**
-   * Create the {@link InputSplit} objects from the index range based on the
-   * user-defined VertexInputFormat.  The {@link InputSplit} objects will
+   * Create the {@link BspInputSplit} objects from the index range based on the
+   * user-defined MappingInputFormat.  The {@link BspInputSplit} objects will
+   * processed by the workers later on during the INPUT_SUPERSTEP.
+   *
+   * @return Number of splits. Returns -1 on failure to create
+   *         valid input splits.
+   */
+  int createMappingInputSplits();
+
+  /**
+   * Create the {@link BspInputSplit} objects from the index range based on the
+   * user-defined VertexInputFormat.  The {@link BspInputSplit} objects will
    * processed by the workers later on during the INPUT_SUPERSTEP.
    *
    * @return Number of splits. Returns -1 on failure to create
@@ -68,8 +83,8 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
   int createVertexInputSplits();
 
   /**
-   * Create the {@link InputSplit} objects from the index range based on the
-   * user-defined EdgeInputFormat.  The {@link InputSplit} objects will
+   * Create the {@link BspInputSplit} objects from the index range based on the
+   * user-defined EdgeInputFormat.  The {@link BspInputSplit} objects will
    * processed by the workers later on during the INPUT_SUPERSTEP.
    *
    * @return Number of splits. Returns -1 on failure to create
@@ -117,11 +132,25 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     long desiredSuperstep);
 
   /**
-   * Get master aggregator handler
+   * Get handler for global communication
    *
-   * @return Master aggregator handler
+   * @return Global communication handler
    */
-  MasterAggregatorHandler getAggregatorHandler();
+  MasterGlobalCommHandler getGlobalCommHandler();
+
+  /**
+   * Handler for aggregators to reduce/broadcast translation
+   *
+   * @return aggregator translation handler
+   */
+  AggregatorToGlobalCommTranslation getAggregatorTranslationHandler();
+
+  /**
+   * Get MasterCompute object
+   *
+   * @return MasterCompute object
+   */
+  MasterCompute getMasterCompute();
 
   /**
    * Superstep has finished.
@@ -146,7 +175,18 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    *
    * @throws IOException
    * @throws InterruptedException
+   * @param superstepState what was the state
+   *                       of the last complete superstep?
    */
-  void cleanup()
+  void cleanup(SuperstepState superstepState)
     throws IOException, InterruptedException;
+
+  /**
+   * Add the Giraph Timers to thirft counter struct, and send to the job client
+   * Counters include the Giraph Timers for setup, initialise, shutdown, total,
+   * and time for the given superstep
+   * @param superstep superstep for which the GiraphTimer will be sent
+   *
+   */
+  void addGiraphTimersAndSendCounters(long superstep);
 }

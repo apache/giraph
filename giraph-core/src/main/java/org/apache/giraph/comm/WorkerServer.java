@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -31,12 +31,11 @@ import java.net.InetSocketAddress;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
+    V extends Writable, E extends Writable>
+    extends NetworkMetrics, Closeable {
   /**
    * Get server address
    *
@@ -45,21 +44,32 @@ public interface WorkerServer<I extends WritableComparable,
   InetSocketAddress getMyAddress();
 
   /**
-   * Prepare incoming messages for computation, and resolve mutation requests.
-   *
-   * @param graphState Current graph state
+   * Get server host name or IP
+   * @return server host name or IP
    */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
+  String getLocalHostOrIp();
+
+  /**
+   * Prepare incoming messages for computation, and resolve mutation requests.
+   */
+  void prepareSuperstep();
 
   /**
    * Get server data
    *
    * @return Server data
    */
-  ServerData<I, V, E, M> getServerData();
+  ServerData<I, V, E> getServerData();
 
   /**
    * Shuts down.
    */
   void close();
+
+  /**
+   * Inform this server about the flow control used in sending requests
+   *
+   * @param flowControl reference to the flow control policy
+   */
+  void setFlowControl(FlowControl flowControl);
 }

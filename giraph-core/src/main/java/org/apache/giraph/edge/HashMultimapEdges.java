@@ -20,18 +20,20 @@ package org.apache.giraph.edge;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.UnmodifiableIterator;
+
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link VertexEdges} implementation backed by an {@link ArrayListMultimap}.
+ * {@link OutEdges} implementation backed by an {@link ArrayListMultimap}.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for fast mutations,
  * but uses more space.
@@ -40,23 +42,14 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements MultiRandomAccessVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements MultiRandomAccessOutEdges<I, E>, Trimmable {
   /** Multimap from target vertex id to edge values. */
   private ArrayListMultimap<I, E> edgeMultimap;
 
   @Override
   public void initialize(Iterable<Edge<I, E>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-multimap with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(((Collection<Edge<I, E>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<I, E> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   /**
@@ -155,5 +148,10 @@ public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
       edgeValue.readFields(in);
       edgeMultimap.put(targetVertexId, edgeValue);
     }
+  }
+
+  @Override
+  public void trim() {
+    edgeMultimap.trimToSize();
   }
 }

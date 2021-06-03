@@ -48,17 +48,16 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> {
+    E extends Writable> {
   static {
     Configuration.addDefaultResource(GiraphConstants.GIRAPH_YARN_CONF_FILE);
   }
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GiraphYarnTask.class);
   /** Manage the framework-agnostic Giraph task for this job run */
-  private GraphTaskManager<I, V, E, M> graphTaskManager;
+  private GraphTaskManager<I, V, E> graphTaskManager;
   /** Giraph task ID number must start @ index 0. Used by ZK, BSP, etc. */
   private final int bspTaskId;
   /** A special "dummy" override of Mapper#Context, used to deliver MRv1 deps */
@@ -74,12 +73,12 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
    *                      supplied by GiraphApplicationMaster.
    */
   public GiraphYarnTask(final TaskAttemptID taskAttemptId) {
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E>(
       new GiraphConfiguration());
     bspTaskId = taskAttemptId.getTaskID().getId();
     conf.setInt("mapred.task.partition", bspTaskId);
     proxy = buildProxyMapperContext(taskAttemptId);
-    graphTaskManager = new GraphTaskManager<I, V, E, M>(proxy);
+    graphTaskManager = new GraphTaskManager<I, V, E>(proxy);
   }
 
   /**
@@ -92,6 +91,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
       graphTaskManager.setup(null); // defaults GTM to "assume fatjar mode"
       graphTaskManager.execute();
       graphTaskManager.cleanup();
+      graphTaskManager.sendWorkerCountersAndFinishCleanup();
     } catch (InterruptedException ie) {
       LOG.error("run() caught an unrecoverable InterruptedException.", ie);
     } catch (IOException ioe) {
@@ -121,7 +121,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
       try {
         LOG.info("Master is ready to commit final job output data.");
         VertexOutputFormat vertexOutputFormat =
-          conf.createVertexOutputFormat();
+          conf.createWrappedVertexOutputFormat();
         OutputCommitter outputCommitter =
           vertexOutputFormat.getOutputCommitter(proxy);
         // now we will have our output in OUTDIR if all went well...
@@ -167,19 +167,6 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
   }
 
   /**
-    * Default handler for uncaught exceptions.
-    */
-  class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
-    @Override
-    public void uncaughtException(final Thread t, final Throwable e) {
-      LOG.fatal(
-        "uncaughtException: OverrideExceptionHandler on thread " +
-         t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
-      System.exit(1);
-    }
-  }
-
-  /**
    * Task entry point.
    * @param args CLI arguments injected by GiraphApplicationMaster to hand off
    *             job, task, and attempt ID's to this (and every) Giraph task.
@@ -192,7 +179,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
         "a TaskAttemptID for the Giraph job from args: " + printArgs(args));
     }
     try {
-      GiraphYarnTask<?, ?, ?, ?> giraphYarnTask =
+      GiraphYarnTask<?, ?, ?> giraphYarnTask =
         new GiraphYarnTask(getTaskAttemptID(args));
       giraphYarnTask.run();
       // CHECKSTYLE: stop IllegalCatch

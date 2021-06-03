@@ -24,6 +24,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -45,6 +46,8 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
     E extends Writable> extends EdgeInputFormat<I, E> {
   /** Underlying GiraphTextInputFormat. */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(

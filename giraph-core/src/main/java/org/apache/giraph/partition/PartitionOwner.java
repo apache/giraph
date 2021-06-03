@@ -69,22 +69,6 @@ public interface PartitionOwner extends Writable {
   void setPreviousWorkerInfo(WorkerInfo workerInfo);
 
   /**
-   * If this is a restarted checkpoint, the worker will use this information
-   * to determine where the checkpointed partition was stored on HDFS.
-   *
-   * @return Prefix of the checkpoint HDFS files for this partition, null if
-   *         this is not a restarted superstep.
-   */
-  String getCheckpointFilesPrefix();
-
-  /**
-   * Set the checkpoint files prefix.  Master uses this.
-   *
-   * @param checkpointFilesPrefix HDFS checkpoint file prefix
-   */
-  void setCheckpointFilesPrefix(String checkpointFilesPrefix);
-
-  /**
    * Write to the output, but don't serialize the whole WorkerInfo,
    * instead use just the task id
    *

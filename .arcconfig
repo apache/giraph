@@ -1,0 +1,7 @@
+{
+  "project_id" : "giraph",
+  "conduit_uri" : "https://reviews.facebook.net/",
+  "copyright_holder" : "Apache Software Foundation",
+  "jira_project" : "GIRAPH",
+  "jira_api_url" : "https://issues.apache.org/jira/browse/GIRAPH"
+}

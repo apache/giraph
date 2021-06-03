@@ -1,0 +1,16 @@
+#if ($complexWritables)
+#foreach ($class in $complexWritables)
+#set ($writableClassName = $class.simpleName)
+  private $writableClassName read$writableClassName#[[FromString]]#(String str) {
+    $writableClassName writable = null;
+    try {
+      writable = $writableClassName#[[.class.newInstance();]]#
+    } catch (InstantiationException | IllegalAccessException e) {
+      e.printStackTrace();
+    }
+    WritableUtils.readFieldsFromByteArray(str.getBytes(), writable);
+    return writable;
+  }
+  
+#end
+#end

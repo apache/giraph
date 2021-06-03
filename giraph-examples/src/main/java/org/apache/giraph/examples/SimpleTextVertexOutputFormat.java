@@ -39,7 +39,7 @@ public class SimpleTextVertexOutputFormat extends
   private class SimpleTextVertexWriter extends TextVertexWriter {
     @Override
     public void writeVertex(
-      Vertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
+      Vertex<LongWritable, IntWritable, FloatWritable> vertex)
       throws IOException, InterruptedException {
       getRecordWriter().write(
           new Text(vertex.getId().toString()),

@@ -35,9 +35,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -51,7 +52,7 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUES
  * authenticate themselves with this server.
  */
 public class SaslServerHandler extends
-    SimpleChannelUpstreamHandler {
+    ChannelInboundHandlerAdapter {
     /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SaslServerHandler.class);
@@ -79,21 +80,22 @@ public class SaslServerHandler extends
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent e) {
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
+    throws Exception {
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("messageReceived: Got " + e.getMessage().getClass());
+      LOG.debug("messageReceived: Got " + msg.getClass());
     }
 
-    WritableRequest writableRequest = (WritableRequest) e.getMessage();
+    WritableRequest writableRequest = (WritableRequest) msg;
     // Simulate a closed connection on the first request (if desired)
     // TODO: Move out into a separate, dedicated handler.
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
       LOG.info("messageReceived: Simulating closing channel on first " +
           "request " + writableRequest.getRequestId() + " from " +
           writableRequest.getClientId());
-      ALREADY_CLOSED_FIRST_REQUEST = true;
-      ctx.getChannel().close();
+      setAlreadyClosedFirstRequest();
+      ctx.close();
       return;
     }
 
@@ -102,26 +104,30 @@ public class SaslServerHandler extends
       // (in which case we are looking at the first SASL message from the
       // client).
       SaslNettyServer saslNettyServer =
-          NettyServer.CHANNEL_SASL_NETTY_SERVERS.get(ctx.getChannel());
+          ctx.attr(NettyServer.CHANNEL_SASL_NETTY_SERVERS).get();
       if (saslNettyServer == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("No saslNettyServer for " + ctx.getChannel() +
+          LOG.debug("No saslNettyServer for " + ctx.channel() +
               " yet; creating now, with secret manager: " + secretManager);
         }
-        saslNettyServer = new SaslNettyServer(secretManager);
-        NettyServer.CHANNEL_SASL_NETTY_SERVERS.set(ctx.getChannel(),
-            saslNettyServer);
+        try {
+          saslNettyServer = new SaslNettyServer(secretManager,
+            AuthMethod.SIMPLE);
+        } catch (IOException ioe) { //TODO:
+          throw new RuntimeException(ioe);
+        }
+        ctx.attr(NettyServer.CHANNEL_SASL_NETTY_SERVERS).set(saslNettyServer);
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Found existing saslNettyServer on server:" +
-              ctx.getChannel().getLocalAddress() + " for client " +
-              ctx.getChannel().getRemoteAddress());
+              ctx.channel().localAddress() + " for client " +
+              ctx.channel().remoteAddress());
         }
       }
 
       ((SaslTokenMessageRequest) writableRequest).processToken(saslNettyServer);
       // Send response to client.
-      ctx.getChannel().write(writableRequest);
+      ctx.write(writableRequest);
       if (saslNettyServer.isComplete()) {
         // If authentication of client is complete, we will also send a
         // SASL-Complete message to the client.
@@ -130,13 +136,14 @@ public class SaslServerHandler extends
               "username: " + saslNettyServer.getUserName());
         }
         SaslCompleteRequest saslComplete = new SaslCompleteRequest();
-        ctx.getChannel().write(saslComplete);
+        ctx.write(saslComplete);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Removing SaslServerHandler from pipeline since SASL " +
               "authentication is complete.");
         }
-        ctx.getPipeline().remove(this);
+        ctx.pipeline().remove(this);
       }
+      ctx.flush();
       // do not send upstream to other handlers: no further action needs to be
       // done for SASL_TOKEN_MESSAGE_REQUEST requests.
       return;
@@ -148,8 +155,15 @@ public class SaslServerHandler extends
       // not completed.
       LOG.warn("Sending upstream an unexpected non-SASL message :  " +
           writableRequest);
-      ctx.sendUpstream(e);
+      ctx.fireChannelRead(msg);
     }
+  }
+
+  /**
+   * Set already closed first request flag
+   */
+  private static void setAlreadyClosedFirstRequest() {
+    ALREADY_CLOSED_FIRST_REQUEST = true;
   }
 
   /**

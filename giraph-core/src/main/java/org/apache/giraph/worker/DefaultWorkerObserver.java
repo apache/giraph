@@ -18,16 +18,24 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 /**
  * Default Observer for Worker that does nothing.
  */
-public class DefaultWorkerObserver implements WorkerObserver,
-    ImmutableClassesGiraphConfigurable {
-  /** The configuration stored here */
+public class DefaultWorkerObserver implements WorkerObserver {
+  /**
+   * The configuration stored here
+   */
   private ImmutableClassesGiraphConfiguration conf;
+
+  @Override
+  public void preLoad() {
+  }
+
+  @Override
+  public void postSave() {
+  }
 
   @Override
   public void preApplication() {

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+	  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Out-of-core Giraph</title>
+  </properties>
+  
+  <body>
+    <section name="Running Giraph with support of external memory">
+      <p>Like Pregel, Giraph was originally designed to run the whole computation in-memory, and to touch disks only for input/output and checkpointing. Unfortunately, sometimes a graph is too large to fit into a cluster's main memory (or the cluster is too small for a graph). Moreover, certain algorithms produce too large message sets (either producing many messages or very large ones), again not fitting into the cluster's memory. For these scenarios, Giraph was extended with out-of-core capabilities, meaning that Giraph is able to spill to disk excessive messages or partitions, according to user-defined parameters.
+      </p>
+    </section>
+    <section name="Out-of-core Graph">
+      <p>When running out-of-core graph, Giraph will keep only a limited number of partitions in memory, while the others will be stored to local disk(s), using an LRU policy to decide which partitions to swap. This feature can be enabled with parameter "giraph.useOutOfCoreGraph=true" (disabled by default), while the number of partitions is controlled by parameter "giraph.maxPartitionsInMemory=N" (with default value 10). The partitions will be kept in local disk(s) for fast i/o, and the destination directory is controlled by parameter "giraph.partitionsDirectory" (with default "_bsp/_partitions"). This is a fairly efficient feature, as all the operations produce sequential i/o, without random access to disk(s).
+      </p>
+      <p>For cluster with multiple disks per machine, the out-of-core partitions will be distributed across all the disks. This feature can be enabled by passing "giraph.partitionsDirectory" a comma-separated list of paths. The files will be distributed in a round-robin fashion.
+      </p>      
+      <p>For computations where the graph is static, meaning that no edges or vertices are added or removed during the computation (e.g. PageRank, SSSP, etc.), it is a waste of i/o operations to write back to disk the adjacency list of each vertex. With parameter "giraph.isStaticGraph=true" (disabled by default), when offloading a partition to disk, Giraph will write back only the vertices' values, saving the i/o produced by writing back also the the adjacency lists.
+      </p>
+    </section>
+    <section name="Out-of-core Messages">
+      <p>When running out-of-core messages, Giraph will keep only a limited number of messages in memory, while the others will be stored to local disk(s). This feature can be enabled with parameter "giraph.useOutOfCoreMessages=true" (disabled by default), while the number of messages is controlled by parameter "giraph.maxMessagesInMemory=N" (with default value 1000000). With this feature, Giraph will keep in memory the incoming messages into an in-memory store. When the store exceeds the chosen number of messages, the content of the store will be spilled to disk, and a new empty in-memory store will be instantiated. This process produces a number of files on disk, depending on the number of messages produced during a superstep. During the vertex computation the files will be read sequentially, and the messages for each vertex will be concatenated and fed to the vertex. Both for reading and writing, files are accessed sequentially.
+      </p>
+      <p>Also out-of-core messages can take advantage of multiple disks, as parameter "giraph.messagesDirectory" (with default "_bsp/_messages/") can accept a comma-separated list of paths. It is possible to control the buffers used for i/o with parameter "giraph.messagesBufferSize=#Bytes" (with default value 8192).
+      </p>
+    </section>
+      <p>It is difficult to decide a general policy to use out-of-core capabilities, as it depends on the behavior of the algorithm and the input graph. The exact number of partitions and messages to keep in memory depends on the cluster capabilities, the number of messages produced per superstep, and number of active vertices per superstep. Moreover, it depends on the type and size of vertex values and messages. For example, algorithms such as Belief Propagation tend to keep large vertex values, while algorithms such as clique computations tend to send large messages along. Hence, it depends on your algorithm what feature to rely on more. 
+      </p>
+  </body>
+</document>

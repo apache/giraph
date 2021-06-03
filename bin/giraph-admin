@@ -24,7 +24,7 @@ if [ $# = 0 ]; then
   exit 1
 fi
 
-GIRAPH_ENV_DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+GIRAPH_ENV_DIR="$( cd -P "$( dirname "${BASH_SOURCE:-0}" )" && pwd )"
 source $GIRAPH_ENV_DIR/giraph-env
 
 # run the ZK cleaner?

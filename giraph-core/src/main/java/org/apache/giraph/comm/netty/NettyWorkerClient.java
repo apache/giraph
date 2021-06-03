@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -50,20 +51,19 @@ import java.util.Map;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class NettyWorkerClient<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    WorkerClient<I, V, E, M>, ResetSuperstepMetricsObserver {
+    V extends Writable, E extends Writable> implements
+    WorkerClient<I, V, E>, ResetSuperstepMetricsObserver {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyWorkerClient.class);
   /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Netty client that does that actual I/O */
   private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
-  private final CentralizedServiceWorker<I, V, E, M> service;
+  private final CentralizedServiceWorker<I, V, E> service;
 
   // Metrics
   /** Per-superstep, per-request counters */
@@ -75,13 +75,17 @@ public class NettyWorkerClient<I extends WritableComparable,
    * @param context Context from mapper
    * @param configuration Configuration
    * @param service Used to get partition mapping
+   * @param exceptionHandler handler for uncaught exception. Will
+   *                         terminate job.
    */
   public NettyWorkerClient(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      CentralizedServiceWorker<I, V, E, M> service) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      CentralizedServiceWorker<I, V, E> service,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.nettyClient =
-        new NettyClient(context, configuration, service.getWorkerInfo());
+        new NettyClient(context, configuration, service.getWorkerInfo(),
+            exceptionHandler);
     this.conf = configuration;
     this.service = service;
     this.superstepRequestCounters = Maps.newHashMap();
@@ -91,7 +95,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   @Override
   public void newSuperstep(SuperstepMetricsRegistry metrics) {
     superstepRequestCounters.clear();
-    superstepRequestCounters.put(RequestType.SEND_VERTEX_REQUEST,
+    superstepRequestCounters.put(RequestType.SEND_WORKER_VERTICES_REQUEST,
         metrics.getCounter(MetricNames.SEND_VERTEX_REQUESTS));
     superstepRequestCounters.put(RequestType.SEND_WORKER_MESSAGES_REQUEST,
         metrics.getCounter(MetricNames.SEND_WORKER_MESSAGES_REQUESTS));
@@ -111,7 +115,7 @@ public class NettyWorkerClient<I extends WritableComparable,
         metrics.getCounter(MetricNames.SEND_AGGREGATORS_TO_WORKER_REQUESTS));
   }
 
-  public CentralizedServiceWorker<I, V, E, M> getService() {
+  public CentralizedServiceWorker<I, V, E> getService() {
     return service;
   }
 
@@ -135,7 +139,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void sendWritableRequest(Integer destTaskId,
+  public void sendWritableRequest(int destTaskId,
                                   WritableRequest request) {
     Counter counter = superstepRequestCounters.get(request.getType());
     if (counter != null) {
@@ -177,4 +181,9 @@ else[HADOOP_NON_SECURE]*/
   }
 
 /*end[HADOOP_NON_SECURE]*/
+
+  @Override
+  public FlowControl getFlowControl() {
+    return nettyClient.getFlowControl();
+  }
 }

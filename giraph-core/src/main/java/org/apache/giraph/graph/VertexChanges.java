@@ -31,18 +31,17 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public interface VertexChanges<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Get the added vertices for this particular vertex index from the previous
    * superstep.
    *
    * @return List of vertices for this vertex index.
    */
-  List<Vertex<I, V, E, M>> getAddedVertexList();
+  List<Vertex<I, V, E>> getAddedVertexList();
 
   /**
    * Get the number of times this vertex was removed in the previous

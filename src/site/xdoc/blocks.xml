@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Blocks Framework</title>
+  </properties>
+
+  <body>
+    <section name="Blocks Framework">
+      Blocks Framework is new and improved API for writing Giraph applications. It allows you to easily organize your code to have better encapsulation, reusability and flexibility. If you know the old way of writing applications and want to learn about motivation behind the new API, read <a href="#Motivation">Motivation section</a>. If you have an existing application that you want to migrate to new api read <a href="#Migration">Migration section</a>.
+    </section>
+
+    <section name="Introduction">
+      <p>
+        Flow of the program within the framework is defined as an Iterable of steps, represented as a Block class. Each Block is a unit of execution, representing some computation to be performed on the graph. We can combine simple Blocks into more complex execution using nesting:
+        <source>
+new SequenceBlock(b1, b2, ...)
+new RepeatBlock(n, b)
+new IfBlock(condition, thenBlock)
+        </source>
+      </p>
+
+      <p>
+        Each step is represented as a Piece class. Implementation logic will be nicely organized and hidden within Pieces, and flow of the application is clear. Piece captures these three consecutive operations:
+        <ul>
+          <li>Workers going through all vertices, potentially sending messages and performing aggregation/reduction.</li>
+          <li>Master receiving aggregated/reduced values, performing any computation, and potentially broadcasting some values.</li>
+          <li>Workers going through all vertices, receiving messages sent in the first operation, and receiving values broadcased in the second operation</li>
+        </ul>
+      </p> 
+    </section>
+
+    <section name="Walkthrough of building PageRank application">
+      <subsection name="Simple application">
+        <p>Example is a good way of understanding how things work, and we will explain how to build PageRank on top of the Framework. Note that framework works with Java 7 as well, but it is preferable to develop in Java 8, since code will look simpler.</p>
+        <p>
+          We start every application by creating a new class that will extend AbstractBlockFactory, where we will define types of vertex id, vertex value, edge value, etc. For our example, VertexID is going to be long, vertex value is going to be double - the page rank of a vertex, and we will have unweighted graph - so it will look like <a href="https://github.com/apache/giraph/blob/trunk/giraph-block-app-8/src/test/java/org/apache/giraph/block_app/examples/pagerank/AbstractPageRankExampleBlockFactory.java">this</a>.
+        </p>
+        <p>
+          Main function that we need to extend is createBlock - which defines what should be executed. 
+          PageRank is an iterative algorithm, where in each step, value of each vertex is updated to be weighted sum of it's neighbors. We can do so by sending our value to all of our neighbors, and after receiving the messages - sum them all up, and update vertex value accordingly. We will use Pieces.sendMessageToNeighbors to do so:
+        </p>
+        <source> 
+// Types here represent vertex id, vertex value, edge value and message respectively. 
+// For types we do not use - we just leave it unspecified - as we do with vertex id and edge value here
+Block iter = Pieces.&lt;WritableComparable, DoubleWritable, Writable, DoubleWritable&gt;sendMessageToNeighbors(
+  "PageRankIteration",
+  DoubleWritable.class,
+  // messageSupplier - which message to send to neighbors
+  (vertex) -&gt; new DoubleWritable(vertex.getValue().get() / vertex.getNumEdges()),
+  // messagesConsumer - what to do with received messages
+  (vertex, messages) -&gt; {
+    double sum = 0;
+    for (DoubleWritable value&nbsp;: messages) {
+      sum += value.get();
+    }
+    vertex.getValue().set(0.15f + 0.85f * sum);
+  });
+        </source> 
+
+        <p>Now we have a piece that does one PageRank iteration, and we only need to execute it number of iterations we want:</p>
+        <source>new RepeatBlock(NUM_ITERATIONS.get(conf), iter);</source>
+        <p>
+          And that is all, we now have a fully functional PageRank application! We can even use DoubleSumMessageCombiner so framework does the sum for us, shown in <a href="https://github.com/apache/giraph/blob/trunk/giraph-block-app-8/src/test/java/org/apache/giraph/block_app/examples/pagerank/PageRankExampleBlockFactory.java">PageRank</a>.
+        </p>
+        
+        </subsection>
+        <subsection name="Adding convergence">
+        
+        <p>
+          But most likely - we are going to want to run as many iterations as needed - until application converges. Let's say we want to run it until no vertices update their value by more than EPS=1e-3. We will use RepeatUntilBlock - which provides a way for pieces to signal when repetition should be stopped early through toQuit argument:
+        </p>
+
+        <source>
+ObjectTransfer&lt;Boolean&gt; converged = new ObjectTransfer&lt;&gt;();
+Block iter = ...;
+return new RepeatUntilBlock(
+    NUM_ITERATIONS.get(conf),
+    iter,
+    converged);
+        </source>
+
+        <p>
+          ObjectTransfer has two functions void accept(T) and T get(), and allows different Blocks/Pieces to transfer values between them. RepeatUntilBlock will in each iteration call get() on it, and terminate once it returns true. We now only need to modify our iteration, to update converged value, once vertex update is small enough. We can do that by looking after each iteration by how much each vertex value changes - and decide whether to continue iterating, by calculating max of those changes. We are going to do so in two connected steps, and for that there is utility class SendMessageChain, which allows chain of connected logic to be executed, which cannot be done within a single Piece:
+        </p>
+
+        <source>
+Block iter = SendMessageChain.&lt;WritableComparable, DoubleWritable, Writable, DoubleWritable&gt;
+startSendToNeighbors(
+  "PageRankSend",
+  DoubleSumMessageCombiner.class,
+  // which message to send to neighbors
+  (vertex) -&gt; new DoubleWritable(vertex.getValue().get() / vertex.getNumEdges())
+).endReduce(
+  "PageRankUpdateAndCheckConvergence",
+  // which reduce operation to perform
+  SumReduce.LONG,
+  // how to process combined message, and return value to be reduced
+  (vertex, combinedMessage) -&gt; {
+    double sum = combinedMessage&nbsp;!= null&nbsp;? combinedMessage.get()&nbsp;: 0;
+    double newValue = 0.15f + 0.85f * sum;
+    double change = Math.abs(newValue - vertex.getValue().get());
+    vertex.getValue().set(newValue);
+    return (change &gt; EPS)&nbsp;? new LongWritable(1)&nbsp;: new LongWritable(0);
+  },
+  // what to do with reduced value - number of vertices that changed their value above threshold
+  (changingCount) -&gt; converged.accept(changingCount.get() == 0)
+);
+        </source>
+
+        <p>
+          This now together gives us a full PageRank application, that will stop after converging! You can find the code for it in <a href="https://github.com/apache/giraph/blob/trunk/giraph-block-app-8/src/test/java/org/apache/giraph/block_app/examples/pagerank/PageRankWithConvergenceExampleBlockFactory.java">PageRankWithConvergence</a>.
+        </p>
+        <p>
+          SendMessageChain is just a wrapper around two or more pieces connected together. We can instead extend our original example by adding a Pieces.reduce after iteration piece, and connecting the two pieces via ObjectTransfer, as can be seen in <a href="https://github.com/apache/giraph/blob/trunk/giraph-block-app-8/src/test/java/org/apache/giraph/block_app/examples/pagerank/PageRankWithTransferAndConvergenceExampleBlockFactory.java">PageRankWithTransferAndConvergence</a>.
+          You can see more example usage of SendMessageChain in <a href="https://github.com/apache/giraph/blob/trunk/giraph-block-app-8/src/test/java/org/apache/giraph/block_app/library/TestMessageChain.java">it's test</a>
+        </p>
+      </subsection>
+    </section>
+
+    <section name="Common library">
+      <p>For common logic - there is a growing library of utilities, that helps you do them easily. Looking at their implementations is also a good way to understand how framework works.</p>
+
+      <p>
+        Set of common pieces are provided, allowing you to write simple applications, without writing a single Piece directly:
+        <source>
+Pieces.forAllVertices((vertex) -> { code});
+Pieces.sendMessageToNeighbors(messageClass, messageSupplier, messagesConsumer)
+Pieces.sendMessage(messageClass, messageSupplier, targetsSupplier, messagesConsumer)
+Pieces.reduce(reducer, whatToReduce, whatToDoWithResultOnMaster);
+Pieces.reduceAndBroadcast(reducer, whatToReduce, whatToDoWithResultOnEachVertex);
+Pieces.removeVertices((vertex) -> boolean);
+// and chaining above actions:
+SendMessageChain.startSend(___).thenSendToNeighbors(___).endReduce(___)
+        </source>
+        Suppliers and consumers above are just functions (interfaces with only one method - functional interfaces), which allow those pieces to execute your logic. There are set of common suppliers written in CommonVertexSuppliers, like vertexIdSupplier, vertexValueSupplier, vertexNeighborsSupplier, which you can pass above where appropriate. 
+      </p>
+
+      <p>
+        Common reusable pieces:
+        <source>
+// cleaning up input graphs:
+PrepareGraphPieces.removeAsymEdges()
+PrepareGraphPieces.removeStandAloneVertices()
+// adjusting graph:
+PrepareGraphPieces.normalizeEdges()
+PrepareGraphPieces.makeSymmetricUnweighted()
+PrepareGraphPieces.makeSymmetricWeighted()
+// Calculating size of the graph:
+PrepareGraphPieces.countTotalEdgesPiece
+PrepareGraphPieces.calcSumEdgesPiece
+        </source>
+      </p>
+
+      <p>
+        Working with pieces:
+        <source>
+// executing multiple pieces consecutively, in the same stage/superstep:
+new DelegatePiece&lt;&gt;(piece1, piece2, ...)
+// executing piece only on subset of vertices:
+new FilteringPiece&lt;&gt;(filterFunction, piece)
+new FilteringPiece&lt;&gt;(filterSendFunction, filterReceiveFunction)
+new FilteringBlock(filterFunction, block)
+        </source>
+      </p>
+    </section>
+
+    <section name="Migration">
+      <p>
+        But even if you have code written without this framework, you can still benefit from many goodnesses of the framework, with minor changes. Additionally there is a simple step-by-step migration path to the framework, if you want more.
+      </p>
+      <p>
+        First, we have a simple step, with minimal code change - that makes your whole application a single Block, you can then easily combine with other blocks. In order to do so, you only need to change parent classes from Giraph ones (AbstractComputation, MasterCompute, WorkerContext), to their drop-in replacements - (MigrationFullAbstractComputation, MigrationFullMasterCompute and MigrationFullWorkerContext). Those classes are fully compatible, so you will not need to modify any code within them. Then you only need to write your block factory which extends MigrationFullBlockFactory, to specify vertex and edge types, and call createMigrationAppBlock with initial computations. You can then combine multiple applications, or use any library written in the framework, but your application is left as one whole indivisible block.
+      </p>
+      <p>
+        If you want to benefit from the framework within your application as well, execution needs to be changed to use composition of Blocks. In order to do so easily, you should modify parent classes to (MigrationAbstractComputation, MigrationMasterCompute and MigrationWorkerContext). They don't have any methods that affect computation ordering - and so all you need to do is fix compile errors, by moving that logic within composition of Blocks, within BlockFactory or utility functions. Calling MigrationPiece.createMigrationPiece and passing appropriate computations, gives you an independent piece, that you can then use in the same way as before, but also combine it in any other way with other pieces you have or are written within the library.
+      </p>
+      <p>
+        This allows you to benefit fully from the framework, but you might still want to cleanup your code, by moving it into Pieces, from the migration classes - but that should be simple to do so at this point - it should be only moving the code around.
+      </p>
+    </section>
+
+    <section name="Motivation">
+      TODO
+    </section>
+  </body>
+</document>

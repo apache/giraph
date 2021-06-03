@@ -21,7 +21,7 @@ package org.apache.giraph.comm.netty.handler;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
-import org.jboss.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFuture;
 
 import java.net.InetSocketAddress;
 import java.util.Date;

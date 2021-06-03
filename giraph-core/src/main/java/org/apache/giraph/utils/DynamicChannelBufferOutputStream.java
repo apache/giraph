@@ -20,9 +20,9 @@ package org.apache.giraph.utils;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteOrder;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.buffer.DirectChannelBufferFactory;
-import org.jboss.netty.buffer.DynamicChannelBuffer;
+
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Special output stream that can grow as needed and dumps to a
@@ -30,7 +30,7 @@ import org.jboss.netty.buffer.DynamicChannelBuffer;
  */
 public class DynamicChannelBufferOutputStream implements DataOutput {
   /** Internal dynamic channel buffer */
-  private DynamicChannelBuffer buffer;
+  private ByteBuf buffer;
 
   /**
    * Constructor
@@ -38,9 +38,10 @@ public class DynamicChannelBufferOutputStream implements DataOutput {
    * @param estimatedLength Estimated length of the buffer
    */
   public DynamicChannelBufferOutputStream(int estimatedLength) {
-    buffer = (DynamicChannelBuffer)
-        ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN,
-            estimatedLength, DirectChannelBufferFactory.getInstance());
+    buffer = Unpooled.unreleasableBuffer(Unpooled.buffer(estimatedLength))
+        .order(ByteOrder.LITTLE_ENDIAN);
+    // -- TODO unresolved what are benefits of using releasable?
+    // currently nit because it is just used in 1 test file
   }
 
   /**
@@ -48,7 +49,7 @@ public class DynamicChannelBufferOutputStream implements DataOutput {
    *
    * @param buffer Buffer to be written to (cleared before use)
    */
-  public DynamicChannelBufferOutputStream(DynamicChannelBuffer buffer) {
+  public DynamicChannelBufferOutputStream(ByteBuf buffer) {
     this.buffer = buffer;
     buffer.clear();
   }
@@ -58,7 +59,7 @@ public class DynamicChannelBufferOutputStream implements DataOutput {
    *
    * @return dynamic channel buffer (not a copy)
    */
-  public DynamicChannelBuffer getDynamicChannelBuffer() {
+  public ByteBuf getDynamicChannelBuffer() {
     return buffer;
   }
 
@@ -184,4 +185,3 @@ public class DynamicChannelBufferOutputStream implements DataOutput {
     }
   }
 }
-

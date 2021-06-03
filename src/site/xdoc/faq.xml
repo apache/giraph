@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>FAQ</title>
+  </properties>
+
+  <body>
+
+<section name="FAQ">
+
+<p>Here is a list of frequently asked questions.</p>
+<ul>
+  <li>Why does my Giraph job randomly fail after hundreds of supersteps?
+    <ul>
+      <li>In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter <tt>mapreduce.job.counters.limit</tt> in job tracker's config file mapred-site.xml.</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+
+  </body>
+</document>

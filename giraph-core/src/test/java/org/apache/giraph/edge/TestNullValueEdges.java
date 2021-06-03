@@ -28,15 +28,15 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import static org.apache.giraph.graph.TestVertexAndEdges.instantiateVertexEdges;
+import static org.apache.giraph.graph.TestVertexAndEdges.instantiateOutEdges;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Tests {@link VertexEdges} implementations with null edge values.
+ * Tests {@link OutEdges} implementations with null edge values.
  */
 public class TestNullValueEdges {
-  /** {@link VertexEdges} classes to be tested. */
-  private Collection<Class<? extends MutableVertexEdges>>
+  /** {@link OutEdges} classes to be tested. */
+  private Collection<Class<? extends MutableOutEdges>>
       edgesClasses = Lists.newArrayList();
 
   @Before
@@ -47,16 +47,16 @@ public class TestNullValueEdges {
 
   @Test
   public void testEdges() {
-    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
+    for (Class<? extends OutEdges> edgesClass : edgesClasses) {
       testEdgesClass(edgesClass);
     }
   }
 
   private void testEdgesClass(
-      Class<? extends VertexEdges> edgesClass) {
-    VertexEdges<LongWritable, NullWritable> edges =
-        (VertexEdges<LongWritable, NullWritable>)
-            instantiateVertexEdges(edgesClass);
+      Class<? extends OutEdges> edgesClass) {
+    OutEdges<LongWritable, NullWritable> edges =
+        (OutEdges<LongWritable, NullWritable>)
+            instantiateOutEdges(edgesClass);
 
     List<Edge<LongWritable, NullWritable>> initialEdges = Lists.newArrayList(
         EdgeFactory.create(new LongWritable(1)),
@@ -79,16 +79,16 @@ public class TestNullValueEdges {
    */
   @Test
   public void testMutateEdges() {
-    for (Class<? extends MutableVertexEdges> edgesClass : edgesClasses) {
+    for (Class<? extends MutableOutEdges> edgesClass : edgesClasses) {
       testMutateEdgesClass(edgesClass);
     }
   }
 
   private void testMutateEdgesClass(
-      Class<? extends MutableVertexEdges> edgesClass) {
-    MutableVertexEdges<LongWritable, NullWritable> edges =
-       (MutableVertexEdges<LongWritable, NullWritable>)
-           instantiateVertexEdges(edgesClass);
+      Class<? extends MutableOutEdges> edgesClass) {
+    MutableOutEdges<LongWritable, NullWritable> edges =
+       (MutableOutEdges<LongWritable, NullWritable>)
+           instantiateOutEdges(edgesClass);
 
     edges.initialize();
 

@@ -19,7 +19,7 @@
 package org.apache.giraph.io;
 
 import org.apache.giraph.BspCase;
-import org.apache.giraph.benchmark.WeightedPageRankVertex;
+import org.apache.giraph.benchmark.WeightedPageRankComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
@@ -61,7 +61,7 @@ public class TestJsonBase64Format extends BspCase {
 
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(WeightedPageRankVertex.class);
+    conf.setComputationClass(WeightedPageRankComputation.class);
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     conf.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
@@ -69,31 +69,33 @@ public class TestJsonBase64Format extends BspCase {
         PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
         PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 2);
-    job.getConfiguration().setInt(WeightedPageRankVertex.SUPERSTEP_COUNT, 2);
-
+    job.getConfiguration().setInt(
+        WeightedPageRankComputation.SUPERSTEP_COUNT, 2);
     assertTrue(job.run(true));
 
     Path outputPath2 = getTempPath(getCallingMethodName() + "2");
     conf = new GiraphConfiguration();
-    conf.setVertexClass(WeightedPageRankVertex.class);
+    conf.setComputationClass(WeightedPageRankComputation.class);
     conf.setVertexInputFormatClass(JsonBase64VertexInputFormat.class);
     conf.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     job = prepareJob(getCallingMethodName(), conf, outputPath2);
-    job.getConfiguration().setInt(WeightedPageRankVertex.SUPERSTEP_COUNT, 3);
+    job.getConfiguration().setInt(
+        WeightedPageRankComputation.SUPERSTEP_COUNT, 3);
     GiraphFileInputFormat.addVertexInputPath(
       job.getInternalJob().getConfiguration(), outputPath);
     assertTrue(job.run(true));
 
     Path outputPath3 = getTempPath(getCallingMethodName() + "3");
     conf = new GiraphConfiguration();
-    conf.setVertexClass(WeightedPageRankVertex.class);
+    conf.setComputationClass(WeightedPageRankComputation.class);
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     conf.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     job = prepareJob(getCallingMethodName(), conf, outputPath3);
     conf = job.getConfiguration();
     conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 101);
     conf.setLong(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 2);
-    conf.setInt(WeightedPageRankVertex.SUPERSTEP_COUNT, 5);
+    conf.setInt(
+        WeightedPageRankComputation.SUPERSTEP_COUNT, 5);
     assertTrue(job.run(true));
 
     assertEquals(101, getNumResults(conf, outputPath));

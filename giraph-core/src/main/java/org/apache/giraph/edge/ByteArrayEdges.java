@@ -21,6 +21,7 @@ package org.apache.giraph.edge;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,12 +29,14 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Collections;
 
 /**
- * {@link VertexEdges} implementation backed by a byte array.
+ * {@link OutEdges} implementation backed by a byte array.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but edge removals are expensive.
@@ -42,8 +45,8 @@ import java.util.List;
  * @param <E> Edge value
  */
 public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements ReuseObjectsVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements ReuseObjectsOutEdges<I, E>, Trimmable {
   /** Serialized edges. */
   private byte[] serializedEdges;
   /** Number of bytes used in serializedEdges. */
@@ -91,6 +94,9 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
     } catch (IOException e) {
       throw new IllegalStateException("add: Failed to write to the new " +
           "byte array");
+    } catch (NegativeArraySizeException negativeArraySizeException) {
+      throw new IllegalStateException("add: Too many edges for a vertex, " +
+        "hence failed to write to byte array");
     }
     serializedEdges = extendedDataOutput.getByteArray();
     serializedEdgesBytesUsed = extendedDataOutput.getPos();
@@ -132,6 +138,15 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
     return edgeCount;
   }
 
+  @Override
+  public void trim() {
+    if (serializedEdges != null &&
+        serializedEdges.length > serializedEdgesBytesUsed) {
+      serializedEdges =
+          Arrays.copyOf(serializedEdges, serializedEdgesBytesUsed);
+    }
+  }
+
   /**
    * Iterator that reuses the same Edge object.
    */
@@ -147,7 +162,7 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
 
     @Override
     public boolean hasNext() {
-      return serializedEdges != null && extendedDataInput.available() > 0;
+      return serializedEdges != null && !extendedDataInput.endOfInput();
     }
 
     @Override
@@ -164,7 +179,11 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
 
   @Override
   public Iterator<Edge<I, E>> iterator() {
-    return new ByteArrayEdgeIterator();
+    if (edgeCount == 0) {
+      return Collections.emptyListIterator();
+    } else {
+      return new ByteArrayEdgeIterator();
+    }
   }
 
   @Override

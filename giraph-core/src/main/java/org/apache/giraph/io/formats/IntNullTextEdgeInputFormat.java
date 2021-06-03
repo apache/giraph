@@ -55,8 +55,8 @@ public class IntNullTextEdgeInputFormat extends
     @Override
     protected IntPair preprocessLine(Text line) throws IOException {
       String[] tokens = SEPARATOR.split(line.toString());
-      return new IntPair(Integer.valueOf(tokens[0]),
-          Integer.valueOf(tokens[1]));
+      return new IntPair(Integer.parseInt(tokens[0]),
+          Integer.parseInt(tokens[1]));
     }
 
     @Override

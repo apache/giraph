@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.hadoop.io.Writable;
 
@@ -37,8 +38,22 @@ public class GlobalStats implements Writable {
   private long edgeCount = 0;
   /** All messages sent in the last superstep */
   private long messageCount = 0;
+  /** All message bytes sent in the last superstep */
+  private long messageBytesCount = 0;
   /** Whether the computation should be halted */
   private boolean haltComputation = false;
+  /** Bytes of data stored to disk in the last superstep */
+  private long oocStoreBytesCount = 0;
+  /** Bytes of data loaded to disk in the last superstep */
+  private long oocLoadBytesCount = 0;
+  /** Lowest percentage of graph in memory throughout the execution */
+  private int lowestGraphPercentageInMemory = 100;
+  /**
+   * Master's decision on whether we should checkpoint and
+   * what to do next.
+   */
+  private CheckpointStatus checkpointStatus =
+      CheckpointStatus.NONE;
 
   /**
    * Add the stats of a partition to the global stats.
@@ -67,12 +82,59 @@ public class GlobalStats implements Writable {
     return messageCount;
   }
 
+  public long getMessageBytesCount() {
+    return messageBytesCount;
+  }
+
   public boolean getHaltComputation() {
     return haltComputation;
   }
 
   public void setHaltComputation(boolean value) {
     haltComputation = value;
+  }
+
+  public long getOocStoreBytesCount() {
+    return oocStoreBytesCount;
+  }
+
+  public long getOocLoadBytesCount() {
+    return oocLoadBytesCount;
+  }
+
+  public CheckpointStatus getCheckpointStatus() {
+    return checkpointStatus;
+  }
+
+  public void setCheckpointStatus(CheckpointStatus checkpointStatus) {
+    this.checkpointStatus = checkpointStatus;
+  }
+
+  public int getLowestGraphPercentageInMemory() {
+    return lowestGraphPercentageInMemory;
+  }
+
+  public void setLowestGraphPercentageInMemory(
+      int lowestGraphPercentageInMemory) {
+    this.lowestGraphPercentageInMemory = lowestGraphPercentageInMemory;
+  }
+
+  /**
+   * Add bytes loaded to the global stats.
+   *
+   * @param oocLoadBytesCount number of bytes to be added
+   */
+  public void addOocLoadBytesCount(long oocLoadBytesCount) {
+    this.oocLoadBytesCount += oocLoadBytesCount;
+  }
+
+  /**
+   * Add bytes stored to the global stats.
+   *
+   * @param oocStoreBytesCount number of bytes to be added
+   */
+  public void addOocStoreBytesCount(long oocStoreBytesCount) {
+    this.oocStoreBytesCount += oocStoreBytesCount;
   }
 
   /**
@@ -84,13 +146,31 @@ public class GlobalStats implements Writable {
     this.messageCount += messageCount;
   }
 
+  /**
+   * Add messages to the global stats.
+   *
+   * @param msgBytesCount Number of message bytes to be added.
+   */
+  public void addMessageBytesCount(long msgBytesCount) {
+    this.messageBytesCount += msgBytesCount;
+  }
+
   @Override
   public void readFields(DataInput input) throws IOException {
     vertexCount = input.readLong();
     finishedVertexCount = input.readLong();
     edgeCount = input.readLong();
     messageCount = input.readLong();
+    messageBytesCount = input.readLong();
+    oocLoadBytesCount = input.readLong();
+    oocStoreBytesCount = input.readLong();
+    lowestGraphPercentageInMemory = input.readInt();
     haltComputation = input.readBoolean();
+    if (input.readBoolean()) {
+      checkpointStatus = CheckpointStatus.values()[input.readInt()];
+    } else {
+      checkpointStatus = null;
+    }
   }
 
   @Override
@@ -99,13 +179,23 @@ public class GlobalStats implements Writable {
     output.writeLong(finishedVertexCount);
     output.writeLong(edgeCount);
     output.writeLong(messageCount);
+    output.writeLong(messageBytesCount);
+    output.writeLong(oocLoadBytesCount);
+    output.writeLong(oocStoreBytesCount);
+    output.writeInt(lowestGraphPercentageInMemory);
     output.writeBoolean(haltComputation);
+    output.writeBoolean(checkpointStatus != null);
+    if (checkpointStatus != null) {
+      output.writeInt(checkpointStatus.ordinal());
+    }
   }
 
   @Override
   public String toString() {
     return "(vtx=" + vertexCount + ",finVtx=" +
         finishedVertexCount + ",edges=" + edgeCount + ",msgCount=" +
-        messageCount + ",haltComputation=" + haltComputation + ")";
+        messageCount + ",msgBytesCount=" +
+          messageBytesCount + ",haltComputation=" + haltComputation +
+        ", checkpointStatus=" + checkpointStatus + ')';
   }
 }

@@ -47,7 +47,7 @@ public class DefaultEdge<I extends WritableComparable, E extends Writable>
    * @param targetVertexId Desination vertex id.
    * @param value Value of the edge.
    */
-  DefaultEdge(I targetVertexId, E value) {
+  protected DefaultEdge(I targetVertexId, E value) {
     this.targetVertexId = targetVertexId;
     this.value = value;
   }

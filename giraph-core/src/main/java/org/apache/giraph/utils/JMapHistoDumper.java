@@ -21,8 +21,12 @@ package org.apache.giraph.utils;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.metrics.AggregatedMetrics;
+import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.log4j.Logger;
+
+import java.util.List;
 
 /**
  * An observer for both worker and master that periodically dumps the memory
@@ -36,22 +40,34 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private int sleepMillis;
   /** How many lines of output to print */
   private int linesToPrint;
+  /** Should only print live objects */
+  private boolean liveObjectsOnly;
 
   /** The jmap printing thread */
   private Thread thread;
   /** Halt jmap thread */
-  private boolean stop = false;
+  private volatile boolean stop = false;
+  /** Path to jmap*/
+  private String jmapPath;
 
   @Override
-  public void preApplication() {
+  public void preLoad() {
     // This is called by both WorkerObserver and MasterObserver
     startJMapThread();
   }
 
   @Override
-  public void postApplication() {
+  public void postSave() {
     // This is called by both WorkerObserver and MasterObserver
     joinJMapThread();
+  }
+
+  @Override
+  public void preApplication() {
+  }
+
+  @Override
+  public void postApplication() {
   }
 
   /**
@@ -60,6 +76,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private void joinJMapThread() {
     stop = true;
     try {
+      thread.interrupt();
       thread.join(sleepMillis + 5000);
     } catch (InterruptedException e) {
       LOG.error("Failed to join jmap thread");
@@ -71,20 +88,15 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
    */
   public void startJMapThread() {
     stop = false;
-    thread = new Thread(new Runnable() {
+    thread = ThreadUtils.startThread(new Runnable() {
       @Override
       public void run() {
         while (!stop) {
-          JMap.heapHistogramDump(linesToPrint);
-          try {
-            Thread.sleep(sleepMillis);
-          } catch (InterruptedException e) {
-            LOG.warn("JMap histogram sleep interrupted", e);
-          }
+          JMap.heapHistogramDump(linesToPrint, liveObjectsOnly, jmapPath);
+          ThreadUtils.trySleep(sleepMillis);
         }
       }
-    });
-    thread.start();
+    }, "jmap-dumper");
   }
 
   @Override
@@ -94,12 +106,19 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   public void postSuperstep(long superstep) { }
 
   @Override
+  public void superstepMetricsUpdate(long superstep,
+      AggregatedMetrics aggregatedMetrics,
+      List<PartitionStats> partitionStatsList) { }
+
+  @Override
   public void applicationFailed(Exception e) { }
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration configuration) {
     sleepMillis = GiraphConstants.JMAP_SLEEP_MILLIS.get(configuration);
     linesToPrint = GiraphConstants.JMAP_PRINT_LINES.get(configuration);
+    liveObjectsOnly = GiraphConstants.JMAP_LIVE_ONLY.get(configuration);
+    jmapPath = GiraphConstants.JMAP_PATH.get(configuration);
   }
 
   @Override

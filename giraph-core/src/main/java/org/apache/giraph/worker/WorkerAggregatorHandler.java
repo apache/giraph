@@ -15,17 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.worker;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
-import org.apache.giraph.comm.aggregators.AggregatedValueOutputStream;
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
+import org.apache.giraph.comm.aggregators.GlobalCommValueOutputStream;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.reducers.Reducer;
+import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
+import org.apache.giraph.utils.UnsafeReusableByteArrayInput;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -33,38 +42,20 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-
-/**
- * Handler for aggregators on worker. Provides the aggregated values and
- * performs aggregations from user vertex code (thread-safe). Also has
- * methods for all superstep coordination related to aggregators.
- *
- * At the beginning of any superstep any worker calls prepareSuperstep(),
- * which blocks until the final aggregates from the previous superstep have
- * been delivered to the worker.
- * Next, during the superstep worker can call aggregate() and
- * getAggregatedValue() (both methods are thread safe) the former
- * computes partial aggregates for this superstep from the worker,
- * the latter returns (read-only) final aggregates from the previous superstep.
- * Finally, at the end of the superstep, the worker calls finishSuperstep(),
- * which propagates non-owned partial aggregates to the owner workers,
- * and sends the final aggregate from the owner worker to the master.
- */
-public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
+/** Handler for reduce/broadcast on the workers */
+public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(WorkerAggregatorHandler.class);
-  /** Map of values from previous superstep */
-  private Map<String, Writable> previousAggregatedValueMap =
+  /** Map of broadcasted values */
+  private final Map<String, Writable> broadcastedMap =
       Maps.newHashMap();
-  /** Map of aggregators for current superstep */
-  private Map<String, Aggregator<Writable>> currentAggregatorMap =
+  /** Map of reducers currently being reduced */
+  private final Map<String, Reducer<Object, Writable>> reducerMap =
       Maps.newHashMap();
+
   /** Service worker */
-  private final CentralizedServiceWorker<?, ?, ?, ?> serviceWorker;
+  private final CentralizedServiceWorker<?, ?, ?> serviceWorker;
   /** Progressable for reporting progress */
   private final Progressable progressable;
   /** How big a single aggregator request can be */
@@ -80,7 +71,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
    * @param progressable  Progressable for reporting progress
    */
   public WorkerAggregatorHandler(
-      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker,
+      CentralizedServiceWorker<?, ?, ?> serviceWorker,
       ImmutableClassesGiraphConfiguration conf,
       Progressable progressable) {
     this.serviceWorker = serviceWorker;
@@ -92,29 +83,49 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   }
 
   @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    Aggregator<Writable> aggregator = currentAggregatorMap.get(name);
-    if (aggregator != null) {
-      progressable.progress();
-      synchronized (aggregator) {
-        aggregator.aggregate(value);
-      }
-    } else {
-      throw new IllegalStateException("aggregate: " +
-          AggregatorUtils.getUnregisteredAggregatorMessage(name,
-              currentAggregatorMap.size() != 0, conf));
+  public <B extends Writable> B getBroadcast(String name) {
+    B value = (B) broadcastedMap.get(name);
+    if (value == null) {
+      LOG.warn("getBroadcast: " +
+          AggregatorUtils.getUnregisteredBroadcastMessage(name,
+              broadcastedMap.size() != 0, conf));
     }
+    return value;
   }
 
   @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    A value = (A) previousAggregatedValueMap.get(name);
-    if (value == null) {
-      LOG.warn("getAggregatedValue: " +
-          AggregatorUtils.getUnregisteredAggregatorMessage(name,
-              previousAggregatedValueMap.size() != 0, conf));
+  public void reduce(String name, Object value) {
+    Reducer<Object, Writable> reducer = reducerMap.get(name);
+    if (reducer != null) {
+      progressable.progress();
+      synchronized (reducer) {
+        reducer.reduce(value);
+      }
+    } else {
+      throw new IllegalStateException("reduce: " +
+          AggregatorUtils.getUnregisteredReducerMessage(name,
+              reducerMap.size() != 0, conf));
     }
-    return value;
+  }
+
+  /**
+   * Combine partially reduced value into currently reduced value.
+   * @param name Name of the reducer
+   * @param valueToReduce Partial value to reduce
+   */
+  @Override
+  public void reduceMerge(String name, Writable valueToReduce) {
+    Reducer<Object, Writable> reducer = reducerMap.get(name);
+    if (reducer != null) {
+      progressable.progress();
+      synchronized (reducer) {
+        reducer.reduceMerge(valueToReduce);
+      }
+    } else {
+      throw new IllegalStateException("reduce: " +
+          AggregatorUtils.getUnregisteredReducerMessage(name,
+              reducerMap.size() != 0, conf));
+    }
   }
 
   /**
@@ -124,27 +135,29 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
    */
   public void prepareSuperstep(
       WorkerAggregatorRequestProcessor requestProcessor) {
+    broadcastedMap.clear();
+    reducerMap.clear();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("prepareSuperstep: Start preparing aggregators");
     }
-    AllAggregatorServerData allAggregatorData =
+    AllAggregatorServerData allGlobalCommData =
         serviceWorker.getServerData().getAllAggregatorData();
     // Wait for my aggregators
     Iterable<byte[]> dataToDistribute =
-        allAggregatorData.getDataFromMasterWhenReady(
+        allGlobalCommData.getDataFromMasterWhenReady(
             serviceWorker.getMasterInfo());
     try {
       // Distribute my aggregators
-      requestProcessor.distributeAggregators(dataToDistribute);
+      requestProcessor.distributeReducedValues(dataToDistribute);
     } catch (IOException e) {
       throw new IllegalStateException("prepareSuperstep: " +
           "IOException occurred while trying to distribute aggregators", e);
     }
     // Wait for all other aggregators and store them
-    allAggregatorData.fillNextSuperstepMapsWhenReady(
-        getOtherWorkerIdsSet(), previousAggregatedValueMap,
-        currentAggregatorMap);
-    allAggregatorData.reset();
+    allGlobalCommData.fillNextSuperstepMapsWhenReady(
+        getOtherWorkerIdsSet(), broadcastedMap,
+        reducerMap);
     if (LOG.isDebugEnabled()) {
       LOG.debug("prepareSuperstep: Aggregators prepared");
     }
@@ -162,19 +175,19 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
           "workers will send their aggregated values " +
           "once they are done with superstep computation");
     }
-    OwnerAggregatorServerData ownerAggregatorData =
+    OwnerAggregatorServerData ownerGlobalCommData =
         serviceWorker.getServerData().getOwnerAggregatorData();
     // First send partial aggregated values to their owners and determine
     // which aggregators belong to this worker
-    for (Map.Entry<String, Aggregator<Writable>> entry :
-        currentAggregatorMap.entrySet()) {
+    for (Map.Entry<String, Reducer<Object, Writable>> entry :
+        reducerMap.entrySet()) {
       try {
-        boolean sent = requestProcessor.sendAggregatedValue(entry.getKey(),
-            entry.getValue().getAggregatedValue());
+        boolean sent = requestProcessor.sendReducedValue(entry.getKey(),
+            entry.getValue().getCurrentValue());
         if (!sent) {
           // If it's my aggregator, add it directly
-          ownerAggregatorData.aggregate(entry.getKey(),
-              entry.getValue().getAggregatedValue());
+          ownerGlobalCommData.reduce(entry.getKey(),
+              entry.getValue().getCurrentValue());
         }
       } catch (IOException e) {
         throw new IllegalStateException("finishSuperstep: " +
@@ -192,20 +205,21 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     }
 
     // Wait to receive partial aggregated values from all other workers
-    Iterable<Map.Entry<String, Writable>> myAggregators =
-        ownerAggregatorData.getMyAggregatorValuesWhenReady(
+    Iterable<Map.Entry<String, Writable>> myReducedValues =
+        ownerGlobalCommData.getMyReducedValuesWhenReady(
             getOtherWorkerIdsSet());
 
     // Send final aggregated values to master
-    AggregatedValueOutputStream aggregatorOutput =
-        new AggregatedValueOutputStream();
-    for (Map.Entry<String, Writable> entry : myAggregators) {
+    GlobalCommValueOutputStream globalOutput =
+        new GlobalCommValueOutputStream(false);
+    for (Map.Entry<String, Writable> entry : myReducedValues) {
       try {
-        int currentSize = aggregatorOutput.addAggregator(entry.getKey(),
+        int currentSize = globalOutput.addValue(entry.getKey(),
+            GlobalCommType.REDUCED_VALUE,
             entry.getValue());
         if (currentSize > maxBytesPerAggregatorRequest) {
-          requestProcessor.sendAggregatedValuesToMaster(
-              aggregatorOutput.flush());
+          requestProcessor.sendReducedValuesToMaster(
+              globalOutput.flush());
         }
         progressable.progress();
       } catch (IOException e) {
@@ -215,7 +229,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
       }
     }
     try {
-      requestProcessor.sendAggregatedValuesToMaster(aggregatorOutput.flush());
+      requestProcessor.sendReducedValuesToMaster(globalOutput.flush());
     } catch (IOException e) {
       throw new IllegalStateException("finishSuperstep: " +
           "IOException occured while sending aggregators to master", e);
@@ -223,7 +237,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     // Wait for master to receive aggregated values before proceeding
     serviceWorker.getWorkerClient().waitAllRequests();
 
-    ownerAggregatorData.reset();
+    ownerGlobalCommData.reset();
     if (LOG.isDebugEnabled()) {
       LOG.debug("finishSuperstep: Aggregators finished");
     }
@@ -235,9 +249,9 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
    *
    * @return New aggregator usage
    */
-  public WorkerThreadAggregatorUsage newThreadAggregatorUsage() {
+  public WorkerThreadGlobalCommUsage newThreadAggregatorUsage() {
     if (AggregatorUtils.useThreadLocalAggregators(conf)) {
-      return new ThreadLocalWorkerAggregatorUsage();
+      return new ThreadLocalWorkerGlobalCommUsage();
     } else {
       return this;
     }
@@ -266,62 +280,83 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   }
 
   /**
-   * Not thread-safe implementation of {@link WorkerThreadAggregatorUsage}.
-   * We can use one instance of this object per thread to prevent
-   * synchronizing on each aggregate() call. In the end of superstep,
-   * values from each of these will be aggregated back to {@link
-   * WorkerAggregatorHandler}
-   */
-  public class ThreadLocalWorkerAggregatorUsage
-      implements WorkerThreadAggregatorUsage {
-    /** Thread-local aggregator map */
-    private final Map<String, Aggregator<Writable>> threadAggregatorMap;
+  * Not thread-safe implementation of {@link WorkerThreadGlobalCommUsage}.
+  * We can use one instance of this object per thread to prevent
+  * synchronizing on each aggregate() call. In the end of superstep,
+  * values from each of these will be aggregated back to {@link
+  * WorkerThreadGlobalCommUsage}
+  */
+  public class ThreadLocalWorkerGlobalCommUsage
+    implements WorkerThreadGlobalCommUsage {
+    /** Thread-local reducer map */
+    private final Map<String, Reducer<Object, Writable>> threadReducerMap;
 
     /**
-     * Constructor
-     *
-     * Creates new instances of all aggregators from
-     * {@link WorkerAggregatorHandler}
-     */
-    public ThreadLocalWorkerAggregatorUsage() {
-      threadAggregatorMap = Maps.newHashMapWithExpectedSize(
-          WorkerAggregatorHandler.this.currentAggregatorMap.size());
-      for (Map.Entry<String, Aggregator<Writable>> entry :
-          WorkerAggregatorHandler.this.currentAggregatorMap.entrySet()) {
-        threadAggregatorMap.put(entry.getKey(),
-            AggregatorUtils.newAggregatorInstance(
-                (Class<Aggregator<Writable>>) entry.getValue().getClass(),
-                conf));
+    * Constructor
+    *
+    * Creates new instances of all reducers from
+    * {@link WorkerAggregatorHandler}
+    */
+    public ThreadLocalWorkerGlobalCommUsage() {
+      threadReducerMap = Maps.newHashMapWithExpectedSize(
+          WorkerAggregatorHandler.this.reducerMap.size());
+
+      UnsafeByteArrayOutputStream out = new UnsafeByteArrayOutputStream();
+      UnsafeReusableByteArrayInput in = new UnsafeReusableByteArrayInput();
+
+      for (Entry<String, Reducer<Object, Writable>> entry :
+          reducerMap.entrySet()) {
+        ReduceOperation<Object, Writable> globalReduceOp =
+            entry.getValue().getReduceOp();
+
+        ReduceOperation<Object, Writable> threadLocalCopy =
+            WritableUtils.createCopy(out, in, globalReduceOp, conf);
+
+        threadReducerMap.put(entry.getKey(), new Reducer<>(threadLocalCopy));
       }
     }
 
     @Override
-    public <A extends Writable> void aggregate(String name, A value) {
-      Aggregator<Writable> aggregator = threadAggregatorMap.get(name);
-      if (aggregator != null) {
+    public void reduce(String name, Object value) {
+      Reducer<Object, Writable> reducer = threadReducerMap.get(name);
+      if (reducer != null) {
         progressable.progress();
-        aggregator.aggregate(value);
+        reducer.reduce(value);
       } else {
-        throw new IllegalStateException("aggregate: " +
+        throw new IllegalStateException("reduce: " +
             AggregatorUtils.getUnregisteredAggregatorMessage(name,
-                threadAggregatorMap.size() != 0, conf));
+                threadReducerMap.size() != 0, conf));
       }
     }
 
     @Override
-    public <A extends Writable> A getAggregatedValue(String name) {
-      return WorkerAggregatorHandler.this.<A>getAggregatedValue(name);
+    public void reduceMerge(String name, Writable value) {
+      Reducer<Object, Writable> reducer = threadReducerMap.get(name);
+      if (reducer != null) {
+        progressable.progress();
+        reducer.reduceMerge(value);
+      } else {
+        throw new IllegalStateException("reduceMerge: " +
+            AggregatorUtils.getUnregisteredAggregatorMessage(name,
+                threadReducerMap.size() != 0, conf));
+      }
+    }
+
+    @Override
+    public <B extends Writable> B getBroadcast(String name) {
+      return WorkerAggregatorHandler.this.getBroadcast(name);
     }
 
     @Override
     public void finishThreadComputation() {
       // Aggregate the values this thread's vertices provided back to
       // WorkerAggregatorHandler
-      for (Map.Entry<String, Aggregator<Writable>> entry :
-          threadAggregatorMap.entrySet()) {
-        WorkerAggregatorHandler.this.aggregate(entry.getKey(),
-            entry.getValue().getAggregatedValue());
+      for (Entry<String, Reducer<Object, Writable>> entry :
+          threadReducerMap.entrySet()) {
+        WorkerAggregatorHandler.this.reduceMerge(entry.getKey(),
+            entry.getValue().getCurrentValue());
       }
     }
   }
+
 }

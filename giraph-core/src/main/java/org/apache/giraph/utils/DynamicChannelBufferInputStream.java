@@ -20,21 +20,21 @@ package org.apache.giraph.utils;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
-import org.jboss.netty.buffer.DynamicChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Special input that reads from a DynamicChannelBuffer.
  */
 public class DynamicChannelBufferInputStream implements DataInput {
   /** Internal dynamic channel buffer */
-  private DynamicChannelBuffer buffer;
+  private ByteBuf buffer;
 
   /**
    * Constructor.
    *
    * @param buffer Buffer to read from
    */
-  public DynamicChannelBufferInputStream(DynamicChannelBuffer buffer) {
+  public DynamicChannelBufferInputStream(ByteBuf buffer) {
     this.buffer = buffer;
   }
 

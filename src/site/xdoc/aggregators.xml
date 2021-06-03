@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Aggregators</title>
+  </properties>
+
+  <body>
+    <section name="Aggregators">
+      <subsection name="What are aggregators?">
+        <p>Aggregators enable global computation in your application. You can use them, for example, to check whether a global condition is satisfied or to keep some statistics.</p>
+        <p>During a superstep, vertices provide values to aggregators.  These values get aggregated by the system and the results become available to all vertices in the following superstep. Providing a value to aggregator is done by calling:</p>
+        <source>aggregate(aggregatorName, aggregatedValue)</source>
+        <p>and to get the value aggregated during previous superstep you should call:</p>
+        <source>getAggregatedValue(aggregatorName)</source>
+        <p>Aggregator operations should be commutative and associative since there is no guaranteed ordering in which the aggregations will be performed.</p>
+      </subsection>
+      <subsection name="Regular vs persistent aggregator">
+        <p>Aggregators come in two flavors: regular and persistent aggregators. The value of a regular aggregator will be reset to the initial value in each superstep, whereas the value of persistent aggregator will live through the application.</p>
+        <p>As an example, consider LongSumAggregator being used by each vertex adding 1 to it during compute(). If this is a regular aggregator, you'll be able to read the number of vertices in the previous superstep from it. If this is persistent aggregator, it will hold the sum of the number of vertices from all of the previous supersteps.</p>
+      </subsection>
+      <subsection name="Registering aggregators">
+        <p>Before using any aggregator, you <b>MUST register it on the master</b>. You can do this by extending (and setting) MasterCompute class, and calling:</p>
+        <source>registerAggregator(aggregatorName, aggregatorClass)</source>
+        <p>or:</p>
+        <source>registerPersistentAggregator(aggregatorName, aggregatorClass)</source>
+        <p>depending on what kind of aggregator you want to have. You can register aggregators either in MasterCompute.initialize() - in that case the registered aggregator will be available through whole application, or you can do it in MasterCompute.compute() - the aggregator will then be available in current and each of the following supersteps.</p>
+      </subsection>
+      <subsection name="Aggregators and MasterCompute">
+        <p>The first thing that gets executed in a superstep is MasterCompute.compute(). In this method you are able to read aggregated values from previous superstep by calling:</p>
+        <source>getAggregatedValue(aggregatorName)</source>
+        <p>and you are able to change the value of the aggregator by calling:</p>
+        <source>setAggregatedValue(aggregatorName, aggregatedValue)</source>
+      </subsection>
+      <subsection name="Implementations">
+        <p>In the package org.apache.giraph.aggregators you can find many common aggregators already implemented.</p>
+        <p>If you need to create your own, you can extend BasicAggregator or implement Aggregator. Methods which you will need to implement are:</p>
+        <source>aggregate(value)</source>
+        <p>which describes how to add another value to the aggregator, and:</p>
+        <source>createInitialValue()</source>
+        <p>The initial value will be applied to all aggregator objects when they are created.  When it's added to an aggregator the value of the aggregator shouldn't change. For example, for sum aggregator this value should be zero, for min aggregator it should be the value corresponding to positive infinity, etc.</p>
+        <p>If you need some parameters from the configuration in your aggregators, your aggregator class can implement ImmutableClassesGiraphConfigurable.</p>
+      </subsection>
+      <subsection name="Advanced options">
+        <p>If you are using multiple threads for computation (giraph.numComputeThreads), you should consider turning on giraph.useThreadLocalAggregators option. Using thread local aggregators allows every worker thread to have it's own local aggregator copy, rather than a single aggregator copy for the entire worker.  The downside of this approach is that it will use more memory - you'll have several copies of each of the aggregators. So if you have a lot of aggregators, or aggregated values are very large objects, this option could be bad. But otherwise, it will likely speed up your application since it will remove the need to perform synchronization when aggregating values.</p>
+      </subsection>
+    </section>
+    <section name="Implementation details">
+      <p>During a superstep, values provided to the aggregators are being aggregated to some worker-local aggregator objects. In the end of the superstep, all of these values need to be aggregated together, given to the master, and after MasterCompute.compute is performed, distributed back to all the workers. In applications which use a lot of aggregators, if all the aggregations were to be done on master, this could cause a serious bottleneck, both from the computation and network communication standpoint, because master would be receiving, processing and sending (number of workers * total size of aggregators) amount of data. This was the motivation for implementing sharded aggregators in Giraph.</p>
+      <p>In the end of the superstep, each aggregator is assigned to one of the workers, and that worker receives and aggregates values for that aggregator from all other workers. Then worker sends all its aggregators to master, so master doesn't have to perform any aggregation, and receives only final value for each of the aggregators. After MasterCompute.compute, master doesn't do the distribution of all aggregators to all workers, but aggregators again have their owners. Master only sends each aggregator to its owner, and then each worker distributes the aggregators which it owns to all other workers.</p>
+    </section>
+  </body>
+</document>

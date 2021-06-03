@@ -18,7 +18,6 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
@@ -28,24 +27,25 @@ import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Input format for unweighted graphs with long ids and double vertex values
+ * Input format for unweighted graphs with long ids.
  */
 public class LongDoubleNullTextInputFormat
     extends TextVertexInputFormat<LongWritable, DoubleWritable, NullWritable>
     implements ImmutableClassesGiraphConfigurable<LongWritable, DoubleWritable,
-    NullWritable, Writable> {
+    NullWritable> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      NullWritable, Writable> conf;
+      NullWritable> conf;
 
   @Override
   public TextVertexReader createVertexReader(InputSplit split,
@@ -56,13 +56,13 @@ public class LongDoubleNullTextInputFormat
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<LongWritable,
-      DoubleWritable, NullWritable, Writable> configuration) {
+      DoubleWritable, NullWritable> configuration) {
     this.conf = configuration;
   }
 
   @Override
   public ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      NullWritable, Writable> getConf() {
+      NullWritable> getConf() {
     return conf;
   }
 
@@ -77,9 +77,9 @@ public class LongDoubleNullTextInputFormat
     private final Pattern separator = Pattern.compile("[\t ]");
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, NullWritable, ?>
+    public Vertex<LongWritable, DoubleWritable, NullWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, NullWritable, ?>
+      Vertex<LongWritable, DoubleWritable, NullWritable>
           vertex = conf.createVertex();
 
       String[] tokens =

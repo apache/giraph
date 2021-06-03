@@ -22,6 +22,8 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
+import org.apache.giraph.utils.CallableFactory;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -32,6 +34,7 @@ import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 /**
  * Class to use as {@link SuperstepOutput} when chosen VertexOutputFormat is
@@ -47,7 +50,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
   /** Mapper context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, ?> configuration;
+  private ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Vertex output format, used to get new vertex writers */
   private final VertexOutputFormat<I, V, E> vertexOutputFormat;
   /**
@@ -65,13 +68,14 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
    * @param context Mapper context
    */
   public MultiThreadedSuperstepOutput(
-      ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.configuration = conf;
-    vertexOutputFormat = conf.createVertexOutputFormat();
+    vertexOutputFormat = conf.createWrappedVertexOutputFormat();
     this.context = context;
     availableVertexWriters = Lists.newArrayList();
     occupiedVertexWriters = Sets.newHashSet();
+    vertexOutputFormat.preWriting(context);
   }
 
   @Override
@@ -80,9 +84,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
     if (availableVertexWriters.isEmpty()) {
       try {
         vertexWriter = vertexOutputFormat.createVertexWriter(context);
-        vertexWriter.setConf(
-            (ImmutableClassesGiraphConfiguration<I, V, E, Writable>)
-                configuration);
+        vertexWriter.setConf(configuration);
         vertexWriter.initialize(context);
       } catch (IOException e) {
         throw new IllegalStateException("getVertexWriter: " +
@@ -118,8 +120,32 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
           occupiedVertexWriters.size() +
           " vertex writers were not returned!");
     }
-    for (VertexWriter<I, V, E> vertexWriter : availableVertexWriters) {
-      vertexWriter.close(context);
-    }
+
+    // Closing writers can take time - use multiple threads and call progress
+    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+      @Override
+      public Callable<Void> newCallable(int callableId) {
+        return new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            while (true) {
+              VertexWriter<I, V, E> vertexWriter;
+              synchronized (availableVertexWriters) {
+                if (availableVertexWriters.isEmpty()) {
+                  return null;
+                }
+                vertexWriter = availableVertexWriters.remove(
+                    availableVertexWriters.size() - 1);
+              }
+              vertexWriter.close(context);
+            }
+          }
+        };
+      }
+    };
+    ProgressableUtils.getResultsWithNCallables(callableFactory,
+        Math.min(configuration.getNumOutputThreads(),
+            availableVertexWriters.size()), "close-writers-%d", context);
+    vertexOutputFormat.postWriting(context);
   }
 }

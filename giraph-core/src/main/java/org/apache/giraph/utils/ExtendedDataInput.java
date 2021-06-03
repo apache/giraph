@@ -36,4 +36,11 @@ public interface ExtendedDataInput extends DataInput {
    * @return Bytes available
    */
   int available();
+
+  /**
+   * Check if we read everything from the input
+   *
+   * @return True iff we read everything from the input
+   */
+  boolean endOfInput();
 }

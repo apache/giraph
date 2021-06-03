@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @SuppressWarnings("rawtypes")
 public abstract class VertexWriter<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
     implements SimpleVertexWriter<I, V, E> {
   /**
    * Use the context to setup writing the vertices.

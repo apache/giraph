@@ -18,6 +18,7 @@
 package org.apache.giraph;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.giraph.io.formats.FileOutputFormatUtil;
 import org.apache.giraph.utils.ConfigurationUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
@@ -27,7 +28,6 @@ end[PURE_YARN]*/
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -79,12 +79,12 @@ public class GiraphRunner implements Tool {
     // set up job for various platforms
     final String vertexClassName = args[0];
     final String jobName = "Giraph: " + vertexClassName;
-    /*if[PURE_YARN]
+/*if[PURE_YARN]
     GiraphYarnClient job = new GiraphYarnClient(giraphConf, jobName);
-    else[PURE_YARN]*/
+else[PURE_YARN]*/
     GiraphJob job = new GiraphJob(giraphConf, jobName);
     prepareHadoopMRJob(job, cmd);
-    /*end[PURE_YARN]*/
+/*end[PURE_YARN]*/
 
     // run the job, collect results
     if (LOG.isDebugEnabled()) {
@@ -102,9 +102,9 @@ public class GiraphRunner implements Tool {
    */
   private void prepareHadoopMRJob(final GiraphJob job, final CommandLine cmd)
     throws Exception {
-    if (cmd.hasOption("of")) {
+    if (cmd.hasOption("vof") || cmd.hasOption("eof")) {
       if (cmd.hasOption("op")) {
-        FileOutputFormat.setOutputPath(job.getInternalJob(),
+        FileOutputFormatUtil.setOutputPath(job.getInternalJob(),
           new Path(cmd.getOptionValue("op")));
       }
     }

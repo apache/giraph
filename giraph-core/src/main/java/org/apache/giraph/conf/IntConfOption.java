@@ -28,28 +28,34 @@ public class IntConfOption extends AbstractConfOption {
 
   /**
    * Constructor
+   *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public IntConfOption(String key, int defaultValue) {
-    super(key);
+  public IntConfOption(String key, int defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   /**
    * Constructor
+   *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public IntConfOption(String key, long defaultValue) {
-    super(key);
+  public IntConfOption(String key, long defaultValue, String description) {
+    super(key, description);
     this.defaultValue = (int) defaultValue;
-    AllOptions.add(this);
   }
 
   public int getDefaultValue() {
     return defaultValue;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return get(conf) == defaultValue;
   }
 
   @Override public String getDefaultValueStr() {
@@ -62,6 +68,7 @@ public class IntConfOption extends AbstractConfOption {
 
   /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return value for key, or default value if not set
    */
@@ -71,6 +78,7 @@ public class IntConfOption extends AbstractConfOption {
 
   /**
    * Set value
+   *
    * @param conf Configuration
    * @param value to set
    */
@@ -80,11 +88,12 @@ public class IntConfOption extends AbstractConfOption {
 
   /**
    * Set value if it's not already present
+   *
    * @param conf Configuration
    * @param value to set
    */
   public void setIfUnset(Configuration conf, int value) {
-    if (conf.get(getKey()) == null) {
+    if (!contains(conf)) {
       conf.setInt(getKey(), value);
     }
   }

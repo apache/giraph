@@ -29,13 +29,17 @@ import java.lang.annotation.Target;
 @Retention(value = RetentionPolicy.RUNTIME)
 @Target(value = ElementType.TYPE)
 public @interface Algorithm {
+  // CHECKSTYLE: stop JavadocMethod
   /**
    * Name of the algorithm.
+   * @return Name
    */
   String name();
 
   /**
    * Short description of algorithm which is going to be presented to the user.
+   * @return Description
    */
   String description() default "";
+  // CHECKSTYLE: resume JavadocMethod
 }

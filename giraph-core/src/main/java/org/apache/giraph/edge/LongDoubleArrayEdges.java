@@ -18,30 +18,33 @@
 
 package org.apache.giraph.edge;
 
-import com.google.common.collect.UnmodifiableIterator;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+
+import com.google.common.collect.UnmodifiableIterator;
+
 /**
- * Implementation of {@link VertexEdges} with long ids and double edge
+ * Implementation of {@link OutEdges} with long ids and double edge
  * values, backed by dynamic primitive arrays.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but edge removals are expensive.
  */
 public class LongDoubleArrayEdges
-    implements ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
-    MutableVertexEdges<LongWritable, DoubleWritable> {
+    implements ReuseObjectsOutEdges<LongWritable, DoubleWritable>,
+    MutableOutEdges<LongWritable, DoubleWritable>, Trimmable {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
   /** Array of edge values. */
@@ -49,18 +52,7 @@ public class LongDoubleArrayEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, DoubleWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the arrays with the expected capacity.
-    if (edges instanceof Collection) {
-      int numEdges =
-          ((Collection<Edge<LongWritable, DoubleWritable>>) edges).size();
-      initialize(numEdges);
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, DoubleWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override
@@ -85,7 +77,7 @@ public class LongDoubleArrayEdges
    * If the backing arrays are more than four times as big as the number of
    * elements, halve their size.
    */
-  private void trim() {
+  private void trimBack() {
     if (neighbors.elements().length > 4 * neighbors.size()) {
       neighbors.trim(neighbors.elements().length / 2);
       edgeValues.trim(neighbors.elements().length / 2);
@@ -109,7 +101,7 @@ public class LongDoubleArrayEdges
       edgeValues.set(i, edgeValues.popDouble());
     }
     // If needed after the removal, trim the arrays.
-    trim();
+    trimBack();
   }
 
   @Override
@@ -117,7 +109,7 @@ public class LongDoubleArrayEdges
     // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
-      if (neighbors.get(i) == targetVertexId.get()) {
+      if (neighbors.getLong(i) == targetVertexId.get()) {
         removeAt(i);
       }
     }
@@ -133,11 +125,11 @@ public class LongDoubleArrayEdges
     // Returns an iterator that reuses objects.
     return new UnmodifiableIterator<Edge<LongWritable, DoubleWritable>>() {
       /** Wrapped neighbors iterator. */
-      private LongIterator neighborsIt = neighbors.iterator();
+      private final LongIterator neighborsIt = neighbors.iterator();
       /** Wrapped edge values iterator. */
-      private DoubleIterator edgeValuesIt = edgeValues.iterator();
+      private final DoubleIterator edgeValuesIt = edgeValues.iterator();
       /** Representative edge object. */
-      private Edge<LongWritable, DoubleWritable> representativeEdge =
+      private final Edge<LongWritable, DoubleWritable> representativeEdge =
           EdgeFactory.create(new LongWritable(), new DoubleWritable());
 
       @Override
@@ -172,8 +164,8 @@ public class LongDoubleArrayEdges
      */
     public void setIndex(int index) {
       // Update the id and value objects from the superclass.
-      getTargetVertexId().set(neighbors.get(index));
-      getValue().set(edgeValues.get(index));
+      getTargetVertexId().set(neighbors.getLong(index));
+      getValue().set(edgeValues.getDouble(index));
       // Update the index.
       this.index = index;
     }
@@ -194,7 +186,7 @@ public class LongDoubleArrayEdges
       /** Current position in the array. */
       private int offset = 0;
       /** Representative edge object. */
-      private LongDoubleArrayMutableEdge representativeEdge =
+      private final LongDoubleArrayMutableEdge representativeEdge =
           new LongDoubleArrayMutableEdge();
 
       @Override
@@ -237,5 +229,11 @@ public class LongDoubleArrayEdges
       neighbors.add(in.readLong());
       edgeValues.add(in.readDouble());
     }
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
+    edgeValues.trim();
   }
 }

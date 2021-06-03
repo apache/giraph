@@ -30,6 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,10 +43,13 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 
 import org.apache.log4j.Logger;
@@ -50,6 +57,7 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.nio.ByteBuffer;
 
 /**
  * The initial launcher for a YARN-based Giraph job. This class attempts to
@@ -57,7 +65,7 @@ import java.util.Map;
  * application container to host GiraphApplicationMaster. The RPC connection
  * between the RM and GiraphYarnClient is the YARN ApplicationManager.
  */
-public class GiraphYarnClient extends YarnClientImpl {
+public class GiraphYarnClient {
   static {
     Configuration.addDefaultResource("giraph-site.xml");
   }
@@ -66,7 +74,7 @@ public class GiraphYarnClient extends YarnClientImpl {
   /** Sleep time between silent progress checks */
   private static final int JOB_STATUS_INTERVAL_MSECS = 800;
   /** Memory (in MB) to allocate for our ApplicationMaster container */
-  private static final int YARN_APP_MASTER_MEMORY_MB = 1024;
+  private static final int YARN_APP_MASTER_MEMORY_MB = 512;
 
   /** human-readable job name */
   private final String jobName;
@@ -76,6 +84,8 @@ public class GiraphYarnClient extends YarnClientImpl {
   private ApplicationId appId;
   /** # of sleeps between progress reports to client */
   private int reportCounter;
+  /** Yarn client object */
+  private YarnClient yarnClient;
 
   /**
    * Constructor. Requires caller to hand us a GiraphConfiguration.
@@ -85,13 +95,13 @@ public class GiraphYarnClient extends YarnClientImpl {
    */
   public GiraphYarnClient(GiraphConfiguration giraphConf, String jobName)
     throws IOException {
-    super();
     this.reportCounter = 0;
     this.jobName = jobName;
     this.appId = null; // can't set this until after start()
     this.giraphConf = giraphConf;
     verifyOutputDirDoesNotExist();
-    super.init(this.giraphConf);
+    yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(giraphConf);
   }
 
   /**
@@ -102,35 +112,52 @@ public class GiraphYarnClient extends YarnClientImpl {
    * @param verbose Not implemented yet, to provide compatibility w/GiraphJob
    * @return true if job is successful
    */
-  public boolean run(final boolean verbose) {
-    checkJobLocalZooKeeperSupported();
+  public boolean run(final boolean verbose) throws YarnException, IOException {
     // init our connection to YARN ResourceManager RPC
-    start();
+    LOG.info("Running Client");
+    yarnClient.start();
     // request an application id from the RM
-    GetNewApplicationResponse getNewAppResponse;
-    try {
-      getNewAppResponse = super.getNewApplication();
-      // make sure we have the cluster resources to run the job.
-      checkPerNodeResourcesAvailable(getNewAppResponse);
-    } catch (YarnRemoteException yre) {
-      yre.printStackTrace();
-      return false;
-    }
-    appId = getNewAppResponse.getApplicationId();
+ // Get a new application id
+    YarnClientApplication app = yarnClient.createApplication();
+    GetNewApplicationResponse getNewAppResponse = app.
+      getNewApplicationResponse();
+    checkPerNodeResourcesAvailable(getNewAppResponse);
+    // configure our request for an exec container for GiraphApplicationMaster
+    ApplicationSubmissionContext appContext = app.
+      getApplicationSubmissionContext();
+    appId = appContext.getApplicationId();
+    //createAppSubmissionContext(appContext);
+    appContext.setApplicationId(appId);
+    appContext.setApplicationName(jobName);
     LOG.info("Obtained new Application ID: " + appId);
     // sanity check
     applyConfigsForYarnGiraphJob();
-    // configure our request for an exec container for GiraphApplicationMaster
-    ApplicationSubmissionContext appContext = createAppSubmissionContext();
+
     ContainerLaunchContext containerContext = buildContainerLaunchContext();
+    appContext.setResource(buildContainerMemory());
     appContext.setAMContainerSpec(containerContext);
     LOG.info("ApplicationSumbissionContext for GiraphApplicationMaster " +
       "launch container is populated.");
-    // make the request, blow up if fail, loop and report job progress if not
+    //TODO: priority and queue
+    // Set the priority for the application master
+    //Priority pri = Records.newRecord(Priority.class);
+    // TODO - what is the range for priority? how to decide?
+    //pri.setPriority(amPriority);
+    //appContext.setPriority(pri);
+
+    // Set the queue to which this application is to be submitted in the RM
+    //appContext.setQueue(amQueue);
+
+   // make the request, blow up if fail, loop and report job progress if not
     try {
+      LOG.info("Submitting application to ASM");
       // obtain an "updated copy" of the appId for status checks/job kill later
-      appId = super.submitApplication(appContext);
-    } catch (YarnRemoteException yre) {
+      appId = yarnClient.submitApplication(appContext);
+      LOG.info("Got new appId after submission :" + appId);
+    } catch (YarnException yre) {
+      // TODO
+      // Try submitting the same request again
+      // app submission failure?
       throw new RuntimeException("submitApplication(appContext) FAILED.", yre);
     }
     LOG.info("GiraphApplicationMaster container request was submitted to " +
@@ -175,28 +202,27 @@ public class GiraphYarnClient extends YarnClientImpl {
    * @param cluster the GetNewApplicationResponse from the YARN RM.
    */
   private void checkPerNodeResourcesAvailable(
-    final GetNewApplicationResponse cluster) {
+    final GetNewApplicationResponse cluster) throws YarnException, IOException {
     // are there enough containers to go around for our Giraph job?
     List<NodeReport> nodes = null;
-    int numContainers = 0;
     long totalAvailable = 0;
     try {
-      nodes = super.getNodeReports();
-    } catch (YarnRemoteException yre) {
+      nodes = yarnClient.getNodeReports(NodeState.RUNNING);
+    } catch (YarnException yre) {
       throw new RuntimeException("GiraphYarnClient could not connect with " +
         "the YARN ResourceManager to determine the number of available " +
         "application containers.", yre);
     }
     for (NodeReport node : nodes) {
-      numContainers += node.getNumContainers();
+      LOG.info("Got node report from ASM for" +
+        ", nodeId=" + node.getNodeId() +
+        ", nodeAddress " + node.getHttpAddress() +
+        ", nodeRackName " + node.getRackName() +
+        ", nodeNumContainers " + node.getNumContainers());
       totalAvailable += node.getCapability().getMemory();
     }
     // 1 master + all workers in -w command line arg
     final int workers = giraphConf.getMaxWorkers() + 1;
-    if (workers < numContainers) {
-      throw new RuntimeException("Giraph job requires " + workers +
-        " containers to run; cluster only hosts " + numContainers);
-    }
     checkAndAdjustPerTaskHeapSize(cluster);
     final long totalAsk =
       giraphConf.getYarnTaskHeapMb() * workers;
@@ -213,9 +239,11 @@ public class GiraphYarnClient extends YarnClientImpl {
    * and re-record the new settings in the GiraphConfiguration for export.
    * @param gnar the GetNewAppResponse from the YARN ResourceManager.
    */
-  private void checkAndAdjustPerTaskHeapSize(GetNewApplicationResponse gnar) {
+  private void checkAndAdjustPerTaskHeapSize(
+    final GetNewApplicationResponse gnar) {
     // do we have the right heap size on these cluster nodes to run our job?
-    final int minCapacity = gnar.getMinimumResourceCapability().getMemory();
+    //TODO:
+    //final int minCapacity = gnar.getMinimumResourceCapability().getMemory();
     final int maxCapacity = gnar.getMaximumResourceCapability().getMemory();
     // make sure heap size is OK for this cluster's available containers
     int giraphMem = giraphConf.getYarnTaskHeapMb();
@@ -224,14 +252,14 @@ public class GiraphYarnClient extends YarnClientImpl {
     }
     if (giraphMem > maxCapacity) {
       LOG.info("Giraph's request of heap MB per-task is more than the " +
-        "minimum; downgrading Giraph to" + maxCapacity + "MB.");
+        "maximum; downgrading Giraph to" + maxCapacity + "MB.");
       giraphMem = maxCapacity;
     }
-    if (giraphMem < minCapacity) {
+    /*if (giraphMem < minCapacity) { //TODO:
       LOG.info("Giraph's request of heap MB per-task is less than the " +
         "minimum; upgrading Giraph to " + minCapacity + "MB.");
       giraphMem = minCapacity;
-    }
+    }*/
     giraphConf.setYarnTaskHeapMb(giraphMem); // record any changes made
   }
 
@@ -240,7 +268,7 @@ public class GiraphYarnClient extends YarnClientImpl {
    * just sleep and wait for the job to finish. If no AM response, kill the app.
    * @return true if job run is successful.
    */
-  private boolean awaitGiraphJobCompletion() {
+  private boolean awaitGiraphJobCompletion() throws YarnException, IOException {
     boolean done;
     ApplicationReport report = null;
     try {
@@ -250,7 +278,7 @@ public class GiraphYarnClient extends YarnClientImpl {
         } catch (InterruptedException ir) {
           LOG.info("Progress reporter's sleep was interrupted!", ir);
         }
-        report = super.getApplicationReport(appId);
+        report = yarnClient.getApplicationReport(appId);
         done = checkProgress(report);
       } while (!done);
       if (!giraphConf.metricsEnabled()) {
@@ -263,8 +291,8 @@ public class GiraphYarnClient extends YarnClientImpl {
         diagnostics, ex);
       try {
         LOG.error("FORCIBLY KILLING Application from AppMaster.");
-        super.killApplication(appId);
-      } catch (YarnRemoteException yre) {
+        yarnClient.killApplication(appId);
+      } catch (YarnException yre) {
         LOG.error("Exception raised in attempt to kill application.", yre);
       }
       return false;
@@ -291,10 +319,10 @@ public class GiraphYarnClient extends YarnClientImpl {
    * Print final formatted job report for local client that initiated this run.
    * @return true for app success, false for failure.
    */
-  private boolean printFinalJobReport() {
+  private boolean printFinalJobReport() throws YarnException, IOException {
     ApplicationReport report;
     try {
-      report = super.getApplicationReport(appId);
+      report = yarnClient.getApplicationReport(appId);
       FinalApplicationStatus finalAppStatus =
         report.getFinalApplicationStatus();
       final long secs =
@@ -303,7 +331,7 @@ public class GiraphYarnClient extends YarnClientImpl {
         secs / 60L, secs % 60L);
       LOG.info("Completed " + jobName + ": " +
         finalAppStatus.name() + ", total running time: " + time);
-    } catch (YarnRemoteException yre) {
+    } catch (YarnException yre) {
       LOG.error("Exception encountered while attempting to request " +
         "a final job report for " + jobName , yre);
       return false;
@@ -315,15 +343,47 @@ public class GiraphYarnClient extends YarnClientImpl {
    * Compose the ContainerLaunchContext for the Application Master.
    * @return the CLC object populated and configured.
    */
-  private ContainerLaunchContext buildContainerLaunchContext() {
+  private ContainerLaunchContext buildContainerLaunchContext()
+    throws IOException {
     ContainerLaunchContext appMasterContainer =
       Records.newRecord(ContainerLaunchContext.class);
     appMasterContainer.setEnvironment(buildEnvironment());
     appMasterContainer.setLocalResources(buildLocalResourceMap());
     appMasterContainer.setCommands(buildAppMasterExecCommand());
-    appMasterContainer.setResource(buildContainerMemory());
-    appMasterContainer.setUser(ApplicationConstants.Environment.USER.name());
+    //appMasterContainer.setResource(buildContainerMemory());
+    //appMasterContainer.setUser(ApplicationConstants.Environment.USER.name());
+    setToken(appMasterContainer);
     return appMasterContainer;
+  }
+
+  /**
+   * Set delegation tokens for AM container
+   * @param amContainer AM container
+   * @return
+   */
+  private void setToken(ContainerLaunchContext amContainer) throws IOException {
+    // Setup security tokens
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials credentials = new Credentials();
+      String tokenRenewer = giraphConf.get(YarnConfiguration.RM_PRINCIPAL);
+      if (tokenRenewer == null || tokenRenewer.length() == 0) {
+        throw new IOException(
+          "Can't get Master Kerberos principal for the RM to use as renewer");
+      }
+      FileSystem fs = FileSystem.get(giraphConf);
+      // For now, only getting tokens for the default file-system.
+      final Token<?> [] tokens =
+        fs.addDelegationTokens(tokenRenewer, credentials);
+      if (tokens != null) {
+        for (Token<?> token : tokens) {
+          LOG.info("Got dt for " + fs.getUri() + "; " + token);
+        }
+      }
+      DataOutputBuffer dob = new DataOutputBuffer();
+      credentials.writeTokenStorageToStream(dob);
+      ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      amContainer.setTokens(fsTokens);
+    }
   }
 
   /**
@@ -376,23 +436,11 @@ public class GiraphYarnClient extends YarnClientImpl {
     return ImmutableList.of("${JAVA_HOME}/bin/java " +
       "-Xmx" + YARN_APP_MASTER_MEMORY_MB + "M " +
       "-Xms" + YARN_APP_MASTER_MEMORY_MB + "M " + // TODO: REMOVE examples jar!
+      //TODO: Make constant
       "-cp .:${CLASSPATH} org.apache.giraph.yarn.GiraphApplicationMaster " +
       "1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/gam-stdout.log " +
       "2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/gam-stderr.log "
     );
-  }
-
-  /**
-   * Check if the job's configuration is for a local run. These can all be
-   * removed as we expand the functionality of the "pure YARN" Giraph profile.
-   */
-  private void checkJobLocalZooKeeperSupported() {
-    final String checkZkList = giraphConf.getZookeeperList();
-    if (checkZkList == null || checkZkList.isEmpty()) {
-      throw new IllegalArgumentException("Giraph on YARN does not currently" +
-        "support Giraph-managed ZK instances: use a standalone ZooKeeper: '" +
-        checkZkList + "'");
-    }
   }
 
   /**
@@ -403,6 +451,7 @@ public class GiraphYarnClient extends YarnClientImpl {
   private void addLocalJarsToResourceMap(Map<String, LocalResource> map)
     throws IOException {
     Set<String> jars = Sets.newHashSet();
+    LOG.info("LIB JARS :" + giraphConf.getYarnLibJars());
     String[] libJars = giraphConf.getYarnLibJars().split(",");
     for (String libJar : libJars) {
       jars.add(libJar);
@@ -410,8 +459,8 @@ public class GiraphYarnClient extends YarnClientImpl {
     FileSystem fs = FileSystem.get(giraphConf);
     Path baseDir = YarnUtils.getFsCachePath(fs, appId);
     for (Path jar : YarnUtils.getLocalFiles(jars)) {
-      LOG.info("Located local resource for export at: " + jar);
       Path dest = new Path(baseDir, jar.getName());
+      LOG.info("Made local resource for :" + jar + " to " +  dest);
       fs.copyFromLocalFile(false, true, jar, dest);
       YarnUtils.addFileToResourceMap(map, fs, dest);
     }
@@ -423,7 +472,7 @@ public class GiraphYarnClient extends YarnClientImpl {
    */
   private Resource buildContainerMemory() {
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(YARN_APP_MASTER_MEMORY_MB);
+    capability.setMemory(YARN_APP_MASTER_MEMORY_MB); //Configurable thru CLI?
     return capability;
   }
 
@@ -435,8 +484,10 @@ public class GiraphYarnClient extends YarnClientImpl {
   private Map<String, String> buildEnvironment() {
     Map<String, String> environment =
       Maps.<String, String>newHashMap();
+    LOG.info("Set the environment for the application master");
     YarnUtils.addLocalClasspathToEnv(environment, giraphConf);
-    // TODO: add java.class.path to env map if running a local YARN minicluster.
+    //TODO: add the runtime classpath needed for tests to work
+    LOG.info("Environment for AM :" + environment);
     return environment;
   }
 
@@ -444,33 +495,29 @@ public class GiraphYarnClient extends YarnClientImpl {
    * Create the mapping of files and JARs to send to the GiraphApplicationMaster
    * and from there on to the Giraph tasks.
    * @return the map of jars to local resource paths for transport
-   *         to the host container that will run our AppMaster.
+   *   to the host container that will run our AppMaster.
    */
   private Map<String, LocalResource> buildLocalResourceMap() {
+    // set local resources for the application master
+    // local files or archives as needed
+    // In this scenario, the jar file for the application master
+    //is part of the local resources
     Map<String, LocalResource> localResources =
         Maps.<String, LocalResource>newHashMap();
+    LOG.info("buildLocalResourceMap ....");
     try {
       // export the GiraphConfiguration to HDFS for localization to remote tasks
+      //Ques: Merge the following two method
       YarnUtils.exportGiraphConfiguration(giraphConf, appId);
       YarnUtils.addGiraphConfToLocalResourceMap(
         giraphConf, appId, localResources);
       // add jars from '-yj' cmd-line arg to resource map for localization
       addLocalJarsToResourceMap(localResources);
+      //TODO: log4j?
       return localResources;
     } catch (IOException ioe) {
       throw new IllegalStateException("Failed to build LocalResouce map.", ioe);
     }
   }
 
-  /**
-   * Create the app submission context, and populate it.
-   * @return the populated ApplicationSubmissionContext for the AppMaster.
-   */
-  private ApplicationSubmissionContext createAppSubmissionContext() {
-    ApplicationSubmissionContext appContext =
-      Records.newRecord(ApplicationSubmissionContext.class);
-    appContext.setApplicationId(appId);
-    appContext.setApplicationName(jobName);
-    return appContext;
-  }
 }

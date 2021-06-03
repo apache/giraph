@@ -18,21 +18,24 @@
 
 package org.apache.giraph.edge;
 
-import com.google.common.collect.UnmodifiableIterator;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+
+import com.google.common.collect.UnmodifiableIterator;
+
 /**
- * {@link VertexEdges} implementation with long ids and double edge values,
+ * {@link OutEdges} implementation with long ids and double edge values,
  * backed by a {@link Long2DoubleOpenHashMap}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
@@ -40,9 +43,9 @@ import java.util.Iterator;
  * {@link LongDoubleArrayEdges}.
  */
 public class LongDoubleHashMapEdges
-    implements StrictRandomAccessVertexEdges<LongWritable, DoubleWritable>,
-    ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
-    MutableVertexEdges<LongWritable, DoubleWritable> {
+    implements StrictRandomAccessOutEdges<LongWritable, DoubleWritable>,
+    ReuseObjectsOutEdges<LongWritable, DoubleWritable>,
+    MutableOutEdges<LongWritable, DoubleWritable>, Trimmable {
   /** Hash map from target vertex id to edge value. */
   private Long2DoubleOpenHashMap edgeMap;
   /** Representative edge value object, used by getEdgeValue(). */
@@ -50,17 +53,7 @@ public class LongDoubleHashMapEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, DoubleWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-map with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(
-          ((Collection<Edge<LongWritable, DoubleWritable>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, DoubleWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override
@@ -113,10 +106,11 @@ public class LongDoubleHashMapEdges
     // Returns an iterator that reuses objects.
     return new UnmodifiableIterator<Edge<LongWritable, DoubleWritable>>() {
       /** Wrapped map iterator. */
-      private ObjectIterator<Long2DoubleMap.Entry> mapIterator =
+      private final ObjectIterator<Long2DoubleMap.Entry> mapIterator =
           edgeMap.long2DoubleEntrySet().fastIterator();
       /** Representative edge object. */
-      private ReusableEdge<LongWritable, DoubleWritable> representativeEdge =
+      private final ReusableEdge<LongWritable, DoubleWritable>
+      representativeEdge =
           EdgeFactory.createReusable(new LongWritable(), new DoubleWritable());
 
       @Override
@@ -132,6 +126,11 @@ public class LongDoubleHashMapEdges
         return representativeEdge;
       }
     };
+  }
+
+  @Override
+  public void trim() {
+    edgeMap.trim();
   }
 
   /** Helper class for a mutable edge that modifies the backing map entry. */
@@ -153,7 +152,7 @@ public class LongDoubleHashMapEdges
     public void setEntry(Long2DoubleMap.Entry entry) {
       // Update the id and value objects from the superclass.
       getTargetVertexId().set(entry.getLongKey());
-      getValue().set(entry.getValue());
+      getValue().set(entry.getDoubleValue());
       // Update the entry.
       this.entry = entry;
     }
@@ -175,10 +174,10 @@ public class LongDoubleHashMapEdges
        * Note: we cannot use the fast iterator in this case,
        * because we need to call setValue() on an entry.
        */
-      private ObjectIterator<Long2DoubleMap.Entry> mapIterator =
+      private final ObjectIterator<Long2DoubleMap.Entry> mapIterator =
           edgeMap.long2DoubleEntrySet().iterator();
       /** Representative edge object. */
-      private LongDoubleHashMapMutableEdge representativeEdge =
+      private final LongDoubleHashMapMutableEdge representativeEdge =
           new LongDoubleHashMapMutableEdge();
 
       @Override

@@ -50,10 +50,19 @@ public class SimpleAggregatorWriter extends
   @Override
   public void initialize(Context context, long applicationAttempt)
     throws IOException {
-    FILENAME = "aggregatedValues_" + applicationAttempt;
+    setFilename(applicationAttempt);
     Path p = new Path(FILENAME);
     FileSystem fs = FileSystem.get(context.getConfiguration());
     output = fs.create(p, true);
+  }
+
+  /**
+   * Set filename written to
+   *
+   * @param applicationAttempt app attempt
+   */
+  private static void setFilename(long applicationAttempt) {
+    FILENAME = "aggregatedValues_" + applicationAttempt;
   }
 
   @Override

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Introduction to Apache Giraph</title>
+  </properties>
+
+  <body>
+
+    <section name="Introduction">
+<p><b>Apache Giraph</b> is an iterative graph processing framework, built on top of <b>Apache Hadoop</b>.</p>
+
+<p>The input to a Giraph computation is a graph composed of vertices and directed edges, see Figure <a href="#Figure1">1</a>. 
+For example vertices can represent people, and edges friend requests. Each vertex stores a <i>value</i>, so does each edge. 
+The input, thus, not only determines the graph topology, but also the initial values of vertices and edges.</p>
+
+<p>As an example, consider a computation that finds the distance from a predetermined <i>source person <b>s</b></i> 
+to any person in the social graph. In this computation, the value of an <i>edge</i> <b>E</b> is a floating point number 
+denoting distance between adjacent people. The value of a <i>vertex</i> 
+<b>V</b> is also a floating point number, representing an upper bound on the distance 
+along a shortest path from the predetermined vertex s to v. The initial value of the predetermined 
+source vertex <i>s</i> is 0, and the initial value for any other vertex is infinity.</p>
+
+<p>
+<table border="0" class="image" align="center" width="60%">
+<tr><td><img src="images/ExampleSSSP.svg" /></td></tr>
+<tr><td class="caption" id="Figure1">Figure 1: An illustration of an execution of a single source shortest paths algorithm in Giraph. The input is a chain graph with three vertices (black) and two edges (green). The values of edges are 1 and 3 respectively. The algorithm computes distances from the leftmost vertex. The initial values of vertices are 0, &#8734; and &#8734; (top row). Distance upper bounds are sent as messages (blue), resulting in updates to vertex values (successive rows going down). 
+The execution lasts three supersteps (separated by red lines).
+</td></tr>
+</table>
+</p>
+
+<p></p>
+
+<p>Computation proceeds as a sequence of iterations, called <i>supersteps</i> in <a href="http://en.wikipedia.org/wiki/Bulk_Synchronous_Parallel">BSP</a>. 
+Initially, every vertex is <i>active</i>. In each superstep each active vertex invokes the <i>Compute method</i> provided by the user. 
+The method implements the graph algorithm that will be executed on the input graph. 
+Intuitively, you should think like a vertex when designing a Giraph algorithm, it is vertex oriented.
+A graph oriented approach is discussded in <a href="https://issues.apache.org/jira/browse/GIRAPH-818">GIRAPH-818</a>.
+</p>
+<p>The Compute method:</p>
+<p><ul>
+<li>receives messages sent to the vertex in the previous superstep,</li>
+<li>computes using the messages, and the vertex and outgoing edge values, which may result in modifications to the values, and</li>
+<li>may send messages to other vertices.</li>
+</ul></p>
+<p>The Compute method does not have direct access to the values of other vertices and their outgoing edges. Inter-vertex communication occurs by sending messages.</p>
+
+<p>In our single-source shortest paths example, a Compute method will: (1) find the minimum value arriving on any message, (2) if that value is less than the current value of the vertex, then (3) the minimum will be adopted as the vertex value, and (4) the value plus the edge value will be sent along every outgoing edge. See a simplified code in Figure <a href="#Figure2">2</a> and a complete Java implementation <a href="https://github.com/apache/giraph/blob/trunk/giraph-examples/src/main/java/org/apache/giraph/examples/SimpleShortestPathsVertex.java">here</a>.</p>
+
+<p>
+<table border="0" class="image" align="center" width="70%">
+<tr><td>
+<source>
+  public void compute(Iterable&lt;DoubleWritable&gt; messages) {
+    double minDist = Double.MAX_VALUE;
+    for (DoubleWritable message : messages) {
+      minDist = Math.min(minDist, message.get());
+    }
+    if (minDist &lt; getValue().get()) {
+      setValue(new DoubleWritable(minDist));
+      for (Edge&lt;LongWritable, FloatWritable&gt; edge : getEdges()) {
+        double distance = minDist + edge.getValue().get();
+        sendMessage(edge.getTargetVertexId(), new DoubleWritable(distance));
+      }
+    }
+    voteToHalt();
+  }
+</source></td></tr>
+<tr><td class="caption" id="Figure2">Figure 2: The Compute method for a single source shortest paths computation. Each vertex in the graph executes this method at each superstep. The method computes a minimum distance arriving on messages and can send distances along each edge.
+</td></tr>
+</table>
+</p>
+
+<p></p>
+
+<p>There is a <i>barrier</i> between consecutive supersteps. By this we mean that: (1) the messages sent in any current superstep get delivered to the destination vertices only in the next superstep, and (2) vertices start computing the next superstep after every vertex has completed computing the current superstep.</p>
+
+<p>The graph can be mutated during computation by adding or removing vertices or edges. Our example shortest paths algorithm does not mutate the graph.</p>
+
+<p>Values are retained across barriers. That is, the value of any vertex or edge at the beginning of a superstep is equal to the corresponding value at the end of the previous superstep, when graph topology is not mutated. For example, when a vertex has set the distance upper bound to D, then at the beginning of the next superstep the distance upper bound will still be equal D. Of course the vertex can modify the value of the vertex and of the outgoing edges during any superstep.</p>
+
+<p>Any vertex can stop computing after any superstep. The vertex simply declares that it does not want to be active anymore. However, any incoming message will make the vertex active again.</p>
+
+<p>The computation halts after the vertices have voted to halt and there are no messages in flight. Each vertex outputs some local information, which usually amounts to the final vertex value.</p>
+    </section>
+
+  </body>
+</document>

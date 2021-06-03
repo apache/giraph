@@ -18,9 +18,9 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.combiner.DoubleSumCombiner;
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.HashMapEdges;
@@ -38,14 +38,14 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Benchmark for {@link WeightedPageRankVertex}
+ * Benchmark for {@link WeightedPageRankComputation}
  */
 public class WeightedPageRankBenchmark extends GiraphBenchmark {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(WeightedPageRankBenchmark.class);
 
-  /** Option for VertexEdges class */
+  /** Option for OutEdges class */
   private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
       "c", "edgesClass", true,
       "Vertex edges class (0 for LongDoubleArrayEdges," +
@@ -63,9 +63,10 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
       "Partitioning algorithm (0 for hash partitioning (default), " +
           "1 for range partitioning)");
   /** Option for type of combiner */
-  private static final BenchmarkOption COMBINER_TYPE = new BenchmarkOption(
-      "t", "combinerType", true,
-      "Combiner type (0 for no combiner, 1 for DoubleSumCombiner (default)");
+  private static final BenchmarkOption MESSAGE_COMBINER_TYPE =
+      new BenchmarkOption("t", "combinerType", true,
+          "MessageCombiner type (0 for no combiner," +
+              " 1 for DoubleSumMessageCombiner (default)");
   /** Option for output format */
   private static final BenchmarkOption OUTPUT_FORMAT = new BenchmarkOption(
       "o", "vertexOutputFormat", true,
@@ -76,7 +77,8 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
     return Sets.newHashSet(
         BenchmarkOption.SUPERSTEPS, BenchmarkOption.VERTICES,
         BenchmarkOption.EDGES_PER_VERTEX, BenchmarkOption.LOCAL_EDGES_MIN_RATIO,
-        EDGES_CLASS, EDGE_INPUT, PARTITIONER, COMBINER_TYPE, OUTPUT_FORMAT);
+        EDGES_CLASS, EDGE_INPUT, PARTITIONER,
+        MESSAGE_COMBINER_TYPE, OUTPUT_FORMAT);
   }
 
   /**
@@ -88,35 +90,35 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
    */
   protected void prepareConfiguration(GiraphConfiguration configuration,
       CommandLine cmd) {
-    configuration.setVertexClass(WeightedPageRankVertex.class);
+    configuration.setComputationClass(WeightedPageRankComputation.class);
     int edgesClassOption = EDGES_CLASS.getOptionIntValue(cmd, 1);
     switch (edgesClassOption) {
     case 0:
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
+      configuration.setOutEdgesClass(LongDoubleArrayEdges.class);
       break;
     case 1:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
+      configuration.setOutEdgesClass(ByteArrayEdges.class);
       break;
     case 2:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
+      configuration.setOutEdgesClass(ByteArrayEdges.class);
       configuration.useUnsafeSerialization(true);
       break;
     case 3:
-      configuration.setVertexEdgesClass(ArrayListEdges.class);
+      configuration.setOutEdgesClass(ArrayListEdges.class);
       break;
     case 4:
-      configuration.setVertexEdgesClass(HashMapEdges.class);
+      configuration.setOutEdgesClass(HashMapEdges.class);
       break;
     default:
-      LOG.info("Unknown VertexEdges class, " +
+      LOG.info("Unknown OutEdges class, " +
           "defaulting to LongDoubleArrayEdges");
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
+      configuration.setOutEdgesClass(LongDoubleArrayEdges.class);
     }
 
     LOG.info("Using edges class " +
         GiraphConstants.VERTEX_EDGES_CLASS.get(configuration));
-    if (COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
-      configuration.setCombinerClass(DoubleSumCombiner.class);
+    if (MESSAGE_COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
+      configuration.setMessageCombinerClass(DoubleSumMessageCombiner.class);
     }
 
     if (EDGE_INPUT.optionTurnedOn(cmd)) {
@@ -149,7 +151,7 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
           SimpleLongRangePartitionerFactory.class);
     }
 
-    configuration.setInt(WeightedPageRankVertex.SUPERSTEP_COUNT,
+    configuration.setInt(WeightedPageRankComputation.SUPERSTEP_COUNT,
         BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
   }
 

@@ -1,0 +1,12 @@
+package org.apache.giraph.debugger;
+
+message Aggregator {
+  required string aggregatorClass = 1;
+  required AggregatedValue aggregatedValue = 2;
+}
+
+message AggregatedValue { 
+  required string writableClass	= 1;
+  required string key = 2;
+  required bytes value = 3;
+}

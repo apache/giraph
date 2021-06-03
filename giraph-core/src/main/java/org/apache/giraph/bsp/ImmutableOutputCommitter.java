@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * where output isn't desired, or as a base for not using
  * FileOutputCommitter.
  */
-class ImmutableOutputCommitter extends OutputCommitter {
+public class ImmutableOutputCommitter extends OutputCommitter {
   @Override
   public void abortTask(TaskAttemptContext context) throws IOException {
   }
@@ -52,12 +52,14 @@ class ImmutableOutputCommitter extends OutputCommitter {
   public void setupTask(TaskAttemptContext context) throws IOException {
   }
 
+/*if[HADOOP_NON_SECURE]
   @Override
-  /*if[HADOOP_NON_SECURE]
   public void cleanupJob(JobContext jobContext) throws IOException {
   }
-  else[HADOOP_NON_SECURE]*/
-  /*end[HADOOP_NON_SECURE]*/
+
+else[HADOOP_NON_SECURE]*/
+/*end[HADOOP_NON_SECURE]*/
+  @Override
   public void commitJob(JobContext jobContext) throws IOException {
   }
 }

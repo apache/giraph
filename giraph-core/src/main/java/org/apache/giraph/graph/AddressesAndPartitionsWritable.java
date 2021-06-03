@@ -20,6 +20,8 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
@@ -44,8 +46,6 @@ public class AddressesAndPartitionsWritable implements Writable {
   private List<WorkerInfo> workerInfos;
   /** Collection of partitions */
   private Collection<PartitionOwner> partitionOwners;
-  /** Partition owner class, used to deserialize object */
-  private Class<? extends PartitionOwner> partitionOwnerClass;
 
   /**
    * Constructor when we want to serialize object
@@ -62,14 +62,8 @@ public class AddressesAndPartitionsWritable implements Writable {
     this.partitionOwners = partitionOwners;
   }
 
-  /**
-   * Constructor when we want to deserialize object
-   *
-   * @param partitionOwnerClass Partition owner class
-   */
-  public AddressesAndPartitionsWritable(
-      Class<? extends PartitionOwner> partitionOwnerClass) {
-    this.partitionOwnerClass = partitionOwnerClass;
+  /** Constructor for reflection */
+  public AddressesAndPartitionsWritable() {
   }
 
   /**
@@ -126,6 +120,10 @@ public class AddressesAndPartitionsWritable implements Writable {
     }
 
     output.writeInt(partitionOwners.size());
+    if (partitionOwners.size() > 0) {
+      WritableUtils.writeClass(
+          partitionOwners.iterator().next().getClass(), output);
+    }
     for (PartitionOwner partitionOwner : partitionOwners) {
       partitionOwner.writeWithWorkerIds(output);
     }
@@ -153,21 +151,16 @@ public class AddressesAndPartitionsWritable implements Writable {
     }
 
     int partitionOwnersSize = input.readInt();
+    Class<PartitionOwner> partitionOwnerClass = null;
+    if (partitionOwnersSize > 0) {
+      partitionOwnerClass = WritableUtils.readClass(input);
+    }
     partitionOwners = Lists.newArrayListWithCapacity(partitionOwnersSize);
     for (int i = 0; i < partitionOwnersSize; i++) {
-      try {
-        PartitionOwner partitionOwner = partitionOwnerClass.newInstance();
-        partitionOwner.readFieldsWithWorkerIds(input, workerInfoMap);
-        partitionOwners.add(partitionOwner);
-      } catch (InstantiationException e) {
-        throw new IllegalStateException("readFields: " +
-            "InstantiationException on partition owner class " +
-            partitionOwnerClass, e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalStateException("readFields: " +
-            "IllegalAccessException on partition owner class " +
-            partitionOwnerClass, e);
-      }
+      PartitionOwner partitionOwner =
+          ReflectionUtils.newInstance(partitionOwnerClass);
+      partitionOwner.readFieldsWithWorkerIds(input, workerInfoMap);
+      partitionOwners.add(partitionOwner);
     }
   }
 

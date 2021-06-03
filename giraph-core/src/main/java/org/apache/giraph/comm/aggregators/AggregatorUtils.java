@@ -18,24 +18,16 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.worker.WorkerInfo;
-import org.apache.hadoop.io.Writable;
-
 import java.util.List;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.worker.WorkerInfo;
 
 /**
  * Class for aggregator constants and utility methods
  */
 public class AggregatorUtils {
-  /**
-   * Special aggregator name which will be used to send the total number of
-   * aggregators requests which should arrive
-   */
-  public static final String SPECIAL_COUNT_AGGREGATOR =
-      "__aggregatorRequestCount";
+
   /** How big a single aggregator request can be (in bytes) */
   public static final String MAX_BYTES_PER_AGGREGATOR_REQUEST =
       "giraph.maxBytesPerAggregatorRequest";
@@ -56,37 +48,6 @@ public class AggregatorUtils {
 
   /** Do not instantiate */
   private AggregatorUtils() { }
-
-  /**
-   * Get aggregator class from class name, catch all exceptions.
-   *
-   * @param aggregatorClassName Class nam of aggregator class
-   * @return Aggregator class
-   */
-  public static Class<Aggregator<Writable>> getAggregatorClass(String
-      aggregatorClassName) {
-    try {
-      return (Class<Aggregator<Writable>>) Class.forName(aggregatorClassName);
-    } catch (ClassNotFoundException e) {
-      throw new IllegalStateException("getAggregatorClass: " +
-          "ClassNotFoundException for aggregator class " + aggregatorClassName,
-          e);
-    }
-  }
-
-  /**
-   * Create new aggregator instance from aggregator class,
-   * catch all exceptions.
-   *
-   * @param aggregatorClass Class of aggregator
-   * @param conf Configuration
-   * @return New aggregator
-   */
-  public static Aggregator<Writable> newAggregatorInstance(
-      Class<Aggregator<Writable>> aggregatorClass,
-      ImmutableClassesGiraphConfiguration conf) {
-    return ReflectionUtils.newInstance(aggregatorClass, conf);
-  }
 
   /**
    * Get owner of aggregator with selected name from the list of workers
@@ -133,6 +94,57 @@ public class AggregatorUtils {
       message = message + "; Aggregators can be registered in " +
           "MasterCompute.initialize by calling " +
           "registerAggregator(aggregatorName, aggregatorClass). " +
+          "Also be sure that you are correctly setting MasterCompute class, " +
+          "currently using " + conf.getMasterComputeClass().getName();
+    }
+    return message;
+  }
+
+  /**
+   * Get the warning message about usage of unregistered reducer to be
+   * printed to user. If user didn't register any reducers also provide
+   * the explanation on how to do so.
+   *
+   * @param reducerName The name of the aggregator which user tried to
+   *                       access
+   * @param hasRegisteredReducers True iff user registered some aggregators
+   * @param conf Giraph configuration
+   * @return Warning message
+   */
+  public static String getUnregisteredReducerMessage(
+      String reducerName, boolean hasRegisteredReducers,
+      ImmutableClassesGiraphConfiguration conf) {
+    String message = "Tried to access reducer which wasn't registered " +
+        reducerName;
+    if (!hasRegisteredReducers) {
+      message = message + "; Aggregators can be registered from " +
+          "MasterCompute by calling registerReducer function. " +
+          "Also be sure that you are correctly setting MasterCompute class, " +
+          "currently using " + conf.getMasterComputeClass().getName();
+    }
+    return message;
+  }
+
+  /**
+   * Get the warning message when user tries to access broadcast, without
+   * previously setting it, to be printed to user.
+   * If user didn't broadcast any value also provide
+   * the explanation on how to do so.
+   *
+   * @param broadcastName The name of the broadcast which user tried to
+   *                       access
+   * @param hasBroadcasted True iff user has broadcasted value before
+   * @param conf Giraph configuration
+   * @return Warning message
+   */
+  public static String getUnregisteredBroadcastMessage(
+      String broadcastName, boolean hasBroadcasted,
+      ImmutableClassesGiraphConfiguration conf) {
+    String message = "Tried to access broadcast which wasn't set before " +
+        broadcastName;
+    if (!hasBroadcasted) {
+      message = message + "; Values can be broadcasted from " +
+          "MasterCompute by calling broadcast function. " +
           "Also be sure that you are correctly setting MasterCompute class, " +
           "currently using " + conf.getMasterComputeClass().getName();
     }
