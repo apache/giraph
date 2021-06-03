@@ -957,6 +957,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Use authentication? (if supported)
+   *
+   * @return True if should authenticate, false otherwise
+   */
+  public boolean sslAuthenticate() {
+    return SSL_ENCRYPT.get(this);
+  }
+
+  /**
    * Set the number of compute threads
    *
    * @param numComputeThreads Number of compute threads to use

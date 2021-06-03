@@ -28,6 +28,7 @@ import io.netty.handler.codec.compression.SnappyFramedEncoder;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
+import org.apache.giraph.comm.netty.SSLEventHandler;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.EdgeStoreFactory;
@@ -541,6 +542,28 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public AggregatorWriter createAggregatorWriter() {
     return ReflectionUtils.newInstance(getAggregatorWriterClass(), this);
+  }
+
+  /**
+   * Get the user's subclassed {@link SSLEventHandler}.
+   *
+   * @return User's SSL Event Handler class
+   */
+  public Class<? extends SSLEventHandler> getSSLEventHandlerClass() {
+    return SSL_EVENT_HANDLER_CLASS.get(this);
+  }
+
+  /**
+   * Create a user SSLEventHandler class
+   *
+   * @return Instantiated user SSL Event Handler class
+   */
+  public SSLEventHandler createSSLEventHandler() {
+    if (getSSLEventHandlerClass() != null) {
+      return ReflectionUtils.newInstance(getSSLEventHandlerClass(), this);
+    } else {
+      return null;
+    }
   }
 
   /**
