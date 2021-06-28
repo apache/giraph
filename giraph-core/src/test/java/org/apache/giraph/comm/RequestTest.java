@@ -20,7 +20,6 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
-import org.apache.giraph.comm.netty.handler.AckSignalFlag;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
@@ -52,8 +51,13 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
@@ -67,251 +71,276 @@ import static org.mockito.Mockito.when;
  * Test all the different netty requests.
  */
 @SuppressWarnings("unchecked")
+@RunWith(Enclosed.class)
 public class RequestTest {
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration conf;
-  /** Server data */
-  private ServerData<IntWritable, IntWritable, IntWritable> serverData;
-  /** Server */
-  private NettyServer server;
-  /** Client */
-  private NettyClient client;
-  /** Worker info */
-  private WorkerInfo workerInfo;
+  abstract public static class SharedSetup {
+    /** * Configuration */
+    protected ImmutableClassesGiraphConfiguration conf;
+    /** * Server data */
+    protected ServerData<IntWritable, IntWritable, IntWritable> serverData;
+    /** * Server */
+    protected NettyServer server;
+    /** * Client */
+    protected NettyClient client;
+    /** * Worker info */
+    protected WorkerInfo workerInfo;
 
-  @Before
-  public void setUp() {
-    // Setup the conf
-    GiraphConfiguration tmpConf = new GiraphConfiguration();
-    GiraphConstants.COMPUTATION_CLASS.set(tmpConf, IntNoOpComputation.class);
-    conf = new ImmutableClassesGiraphConfiguration(tmpConf);
+    @Before
+    public void setUp() {
+      // Setup the conf
+      GiraphConfiguration tmpConf = new GiraphConfiguration();
+      GiraphConstants.COMPUTATION_CLASS.set(tmpConf, IntNoOpComputation.class);
+      conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
-    @SuppressWarnings("rawtypes")
-    Context context = mock(Context.class);
-    when(context.getConfiguration()).thenReturn(conf);
+      @SuppressWarnings("rawtypes")
+      Context context = mock(Context.class);
+      when(context.getConfiguration()).thenReturn(conf);
 
-    // Start the service
-    serverData = MockUtils.createNewServerData(conf, context);
-    serverData.prepareSuperstep();
-    workerInfo = new WorkerInfo();
-    server = new NettyServer(conf,
+      // Start the service
+      serverData = MockUtils.createNewServerData(conf, context);
+      serverData.prepareSuperstep();
+      workerInfo = new WorkerInfo();
+      server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context, new MockExceptionHandler());
-    server.start();
+        context, new MockExceptionHandler());
+      server.start();
 
-    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
-    client = new NettyClient(context, conf, new WorkerInfo(),
+      workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
+      client = new NettyClient(context, conf, new WorkerInfo(),
         new MockExceptionHandler());
-    server.setFlowControl(client.getFlowControl());
-    client.connectAllAddresses(
+      server.setFlowControl(client.getFlowControl());
+      client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
+    }
   }
 
-  @Test
-  public void sendVertexPartition() {
-    // Data to send
-    int partitionId = 13;
-    Partition<IntWritable, IntWritable, IntWritable> partition =
+  public static class NonParameterizedTest extends SharedSetup {
+    @Test
+    public void sendVertexPartition() {
+      // Data to send
+      int partitionId = 13;
+      Partition<IntWritable, IntWritable, IntWritable> partition =
         conf.createPartition(partitionId, null);
-    for (int i = 0; i < 10; ++i) {
-      Vertex vertex = conf.createVertex();
-      vertex.initialize(new IntWritable(i), new IntWritable(i));
-      partition.putVertex(vertex);
-    }
-
-    // Send the request
-    SendVertexRequest<IntWritable, IntWritable, IntWritable> request =
-      new SendVertexRequest<IntWritable, IntWritable, IntWritable>(partition);
-    client.sendWritableRequest(workerInfo.getTaskId(), request);
-    client.waitAllRequests();
-
-    // Stop the service
-    client.stop();
-    server.stop();
-
-    // Check the output
-    PartitionStore<IntWritable, IntWritable, IntWritable> partitionStore =
-        serverData.getPartitionStore();
-    assertTrue(partitionStore.hasPartition(partitionId));
-    int total = 0;
-    Partition<IntWritable, IntWritable, IntWritable> partition2 =
-        partitionStore.removePartition(partitionId);
-    for (Vertex<IntWritable, IntWritable, IntWritable> vertex : partition2) {
-      total += vertex.getId().get();
-    }
-    partitionStore.putPartition(partition2);
-    assertEquals(total, 45);
-    partitionStore.shutdown();
-  }
-
-  @Test
-  public void sendWorkerMessagesRequest() {
-    // Data to send
-    PairList<Integer, VertexIdMessages<IntWritable,
-            IntWritable>>
-        dataToSend = new PairList<>();
-    dataToSend.initialize();
-    int partitionId = 0;
-    ByteArrayVertexIdMessages<IntWritable,
-            IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessages<>(
-            new TestMessageValueFactory<>(IntWritable.class));
-    vertexIdMessages.setConf(conf);
-    vertexIdMessages.initialize();
-    dataToSend.add(partitionId, vertexIdMessages);
-    for (int i = 1; i < 7; ++i) {
-      IntWritable vertexId = new IntWritable(i);
-      for (int j = 0; j < i; ++j) {
-        vertexIdMessages.add(vertexId, new IntWritable(j));
-      }
-    }
-
-    // Send the request
-    SendWorkerMessagesRequest<IntWritable, IntWritable> request =
-      new SendWorkerMessagesRequest<>(dataToSend);
-    request.setConf(conf);
-
-    client.sendWritableRequest(workerInfo.getTaskId(), request);
-    client.waitAllRequests();
-
-    // Stop the service
-    client.stop();
-    server.stop();
-
-    // Check the output
-    Iterable<IntWritable> vertices =
-        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
-    int keySum = 0;
-    int messageSum = 0;
-    for (IntWritable vertexId : vertices) {
-      keySum += vertexId.get();
-      Iterable<IntWritable> messages =
-          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
-              vertexId);
-      synchronized (messages) {
-        for (IntWritable message : messages) {
-          messageSum += message.get();
-        }
-      }
-    }
-    assertEquals(21, keySum);
-    assertEquals(35, messageSum);
-  }
-
-  @Test
-  public void sendWorkerIndividualMessagesRequest() throws IOException {
-    // Data to send
-    ByteArrayOneMessageToManyIds<IntWritable, IntWritable>
-        dataToSend = new ByteArrayOneMessageToManyIds<>(new
-        TestMessageValueFactory<>(IntWritable.class));
-    dataToSend.setConf(conf);
-    dataToSend.initialize();
-    ExtendedDataOutput output = conf.createExtendedDataOutput();
-    for (int i = 1; i <= 7; ++i) {
-      IntWritable vertexId = new IntWritable(i);
-      vertexId.write(output);
-    }
-    dataToSend.add(output.getByteArray(), output.getPos(), 7, new IntWritable(1));
-
-    // Send the request
-    SendWorkerOneMessageToManyRequest<IntWritable, IntWritable> request =
-      new SendWorkerOneMessageToManyRequest<>(dataToSend, conf);
-    client.sendWritableRequest(workerInfo.getTaskId(), request);
-    client.waitAllRequests();
-
-    // Stop the service
-    client.stop();
-    server.stop();
-
-    // Check the output
-    Iterable<IntWritable> vertices =
-        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
-    int keySum = 0;
-    int messageSum = 0;
-    for (IntWritable vertexId : vertices) {
-      keySum += vertexId.get();
-      Iterable<IntWritable> messages =
-          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
-              vertexId);
-      synchronized (messages) {
-        for (IntWritable message : messages) {
-          messageSum += message.get();
-        }
-      }
-    }
-    assertEquals(28, keySum);
-    assertEquals(7, messageSum);
-  }
-
-  @Test
-  public void sendPartitionMutationsRequest() {
-    // Data to send
-    int partitionId = 19;
-    Map<IntWritable, VertexMutations<IntWritable, IntWritable,
-    IntWritable>> vertexIdMutations =
-        Maps.newHashMap();
-    for (int i = 0; i < 11; ++i) {
-      VertexMutations<IntWritable, IntWritable, IntWritable> mutations =
-          new VertexMutations<IntWritable, IntWritable, IntWritable>();
-      for (int j = 0; j < 3; ++j) {
+      for (int i = 0; i < 10; ++i) {
         Vertex vertex = conf.createVertex();
-        vertex.initialize(new IntWritable(i), new IntWritable(j));
-        mutations.addVertex(vertex);
+        vertex.initialize(new IntWritable(i), new IntWritable(i));
+        partition.putVertex(vertex);
       }
-      for (int j = 0; j < 2; ++j) {
-        mutations.removeVertex();
+
+      // Send the request
+      SendVertexRequest<IntWritable, IntWritable, IntWritable> request =
+        new SendVertexRequest<IntWritable, IntWritable, IntWritable>(partition);
+      client.sendWritableRequest(workerInfo.getTaskId(), request);
+      client.waitAllRequests();
+
+      // Stop the service
+      client.stop();
+      server.stop();
+
+      // Check the output
+      PartitionStore<IntWritable, IntWritable, IntWritable> partitionStore =
+        serverData.getPartitionStore();
+      assertTrue(partitionStore.hasPartition(partitionId));
+      int total = 0;
+      Partition<IntWritable, IntWritable, IntWritable> partition2 =
+        partitionStore.removePartition(partitionId);
+      for (Vertex<IntWritable, IntWritable, IntWritable> vertex : partition2) {
+        total += vertex.getId().get();
       }
-      for (int j = 0; j < 5; ++j) {
-        Edge<IntWritable, IntWritable> edge =
-            EdgeFactory.create(new IntWritable(i), new IntWritable(2 * j));
-        mutations.addEdge(edge);
-      }
-      for (int j = 0; j < 7; ++j) {
-        mutations.removeEdge(new IntWritable(j));
-      }
-      vertexIdMutations.put(new IntWritable(i), mutations);
+      partitionStore.putPartition(partition2);
+      assertEquals(total, 45);
+      partitionStore.shutdown();
     }
 
-    // Send the request
-    SendPartitionMutationsRequest<IntWritable, IntWritable, IntWritable>
+    @Test
+    public void sendWorkerMessagesRequest() {
+      // Data to send
+      PairList<Integer, VertexIdMessages<IntWritable,
+        IntWritable>>
+        dataToSend = new PairList<>();
+      dataToSend.initialize();
+      int partitionId = 0;
+      ByteArrayVertexIdMessages<IntWritable,
+        IntWritable> vertexIdMessages =
+        new ByteArrayVertexIdMessages<>(
+          new TestMessageValueFactory<>(IntWritable.class));
+      vertexIdMessages.setConf(conf);
+      vertexIdMessages.initialize();
+      dataToSend.add(partitionId, vertexIdMessages);
+      for (int i = 1; i < 7; ++i) {
+        IntWritable vertexId = new IntWritable(i);
+        for (int j = 0; j < i; ++j) {
+          vertexIdMessages.add(vertexId, new IntWritable(j));
+        }
+      }
+
+      // Send the request
+      SendWorkerMessagesRequest<IntWritable, IntWritable> request =
+        new SendWorkerMessagesRequest<>(dataToSend);
+      request.setConf(conf);
+
+      client.sendWritableRequest(workerInfo.getTaskId(), request);
+      client.waitAllRequests();
+
+      // Stop the service
+      client.stop();
+      server.stop();
+
+      // Check the output
+      Iterable<IntWritable> vertices =
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
+      int keySum = 0;
+      int messageSum = 0;
+      for (IntWritable vertexId : vertices) {
+        keySum += vertexId.get();
+        Iterable<IntWritable> messages =
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+            vertexId);
+        synchronized (messages) {
+          for (IntWritable message : messages) {
+            messageSum += message.get();
+          }
+        }
+      }
+      assertEquals(21, keySum);
+      assertEquals(35, messageSum);
+    }
+
+
+    @Test
+    public void sendPartitionMutationsRequest() {
+      // Data to send
+      int partitionId = 19;
+      Map<IntWritable, VertexMutations<IntWritable, IntWritable,
+        IntWritable>> vertexIdMutations =
+        Maps.newHashMap();
+      for (int i = 0; i < 11; ++i) {
+        VertexMutations<IntWritable, IntWritable, IntWritable> mutations =
+          new VertexMutations<IntWritable, IntWritable, IntWritable>();
+        for (int j = 0; j < 3; ++j) {
+          Vertex vertex = conf.createVertex();
+          vertex.initialize(new IntWritable(i), new IntWritable(j));
+          mutations.addVertex(vertex);
+        }
+        for (int j = 0; j < 2; ++j) {
+          mutations.removeVertex();
+        }
+        for (int j = 0; j < 5; ++j) {
+          Edge<IntWritable, IntWritable> edge =
+            EdgeFactory.create(new IntWritable(i), new IntWritable(2 * j));
+          mutations.addEdge(edge);
+        }
+        for (int j = 0; j < 7; ++j) {
+          mutations.removeEdge(new IntWritable(j));
+        }
+        vertexIdMutations.put(new IntWritable(i), mutations);
+      }
+
+      // Send the request
+      SendPartitionMutationsRequest<IntWritable, IntWritable, IntWritable>
         request = new SendPartitionMutationsRequest<IntWritable, IntWritable,
         IntWritable>(partitionId,
         vertexIdMutations);
-    GiraphMetrics.init(conf);
-    client.sendWritableRequest(workerInfo.getTaskId(), request);
-    client.waitAllRequests();
+      GiraphMetrics.init(conf);
+      client.sendWritableRequest(workerInfo.getTaskId(), request);
+      client.waitAllRequests();
 
-    // Stop the service
-    client.stop();
-    server.stop();
+      // Stop the service
+      client.stop();
+      server.stop();
 
-    // Check the output
-    ConcurrentMap<IntWritable,
+      // Check the output
+      ConcurrentMap<IntWritable,
         VertexMutations<IntWritable, IntWritable, IntWritable>>
         inVertexIdMutations =
         serverData.getPartitionMutations().get(partitionId);
-    int keySum = 0;
-    for (Entry<IntWritable,
+      int keySum = 0;
+      for (Entry<IntWritable,
         VertexMutations<IntWritable, IntWritable, IntWritable>> entry :
         inVertexIdMutations
-        .entrySet()) {
-      synchronized (entry.getValue()) {
-        keySum += entry.getKey().get();
-        int vertexValueSum = 0;
-        for (Vertex<IntWritable, IntWritable, IntWritable> vertex : entry
+          .entrySet()) {
+        synchronized (entry.getValue()) {
+          keySum += entry.getKey().get();
+          int vertexValueSum = 0;
+          for (Vertex<IntWritable, IntWritable, IntWritable> vertex : entry
             .getValue().getAddedVertexList()) {
-          vertexValueSum += vertex.getValue().get();
-        }
-        assertEquals(3, vertexValueSum);
-        assertEquals(2, entry.getValue().getRemovedVertexCount());
-        int removeEdgeValueSum = 0;
-        for (Edge<IntWritable, IntWritable> edge : entry.getValue()
+            vertexValueSum += vertex.getValue().get();
+          }
+          assertEquals(3, vertexValueSum);
+          assertEquals(2, entry.getValue().getRemovedVertexCount());
+          int removeEdgeValueSum = 0;
+          for (Edge<IntWritable, IntWritable> edge : entry.getValue()
             .getAddedEdgeList()) {
-          removeEdgeValueSum += edge.getValue().get();
+            removeEdgeValueSum += edge.getValue().get();
+          }
+          assertEquals(20, removeEdgeValueSum);
         }
-        assertEquals(20, removeEdgeValueSum);
       }
+      assertEquals(55, keySum);
     }
-    assertEquals(55, keySum);
+  }
+
+  /**
+   * Tests that we run for different input parameters.
+   */
+  @RunWith(Parameterized.class)
+  public static class ParameterizedTest extends SharedSetup {
+
+    @Parameterized.Parameter(value = 0)
+    public int numVertices;
+
+    @Parameterized.Parameters(name = "{index}: numVertices={0}")
+    public static Object[] data() {
+      return new Object[] {10, 1000, 1000000};
+    }
+
+    @Test
+    public void sendWorkerIndividualMessagesRequest()
+      throws IOException {
+
+      int expectedKeySum = 0;
+
+      ByteArrayOneMessageToManyIds<IntWritable, IntWritable>
+        dataToSend = new ByteArrayOneMessageToManyIds<>(new
+        TestMessageValueFactory<>(IntWritable.class));
+      dataToSend.setConf(conf);
+      dataToSend.initialize();
+      ExtendedDataOutput output = conf.createExtendedDataOutput();
+      for (int i = 1; i <= numVertices; ++i) {
+        IntWritable vertexId = new IntWritable(i);
+        vertexId.write(output);
+        expectedKeySum += i;
+      }
+      dataToSend.add(output.getByteArray(), output.getPos(), numVertices, new IntWritable(1));
+
+      // Send the request
+      SendWorkerOneMessageToManyRequest<IntWritable, IntWritable> request =
+        new SendWorkerOneMessageToManyRequest<>(dataToSend, conf);
+      client.sendWritableRequest(workerInfo.getTaskId(), request);
+      client.waitAllRequests();
+
+      // Stop the service
+      client.stop();
+      server.stop();
+
+      // Check the output
+      Iterable<IntWritable> vertices =
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
+      int keySum = 0;
+      int messageSum = 0;
+      for (IntWritable vertexId : vertices) {
+        keySum += vertexId.get();
+        Iterable<IntWritable> messages =
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+            vertexId);
+        synchronized (messages) {
+          for (IntWritable message : messages) {
+            messageSum += message.get();
+          }
+        }
+      }
+      assertEquals(expectedKeySum, keySum);
+      assertEquals(numVertices, messageSum);
+    }
   }
 }

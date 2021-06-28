@@ -137,15 +137,41 @@ public class SendWorkerOneMessageToManyRequest<I extends WritableComparable,
           partitionIdMsgs.put(partitionId, idMsgs);
         }
         idMsgs.add(vertexId, msg);
+
+        // If any of the list of messages reaches the expected initialSize
+        // threshold, then move everything we have so far to the message store.
+        // This avoids maintaining large intermediate lists of messages.
+        if (idMsgs.getSize() >= initialSize) {
+          addMessagesToStore(partitionIdMsgs,
+            serverData.getIncomingMessageStore());
+          partitionIdMsgs.clear();
+        }
       }
 
-      // Read ByteArrayVertexIdMessages and write to message store
-      for (Entry<Integer, ByteArrayVertexIdMessages> idMsgs :
-          partitionIdMsgs.entrySet()) {
-        if (!idMsgs.getValue().isEmpty()) {
-          serverData.getIncomingMessageStore().addPartitionMessages(
-              idMsgs.getKey(), idMsgs.getValue());
-        }
+      // Move any remaining messages to the message store
+      addMessagesToStore(partitionIdMsgs, serverData.getIncomingMessageStore());
+    }
+  }
+
+  /**
+   * Adds the provided per partition messages from the hashmap to the message
+   * store.
+   *
+   * @param partitionIdMsgs Per partition messages
+   * @param messageStore Message store instance
+   * @param <I> Vertex ID type
+   * @param <M> Message type
+   */
+  private static <I extends WritableComparable, M extends Writable> void
+  addMessagesToStore(
+    Int2ObjectOpenHashMap<ByteArrayVertexIdMessages> partitionIdMsgs,
+    MessageStore<I, M> messageStore) {
+
+    for (Entry<Integer, ByteArrayVertexIdMessages> idMsgs :
+      partitionIdMsgs.entrySet()) {
+
+      if (!idMsgs.getValue().isEmpty()) {
+        messageStore.addPartitionMessages(idMsgs.getKey(), idMsgs.getValue());
       }
     }
   }
