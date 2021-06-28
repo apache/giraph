@@ -34,7 +34,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.giraph.utils.Varint;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.fastutil.longs.LongCollection;
 import it.unimi.dsi.fastutil.longs.LongList;
 
@@ -161,6 +160,7 @@ public class WLongArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEachLong(LongConsumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(getLong(i));
@@ -175,6 +175,7 @@ public class WLongArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhileLong(LongPredicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(getLong(i))) {
@@ -186,7 +187,21 @@ public class WLongArrayList
 
   @Override
   public void sort() {
-    LongArrays.quickSort(elements(), 0, size());
+    Arrays.sort(elements(), 0, size());
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    long[] arr = elements();
+    long tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override

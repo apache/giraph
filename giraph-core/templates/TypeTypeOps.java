@@ -17,12 +17,10 @@
  */
 package org.apache.giraph.types.ops;
 
-<#if type.id>
-import org.apache.giraph.types.ops.collections.Basic2ObjectMap.Basic${type.camel}2ObjectOpenHashMap;
-import org.apache.giraph.types.ops.collections.BasicSet.Basic${type.camel}OpenHashSet;
-</#if>
 import org.apache.giraph.types.ops.collections.array.W${type.camel}ArrayList;
 <#if type.id>
+import org.apache.giraph.types.ops.collections.map.Basic${type.camel}2ObjectOpenHashMap;
+import org.apache.giraph.types.ops.collections.set.Basic${type.camel}OpenHashSet;
 import org.apache.giraph.types.ops.collections.WritableWriter;
 </#if>
 import org.apache.hadoop.io.${type.camel}Writable;
@@ -40,8 +38,8 @@ ${generated_message}
 <#else>
   <#assign parent_type = "PrimitiveTypeOps<${type.camel}Writable>">
 </#if>
-<#macro cast_if_needed_v expr><#if type.lower == "byte">(${type.lower}) ${expr}<#else>${expr}</#if></#macro>
-<#macro cast_if_needed_e expr><#if type.lower == "byte">(${type.lower}) (${expr})<#else>${expr}</#if></#macro>
+<#macro cast_if_needed_v expr><#if type.opNeedCast>(${type.lower}) ${expr}<#else>${expr}</#if></#macro>
+<#macro cast_if_needed_e expr><#if type.opNeedCast>(${type.lower}) (${expr})<#else>${expr}</#if></#macro>
 
 /** TypeOps implementation for working with ${type.camel}Writable type */
 public enum ${type.camel}TypeOps implements
@@ -92,7 +90,11 @@ public enum ${type.camel}TypeOps implements
 
   @Override
   public Basic${type.camel}OpenHashSet createOpenHashSet(long capacity) {
+<#if type.hasBigFastutil()>
     return new Basic${type.camel}OpenHashSet(capacity);
+<#else>
+    return new Basic${type.camel}OpenHashSet((int) capacity);
+</#if>
   }
 
   @Override

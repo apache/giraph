@@ -18,7 +18,7 @@
 
 package org.apache.giraph.types.heaps;
 
-import it.unimi.dsi.fastutil.${type1.lower}s.${type1.camel}2${type2.camel}Map;;
+import it.unimi.dsi.fastutil.${type1.lower}s.${type1.camel}2${type2.camel}Map;
 import it.unimi.dsi.fastutil.objects.ObjectIterable;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 

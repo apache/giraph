@@ -34,7 +34,6 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.giraph.utils.Varint;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.floats.FloatArrays;
 import it.unimi.dsi.fastutil.floats.FloatCollection;
 import it.unimi.dsi.fastutil.floats.FloatList;
 
@@ -161,6 +160,7 @@ public class WFloatArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEachFloat(FloatConsumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(getFloat(i));
@@ -175,6 +175,7 @@ public class WFloatArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhileFloat(FloatPredicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(getFloat(i))) {
@@ -186,7 +187,21 @@ public class WFloatArrayList
 
   @Override
   public void sort() {
-    FloatArrays.quickSort(elements(), 0, size());
+    Arrays.sort(elements(), 0, size());
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    float[] arr = elements();
+    float tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override

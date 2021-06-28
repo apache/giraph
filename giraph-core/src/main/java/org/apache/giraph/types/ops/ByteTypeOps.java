@@ -18,6 +18,9 @@
 package org.apache.giraph.types.ops;
 
 import org.apache.giraph.types.ops.collections.array.WByteArrayList;
+import org.apache.giraph.types.ops.collections.map.BasicByte2ObjectOpenHashMap;
+import org.apache.giraph.types.ops.collections.set.BasicByteOpenHashSet;
+import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.ByteWritable;
 
 import java.io.DataInput;
@@ -28,7 +31,7 @@ import java.io.IOException;
 
 /** TypeOps implementation for working with ByteWritable type */
 public enum ByteTypeOps implements
-    PrimitiveTypeOps<ByteWritable>, NumericTypeOps<ByteWritable> {
+    PrimitiveIdTypeOps<ByteWritable>, NumericTypeOps<ByteWritable> {
   /** Singleton instance */
   INSTANCE;
 
@@ -65,6 +68,28 @@ public enum ByteTypeOps implements
   @Override
   public WByteArrayList readNewArrayList(DataInput in) throws IOException {
     return WByteArrayList.readNew(in);
+  }
+
+  @Override
+  public BasicByteOpenHashSet createOpenHashSet() {
+    return new BasicByteOpenHashSet();
+  }
+
+  @Override
+  public BasicByteOpenHashSet createOpenHashSet(long capacity) {
+    return new BasicByteOpenHashSet((int) capacity);
+  }
+
+  @Override
+  public <V> BasicByte2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
+      WritableWriter<V> valueWriter) {
+    return new BasicByte2ObjectOpenHashMap<>(valueWriter);
+  }
+
+  @Override
+  public <V> BasicByte2ObjectOpenHashMap<V> create2ObjectOpenHashMap(
+      int capacity, WritableWriter<V> valueWriter) {
+    return new BasicByte2ObjectOpenHashMap<>(capacity, valueWriter);
   }
 
   @Override

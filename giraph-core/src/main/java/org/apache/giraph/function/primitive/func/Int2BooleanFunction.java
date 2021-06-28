@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.func;
 
 import java.io.Serializable;
 
@@ -24,14 +24,14 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (boolean) -&gt; boolean
+ * (int) -&gt; boolean
  */
-public interface Boolean2BooleanFunction extends Serializable {
+public interface Int2BooleanFunction extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
    *
    * @param input input
    * @return result
    */
-  boolean apply(boolean input);
+  boolean apply(int input);
 }

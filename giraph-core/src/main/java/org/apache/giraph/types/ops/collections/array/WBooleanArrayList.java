@@ -161,6 +161,7 @@ public class WBooleanArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEachBoolean(BooleanConsumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(getBoolean(i));
@@ -175,6 +176,7 @@ public class WBooleanArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhileBoolean(BooleanPredicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(getBoolean(i))) {
@@ -187,6 +189,20 @@ public class WBooleanArrayList
   @Override
   public void sort() {
     BooleanArrays.quickSort(elements(), 0, size());
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    boolean[] arr = elements();
+    boolean tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override

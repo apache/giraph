@@ -34,7 +34,6 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.giraph.utils.Varint;
 
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
-import it.unimi.dsi.fastutil.doubles.DoubleArrays;
 import it.unimi.dsi.fastutil.doubles.DoubleCollection;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 
@@ -161,6 +160,7 @@ public class WDoubleArrayList
    *
    * @param f Function to call on each element.
    */
+  @Override
   public void forEachDouble(DoubleConsumer f) {
     for (int i = 0; i < size(); ++i) {
       f.apply(getDouble(i));
@@ -175,6 +175,7 @@ public class WDoubleArrayList
    * @return true if the predicate returned true for all elements,
    *    false if it returned false for some element.
    */
+  @Override
   public boolean forEachWhileDouble(DoublePredicate f) {
     for (int i = 0; i < size(); ++i) {
       if (!f.apply(getDouble(i))) {
@@ -186,7 +187,21 @@ public class WDoubleArrayList
 
   @Override
   public void sort() {
-    DoubleArrays.quickSort(elements(), 0, size());
+    Arrays.sort(elements(), 0, size());
+  }
+
+  @Override
+  public void swap(int i, int j) {
+    int size = size();
+    if (i >= size || j >= size) {
+      throw new IndexOutOfBoundsException(
+          "Index (" + Math.max(i,  j) +
+          ") is greater than or equal to list size (" + size + ")");
+    }
+    double[] arr = elements();
+    double tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
   }
 
   @Override

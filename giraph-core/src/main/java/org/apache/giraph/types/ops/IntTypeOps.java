@@ -17,9 +17,9 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.Basic2ObjectMap.BasicInt2ObjectOpenHashMap;
-import org.apache.giraph.types.ops.collections.BasicSet.BasicIntOpenHashSet;
 import org.apache.giraph.types.ops.collections.array.WIntArrayList;
+import org.apache.giraph.types.ops.collections.map.BasicInt2ObjectOpenHashMap;
+import org.apache.giraph.types.ops.collections.set.BasicIntOpenHashSet;
 import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.IntWritable;
 

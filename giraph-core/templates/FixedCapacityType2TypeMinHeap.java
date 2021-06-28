@@ -31,7 +31,7 @@ import org.apache.giraph.function.primitive.pairs.${type1.camel}${type2.camel}Co
 import org.apache.giraph.function.primitive.pairs.${type1.camel}${type2.camel}Predicate;
 
 ${generated_message}
-<#macro cast2><#if type2.lower == "byte">(${type2.lower}) </#if></#macro>
+<#macro cast2><#if type2.opNeedCast>(${type2.lower}) </#if></#macro>
 
 /**
  * Min heap which holds (${type1.lower} key, ${type2.lower} value) pairs with

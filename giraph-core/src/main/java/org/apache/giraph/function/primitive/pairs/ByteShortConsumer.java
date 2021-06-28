@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.pairs;
 
 import java.io.Serializable;
 
@@ -24,14 +24,14 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (int) -&gt; int
+ * (byte, short) -&gt; void
  */
-public interface Int2IntFunction extends Serializable {
+public interface ByteShortConsumer extends Serializable {
   /**
-   * Returns the result of applying this function to given {@code input}.
+   * Applies this function to {@code input1} and {@code input2}
    *
-   * @param input input
-   * @return result
+   * @param input1 First input
+   * @param input2 Second input
    */
-  int apply(int input);
+  void apply(byte input1, short input2);
 }
