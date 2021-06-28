@@ -26,6 +26,8 @@ import java.io.Writer;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 
 import freemarker.core.ParseException;
 import freemarker.template.Configuration;
@@ -252,7 +254,7 @@ public class GeneratePrimitiveClasses {
           throws TemplateNotFoundException, MalformedTemplateNameException, ParseException,
           IOException, FileNotFoundException, TemplateException {
     Template temp = cfg.getTemplate(template);
-    Writer out = new OutputStreamWriter(new FileOutputStream(outputFile));
+    Writer out = new OutputStreamWriter(Files.newOutputStream(Paths.get(outputFile)));
     temp.process(props, out);
     out.close();
   }
