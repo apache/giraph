@@ -51,4 +51,9 @@ public final class BlockComputation extends AbstractComputation {
   public void postSuperstep() {
     workerLogic.postSuperstep();
   }
+
+  @Override
+  public boolean isVertexNoOp() {
+    return workerLogic.isVertexNoOp();
+  }
 }

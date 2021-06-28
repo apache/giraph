@@ -19,9 +19,8 @@ package org.apache.giraph.block_app.framework.internal;
 
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
+import org.apache.giraph.block_app.framework.piece.AbstractPiece.InnerVertexReceiver;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece.InnerVertexSender;
-import org.apache.giraph.block_app.framework.piece.interfaces.VertexPostprocessor;
-import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.graph.Vertex;
 
 /**
@@ -31,7 +30,7 @@ import org.apache.giraph.graph.Vertex;
 public class BlockWorkerLogic {
   private final BlockWorkerPieces pieces;
 
-  private transient VertexReceiver receiveFunctions;
+  private transient InnerVertexReceiver receiveFunctions;
   private transient InnerVertexSender sendFunctions;
 
   public BlockWorkerLogic(BlockWorkerPieces pieces) {
@@ -60,11 +59,22 @@ public class BlockWorkerLogic {
   }
 
   public void postSuperstep() {
-    if (receiveFunctions instanceof VertexPostprocessor) {
-      ((VertexPostprocessor) receiveFunctions).postprocess();
+    if (receiveFunctions != null) {
+      receiveFunctions.postprocess();
     }
     if (sendFunctions != null) {
       sendFunctions.postprocess();
     }
+  }
+
+  /**
+   * Return true iff compute() function is empty
+   *
+   * @return True iff compute function is empty, so we know we don't have to
+   * iterate through vertices
+   */
+  public boolean isVertexNoOp() {
+    return (receiveFunctions == null || receiveFunctions.isVertexNoOp()) &&
+        (sendFunctions == null || sendFunctions.isVertexNoOp());
   }
 }

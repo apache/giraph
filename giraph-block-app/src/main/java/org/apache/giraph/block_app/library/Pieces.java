@@ -59,6 +59,16 @@ public class Pieces {
   private Pieces() { }
 
   /**
+   * Piece which does nothing
+   */
+  public static Piece<WritableComparable, Writable,  Writable, NoMessage,
+      Object> noOpPiece() {
+    return new Piece<WritableComparable, Writable,  Writable, NoMessage,
+        Object>() {
+    };
+  }
+
+  /**
    * For each vertex execute given process function.
    * Computation is happening in send phase of the returned Piece.
    */
