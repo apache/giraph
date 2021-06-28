@@ -55,6 +55,19 @@ public class PageRankSettings {
       new BooleanConfOption("giraph.pagerank.weighted", true,
           "Whether to run weighted or unweighted pagerank");
 
+  /**
+   * One-to-many messaging is used as an optimization to reduce the size of the
+   * messages.
+   *
+   * However, because of the way the {@link SendWorkerOneMessageToManyRequest}
+   * is implemented it may result in large {@link ByteArrayVertexIdMessages}
+   * instances getting created. Disabling this option avoids this at the cost
+   * of sending larger messages.
+   */
+  private static final BooleanConfOption ONE_TO_MANY_MESSAGING =
+    new BooleanConfOption("giraph.pagerank.msg.onetomany", true,
+      "Enable one-to-many message optimization");
+
   /** Don't construct */
   protected PageRankSettings() { }
 
@@ -116,5 +129,14 @@ public class PageRankSettings {
    */
   public static boolean isWeighted(Configuration conf) {
     return WEIGHTED_PAGERANK.get(conf);
+  }
+
+  /**
+   * Checks whether one-to-many messaging is enabled in the configuration.
+   * @param conf Configuration
+   * @return Whether one-to-many messaging is enabled.
+   */
+  public static boolean isOneToManyMessagingEnabled(Configuration conf) {
+    return ONE_TO_MANY_MESSAGING.get(conf);
   }
 }
