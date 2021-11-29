@@ -335,7 +335,7 @@ under the License.
     <dep.jetty.version>6.1.26</dep.jetty.version>
     <dep.json.version>20160810</dep.json.version>
     <dep.junit.version>4.11</dep.junit.version>
-    <dep.jython.version>2.5.3</dep.jython.version>
+    <dep.jython-standalone.version>2.7.2</dep.jython-standalone.version>
     <dep.kryo.version>4.0.0</dep.kryo.version>
     <dep.reflectasm.version>1.11.3</dep.reflectasm.version>
     <dep.kryo-serializers.version>0.42</dep.kryo-serializers.version>
@@ -483,7 +483,7 @@ under the License.
               </dependency>
               <dependency>
                 <groupId>org.python</groupId>
-                <artifactId>jython</artifactId>
+                <artifactId>jython-standalone</artifactId>
               </dependency>
               <dependency>
                 <groupId>org.apache.hive</groupId>
@@ -1456,8 +1456,8 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.python</groupId>
-        <artifactId>jython</artifactId>
-        <version>${dep.jython.version}</version>
+        <artifactId>jython-standalone</artifactId>
+        <version>${dep.jython-standalone.version}</version>
       </dependency>
       <dependency>
         <groupId>com.esotericsoftware</groupId>
