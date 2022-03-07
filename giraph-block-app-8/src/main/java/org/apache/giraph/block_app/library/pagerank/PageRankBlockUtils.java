@@ -44,7 +44,7 @@ public class PageRankBlockUtils {
       SupplierFromVertex<I, V, DoubleWritable, DoubleWritable> valueGetter,
       GiraphConfiguration conf) {
     return new SequenceBlock(
-        new PageRankInitializeAndNormalizeEdgesPiece<>(valueSetter, conf),
+        new PageRankInitializeAndNormalizeEdgesPiece<>(),
         pagerank(valueSetter, valueGetter,
             (vertex, edgeValue) -> edgeValue.get(), conf));
   }
