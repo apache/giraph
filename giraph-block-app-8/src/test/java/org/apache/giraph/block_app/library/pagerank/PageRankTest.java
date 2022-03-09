@@ -202,7 +202,7 @@ public class PageRankTest {
       TestGraph<LongWritable, DoubleWritable, DoubleWritable> graph) {
     Vertex<LongWritable, DoubleWritable, DoubleWritable> v = graph.getConf().createVertex();
     v.setConf(graph.getConf());
-    v.initialize(new LongWritable(id), new DoubleWritable(), newEdges(edges, weights));
+    v.initialize(new LongWritable(id), new DoubleWritable(1), newEdges(edges, weights));
     graph.addVertex(v);
   }
 

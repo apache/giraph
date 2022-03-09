@@ -24,11 +24,9 @@ import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
 import org.apache.giraph.combiner.NullMessageCombiner;
-import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.MutableEdge;
-import org.apache.giraph.function.vertex.ConsumerWithVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -44,22 +42,8 @@ public class PageRankInitializeAndNormalizeEdgesPiece<
     I extends WritableComparable, V extends Writable>
     extends Piece<I, V, DoubleWritable, NullWritable, Object> {
   /** Consumer which sets pagerank value in vertex */
-  private final ConsumerWithVertex<I, V, DoubleWritable, DoubleWritable>
-      valueSetter;
-  /** Default initial value pagerank value */
-  private final DoubleWritable initialValue;
 
-  /**
-   * Constructor
-   *
-   * @param valueSetter Consumer which sets pagerank value in vertex
-   * @param conf        Configuration
-   */
-  public PageRankInitializeAndNormalizeEdgesPiece(
-      ConsumerWithVertex<I, V, DoubleWritable, DoubleWritable> valueSetter,
-      GiraphConfiguration conf) {
-    this.valueSetter = valueSetter;
-    initialValue = new DoubleWritable(PageRankSettings.getInitialValue(conf));
+  public PageRankInitializeAndNormalizeEdgesPiece() {
   }
 
   @Override
@@ -87,8 +71,7 @@ public class PageRankInitializeAndNormalizeEdgesPiece<
   public VertexReceiver<I, V, DoubleWritable, NullWritable> getVertexReceiver(
       BlockWorkerReceiveApi<I> workerApi, Object executionStage) {
     return (vertex, messages) -> {
-      // Set initial pagerank value on all vertices
-      valueSetter.apply(vertex, initialValue);
+      // Do nothing
     };
   }
 
