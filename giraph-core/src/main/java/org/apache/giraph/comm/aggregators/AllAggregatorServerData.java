@@ -18,22 +18,26 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.aggregators.Aggregator;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.reducers.Reducer;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Accepts aggregators and their values from previous superstep from master
@@ -49,19 +53,12 @@ public class AllAggregatorServerData {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(AllAggregatorServerData.class);
-  /**
-   * Map from aggregator class to aggregator object which we need in order
-   * to create initial aggregated values
-   */
-  private final
-  ConcurrentMap<Class<Aggregator<Writable>>, Aggregator<Writable>>
-  aggregatorTypesMap = Maps.newConcurrentMap();
-  /** Map of aggregator classes */
-  private final ConcurrentMap<String, Class<Aggregator<Writable>>>
-  aggregatorClassMap = Maps.newConcurrentMap();
-  /** Map of values of aggregators from previous superstep */
+  /** Map of broadcasted values from master */
   private final ConcurrentMap<String, Writable>
-  aggregatedValuesMap = Maps.newConcurrentMap();
+  broadcastedMap = Maps.newConcurrentMap();
+  /** Map of registered reducers for current superstep */
+  private final ConcurrentMap<String, ReduceOperation<Object, Writable>>
+  reduceOpMap = Maps.newConcurrentMap();
   /**
    * Counts the requests with final aggregators from master.
    * It uses values from special aggregators
@@ -102,58 +99,36 @@ public class AllAggregatorServerData {
   }
 
   /**
-   * Register the class of the aggregator, received by master or worker.
-   *
-   * @param name            Aggregator name
-   * @param aggregatorClass Class of the aggregator
+   * Received value through global communication from master.
+   * @param name Name
+   * @param type Global communication type
+   * @param value Object value
    */
-  public void registerAggregatorClass(String name,
-      Class<Aggregator<Writable>> aggregatorClass) {
-    aggregatorClassMap.put(name, aggregatorClass);
-    if (!aggregatorTypesMap.containsKey(aggregatorClass)) {
-      aggregatorTypesMap.putIfAbsent(aggregatorClass,
-          AggregatorUtils.newAggregatorInstance(aggregatorClass, conf));
+  public void receiveValueFromMaster(
+      String name, GlobalCommType type, Writable value) {
+    switch (type) {
+    case BROADCAST:
+      broadcastedMap.put(name, value);
+      break;
+
+    case REDUCE_OPERATIONS:
+      reduceOpMap.put(name, (ReduceOperation<Object, Writable>) value);
+      break;
+
+    default:
+      throw new IllegalArgumentException("Unkown request type " + type);
     }
     progressable.progress();
-  }
-
-  /**
-   * Set the value of aggregator from previous superstep,
-   * received by master or worker.
-   *
-   * @param name Name of the aggregator
-   * @param value Value of the aggregator
-   */
-  public void setAggregatorValue(String name, Writable value) {
-    aggregatedValuesMap.put(name, value);
-    progressable.progress();
-  }
-
-  /**
-   * Create initial aggregated value for an aggregator. Used so requests
-   * would be able to deserialize data.
-   * registerAggregatorClass needs to be called first to ensure that we have
-   * the class of the aggregator.
-   *
-   * @param name Name of the aggregator
-   * @return Empty aggregated value for this aggregator
-   */
-  public Writable createAggregatorInitialValue(String name) {
-    Class<Aggregator<Writable>> aggregatorClass = aggregatorClassMap.get(name);
-    Aggregator<Writable> aggregator = aggregatorTypesMap.get(aggregatorClass);
-    synchronized (aggregator) {
-      return aggregator.createInitialValue();
-    }
   }
 
   /**
    * Notify this object that an aggregator request from master has been
    * received.
    *
-   * @param aggregatorData Byte request with data received from master
+   * @param data Byte request with data received from master
    */
-  public void receivedRequestFromMaster(byte[] aggregatorData) {
-    masterData.add(aggregatorData);
+  public void receivedRequestFromMaster(byte[] data) {
+    masterData.add(data);
     masterBarrier.releaseOnePermit();
   }
 
@@ -209,39 +184,32 @@ public class AllAggregatorServerData {
    * arrived, and fill the maps for next superstep when ready.
    *
    * @param workerIds All workers in the job apart from the current one
-   * @param previousAggregatedValuesMap Map of values from previous
-   *                                    superstep to fill out
-   * @param currentAggregatorMap Map of aggregators for current superstep to
-   *                             fill out. All aggregators in this map will
-   *                             be set to initial value.
+   * @param broadcastedMapToFill Broadcast map to fill out
+   * @param reducerMapToFill Registered reducer map to fill out.
    */
   public void fillNextSuperstepMapsWhenReady(
       Set<Integer> workerIds,
-      Map<String, Writable> previousAggregatedValuesMap,
-      Map<String, Aggregator<Writable>> currentAggregatorMap) {
+      Map<String, Writable> broadcastedMapToFill,
+      Map<String, Reducer<Object, Writable>> reducerMapToFill) {
     workersBarrier.waitForRequiredPermits(workerIds);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("fillNextSuperstepMapsWhenReady: Aggregators ready");
+      LOG.debug("fillNextSuperstepMapsWhenReady: Global data ready");
     }
-    previousAggregatedValuesMap.clear();
-    previousAggregatedValuesMap.putAll(aggregatedValuesMap);
-    for (Map.Entry<String, Class<Aggregator<Writable>>> entry :
-        aggregatorClassMap.entrySet()) {
-      Aggregator<Writable> aggregator =
-          currentAggregatorMap.get(entry.getKey());
-      if (aggregator == null) {
-        currentAggregatorMap.put(entry.getKey(),
-            AggregatorUtils.newAggregatorInstance(entry.getValue(), conf));
-      } else {
-        aggregator.reset();
-      }
-    }
-  }
 
-  /**
-   * Prepare for next superstep
-   */
-  public void reset() {
+    Preconditions.checkArgument(broadcastedMapToFill.isEmpty(),
+        "broadcastedMap needs to be empty for filling");
+    Preconditions.checkArgument(reducerMapToFill.isEmpty(),
+        "reducerMap needs to be empty for filling");
+
+    broadcastedMapToFill.putAll(broadcastedMap);
+
+    for (Entry<String, ReduceOperation<Object, Writable>> entry :
+        reduceOpMap.entrySet()) {
+      reducerMapToFill.put(entry.getKey(), new Reducer<>(entry.getValue()));
+    }
+
+    broadcastedMap.clear();
+    reduceOpMap.clear();
     masterData.clear();
     if (LOG.isDebugEnabled()) {
       LOG.debug("reset: Ready for next superstep");

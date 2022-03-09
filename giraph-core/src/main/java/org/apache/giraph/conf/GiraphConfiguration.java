@@ -18,37 +18,60 @@
 
 package org.apache.giraph.conf;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import org.apache.giraph.aggregators.AggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.edge.ReuseObjectsVertexEdges;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.bsp.checkpoints.CheckpointSupportedChecker;
+import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.edge.ReuseObjectsOutEdges;
+import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.MapperObserver;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.filters.EdgeInputFilter;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.ReusesObjectsPartition;
+import org.apache.giraph.utils.GcObserver;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.net.DNS;
-
-import java.net.UnknownHostException;
 
 /**
  * Adds user methods specific to Giraph.  This will be put into an
  * ImmutableClassesGiraphConfiguration that provides the configuration plus
  * the immutable classes.
+ *
+ * Keeps track of parameters which were set so it easily set them in another
+ * copy of configuration.
  */
 public class GiraphConfiguration extends Configuration
     implements GiraphConstants {
+  /** ByteBufAllocator to be used by netty */
+  private ByteBufAllocator nettyBufferAllocator = null;
+
   /**
    * Constructor that creates the configuration
    */
@@ -67,22 +90,43 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
+   * Get name of computation being run. We leave this up to the
+   * {@link ComputationFactory} to decide what to return.
    *
-   * @return User's vertex class
+   * @return Name of computation being run
    */
-  public Class<? extends Vertex> getVertexClass() {
-    return VERTEX_CLASS.get(this);
+  public String getComputationName() {
+    ComputationFactory compFactory = ReflectionUtils.newInstance(
+        getComputationFactoryClass());
+    return compFactory.computationName(this);
   }
 
   /**
-   * Set the vertex class (required)
+   * Get the user's subclassed {@link ComputationFactory}
    *
-   * @param vertexClass Runs vertex computation
+   * @return User's computation factory class
    */
-  public final void setVertexClass(
-      Class<? extends Vertex> vertexClass) {
-    VERTEX_CLASS.set(this, vertexClass);
+  public Class<? extends ComputationFactory> getComputationFactoryClass() {
+    return COMPUTATION_FACTORY_CLASS.get(this);
+  }
+
+  /**
+   * Get the user's subclassed {@link Computation}
+   *
+   * @return User's computation class
+   */
+  public Class<? extends Computation> getComputationClass() {
+    return COMPUTATION_CLASS.get(this);
+  }
+
+  /**
+   * Set the computation class (required)
+   *
+   * @param computationClass Runs vertex computation
+   */
+  public void setComputationClass(
+      Class<? extends Computation> computationClass) {
+    COMPUTATION_CLASS.set(this, computationClass);
   }
 
   /**
@@ -96,40 +140,70 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Set the edge input filter class
+   *
+   * @param edgeFilterClass class to use
+   */
+  public void setEdgeInputFilterClass(
+      Class<? extends EdgeInputFilter> edgeFilterClass) {
+    EDGE_INPUT_FILTER_CLASS.set(this, edgeFilterClass);
+  }
+
+  /**
+   * Set the vertex input filter class
+   *
+   * @param vertexFilterClass class to use
+   */
+  public void setVertexInputFilterClass(
+      Class<? extends VertexInputFilter> vertexFilterClass) {
+    VERTEX_INPUT_FILTER_CLASS.set(this, vertexFilterClass);
+  }
+
+  /**
    * Get the vertex edges class
    *
    * @return vertex edges class
    */
-  public Class<? extends VertexEdges> getVertexEdgesClass() {
+  public Class<? extends OutEdges> getOutEdgesClass() {
     return VERTEX_EDGES_CLASS.get(this);
   }
 
   /**
    * Set the vertex edges class
    *
-   * @param vertexEdgesClass Determines the way edges are stored
+   * @param outEdgesClass Determines the way edges are stored
    */
-  public final void setVertexEdgesClass(
-      Class<? extends VertexEdges> vertexEdgesClass) {
-    VERTEX_EDGES_CLASS.set(this, vertexEdgesClass);
+  public final void setOutEdgesClass(
+      Class<? extends OutEdges> outEdgesClass) {
+    VERTEX_EDGES_CLASS.set(this, outEdgesClass);
   }
+
+  /**
+   * Set the vertex implementation class
+   *
+   * @param vertexClass class of the vertex implementation
+   */
+  public final void setVertexClass(Class<? extends Vertex> vertexClass) {
+    VERTEX_CLASS.set(this, vertexClass);
+  }
+
 
   /**
    * Set the vertex edges class used during edge-based input (if different
    * from the one used during computation)
    *
-   * @param inputVertexEdgesClass Determines the way edges are stored
+   * @param inputOutEdgesClass Determines the way edges are stored
    */
-  public final void setInputVertexEdgesClass(
-      Class<? extends VertexEdges> inputVertexEdgesClass) {
-    INPUT_VERTEX_EDGES_CLASS.set(this, inputVertexEdgesClass);
+  public final void setInputOutEdgesClass(
+      Class<? extends OutEdges> inputOutEdgesClass) {
+    INPUT_VERTEX_EDGES_CLASS.set(this, inputOutEdgesClass);
   }
 
   /**
-   * True if the {@link VertexEdges} implementation copies the passed edges
-   * to its own data structure, i.e. it doesn't keep references to Edge
-   * objects, target vertex ids or edge values passed to add() or
-   * initialize().
+   * True if the {@link org.apache.giraph.edge.OutEdges} implementation
+   * copies the passed edges to its own data structure,
+   * i.e. it doesn't keep references to Edge objects, target vertex ids or edge
+   * values passed to add() or initialize().
    * This makes it possible to reuse edge objects passed to the data
    * structure, to minimize object instantiation (see for example
    * EdgeStore#addPartitionEdges()).
@@ -137,8 +211,8 @@ public class GiraphConfiguration extends Configuration
    * @return True iff we can reuse the edge objects
    */
   public boolean reuseEdgeObjects() {
-    return ReuseObjectsVertexEdges.class.isAssignableFrom(
-        getVertexEdgesClass());
+    return ReuseObjectsOutEdges.class.isAssignableFrom(
+        getOutEdgesClass());
   }
 
   /**
@@ -176,7 +250,7 @@ public class GiraphConfiguration extends Configuration
    *
    * @param vertexInputFormatClass Determines how graph is input
    */
-  public final void setVertexInputFormatClass(
+  public void setVertexInputFormatClass(
       Class<? extends VertexInputFormat> vertexInputFormatClass) {
     VERTEX_INPUT_FORMAT_CLASS.set(this, vertexInputFormatClass);
   }
@@ -195,9 +269,19 @@ public class GiraphConfiguration extends Configuration
    *
    * @param edgeInputFormatClass Determines how graph is input
    */
-  public final void setEdgeInputFormatClass(
+  public void setEdgeInputFormatClass(
       Class<? extends EdgeInputFormat> edgeInputFormatClass) {
     EDGE_INPUT_FORMAT_CLASS.set(this, edgeInputFormatClass);
+  }
+
+  /**
+   * Set the mapping input format class (optional)
+   *
+   * @param mappingInputFormatClass Determines how mappings are input
+   */
+  public void setMappingInputFormatClass(
+    Class<? extends MappingInputFormat> mappingInputFormatClass) {
+    MAPPING_INPUT_FORMAT_CLASS.set(this, mappingInputFormatClass);
   }
 
   /**
@@ -231,6 +315,26 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Add a MapperObserver class (optional)
+   *
+   * @param mapperObserverClass MapperObserver class to add.
+   */
+  public final void addMapperObserverClass(
+      Class<? extends MapperObserver> mapperObserverClass) {
+    MAPPER_OBSERVER_CLASSES.add(this, mapperObserverClass);
+  }
+
+  /**
+   * Add a GcObserver class (optional)
+   *
+   * @param gcObserverClass GcObserver class to add.
+   */
+  public final void addGcObserverClass(
+      Class<? extends GcObserver> gcObserverClass) {
+    GC_OBSERVER_CLASSES.add(this, gcObserverClass);
+  }
+
+  /**
    * Get job observer class
    *
    * @return GiraphJobObserver class set.
@@ -249,12 +353,40 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get job retry checker class
+   *
+   * @return GiraphJobRetryChecker class set.
+   */
+  public Class<? extends GiraphJobRetryChecker> getJobRetryCheckerClass() {
+    return JOB_RETRY_CHECKER_CLASS.get(this);
+  }
+
+  /**
+   * Set job retry checker class
+   *
+   * @param klass GiraphJobRetryChecker class to set.
+   */
+  public void setJobRetryCheckerClass(
+      Class<? extends GiraphJobRetryChecker> klass) {
+    JOB_RETRY_CHECKER_CLASS.set(this, klass);
+  }
+
+  /**
    * Check whether to enable jmap dumping thread.
    *
    * @return true if jmap dumper is enabled.
    */
   public boolean isJMapHistogramDumpEnabled() {
     return JMAP_ENABLE.get(this);
+  }
+
+  /**
+   * Check whether to enable heap memory supervisor thread
+   *
+   * @return true if jmap dumper is reactively enabled
+   */
+  public boolean isReactiveJmapHistogramDumpEnabled() {
+    return REACTIVE_JMAP_ENABLE.get(this);
   }
 
   /**
@@ -295,6 +427,25 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexOutputFormatClass(
       Class<? extends VertexOutputFormat> vertexOutputFormatClass) {
     VERTEX_OUTPUT_FORMAT_CLASS.set(this, vertexOutputFormatClass);
+  }
+
+
+  /**
+   * Does the job have a {@link EdgeOutputFormat} subdir?
+   *
+   * @return True iff a {@link EdgeOutputFormat} subdir has been specified.
+   */
+  public boolean hasVertexOutputFormatSubdir() {
+    return !VERTEX_OUTPUT_FORMAT_SUBDIR.get(this).isEmpty();
+  }
+
+  /**
+   * Set the vertex output format path
+   *
+   * @param path path where the verteces will be written
+   */
+  public final void setVertexOutputFormatSubdir(String path) {
+    VERTEX_OUTPUT_FORMAT_SUBDIR.set(this, path);
   }
 
   /**
@@ -338,6 +489,43 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Does the job have a {@link EdgeOutputFormat}?
+   *
+   * @return True iff a {@link EdgeOutputFormat} has been specified.
+   */
+  public boolean hasEdgeOutputFormat() {
+    return EDGE_OUTPUT_FORMAT_CLASS.get(this) != null;
+  }
+
+  /**
+   * Set the edge output format class (optional)
+   *
+   * @param edgeOutputFormatClass Determines how graph is output
+   */
+  public final void setEdgeOutputFormatClass(
+      Class<? extends EdgeOutputFormat> edgeOutputFormatClass) {
+    EDGE_OUTPUT_FORMAT_CLASS.set(this, edgeOutputFormatClass);
+  }
+
+  /**
+   * Does the job have a {@link EdgeOutputFormat} subdir?
+   *
+   * @return True iff a {@link EdgeOutputFormat} subdir has been specified.
+   */
+  public boolean hasEdgeOutputFormatSubdir() {
+    return !EDGE_OUTPUT_FORMAT_SUBDIR.get(this).isEmpty();
+  }
+
+  /**
+   * Set the edge output format path
+   *
+   * @param path path where the edges will be written
+   */
+  public final void setEdgeOutputFormatSubdir(String path) {
+    EDGE_OUTPUT_FORMAT_SUBDIR.set(this, path);
+  }
+
+  /**
    * Get the number of threads to use for writing output in the end of the
    * application. If output format is not thread safe, returns 1.
    *
@@ -362,22 +550,13 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the vertex combiner class (optional)
+   * Set the message combiner class (optional)
    *
-   * @return vertexCombinerClass Determines how vertex messages are combined
+   * @param messageCombinerClass Determines how vertex messages are combined
    */
-  public Class<? extends Combiner> getCombinerClass() {
-    return VERTEX_COMBINER_CLASS.get(this);
-  }
-
-  /**
-   * Set the vertex combiner class (optional)
-   *
-   * @param vertexCombinerClass Determines how vertex messages are combined
-   */
-  public final void setCombinerClass(
-      Class<? extends Combiner> vertexCombinerClass) {
-    VERTEX_COMBINER_CLASS.set(this, vertexCombinerClass);
+  public void setMessageCombinerClass(
+      Class<? extends MessageCombiner> messageCombinerClass) {
+    MESSAGE_COMBINER_CLASS.set(this, messageCombinerClass);
   }
 
   /**
@@ -420,14 +599,13 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Set the partition context class (optional)
+   * Set the vertex value combiner class (optional)
    *
-   * @param partitionContextClass Determines what code is executed for each
-   *        partition before and after each superstep
+   * @param vertexValueCombinerClass Determines how vertices are combined
    */
-  public final void setPartitionContextClass(
-      Class<? extends PartitionContext> partitionContextClass) {
-    PARTITION_CONTEXT_CLASS.set(this, partitionContextClass);
+  public final void setVertexValueCombinerClass(
+      Class<? extends VertexValueCombiner> vertexValueCombinerClass) {
+    VERTEX_VALUE_COMBINER_CLASS.set(this, vertexValueCombinerClass);
   }
 
   /**
@@ -493,6 +671,16 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * How many mappers is job asking for, taking into account whether master
+   * is running on the same mapper as worker or not
+   *
+   * @return How many mappers is job asking for
+   */
+  public final int getMaxMappers() {
+    return getMaxWorkers() + (SPLIT_MASTER_WORKER.get(this) ? 1 : 0);
+  }
+
+  /**
    * Utilize an existing ZooKeeper service.  If this is not set, ZooKeeper
    * will be dynamically started by Giraph for this job.
    *
@@ -500,11 +688,12 @@ public class GiraphConfiguration extends Configuration
    *        (i.e. zk1:2221,zk2:2221)
    */
   public final void setZooKeeperConfiguration(String serverList) {
-    set(ZOOKEEPER_LIST, serverList);
+    ZOOKEEPER_LIST.set(this, serverList);
   }
 
   /**
    * Getter for SPLIT_MASTER_WORKER flag.
+   *
    * @return boolean flag value.
    */
   public final boolean getSplitMasterWorker() {
@@ -530,6 +719,24 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get array of MapperObserver classes set in configuration.
+   *
+   * @return array of MapperObserver classes.
+   */
+  public Class<? extends MapperObserver>[] getMapperObserverClasses() {
+    return MAPPER_OBSERVER_CLASSES.getArray(this);
+  }
+
+  /**
+   * Get array of GcObserver classes set in configuration.
+   *
+   * @return array of GcObserver classes.
+   */
+  public Class<? extends GcObserver>[] getGcObserverClasses() {
+    return GC_OBSERVER_CLASSES.getArray(this);
+  }
+
+  /**
    * Whether to track, print, and aggregate metrics.
    *
    * @return true if metrics are enabled, false otherwise (default)
@@ -550,6 +757,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Is this a "pure YARN" Giraph job, or is a MapReduce layer (v1 or v2)
    * actually managing our cluster nodes, i.e. each task is a Mapper.
+   *
    * @return TRUE if this is a pure YARN job.
    */
   public boolean isPureYarnJob() {
@@ -559,6 +767,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Jars required in "Pure YARN" jobs (names only, no paths) should
    * be listed here in full, including Giraph framework jar(s).
+   *
    * @return the comma-separated list of jar names for export to cluster.
    */
   public String getYarnLibJars() {
@@ -567,6 +776,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Populate jar list for Pure YARN jobs.
+   *
    * @param jarList a comma-separated list of jar names
    */
   public void setYarnLibJars(String jarList) {
@@ -576,6 +786,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Get heap size (in MB) for each task in our Giraph job run,
    * assuming this job will run on the "pure YARN" profile.
+   *
    * @return the heap size for all tasks, in MB
    */
   public int getYarnTaskHeapMb() {
@@ -585,6 +796,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Set heap size for Giraph tasks in our job run, assuming
    * the job will run on the "pure YARN" profile.
+   *
    * @param heapMb the heap size for all tasks
    */
   public void setYarnTaskHeapMb(int heapMb) {
@@ -597,7 +809,28 @@ public class GiraphConfiguration extends Configuration
    * @return ZooKeeper list of strings, comma separated or null if none set.
    */
   public String getZookeeperList() {
-    return get(ZOOKEEPER_LIST);
+    return ZOOKEEPER_LIST.get(this);
+  }
+
+  /**
+   * Set the ZooKeeper list to the provided list. This method is used when the
+   * ZooKeeper is started internally and will set the zkIsExternal option to
+   * false as well.
+   *
+   * @param zkList list of strings, comma separated of zookeeper servers
+   */
+  public void setZookeeperList(String zkList) {
+    ZOOKEEPER_LIST.set(this, zkList);
+    ZOOKEEPER_IS_EXTERNAL.set(this, false);
+  }
+
+  /**
+   * Was ZooKeeper provided externally?
+   *
+   * @return true iff was zookeeper is external
+   */
+  public boolean isZookeeperExternal() {
+    return ZOOKEEPER_IS_EXTERNAL.get(this);
   }
 
   public String getLocalLevel() {
@@ -615,6 +848,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * is this job run a local test?
+   *
    * @return the test status as recorded in the Configuration
    */
   public boolean getLocalTestMode() {
@@ -623,28 +857,11 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Flag this job as a local test run.
+   *
    * @param flag the test status for this job
    */
   public void setLocalTestMode(boolean flag) {
     LOCAL_TEST_MODE.set(this, flag);
-  }
-
-  /**
-   * The number of server tasks in our ZK quorum for
-   * this job run.
-   * @return the number of ZK servers in the quorum
-   */
-  public int getZooKeeperServerCount() {
-    return ZOOKEEPER_SERVER_COUNT.get(this);
-  }
-
-  /**
-   * Set the ZooKeeper jar classpath
-   *
-   * @param classPath Classpath for the ZooKeeper jar
-   */
-  public void setZooKeeperJar(String classPath) {
-    set(ZOOKEEPER_JAR, classPath);
   }
 
   public int getZooKeeperSessionTimeout() {
@@ -685,6 +902,25 @@ public class GiraphConfiguration extends Configuration
     }
   }
 
+  /**
+   * Used by netty client and server to create ByteBufAllocator
+   *
+   * @return ByteBufAllocator
+   */
+  public ByteBufAllocator getNettyAllocator() {
+    if (nettyBufferAllocator == null) {
+      if (NETTY_USE_POOLED_ALLOCATOR.get(this)) { // Use pooled allocator
+        nettyBufferAllocator = new PooledByteBufAllocator(
+          NETTY_USE_DIRECT_MEMORY.get(this));
+      } else { // Use un-pooled allocator
+        // Note: Current default settings create un-pooled heap allocator
+        nettyBufferAllocator = new UnpooledByteBufAllocator(
+            NETTY_USE_DIRECT_MEMORY.get(this));
+      }
+    }
+    return nettyBufferAllocator;
+  }
+
   public int getZookeeperConnectionAttempts() {
     return ZOOKEEPER_CONNECTION_ATTEMPTS.get(this);
   }
@@ -695,14 +931,6 @@ public class GiraphConfiguration extends Configuration
 
   public int getZooKeeperMaxSessionTimeout() {
     return ZOOKEEPER_MAX_SESSION_TIMEOUT.get(this);
-  }
-
-  public boolean getZooKeeperForceSync() {
-    return ZOOKEEPER_FORCE_SYNC.get(this);
-  }
-
-  public boolean getZooKeeperSkipAcl() {
-    return ZOOKEEPER_SKIP_ACL.get(this);
   }
 
   /**
@@ -726,6 +954,15 @@ public class GiraphConfiguration extends Configuration
    */
   public boolean authenticate() {
     return AUTHENTICATE.get(this);
+  }
+
+  /**
+   * Use authentication? (if supported)
+   *
+   * @return True if should authenticate, false otherwise
+   */
+  public boolean sslAuthenticate() {
+    return SSL_ENCRYPT.get(this);
   }
 
   /**
@@ -772,16 +1009,6 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Use message size encoding?  This feature may help with complex message
-   * objects.
-   *
-   * @return Whether to use message size encoding
-   */
-  public boolean useMessageSizeEncoding() {
-    return USE_MESSAGE_SIZE_ENCODING.get(this);
-  }
-
-  /**
    * Set the checkpoint frequeuncy of how many supersteps to wait before
    * checkpointing
    *
@@ -808,6 +1035,18 @@ public class GiraphConfiguration extends Configuration
    */
   public boolean useCheckpointing() {
     return getCheckpointFrequency() != 0;
+  }
+
+  /**
+   * Set runtime checkpoint support checker.
+   * The instance of this class will have to decide whether
+   * checkpointing is allowed on current superstep.
+   *
+   * @param clazz checkpoint supported checker class
+   */
+  public void setCheckpointSupportedChecker(
+      Class<? extends CheckpointSupportedChecker> clazz) {
+    GiraphConstants.CHECKPOINT_SUPPORTED_CHECKER.set(this, clazz);
   }
 
   /**
@@ -858,6 +1097,10 @@ public class GiraphConfiguration extends Configuration
     return MAX_MASTER_SUPERSTEP_WAIT_MSECS.get(this);
   }
 
+  public int getMaxCounterWaitMsecs() {
+    return MAX_COUNTER_WAIT_MSECS.get(this);
+  }
+
   /**
    * Set the maximum milliseconds to wait before giving up trying to get the
    * minimum number of workers before a superstep.
@@ -891,24 +1134,28 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Check if we can reuse incoming edge objects.
-   *
-   * @return True iff we can reuse incoming edge objects.
-   */
-  public boolean reuseIncomingEdgeObjects() {
-    return GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS.get(this);
-  }
-
-  /**
    * Get the local hostname on the given interface.
    *
    * @return The local hostname
-   * @throws UnknownHostException
+   * @throws UnknownHostException IP address of a host could not be determined
    */
   public String getLocalHostname() throws UnknownHostException {
     return DNS.getDefaultHost(
         GiraphConstants.DNS_INTERFACE.get(this),
-        GiraphConstants.DNS_NAMESERVER.get(this));
+        GiraphConstants.DNS_NAMESERVER.get(this)).toLowerCase();
+  }
+
+  /**
+   * Return local host name by default. Or local host IP if preferIP
+   * option is set.
+   * @return local host name or IP
+   * @throws UnknownHostException IP address of a host could not be determined
+   */
+  public String getLocalHostOrIp() throws UnknownHostException {
+    if (GiraphConstants.PREFER_IP_ADDRESSES.get(this)) {
+      return InetAddress.getLocalHost().getHostAddress();
+    }
+    return getLocalHostname();
   }
 
   /**
@@ -932,11 +1179,123 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Whether the application with change or not the graph topology.
+   * Get the output directory to write YourKit snapshots to
    *
-   * @return true if the graph is static, false otherwise.
+   * @param context Map context
+   * @return output directory
    */
-  public boolean isStaticGraph() {
-    return STATIC_GRAPH.isTrue(this);
+  public String getYourKitOutputDir(Mapper.Context context) {
+    final String cacheKey = "giraph.yourkit.outputDirCached";
+    String outputDir = get(cacheKey);
+    if (outputDir == null) {
+      outputDir = getStringVars(YOURKIT_OUTPUT_DIR, YOURKIT_OUTPUT_DIR_DEFAULT,
+          context);
+      set(cacheKey, outputDir);
+    }
+    return outputDir;
+  }
+
+  /**
+   * Get string, replacing variables in the output.
+   *
+   * %JOB_ID% =&gt; job id
+   * %TASK_ID% =&gt; task id
+   * %USER% =&gt; owning user name
+   *
+   * @param key name of key to lookup
+   * @param context mapper context
+   * @return value for key, with variables expanded
+   */
+  public String getStringVars(String key, Mapper.Context context) {
+    return getStringVars(key, null, context);
+  }
+
+  /**
+   * Get string, replacing variables in the output.
+   *
+   * %JOB_ID% =&gt; job id
+   * %TASK_ID% =&gt; task id
+   * %USER% =&gt; owning user name
+   *
+   * @param key name of key to lookup
+   * @param defaultValue value to return if no mapping exists. This can also
+   *                     have variables, which will be substituted.
+   * @param context mapper context
+   * @return value for key, with variables expanded
+   */
+  public String getStringVars(String key, String defaultValue,
+                              Mapper.Context context) {
+    String value = get(key);
+    if (value == null) {
+      if (defaultValue == null) {
+        return null;
+      }
+      value = defaultValue;
+    }
+    value = value.replace("%JOB_ID%", context.getJobID().toString());
+    value = value.replace("%TASK_ID%", context.getTaskAttemptID().toString());
+    value = value.replace("%USER%", get("user.name", "unknown_user"));
+    return value;
+  }
+
+  /**
+   * Get option whether to create a source vertex present only in edge input
+   *
+   * @return CREATE_EDGE_SOURCE_VERTICES option
+   */
+  public boolean getCreateSourceVertex() {
+    return CREATE_EDGE_SOURCE_VERTICES.get(this);
+  }
+
+  /**
+   * set option whether to create a source vertex present only in edge input
+   * @param createVertex create source vertex option
+   */
+  public void setCreateSourceVertex(boolean createVertex) {
+    CREATE_EDGE_SOURCE_VERTICES.set(this, createVertex);
+  }
+
+  /**
+   * Get the maximum timeout (in milliseconds) for waiting for all tasks
+   * to complete after the job is done.
+   *
+   * @return Wait task done timeout in milliseconds.
+   */
+  public int getWaitTaskDoneTimeoutMs() {
+    return WAIT_TASK_DONE_TIMEOUT_MS.get(this);
+  }
+
+  /**
+   * Set the maximum timeout (in milliseconds) for waiting for all tasks
+   * to complete after the job is done.
+   *
+   * @param ms Milliseconds to set
+   */
+  public void setWaitTaskDoneTimeoutMs(int ms) {
+    WAIT_TASK_DONE_TIMEOUT_MS.set(this, ms);
+  }
+
+  /**
+   * Check whether to track job progress on client or not
+   *
+   * @return True if job progress should be tracked on client
+   */
+  public boolean trackJobProgressOnClient() {
+    return TRACK_JOB_PROGRESS_ON_CLIENT.get(this);
+  }
+
+  /**
+   * @return Number of retries when creating an HDFS file before failing.
+   */
+  public int getHdfsFileCreationRetries() {
+    return HDFS_FILE_CREATION_RETRIES.get(this);
+  }
+
+  /**
+   * @return Milliseconds to wait before retrying an HDFS file creation
+   *         operation.
+   */
+  public int getHdfsFileCreationRetryWaitMs() {
+    return HDFS_FILE_CREATION_RETRY_WAIT_MS.get(this);
   }
 }

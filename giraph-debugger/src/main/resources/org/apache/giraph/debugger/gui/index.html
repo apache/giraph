@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Graft</title>
+		<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+		<link rel="stylesheet" href="http://cdn.datatables.net/1.10.0/css/jquery.dataTables.css" />
+		<link rel="stylesheet" href="http://yandex.st/highlightjs/8.0/styles/default.min.css">
+		<link rel="stylesheet" href="css/valpanel.css">
+		<link rel="stylesheet" href="css/slider/slider.css">
+		<link rel="stylesheet" href="css/app.css">
+		<!--TODO(vikesh) : * Load all JS files asychronously in a single script - requirejs. 
+			* Download external JS files during mvn compile.
+			* Remove http from src to automatically load based on the protocol used to launch this file.
+		-->
+		<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+		<script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+		<script src="http://d3js.org/d3.v3.min.js"></script>
+		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		<script src="http://cdn.datatables.net/1.10.0/js/jquery.dataTables.js"></script>
+		<script src="http://yandex.st/highlightjs/8.0/highlight.min.js"></script>
+		<script src="http://cdn.jsdelivr.net/noty/2.2.2/packaged/jquery.noty.packaged.min.js" />
+		<script src="js/slider/bootstrap-slider.js"></script>
+		<script src="js/slider/bootstrap-slider.js"></script>
+		<script src="js/utils.js"></script>
+		<script src="js/utils.sampleGraphs.js"></script>
+		<script src="js/editor.core.js"></script>
+		<script src="js/editor.utils.js"></script>
+		<script src="js/valpanel.js"></script>
+		<script src="js/debugger.js"></script>
+
+		<script type="text/javascript">
+			var giraphDebugger;
+			var currentSuperstep = -1;
+
+			$(document).ready(function(){
+					var currentCodeUrl = null;
+					// Initialize highlighting.
+					hljs.initHighlightingOnLoad();
+
+					// Performs syntax highlighting for dynamically loaded content in pre code.
+					function highlightAll() {
+						$('pre code').each(function(i, e) {hljs.highlightBlock(e)});
+					}
+
+					/*
+					 * Sets the currentCode string and the code-container div. 
+					 * @param {object} data - data.code is the code content and data.url is the
+					 * downloadable link of the code (text/plain with content-disposition). 
+					 * NOTE: All code setting should be performed through this method to ensure that 
+					 * currentCodeUrl is set properly.
+					 */ 
+					function setCode(data) {
+						currentCodeUrl = data ? data.url : null;
+						var code = data ? data.code : null;
+						$('#code-container').html(code);
+						$('#btn-code-download').prop('disabled', code === null);
+						highlightAll();
+					}
+
+					function handleTestGraphSuccess(response) {
+						setCode(response);
+						noty({text : 'Fetched the test graph successfully.', type : 'success', timeout: 1000});
+					}
+
+					function handleTestGraphFail(responseText) {
+						setCode();
+						noty({text : 'Failed to fetch the test graph. Message from server : ' + responseText, type : 'error'});
+					}
+
+					$("#node-attr-id").keyup(function(event){
+						if(event.keyCode===13){
+							$("#btn-node-attr-save").click();
+						}
+					});
+			
+					$("#btn-adj-list-get").click(function() {
+						var adjList = Utils.getAdjListStr(editor.getAdjList());
+						Utils.downloadFile(adjList, 'adjList.txt');
+					});
+
+					// Generate Test Graph - Fetch the test graph and display the code.
+					$('#btn-gen-test-graph').click(function() {
+						Utils.fetchTestGraph(giraphDebugger.debuggerServerRoot, Utils.getAdjListStrForTestGraph(giraphDebugger.editor.getAdjList()))
+						.done(function(response) {
+							handleTestGraphSuccess(response);
+						})
+						.fail(function(responseText) {
+							handleTestGraphFail(responseText);
+						});
+					});
+
+					giraphDebugger = new GiraphDebugger({
+								debuggerContainer : '#debugger-container',
+								nodeAttrContainer : '#node-attr-container',
+								superstepControlsContainer : '#controls-container',
+					});
+		
+					// Attach events to catpure scenario - vertex.
+					giraphDebugger.onCaptureVertex(function(response) {
+						setCode(response);
+						noty({text : 'Fetched the vertex scenario successfully.', type : 'success', timeout: 1000});
+					},
+					function(response) {
+						setCode();
+						noty({text : 'Failed to fetch the vertex scenario. Message from server : ' + response, type : 'error'});
+					});
+
+					// Attach events to catpure scenario - master.
+					giraphDebugger.onCaptureMaster(function(response) {
+						setCode(response);
+						noty({text : 'Fetched the master scenario successfully.', type : 'success', timeout: 1000});
+					},
+					function(response) {
+						setCode();
+						noty({text : 'Failed to fetch the master scenario. Message from server : ' + response, type : 'error'});
+					});
+
+					// Attach events to generate test graph.
+					giraphDebugger.onGenerateTestGraph(handleTestGraphSuccess, handleTestGraphFail);
+			
+					var editor = giraphDebugger.editor;
+					// Undirected behaviour.
+					$(".graph-type").change(function(event) {
+							editor.undirected = event.target.value === "undirected" ? true : false;
+							editor.restartGraph();
+					});
+
+					// Btn attr-view 
+					$("#btn-attr-view").click(function() {
+						$("#attr-view-content").empty();
+						$("#attr-view-content").append("<tr><th>Node ID</th><th>Attributes</th></tr><tr>");
+
+						// Attribute view 
+						for (var i = 0; i < editor.nodes.length; i++) {
+							$("#attr-view-content").append("<tr></tr>");	
+						}
+
+						var rows = d3.select("#attr-view-content").selectAll("tr")
+							.filter(function(d,i) { return i!=0; })
+							.data(editor.nodes);
+
+						rows.append("td").text(function(d){ return d.id; });
+						rows.append("td").append("textarea")
+							.attr("class", "form-control") 
+							.attr("rows","1")
+							.text(function(d){ return d.attrs.join(); }); 
+
+						// show the dialog
+						$("#attr-view").dialog({
+								modal:true, 
+								title:"Node Attributes View", 
+								closeText:"close", 
+								maxHeight:600,
+								closeOnEscape:true,
+								hide : {effect : "fade", duration:100}
+						});
+
+						$(".ui-widget-overlay").click(function(){ $("#attr-view").dialog("close"); });
+					});
+
+					$("#btn-attr-view-save").unbind("click");
+					$("#btn-attr-view-save").click(function(){
+							var rows = $("#attr-view-content textarea");
+						
+							for(var i=0;i<rows.length;i++) {
+								if (rows[i]!="") {
+									editor.nodes[i].attrs = rows[i].value.split(",");
+								}
+							}
+							editor.restartGraph();
+							$("#attr-view").dialog("close");
+						});
+
+					$("#btn-attr-view-cancel").unbind("click");
+					$("#btn-attr-view-cancel").click(function() {
+						$("#attr-view").dialog("close");
+					});
+
+					// Slider for linkDistance 
+					$('#slider-link-distance').slider({
+						min : editor.linkDistance,
+						value : editor.linkDistance,
+						max : 500
+					})
+					.on('slideStop', function(ev) {
+						// resize the linkDistance of editor
+						editor.linkDistance = ev.value;
+						editor.restartGraph();
+					});
+
+					// Code select handler.
+					$('#btn-code-select').click(function(event) {
+						selectText('code-container');	
+					});
+
+					// Code download handler.
+					$('#btn-code-download').click(function(event) {
+						location.href = currentCodeUrl;
+					});
+				});
+		</script>
+	</head>
+  
+	<body>
+		<div id="attr-view" style="display:none">
+			<div id="attr-view-container">
+				<table>
+					<tbody id="attr-view-content">
+					</tbody>
+				</table>	
+			</div>
+			<form role="form">
+				<div class="form-group">
+					<button type="button" class="btn btn-primary btn-sm editable-submit" id="btn-attr-view-save"><i class="glyphicon glyphicon-ok"></i></button>
+					<button type="button" class="btn btn-default btn-sm editable-cancel" id="btn-attr-view-cancel"><i class="glyphicon glyphicon-remove"></i></button>
+				</div>
+			</form>
+		</div>
+
+		<div class="container bs-docs-container">
+			<h1>Graft <small>GUI</small></h1>
+		</div>
+
+		<div id="debugger-container">
+		</div>
+
+		<!--Container begins-->
+		<div class="container bs-docs-container">
+			<div class="row"> <!--Row1 begins-->
+				<!--Column for left side controls-->
+				<div class="col-md-4">
+					<!-- This is a row for the directed/undirected controls-->
+					<div class="row"> 
+						<!--Internal col begins-->
+						<div class="col-md-12">							
+							<!--Form begins-->
+							<form role="form" class="form-inline editor-controls"> 
+								<div class="form-group">
+									<label>
+										<input type="radio" name="options" id="options_directed" class="graph-type form-control" value="directed" checked /> Directed
+									</label>
+								</div>
+								<div class="form-group">
+									<label>
+										<input type="radio" name="options" id="options_undirected" class="graph-type form-control" value="undirected" /> Undirected
+									</label>
+								</div>
+								<!--<button type="button" class="btn btn-primary btn-danger form-control btn-sm" id="btn-attr-view">Attribute view</button>-->
+							</form> <!--Form ends-->
+						</div><!--Internal column ends-->
+					</div><!--Directed/Undirected Row ends-->
+					<!-- This is a row for the download buttons-->
+					<div class="row"> 
+					<!--Internal column begins-->
+						<div class="col-md-12">							
+							<button type="button" class="btn btn-primary" id="btn-adj-list-get">Download Adjacency List</button>
+							<button type="button" class="btn btn-danger" id="btn-gen-test-graph">Generate Test Graph</button>
+						</div><!--Internal column ends-->
+					</div>
+				</div>
+				<div class="col-md-8">
+					<!--Debugger Superstep controls container begin-->
+					<div id="controls-container">
+					</div>
+					<!--Superstep controls end-->
+				</div>
+			</div> <!--Row1 ends-->
+
+			<!-- Row2 begins-->
+			<div class="row" style="margin-top:20px;">
+				<div class="col-md-6">
+					<!-- Slider for linkDistance-->
+					<label>Link Distance : </label> <div class="slider" id="slider-link-distance"></div>
+				</div>
+			</div> <!--Row2 ends-->
+
+			<hr />
+			<div style="margin-top:20px;">
+				<div id="code-controls">
+					<h3>Test Code</h3>
+					<button type="button" class="btn btn-primary btn-sm" id="btn-code-select">Select All</button>
+					<button type="button" class="btn btn-danger btn-sm" id="btn-code-download" disabled>Download</button>
+				</div>
+				<pre>
+					<code id="code-container"></code>
+				</pre>
+			</div>
+
+			<!-- Instructions -->
+			<div id="instructions">
+				<hr style="border-top:1px solid black;" />
+				<p class="lead">
+						<mark>Click</mark> in the open space to <strong><mark>add a node</mark></strong>, drag from one node to another to <strong>add an edge</strong>. <br>
+						<mark>Shift-drag</mark> a node to <strong><mark>move</mark></strong> the graph layout. <br>
+						<mark>Click</mark> a node or an edge to <strong><mark>select</mark></strong> it.<br>
+						<mark>Double-click</mark> a node to open the <strong><mark>node editor</mark></strong>.<br>
+						<mark>Click</mark> on the Attributes View to open an editable list of <strong><mark>node attributes</mark></strong>.<br>
+						<mark>Shift-Click</mark> an edge to edit <strong>edge value</strong>.
+				</p>
+				<p class="lead">
+						When a node is selected: <strong>R</strong> toggles reflexivity, <strong>Delete</strong> removes the node. <br>
+						When an edge is selected: <strong>L</strong>(eft), <strong>R</strong>(ight), <strong>B</strong>(oth) change direction, <strong>Delete</strong> removes the edge.</p>
+			</div> <!-- Instructions end-->
+		</div><!--Container ends-->
+
+		<!--Footer-->
+		<div id="footer">
+			<div class="container">
+				<p class="muted credit">
+					Based on <a href="http://bl.ocks.org/rkirsling/5001347" target="_blank">Directed Graph Editor</a> by rkirsling. 
+				<span style="float:right">Code on <a href="https://github.com/vikeshkhanna/graph-editor" target="_blank">GitHub</a></span>
+				</p>
+			</div>
+		</div><!--Footer-->
+	</body>
+</html>

@@ -19,41 +19,54 @@
 package org.apache.giraph.comm.messages;
 
 import com.google.common.collect.Iterators;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.RepresentativeByteArrayIterable;
-import org.apache.giraph.utils.RepresentativeByteArrayIterator;
-import org.apache.giraph.utils.VertexIdIterator;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.MessageClasses;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.RepresentativeByteStructIterator;
+import org.apache.giraph.utils.VerboseByteStructMessageWrite;
+import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.giraph.utils.VertexIdMessageBytesIterator;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.utils.io.DataInputOutput;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
- * stored per vertex as byte arrays.  Used when there is no combiner provided.
+ * stored per vertex as byte backed datastructures.
+ * Used when there is no combiner provided.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
 public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
-    M extends Writable> extends SimpleMessageStore<I, M, ExtendedDataOutput> {
+    M extends Writable> extends SimpleMessageStore<I, M, DataInputOutput> {
   /**
    * Constructor
    *
-   * @param service Service worker
+   * @param messageValueFactory Message class held in the store
+   * @param partitionInfo Partition split info
    * @param config Hadoop configuration
    */
   public ByteArrayMessagesPerVertexStore(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
-    super(service, config);
+      MessageValueFactory<M> messageValueFactory,
+      PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    super(messageValueFactory, partitionInfo, config);
+  }
+
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
   }
 
   /**
@@ -65,33 +78,28 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @param iterator Special iterator that can release ownerhips of vertex ids
    * @return Extended data output for this vertex id (created if necessary)
    */
-  private ExtendedDataOutput getExtendedDataOutput(
-      ConcurrentMap<I, ExtendedDataOutput> partitionMap,
+  private DataInputOutput getDataInputOutput(
+      ConcurrentMap<I, DataInputOutput> partitionMap,
       VertexIdIterator<I> iterator) {
-    ExtendedDataOutput extendedDataOutput =
+    DataInputOutput dataInputOutput =
         partitionMap.get(iterator.getCurrentVertexId());
-    if (extendedDataOutput == null) {
-      ExtendedDataOutput newExtendedDataOutput =
-          config.createExtendedDataOutput();
-      extendedDataOutput =
-          partitionMap.putIfAbsent(
-              iterator.releaseCurrentVertexId(),
-              newExtendedDataOutput);
-      if (extendedDataOutput == null) {
-        extendedDataOutput = newExtendedDataOutput;
+    if (dataInputOutput == null) {
+      DataInputOutput newDataOutput = config.createMessagesInputOutput();
+      dataInputOutput = partitionMap.putIfAbsent(
+          iterator.releaseCurrentVertexId(), newDataOutput);
+      if (dataInputOutput == null) {
+        dataInputOutput = newDataOutput;
       }
     }
-    return extendedDataOutput;
+    return dataInputOutput;
   }
 
   @Override
   public void addPartitionMessages(
-      int partitionId,
-      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
-    ConcurrentMap<I, ExtendedDataOutput> partitionMap =
+    int partitionId, VertexIdMessages<I, M> messages) {
+    ConcurrentMap<I, DataInputOutput> partitionMap =
         getOrCreatePartitionMap(partitionId);
-    ByteArrayVertexIdMessages<I, M>.VertexIdMessageBytesIterator
-        vertexIdMessageBytesIterator =
+    VertexIdMessageBytesIterator<I, M> vertexIdMessageBytesIterator =
         messages.getVertexIdMessageBytesIterator();
     // Try to copy the message buffer over rather than
     // doing a deserialization of a message just to know its size.  This
@@ -101,114 +109,90 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     if (vertexIdMessageBytesIterator != null) {
       while (vertexIdMessageBytesIterator.hasNext()) {
         vertexIdMessageBytesIterator.next();
-        ExtendedDataOutput extendedDataOutput =
-            getExtendedDataOutput(partitionMap, vertexIdMessageBytesIterator);
+        DataInputOutput dataInputOutput =
+            getDataInputOutput(partitionMap, vertexIdMessageBytesIterator);
 
-        synchronized (extendedDataOutput) {
+        synchronized (dataInputOutput) {
           vertexIdMessageBytesIterator.writeCurrentMessageBytes(
-              extendedDataOutput);
+              dataInputOutput.getDataOutput());
         }
       }
     } else {
-      ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
-          vertexIdMessageIterator = messages.getVertexIdMessageIterator();
-      while (vertexIdMessageIterator.hasNext()) {
-        vertexIdMessageIterator.next();
-        ExtendedDataOutput extendedDataOutput =
-            getExtendedDataOutput(partitionMap, vertexIdMessageIterator);
+      try {
+        VertexIdMessageIterator<I, M> vertexIdMessageIterator =
+            messages.getVertexIdMessageIterator();
+        while (vertexIdMessageIterator.hasNext()) {
+          vertexIdMessageIterator.next();
+          DataInputOutput dataInputOutput =
+              getDataInputOutput(partitionMap, vertexIdMessageIterator);
 
-        synchronized (extendedDataOutput) {
-          vertexIdMessageIterator.getCurrentMessage().write(
-              extendedDataOutput);
+          synchronized (dataInputOutput) {
+            VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
+                vertexIdMessageIterator, dataInputOutput.getDataOutput());
+          }
         }
+      } catch (IOException e) {
+        throw new RuntimeException("addPartitionMessages: IOException while" +
+            " adding messages for a partition: " + e);
       }
     }
   }
 
-  /**
-   * Special iterable that recycles the message
-   */
-  private class MessagesIterable extends RepresentativeByteArrayIterable<M> {
-    /**
-     * Constructor
-     *
-     * @param buf Buffer
-     * @param off Offset to start in the buffer
-     * @param length Length of the buffer
-     */
-    private MessagesIterable(byte[] buf, int off, int length) {
-      super(config, buf, off, length);
+  @Override
+  public void addMessage(I vertexId, M message) throws IOException {
+    ConcurrentMap<I, DataInputOutput> partitionMap =
+      getOrCreatePartitionMap(getPartitionId(vertexId));
+    DataInputOutput dataInputOutput = partitionMap.get(vertexId);
+    if (dataInputOutput == null) {
+      DataInputOutput newDataOutput = config.createMessagesInputOutput();
+      I copyId = WritableUtils.createCopy(vertexId);
+      dataInputOutput = partitionMap.putIfAbsent(copyId, newDataOutput);
+      if (dataInputOutput == null) {
+        dataInputOutput = newDataOutput;
+      }
     }
 
-    @Override
-    protected M createWritable() {
-      return config.createMessageValue();
+    synchronized (dataInputOutput) {
+      VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
+        vertexId, message, dataInputOutput.getDataOutput());
     }
   }
 
   @Override
   protected Iterable<M> getMessagesAsIterable(
-      ExtendedDataOutput extendedDataOutput) {
-
-    return new MessagesIterable(extendedDataOutput.getByteArray(), 0,
-        extendedDataOutput.getPos());
-  }
-
-  /**
-   * Special iterator only for counting messages
-   */
-  private class RepresentativeMessageIterator extends
-      RepresentativeByteArrayIterator<M> {
-    /**
-     * Constructor
-     *
-     * @param configuration Configuration
-     * @param buf buffer to read from
-     * @param off Offset into the buffer to start from
-     * @param length Length of the buffer
-     */
-    public RepresentativeMessageIterator(
-        ImmutableClassesGiraphConfiguration configuration,
-        byte[] buf, int off, int length) {
-      super(configuration, buf, off, length);
-    }
-
-    @Override
-    protected M createWritable() {
-      return config.createMessageValue();
-    }
+      DataInputOutput dataInputOutput) {
+    return new MessagesIterable<M>(dataInputOutput, messageValueFactory);
   }
 
   @Override
   protected int getNumberOfMessagesIn(
-      ConcurrentMap<I, ExtendedDataOutput> partitionMap) {
+      ConcurrentMap<I, DataInputOutput> partitionMap) {
     int numberOfMessages = 0;
-    for (ExtendedDataOutput extendedDataOutput : partitionMap.values()) {
+    for (DataInputOutput dataInputOutput : partitionMap.values()) {
       numberOfMessages += Iterators.size(
-          new RepresentativeMessageIterator(config,
-              extendedDataOutput.getByteArray(), 0,
-              extendedDataOutput.getPos()));
+          new RepresentativeByteStructIterator<M>(
+              dataInputOutput.createDataInput()) {
+            @Override
+            protected M createWritable() {
+              return messageValueFactory.newInstance();
+            }
+          });
     }
     return numberOfMessages;
   }
 
   @Override
-  protected void writeMessages(ExtendedDataOutput extendedDataOutput,
+  protected void writeMessages(DataInputOutput dataInputOutput,
       DataOutput out) throws IOException {
-    out.writeInt(extendedDataOutput.getPos());
-    out.write(
-        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+    dataInputOutput.write(out);
   }
 
   @Override
-  protected ExtendedDataOutput readFieldsForMessages(DataInput in) throws
+  protected DataInputOutput readFieldsForMessages(DataInput in) throws
       IOException {
-    int byteArraySize = in.readInt();
-    byte[] messages = new byte[byteArraySize];
-    in.readFully(messages);
-    ExtendedDataOutput extendedDataOutput =
-        config.createExtendedDataOutput(messages, 0);
-    return extendedDataOutput;
+    DataInputOutput dataInputOutput = config.createMessagesInputOutput();
+    dataInputOutput.readFields(in);
+    return dataInputOutput;
   }
 
   /**
@@ -221,46 +205,10 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @return Factory
    */
   public static <I extends WritableComparable, M extends Writable>
-  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+  MessageStoreFactory<I, M, MessageStore<I, M>> newFactory(
+      CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     return new Factory<I, M>(service, config);
-  }
-
-  @Override
-  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
-    if (messageStore instanceof ByteArrayMessagesPerVertexStore) {
-      ByteArrayMessagesPerVertexStore<I, M>
-          byteArrayMessagesPerVertexStore =
-          (ByteArrayMessagesPerVertexStore<I, M>) messageStore;
-      for (Map.Entry<Integer, ConcurrentMap<I, ExtendedDataOutput>>
-           partitionEntry : byteArrayMessagesPerVertexStore.map.entrySet()) {
-        for (Map.Entry<I, ExtendedDataOutput> vertexEntry :
-            partitionEntry.getValue().entrySet()) {
-          ConcurrentMap<I, ExtendedDataOutput> partitionMap =
-              getOrCreatePartitionMap(partitionEntry.getKey());
-          ExtendedDataOutput extendedDataOutput =
-              partitionMap.get(vertexEntry.getKey());
-          if (extendedDataOutput == null) {
-            ExtendedDataOutput newExtendedDataOutput =
-                config.createExtendedDataOutput();
-            extendedDataOutput =
-                partitionMap.putIfAbsent(vertexEntry.getKey(),
-                    newExtendedDataOutput);
-            if (extendedDataOutput == null) {
-              extendedDataOutput = newExtendedDataOutput;
-            }
-          }
-
-          // Add the messages
-          extendedDataOutput.write(vertexEntry.getValue().getByteArray(), 0,
-              vertexEntry.getValue().getPos());
-        }
-      }
-    } else {
-      throw new IllegalArgumentException("addMessages: Illegal argument " +
-          messageStore.getClass());
-    }
   }
 
   /**
@@ -269,26 +217,42 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @param <I> Vertex id
    * @param <M> Message data
    */
-  private static class Factory<I extends WritableComparable, M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
+  public static class Factory<I extends WritableComparable, M extends Writable>
+    implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, ?, ?, M> service;
+    private PartitionSplitInfo<I> partitionInfo;
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+    private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
+
+    /** Constructor for reflection */
+    public Factory() { }
 
     /**
-     * @param service Worker service
+     * @param partitionInfo Partition split info
      * @param config  Hadoop configuration
      */
-    public Factory(CentralizedServiceWorker<I, ?, ?, M> service,
-        ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
-      this.service = service;
+    public Factory(
+      PartitionSplitInfo<I> partitionInfo,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config
+    ) {
+      this.partitionInfo = partitionInfo;
       this.config = config;
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore() {
-      return new ByteArrayMessagesPerVertexStore(service, config);
+    public MessageStore<I, M> newStore(
+        MessageClasses<I, M> messageClasses) {
+      return new ByteArrayMessagesPerVertexStore<I, M>(
+          messageClasses.createMessageValueFactory(config),
+          partitionInfo, config);
+    }
+
+    @Override
+    public void initialize(PartitionSplitInfo<I> partitionInfo,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
+      this.partitionInfo = partitionInfo;
+      this.config = conf;
     }
   }
+
 }

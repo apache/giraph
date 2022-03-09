@@ -42,12 +42,18 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
     throws IOException, InterruptedException {
     ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(context.getConfiguration());
-    if (!conf.hasVertexOutputFormat()) {
+    if (!conf.hasVertexOutputFormat() && !conf.hasEdgeOutputFormat()) {
       LOG.warn("checkOutputSpecs: ImmutableOutputCommiter" +
           " will not check anything");
       return;
     }
-    conf.createVertexOutputFormat().checkOutputSpecs(context);
+
+    if (conf.hasVertexOutputFormat()) {
+      conf.createWrappedVertexOutputFormat().checkOutputSpecs(context);
+    }
+    if (conf.hasEdgeOutputFormat()) {
+      conf.createWrappedEdgeOutputFormat().checkOutputSpecs(context);
+    }
   }
 
   @Override
@@ -55,12 +61,17 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
     throws IOException, InterruptedException {
     ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(context.getConfiguration());
-    if (!conf.hasVertexOutputFormat()) {
+    if (!conf.hasVertexOutputFormat() && !conf.hasEdgeOutputFormat()) {
       LOG.warn("getOutputCommitter: Returning " +
           "ImmutableOutputCommiter (does nothing).");
       return new ImmutableOutputCommitter();
     }
-    return conf.createVertexOutputFormat().getOutputCommitter(context);
+
+    if (conf.hasVertexOutputFormat()) {
+      return conf.createWrappedVertexOutputFormat().getOutputCommitter(context);
+    } else {
+      return conf.createWrappedEdgeOutputFormat().getOutputCommitter(context);
+    }
   }
 
   @Override

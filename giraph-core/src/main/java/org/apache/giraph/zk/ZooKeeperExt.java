@@ -42,10 +42,10 @@ import org.apache.zookeeper.ZooKeeper;
  * should be thread-safe.
  */
 public class ZooKeeperExt {
+  /** Length of the ZK sequence number */
+  public static final int SEQUENCE_NUMBER_LENGTH = 10;
   /** Internal logger */
   private static final Logger LOG = Logger.getLogger(ZooKeeperExt.class);
-  /** Length of the ZK sequence number */
-  private static final int SEQUENCE_NUMBER_LENGTH = 10;
   /** Internal ZooKeeper */
   private final ZooKeeper zooKeeper;
   /** Ensure we have progress */
@@ -162,8 +162,11 @@ public class ZooKeeperExt {
             if (progressable != null) {
               progressable.progress();
             }
-            zooKeeper.create(
-                path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
+            String filePath = path.substring(0, pos);
+            if (zooKeeper.exists(filePath, false) == null) {
+              zooKeeper.create(
+                  filePath, null, acl, CreateMode.PERSISTENT);
+            }
           } catch (KeeperException.NodeExistsException e) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("createExt: Znode " + path.substring(0, pos) +

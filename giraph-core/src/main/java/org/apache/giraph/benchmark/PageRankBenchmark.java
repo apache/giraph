@@ -19,11 +19,19 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.giraph.combiner.FloatSumCombiner;
+import org.apache.giraph.combiner.FloatSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.IntNullArrayEdges;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomIntNullVertexInputFormat;
+import org.apache.giraph.scripting.DeployType;
+import org.apache.giraph.scripting.ScriptLoader;
+import org.apache.giraph.jython.JythonUtils;
+import org.apache.giraph.utils.DistributedCacheUtils;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.collect.Sets;
@@ -31,22 +39,44 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Benchmark for {@link PageRankVertex}
+ * Benchmark for {@link PageRankComputation}
  */
 public class PageRankBenchmark extends GiraphBenchmark {
   @Override
   public Set<BenchmarkOption> getBenchmarkOptions() {
     return Sets.newHashSet(BenchmarkOption.VERTICES,
         BenchmarkOption.EDGES_PER_VERTEX, BenchmarkOption.SUPERSTEPS,
-        BenchmarkOption.LOCAL_EDGES_MIN_RATIO);
+        BenchmarkOption.LOCAL_EDGES_MIN_RATIO, BenchmarkOption.JYTHON,
+        BenchmarkOption.SCRIPT_PATH);
   }
 
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(PageRankVertex.class);
-    conf.setVertexEdgesClass(IntNullArrayEdges.class);
-    conf.setCombinerClass(FloatSumCombiner.class);
+    if (BenchmarkOption.JYTHON.optionTurnedOn(cmd)) {
+      GiraphTypes types = new GiraphTypes();
+      types.inferFrom(PageRankComputation.class);
+
+      String script;
+      DeployType deployType;
+      if (BenchmarkOption.SCRIPT_PATH.optionTurnedOn(cmd)) {
+        deployType = DeployType.DISTRIBUTED_CACHE;
+        String path = BenchmarkOption.SCRIPT_PATH.getOptionValue(cmd);
+        Path hadoopPath = new Path(path);
+        Path remotePath = DistributedCacheUtils.copyAndAdd(hadoopPath, conf);
+        script = remotePath.toString();
+      } else {
+        deployType = DeployType.RESOURCE;
+        script = ReflectionUtils.getPackagePath(this) + "/page-rank.py";
+      }
+      ScriptLoader.setScriptsToLoad(conf, script, deployType, Language.JYTHON);
+      types.writeIfUnset(conf);
+      JythonUtils.init(conf, "PageRank");
+    } else {
+      conf.setComputationClass(PageRankComputation.class);
+    }
+    conf.setOutEdgesClass(IntNullArrayEdges.class);
+    conf.setMessageCombinerClass(FloatSumMessageCombiner.class);
     conf.setVertexInputFormatClass(
         PseudoRandomIntNullVertexInputFormat.class);
 
@@ -54,7 +84,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
         BenchmarkOption.VERTICES.getOptionIntValue(cmd));
     conf.setInt(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
         BenchmarkOption.EDGES_PER_VERTEX.getOptionIntValue(cmd));
-    conf.setInt(PageRankVertex.SUPERSTEP_COUNT,
+    conf.setInt(PageRankComputation.SUPERSTEP_COUNT,
         BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
     conf.setFloat(PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
         BenchmarkOption.LOCAL_EDGES_MIN_RATIO.getOptionFloatValue(cmd,

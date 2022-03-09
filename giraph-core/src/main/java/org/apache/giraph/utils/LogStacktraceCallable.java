@@ -34,7 +34,9 @@ public class LogStacktraceCallable<V> implements Callable<V> {
       Logger.getLogger(LogStacktraceCallable.class);
 
   /** Pass call() to this callable. */
-  private Callable<V> callable;
+  private final Callable<V> callable;
+  /** Uncaught exception handler, if any */
+  private final Thread.UncaughtExceptionHandler uncaughtExceptionHandler;
 
   /**
    * Construct an instance that will pass call() to the given callable.
@@ -42,7 +44,21 @@ public class LogStacktraceCallable<V> implements Callable<V> {
    * @param callable Callable
    */
   public LogStacktraceCallable(Callable<V> callable) {
+    this(callable, null);
+  }
+
+  /**
+   * Construct an instance that will pass call() to the given callable.
+   *
+   * @param callable Callable
+   * @param uncaughtExceptionHandler Uncaught exception handler, if any
+   *
+   *
+   */
+  public LogStacktraceCallable(Callable<V> callable,
+      Thread.UncaughtExceptionHandler uncaughtExceptionHandler) {
     this.callable = callable;
+    this.uncaughtExceptionHandler = uncaughtExceptionHandler;
   }
 
   @Override
@@ -55,6 +71,9 @@ public class LogStacktraceCallable<V> implements Callable<V> {
     } catch (Exception e) {
       // CHECKSTYLE: resume IllegalCatch
       LOG.error("Execution of callable failed", e);
+      if (uncaughtExceptionHandler != null) {
+        uncaughtExceptionHandler.uncaughtException(Thread.currentThread(), e);
+      }
       throw e;
     }
   }

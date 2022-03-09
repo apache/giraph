@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
@@ -25,13 +26,10 @@ import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED;
 
@@ -41,9 +39,9 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUES
  * @param <R> Request type
  */
 public abstract class RequestServerHandler<R> extends
-    SimpleChannelUpstreamHandler {
+  ChannelInboundHandlerAdapter {
   /** Number of bytes in the encoded response */
-  public static final int RESPONSE_BYTES = 13;
+  public static final int RESPONSE_BYTES = 16;
   /** Time class to use */
   private static Time TIME = SystemTime.get();
   /** Class logger */
@@ -51,6 +49,8 @@ public abstract class RequestServerHandler<R> extends
       Logger.getLogger(RequestServerHandler.class);
   /** Already closed first request? */
   private static volatile boolean ALREADY_CLOSED_FIRST_REQUEST = false;
+  /** Flow control used in sending requests */
+  protected FlowControl flowControl;
   /** Close connection on first request (used for simulating failure) */
   private final boolean closeFirstRequest;
   /** Request reserved map (for exactly one semantics) */
@@ -59,6 +59,8 @@ public abstract class RequestServerHandler<R> extends
   private final TaskInfo myTaskInfo;
   /** Start nanoseconds for the processing time */
   private long startProcessingNanoseconds = -1;
+  /** Handler for uncaught exceptions */
+  private final Thread.UncaughtExceptionHandler exceptionHandler;
 
   /**
    * Constructor
@@ -66,66 +68,78 @@ public abstract class RequestServerHandler<R> extends
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
    * @param myTaskInfo Current task info
+   * @param exceptionHandler Handles uncaught exceptions
    */
   public RequestServerHandler(
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
-      TaskInfo myTaskInfo) {
+      TaskInfo myTaskInfo,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = NETTY_SIMULATE_FIRST_REQUEST_CLOSED.get(conf);
     this.myTaskInfo = myTaskInfo;
+    this.exceptionHandler = exceptionHandler;
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent e) {
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
+    throws Exception {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("messageReceived: Got " + e.getMessage().getClass());
+      LOG.trace("messageReceived: Got " + msg.getClass());
     }
 
-    WritableRequest writableRequest = (WritableRequest) e.getMessage();
+    WritableRequest request = (WritableRequest) msg;
 
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
       LOG.info("messageReceived: Simulating closing channel on first " +
-          "request " + writableRequest.getRequestId() + " from " +
-          writableRequest.getClientId());
-      ALREADY_CLOSED_FIRST_REQUEST = true;
-      ctx.getChannel().close();
+          "request " + request.getRequestId() + " from " +
+          request.getClientId());
+      setAlreadyClosedFirstRequest();
+      ctx.close();
       return;
     }
 
     // Only execute this request exactly once
-    int alreadyDone = 1;
+    AckSignalFlag alreadyDone = AckSignalFlag.DUPLICATE_REQUEST;
     if (workerRequestReservedMap.reserveRequest(
-        writableRequest.getClientId(),
-        writableRequest.getRequestId())) {
+        request.getClientId(),
+        request.getRequestId())) {
       if (LOG.isDebugEnabled()) {
         startProcessingNanoseconds = TIME.getNanoseconds();
       }
-      processRequest((R) writableRequest);
+      processRequest((R) request);
       if (LOG.isDebugEnabled()) {
         LOG.debug("messageReceived: Processing client " +
-            writableRequest.getClientId() + ", " +
-            "requestId " + writableRequest.getRequestId() +
-            ", " +  writableRequest.getType() + " took " +
+            request.getClientId() + ", " +
+            "requestId " + request.getRequestId() +
+            ", " +  request.getType() + " took " +
             Times.getNanosSince(TIME, startProcessingNanoseconds) + " ns");
       }
-      alreadyDone = 0;
+      alreadyDone = AckSignalFlag.NEW_REQUEST;
     } else {
       LOG.info("messageReceived: Request id " +
-          writableRequest.getRequestId() + " from client " +
-          writableRequest.getClientId() +
+          request.getRequestId() + " from client " +
+          request.getClientId() +
           " was already processed, " +
           "not processing again.");
     }
 
     // Send the response with the request id
-    ChannelBuffer buffer = ChannelBuffers.directBuffer(RESPONSE_BYTES);
+    ByteBuf buffer = ctx.alloc().buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
-    buffer.writeLong(writableRequest.getRequestId());
-    buffer.writeByte(alreadyDone);
-    e.getChannel().write(buffer);
+    buffer.writeLong(request.getRequestId());
+    int signal =
+        flowControl.calculateResponse(alreadyDone, request.getClientId());
+    buffer.writeInt(signal);
+    ctx.write(buffer);
+  }
+
+  /**
+   * Set the flag indicating already closed first request
+   */
+  private static void setAlreadyClosedFirstRequest() {
+    ALREADY_CLOSED_FIRST_REQUEST = true;
   }
 
   /**
@@ -136,28 +150,27 @@ public abstract class RequestServerHandler<R> extends
   public abstract void processRequest(R request);
 
   @Override
-  public void channelConnected(ChannelHandlerContext ctx,
-                               ChannelStateEvent e) throws Exception {
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("channelConnected: Connected the channel on " +
-          ctx.getChannel().getRemoteAddress());
+      LOG.debug("channelActive: Connected the channel on " +
+          ctx.channel().remoteAddress());
     }
+    ctx.fireChannelActive();
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext ctx,
-                            ChannelStateEvent e) throws Exception {
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("channelClosed: Closed the channel on " +
-          ctx.getChannel().getRemoteAddress() + " with event " +
-          e);
+      LOG.debug("channelInactive: Closed the channel on " +
+          ctx.channel().remoteAddress());
     }
+    ctx.fireChannelInactive();
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-    LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
+  public void exceptionCaught(
+      ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    exceptionHandler.uncaughtException(Thread.currentThread(), cause);
   }
 
   /**
@@ -170,11 +183,21 @@ public abstract class RequestServerHandler<R> extends
      * @param workerRequestReservedMap Worker request reservation map
      * @param conf Configuration to use
      * @param myTaskInfo Current task info
+     * @param exceptionHandler Handles uncaught exceptions
      * @return New {@link RequestServerHandler}
      */
     RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
-        TaskInfo myTaskInfo);
+        TaskInfo myTaskInfo,
+        Thread.UncaughtExceptionHandler exceptionHandler);
+
+    /**
+     * Inform the factory about the flow control policy used (this method should
+     * be called before any call to `#newHandle()`)
+     *
+     * @param flowControl reference to flow control used
+     */
+    void setFlowControl(FlowControl flowControl);
   }
 }

@@ -21,10 +21,9 @@ package org.apache.giraph.comm.requests;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -34,27 +33,28 @@ import java.io.IOException;
  */
 @SuppressWarnings("unchecked")
 public class SendWorkerMessagesRequest<I extends WritableComparable,
-    M extends Writable>
-    extends SendWorkerDataRequest<I, M, ByteArrayVertexIdMessages<I, M>> {
-  /**
-   * Constructor used for reflection only
-   */
-  public SendWorkerMessagesRequest() { }
+    M extends Writable> extends SendWorkerDataRequest<I, M,
+    VertexIdMessages<I, M>> {
+
+  /** Default constructor */
+  public SendWorkerMessagesRequest() {
+  }
 
   /**
    * Constructor used to send request.
    *
-   * @param partVertMsgs Map of remote partitions =>
-   *                     ByteArrayVertexIdMessages
+   * @param partVertMsgs Map of remote partitions =&gt;
+   *                     VertexIdMessages
    */
   public SendWorkerMessagesRequest(
-      PairList<Integer, ByteArrayVertexIdMessages<I, M>> partVertMsgs) {
+      PairList<Integer, VertexIdMessages<I, M>> partVertMsgs) {
     this.partitionVertexData = partVertMsgs;
   }
 
   @Override
-  public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>();
+  public VertexIdMessages<I, M> createVertexIdData() {
+    return new ByteArrayVertexIdMessages<I, M>(
+        getConf().createOutgoingMessageValueFactory());
   }
 
   @Override
@@ -64,17 +64,13 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData serverData) {
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
+    PairList<Integer, VertexIdMessages<I, M>>.Iterator
         iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      try {
-        serverData.getIncomingMessageStore().
-            addPartitionMessages(iterator.getCurrentFirst(),
-                iterator.getCurrentSecond());
-      } catch (IOException e) {
-        throw new RuntimeException("doRequest: Got IOException ", e);
-      }
+      serverData.getIncomingMessageStore().
+          addPartitionMessages(iterator.getCurrentFirst(),
+              iterator.getCurrentSecond());
     }
   }
 }

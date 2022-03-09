@@ -15,26 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.graph;
 
-import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.worker.WorkerAggregatorUsage;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
  * Immutable global state of the graph.
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class GraphState<I extends WritableComparable, V extends Writable,
-E extends Writable, M extends Writable> {
+public class GraphState {
   /** Graph-wide superstep */
   private final long superstep;
   /** Graph-wide number of vertices */
@@ -43,15 +32,6 @@ E extends Writable, M extends Writable> {
   private final long numEdges;
   /** Graph-wide map context */
   private final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph-wide BSP Mapper for this Vertex */
-  private final GraphTaskManager<I, V, E, M> graphTaskManager;
-  /** Handles requests */
-  private final WorkerClientRequestProcessor<I, V, E, M>
-  workerClientRequestProcessor;
-  /** Worker aggregator usage */
-  private final WorkerAggregatorUsage workerAggregatorUsage;
-  /** Partition context */
-  private PartitionContext partitionContext;
 
   /**
    * Constructor
@@ -60,24 +40,14 @@ E extends Writable, M extends Writable> {
    * @param numVertices Current graph-wide vertices
    * @param numEdges Current graph-wide edges
    * @param context Context
-   * @param graphTaskManager GraphTaskManager for this compute node
-   * @param workerClientRequestProcessor Handles all communication
-   * @param workerAggregatorUsage Aggregator usage
    *
    */
-  public GraphState(
-      long superstep, long numVertices,
-      long numEdges, Mapper<?, ?, ?, ?>.Context context,
-      GraphTaskManager<I, V, E, M> graphTaskManager,
-      WorkerClientRequestProcessor<I, V, E, M> workerClientRequestProcessor,
-      WorkerAggregatorUsage workerAggregatorUsage) {
+  public GraphState(long superstep, long numVertices, long numEdges,
+      Mapper<?, ?, ?, ?>.Context context) {
     this.superstep = superstep;
     this.numVertices = numVertices;
     this.numEdges = numEdges;
     this.context = context;
-    this.graphTaskManager = graphTaskManager;
-    this.workerClientRequestProcessor = workerClientRequestProcessor;
-    this.workerAggregatorUsage = workerAggregatorUsage;
   }
 
   public long getSuperstep() {
@@ -96,33 +66,9 @@ E extends Writable, M extends Writable> {
     return context;
   }
 
-  public GraphTaskManager<I, V, E, M> getGraphTaskManager() {
-    return graphTaskManager;
-  }
-
-  public WorkerClientRequestProcessor<I, V, E, M>
-  getWorkerClientRequestProcessor() {
-    return workerClientRequestProcessor;
-  }
-
-  public WorkerAggregatorUsage getWorkerAggregatorUsage() {
-    return workerAggregatorUsage;
-  }
-
-  public void setPartitionContext(PartitionContext partitionContext) {
-    this.partitionContext = partitionContext;
-  }
-
-  public PartitionContext getPartitionContext() {
-    return partitionContext;
-  }
-
   @Override
   public String toString() {
     return "(superstep=" + superstep + ",numVertices=" + numVertices + "," +
-        "numEdges=" + numEdges + ",context=" + context +
-        ",graphMapper=" + graphTaskManager +
-        ",workerClientRequestProcessor=" + workerClientRequestProcessor + ")";
-
+        "numEdges=" + numEdges + ",context=" + context + ")";
   }
 }

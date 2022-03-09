@@ -29,8 +29,6 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 public interface ReusesObjectsPartition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Partition<I, V, E, M> { }
+    V extends Writable, E extends Writable> extends Partition<I, V, E> { }

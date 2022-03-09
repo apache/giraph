@@ -20,6 +20,7 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.io.VertexValueInputFormat;
 import org.apache.giraph.io.VertexValueReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -39,14 +40,15 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class TextVertexValueInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     extends VertexValueInputFormat<I, V> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
@@ -83,16 +85,11 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
      * Create the line record reader. Override this to use a different
      * underlying record reader (useful for testing).
      *
-     * @param inputSplit
-     *          the split to read
-     * @param context
-     *          the context passed to initialize
-     * @return
-     *         the record reader to be used
-     * @throws IOException
-     *           exception that can be thrown during creation
-     * @throws InterruptedException
-     *           exception that can be thrown during creation
+     * @param inputSplit the split to read
+     * @param context the context passed to initialize
+     * @return the record reader to be used
+     * @throws IOException exception that can be thrown during creation
+     * @throws InterruptedException exception that can be thrown during creation
      */
     protected RecordReader<LongWritable, Text>
     createLineRecordReader(InputSplit inputSplit, TaskAttemptContext context)
@@ -155,22 +152,17 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
     /**
      * Reads vertex id from the current line.
      *
-     * @param line
-     *          the current line
-     * @return
-     *         the vertex id corresponding to the line
-     * @throws IOException
-     *           exception that can be thrown while reading
+     * @param line the current line
+     * @return the vertex id corresponding to the line
+     * @throws IOException exception that can be thrown while reading
      */
     protected abstract I getId(Text line) throws IOException;
 
     /**
      * Reads vertex value from the current line.
      *
-     * @param line
-     *          the current line
-     * @return
-     *         the vertex value corresponding to the line
+     * @param line the current line
+     * @return the vertex value corresponding to the line
      * @throws IOException
      *           exception that can be thrown while reading
      */
@@ -181,8 +173,7 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
    * Abstract class to be implemented by the user to read a vertex value from
    * each text line after preprocessing it.
    *
-   * @param <T>
-   *          The resulting type of preprocessing.
+   * @param <T> The resulting type of preprocessing.
    */
   protected abstract class TextVertexValueReaderFromEachLineProcessed<T>
       extends TextVertexValueReader {
@@ -224,12 +215,9 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
      * Preprocess the line so other methods can easily read necessary
      * information for creating vertex.
      *
-     * @param line
-     *          the current line to be read
-     * @return
-     *         the preprocessed object
-     * @throws IOException
-     *           exception that can be thrown while reading
+     * @param line the current line to be read
+     * @return the preprocessed object
+     * @throws IOException exception that can be thrown while reading
      */
     protected abstract T preprocessLine(Text line) throws IOException;
 
@@ -238,22 +226,17 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
      *
      * @param line
      *          the object obtained by preprocessing the line
-     * @return
-     *         the vertex id
-     * @throws IOException
-     *           exception that can be thrown while reading
+     * @return the vertex id
+     * @throws IOException exception that can be thrown while reading
      */
     protected abstract I getId(T line) throws IOException;
 
     /**
      * Reads vertex value from the preprocessed line.
      *
-     * @param line
-     *          the object obtained by preprocessing the line
-     * @return
-     *         the vertex value
-     * @throws IOException
-     *           exception that can be thrown while reading
+     * @param line the object obtained by preprocessing the line
+     * @return the vertex value
+     * @throws IOException exception that can be thrown while reading
      */
     protected abstract V getValue(T line) throws IOException;
   }

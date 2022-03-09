@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Building and testing</title>
+  </properties>
+
+  <body>
+
+<section name="Building and Testing">
+
+<p>
+You can check out Giraph with <tt>git clone http://gitbox.apache.org/repos/asf/giraph.git</tt>. In order to build and test Giraph, you will need the following:</p>
+<ul>
+  <li>Java 1.8</li>
+  <li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
+  <li>One of the supported versions of Apache Hadoop:
+    <ul>
+      <li>YARN version: Apache Hadoop 2.0.3-alpha, other versions may work as well</li>
+      <li>Secure Hadoop versions: Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well</li>
+      <li>Unsecure Hadoop versions: Apache Hadoop 0.20.1, 0.20.2, 0.20.3. While we provide support for unsecure Hadoop with the maven profile 'hadoop_non_secure', we have been primarily focusing on secure Hadoop releases at this time.</li>
+      <li>Other distributions that included Apache Hadoop reported to work include: Cloudera CDH 4.4</li>
+    </ul>
+  </li>
+</ul>
+	  
+<p>Use the maven commands with secure Hadoop to:</p>
+
+
+
+
+<ul>
+  <li>compile, package and install: <tt>mvn -Phadoop_2 -fae -DskipTests clean install</tt></li>
+  <li>test (i.e. <tt>mvn test</tt>) For testing, one can submit the test to a running Hadoop instance (i.e. <tt>mvn test -Dprop.mapred.job.tracker=localhost:50300</tt>)</li>
+</ul>
+<p>For the non-secure versions of Hadoop, run the maven commands with the
+additional argument <tt>-Dhadoop=non_secure</tt> to enable the maven profile
+<tt>hadoop_non_secure</tt>.  An example compilation command is
+<tt>mvn -Phadoop_2 -fae -DskipTests -Dhadoop=non_secure clean install</tt>.</p>
+</section>
+  </body>
+</document>

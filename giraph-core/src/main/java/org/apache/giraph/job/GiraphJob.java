@@ -18,8 +18,8 @@
 
 package org.apache.giraph.job;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.giraph.bsp.BspInputFormat;
-import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -46,7 +46,7 @@ public class GiraphJob {
   /** Internal delegated job to proxy interface requests for Job */
   private final DelegatedJob delegatedJob;
   /** Name of the job */
-  private final String jobName;
+  private String jobName;
   /** Helper configuration from the job */
   private final GiraphConfiguration giraphConfiguration;
 
@@ -60,9 +60,12 @@ public class GiraphJob {
     /**
      * Constructor
      *
+     * @param conf Configuration
      * @throws IOException
      */
-    DelegatedJob() throws IOException { }
+    DelegatedJob(Configuration conf) throws IOException {
+      super(conf);
+    }
 
     @Override
     public Configuration getConfiguration() {
@@ -107,7 +110,15 @@ public class GiraphJob {
                    String jobName) throws IOException {
     this.jobName = jobName;
     this.giraphConfiguration = giraphConfiguration;
-    this.delegatedJob = new DelegatedJob();
+    this.delegatedJob = new DelegatedJob(giraphConfiguration);
+  }
+
+  public String getJobName() {
+    return jobName;
+  }
+
+  public void setJobName(String jobName) {
+    this.jobName = jobName;
   }
 
   /**
@@ -207,14 +218,14 @@ public class GiraphJob {
     giraphConfiguration.setBoolean("mapreduce.job.user.classpath.first", true);
 
     // If the checkpoint frequency is 0 (no failure handling), set the max
-    // tasks attempts to be 0 to encourage faster failure of unrecoverable jobs
+    // tasks attempts to be 1 to encourage faster failure of unrecoverable jobs
     if (giraphConfiguration.getCheckpointFrequency() == 0) {
       int oldMaxTaskAttempts = giraphConfiguration.getMaxTaskAttempts();
-      giraphConfiguration.setMaxTaskAttempts(0);
+      giraphConfiguration.setMaxTaskAttempts(1);
       if (LOG.isInfoEnabled()) {
         LOG.info("run: Since checkpointing is disabled (default), " +
             "do not allow any task retries (setting " +
-            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 0, " +
+            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 1, " +
             "old value = " + oldMaxTaskAttempts + ")");
       }
     }
@@ -223,20 +234,70 @@ public class GiraphJob {
     ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
     checkLocalJobRunnerConfiguration(conf);
-    Job submittedJob = new Job(conf, jobName);
-    if (submittedJob.getJar() == null) {
-      submittedJob.setJarByClass(getClass());
+
+    int tryCount = 0;
+    GiraphJobRetryChecker retryChecker = conf.getJobRetryChecker();
+    while (true) {
+      GiraphJobObserver jobObserver = conf.getJobObserver();
+
+      JobProgressTrackerService jobProgressTrackerService =
+          DefaultJobProgressTrackerService.createJobProgressTrackerService(
+              conf, jobObserver);
+      ClientThriftServer clientThriftServer = null;
+      if (jobProgressTrackerService != null) {
+        clientThriftServer = new ClientThriftServer(
+            conf, ImmutableList.of(jobProgressTrackerService));
+      }
+
+      tryCount++;
+      Job submittedJob = new Job(conf, jobName);
+      if (submittedJob.getJar() == null) {
+        submittedJob.setJarByClass(getClass());
+      }
+      submittedJob.setNumReduceTasks(0);
+      submittedJob.setMapperClass(GraphMapper.class);
+      submittedJob.setInputFormatClass(BspInputFormat.class);
+      submittedJob.setOutputFormatClass(
+          GiraphConstants.HADOOP_OUTPUT_FORMAT_CLASS.get(conf));
+      if (jobProgressTrackerService != null) {
+        jobProgressTrackerService.setJob(submittedJob);
+      }
+
+      jobObserver.launchingJob(submittedJob);
+      submittedJob.submit();
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Tracking URL: " + submittedJob.getTrackingURL());
+        LOG.info(
+            "Waiting for resources... Job will start only when it gets all " +
+                (conf.getMinWorkers() + 1) + " mappers");
+      }
+      jobObserver.jobRunning(submittedJob);
+      HaltApplicationUtils.printHaltInfo(submittedJob, conf);
+
+      boolean passed = submittedJob.waitForCompletion(verbose);
+      if (jobProgressTrackerService != null) {
+        jobProgressTrackerService.stop(passed);
+      }
+      if (clientThriftServer != null) {
+        clientThriftServer.stopThriftServer();
+      }
+
+      jobObserver.jobFinished(submittedJob, passed);
+
+      if (!passed) {
+        String restartFrom = retryChecker.shouldRestartCheckpoint(submittedJob);
+        if (restartFrom != null) {
+          GiraphConstants.RESTART_JOB_ID.set(conf, restartFrom);
+          continue;
+        }
+      }
+
+      if (passed || !retryChecker.shouldRetry(submittedJob, tryCount)) {
+        return passed;
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("run: Retrying job, " + tryCount + " try");
+      }
     }
-    submittedJob.setNumReduceTasks(0);
-    submittedJob.setMapperClass(GraphMapper.class);
-    submittedJob.setInputFormatClass(BspInputFormat.class);
-    submittedJob.setOutputFormatClass(BspOutputFormat.class);
-
-    GiraphJobObserver jobObserver = conf.getJobObserver();
-    jobObserver.launchingJob(submittedJob);
-    boolean passed = submittedJob.waitForCompletion(verbose);
-    jobObserver.jobFinished(submittedJob, passed);
-
-    return passed;
   }
 }

@@ -25,7 +25,7 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
@@ -48,17 +48,10 @@ public class SaslConnectionTest {
   /** Class configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
-  public static class IntVertex extends Vertex<IntWritable,
-          IntWritable, IntWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
-
   @Before
   public void setUp() {
     GiraphConfiguration tmpConfig = new GiraphConfiguration();
-    tmpConfig.setVertexClass(IntVertex.class);
+    tmpConfig.setComputationClass(IntNoOpComputation.class);
     GiraphConstants.AUTHENTICATE.set(tmpConfig, true);
     conf = new ImmutableClassesGiraphConfiguration(tmpConfig);
   }
@@ -74,7 +67,7 @@ public class SaslConnectionTest {
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
 
-    ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
 
     SaslServerHandler.Factory mockedSaslServerFactory =
@@ -92,11 +85,14 @@ public class SaslConnectionTest {
             new WorkerRequestServerHandler.Factory(serverData),
             workerInfo,
             context,
-            mockedSaslServerFactory);
+            mockedSaslServerFactory,
+            new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(Lists.<WorkerInfo>newArrayList(workerInfo));
 
     client.stop();

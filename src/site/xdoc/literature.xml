@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Literature about Apache Giraph</title>
+  </properties>
+
+  <body>
+
+    <section name="Books">
+		<table>
+	    <tr>
+		  <td><b>Practical Graph Analytics with Apache Giraph</b> (<a href="http://www.apress.com/9781484212523">Published by Apress</a>)<br/> 
+             Practical Graph Analytics with Apache Giraph helps you build data mining and machine learning applications using the Apache Foundation’s Giraph framework for graph processing. This is the same framework as used by Facebook, Google, and other social media analytics operations to derive business value from vast amounts of interconnected data points.
+      </td>
+      <td><img src="http://www.apress.com/media/catalog/product/cache/9/image/9df78eab33525d08d6e5fb8d27136e95/A/9/A9781484212523-3d.png"/><br/>
+      </td>
+		</tr>
+		</table>
+    </section>
+ 
+    <section name="Research Articles">
+      <p>Sergey Edunov, Dionysios Logothetis, Avery Ching, Maja Kabiljo, Cheng Wang, <i>Darwini: Generating realistic large-scale social graphs</i>. 
+      IEEE International Conference on Distributed Computing Systems, 2018<br/>
+      <a href="https://easychair.org/publications/preprint/5vJS">https://easychair.org/publications/preprint/5vJS</a>
+      </p>
+
+      <p>Martella, Claudio et al. <i>Spinner: scalable graph partitioning for the cloud.</i> 
+      IEEE International Conference on Data Engineering, 2017 <br/>
+      <a href="https://ieeexplore.ieee.org/document/7930049/">https://ieeexplore.ieee.org/document/7930049/</a>
+      </p>
+ 
+      <p>Avery Ching, Sergey Edunov, Maja Kabiljo, Dionysios Logothetis, Sambavi Muthukrishnan, <i>One Trillion Edges: Graph Processing at Facebook-Scale</i>. 
+        Proceedings of the VLDB Endowment, Vol. 8, No. 12, (2015)<br/>
+      <a href="http://www.vldb.org/pvldb/vol8/p1804-ching.pdf">http://www.vldb.org/pvldb/vol8/p1804-ching.pdf</a>
+      </p>
+		
+      <p>Xin, R. S., Crankshaw, D., Dave, A., Gonzalez, J. E., Franklin, M. J., &amp; Stoica, I. <i>GraphX: Unifying Data-Parallel and Graph-Parallel Analytics</i>. 
+		  arXiv preprint arXiv:1402.2394. (2014)<br/>
+      <a href="http://arxiv.org/pdf/1402.2394">http://arxiv.org/pdf/1402.2394</a>
+      </p>
+     
+      <p>Khayyat, Zuhair, et al. <i>Mizan: a system for dynamic load balancing in large-scale graph processing.</i> 
+         Proceedings of the 8th ACM European Conference on Computer Systems. ACM, (2013). <br/>
+      <a href="http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf">http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf</a>
+      </p>
+      
+      <p>Salihoglu, Semih, &amp; Jennifer Widom. <i>Gps: A graph processing system.</i> 
+        Proceedings of the 25th International Conference on Scientific and Statistical Database Management. ACM, (2013).<br/>
+      <a href="http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf">http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf</a>
+      </p>		
+      
+      <p>Tian, Y., Balmin, A., Corsten, S. A., Tatikonda, S., &amp; McPherson, J. <i>From <b>Think Like a Vertex</b> to <b>Think Like a Graph</b></i>. 
+      Proceedings of the VLDB Endowment, 7(3). (2013)<br/>
+      <a href="http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf">http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf</a>
+      </p>
+   
+      <p>Schelter, S., Ewen, S., Tzoumas, K., &amp; Markl, V. <i>All roads lead to Rome: optimistic recovery for distributed iterative data processing</i>. 
+      In Proceedings of the 22nd ACM international conference on Conference on information &amp; knowledge management (pp. 1919-1928). ACM. (2013, October).<br/>
+      <a href="http://stratosphere.eu/assets/papers/optimistic.pdf">http://stratosphere.eu/assets/papers/optimistic.pdf</a>
+      </p>
+   
+      <p>Ewen, S., Tzoumas, K., Kaufmann, M., &amp; Markl, V. <i>Spinning fast iterative data flows</i>. Proceedings of the VLDB Endowment, 5(11), 1268-1279. (2012).<br/>
+      <a href="http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail">http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail</a>
+      </p>
+      
+      <p>Malewicz, Grzegorz, et al. <i>Pregel: a system for large-scale graph processing.</i> Proceedings of the 2010 ACM SIGMOD International Conference on Management of data. ACM, (2010). <br/>
+      <a href="http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf">http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf</a>
+      </p>
+          
+      <p>Valiant, Leslie G. <i>A bridging model for parallel computation.</i> Communications of the ACM 33.8 : 103-111. (1990).<br/>
+      <a href="http://web.mit.edu/6.976/www/handout/valiant2.pdf">http://web.mit.edu/6.976/www/handout/valiant2.pdf</a>
+      </p>
+      
+      <p>Hong, Sungpack, et al. <i>Green-Marl: a DSL for easy and efficient graph analysis.</i> ACM SIGARCH Computer Architecture News. Vol. 40. No. 1. ACM, (2012). <br/>
+      <a href="http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf">http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf</a>
+      </p>
+        
+      <p>Salihoglu, Semih, and Jennifer Widom. <i>Optimizing Graph Algorithms on Pregel-like Systems.</i> (2014). <br/>
+      <a href="http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf">http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf</a>
+      </p>
+      
+      <p>Salihoglu, Semih, and Jennifer Widom. <i>HelP: High-level Primitives For Large-Scale Graph Processing.</i> <br/>
+      <a href="http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf">http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf</a>
+      </p>
+    </section>
+
+  </body>
+</document>

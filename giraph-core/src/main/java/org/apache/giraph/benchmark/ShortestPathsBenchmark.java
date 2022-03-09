@@ -19,7 +19,7 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.giraph.combiner.MinimumDoubleCombiner;
+import org.apache.giraph.combiner.MinimumDoubleMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ArrayListEdges;
@@ -41,7 +41,7 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
   private static final Logger LOG =
       Logger.getLogger(ShortestPathsBenchmark.class);
 
-  /** Option for VertexEdges class */
+  /** Option for OutEdges class */
   private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
       "c", "edgesClass", true,
       "Vertex edges class (0 for HashMapEdges, 1 for ArrayListEdges)");
@@ -58,16 +58,16 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(ShortestPathsVertex.class);
+    conf.setComputationClass(ShortestPathsComputation.class);
     if (EDGES_CLASS.getOptionIntValue(cmd, 1) == 1) {
-      conf.setVertexEdgesClass(ArrayListEdges.class);
+      conf.setOutEdgesClass(ArrayListEdges.class);
     } else {
-      conf.setVertexEdgesClass(HashMapEdges.class);
+      conf.setOutEdgesClass(HashMapEdges.class);
     }
-    LOG.info("Using class " + GiraphConstants.VERTEX_CLASS.get(conf));
+    LOG.info("Using class " + GiraphConstants.COMPUTATION_CLASS.get(conf));
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     if (!NO_COMBINER.optionTurnedOn(cmd)) {
-      conf.setCombinerClass(MinimumDoubleCombiner.class);
+      conf.setMessageCombinerClass(MinimumDoubleMessageCombiner.class);
     }
     conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
         BenchmarkOption.VERTICES.getOptionLongValue(cmd));

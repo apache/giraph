@@ -21,10 +21,17 @@ under the License.
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>13</version>
+  </parent>
+
   <groupId>org.apache.giraph</groupId>
   <artifactId>giraph-parent</artifactId>
   <packaging>pom</packaging>
-  <version>0.2-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 
   <name>Apache Giraph Parent</name>
   <url>http://giraph.apache.org/</url>
@@ -32,9 +39,9 @@ under the License.
   <inceptionYear>2011</inceptionYear>
 
   <scm>
-    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/giraph.git</connection>
-    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/giraph.git</developerConnection>
-    <url>https://git-wip-us.apache.org/repos/asf/giraph.git</url>
+    <connection>scm:git:http://gitbox.apache.org/repos/asf/giraph.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/giraph.git</developerConnection>
+    <url>https://gitbox.apache.org/repos/asf/giraph.git</url>
   </scm>
 
   <ciManagement>
@@ -156,6 +163,13 @@ under the License.
       <organization>LSDS group, VU Amsterdam</organization>
     </developer>
     <developer>
+      <id>rvs</id>
+      <name>Roman Shaposhnik</name>
+      <email>rvs@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Pivotal Inc.</organization>
+    </developer>
+    <developer>
       <id>ssc</id>
       <name>Sebastian Schelter</name>
       <email>ssc@apache.org</email>
@@ -204,6 +218,38 @@ under the License.
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
+    <developer>
+      <id>edunov</id>
+      <name>Sergey Edunov</name>
+      <email>edunov@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>pavanka</id>
+      <name>Pavan Kumar</name>
+      <email>pavanka@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>ikabiljo</id>
+      <name>Igor Kabiljo</name>
+      <email>ikabiljo@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>heslami</id>
+      <name>Hassan Eslami</name>
+      <email>heslami@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook, UIUC</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
@@ -225,7 +271,7 @@ under the License.
       </snapshots>
     </repository>
     <repository>
-      <id>apache snapshots</id>
+      <id>apache</id>
       <url>https://repository.apache.org/content/groups/public/</url>
       <snapshots>
         <enabled>true</enabled>
@@ -235,7 +281,7 @@ under the License.
       </releases>
     </repository>
     <repository>
-      <id>sonatypereleases</id>
+      <id>sonatype</id>
       <url>https://oss.sonatype.org/content/groups/public/</url>
       <snapshots>
         <enabled>true</enabled>
@@ -248,16 +294,68 @@ under the License.
 
   <properties>
     <top.dir>${project.basedir}</top.dir>
-    <lib.dir>${top.dir}/lib</lib.dir>
+
     <buildtype>test</buildtype>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hbase.version>0.90.5</hbase.version>
-    <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
-    <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
-    <slf4j.version>1.7.2</slf4j.version>
-    <hive.version>0.10.0</hive.version>
-    <facebook-hadoop.version>0.20.0</facebook-hadoop.version>
+    <project.maven.version>3.0.0</project.maven.version>
+    <project.enforcer.skip>false</project.enforcer.skip>
+    <project.enforcer.fail>true</project.enforcer.fail>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
+    <project.build.javaHome>${env.JAVA_HOME}</project.build.javaHome>
+    <project.enforcer.minJdk>1.8</project.enforcer.minJdk>
+    <giraph.maven.dependency.plugin.skip>false</giraph.maven.dependency.plugin.skip>
+    <giraph.maven.duplicate.finder.skip>false</giraph.maven.duplicate.finder.skip>
+    <!-- This lets modules skip unit tests. More details: GIRAPH-957 --> 
+    <surefire.skip>false</surefire.skip>
+
+    <checkstyle.config.path>${top.dir}/checkstyle.xml</checkstyle.config.path>
+
+    <dep.asm.version>3.2</dep.asm.version>
+    <dep.airline.version>0.5</dep.airline.version>
+    <dep.base64.version>2.3.8</dep.base64.version>
+    <dep.cli-parser.version>1.1</dep.cli-parser.version>
+    <dep.codehaus-jackson.version>1.9.2</dep.codehaus-jackson.version>
+    <dep.commons-codec.version>1.8</dep.commons-codec.version>
+    <dep.commons-cli.version>1.2</dep.commons-cli.version>
+    <dep.commons-collections.version>3.2.1</dep.commons-collections.version>
+    <dep.commons-configuration.version>1.6</dep.commons-configuration.version>
+    <dep.commons-httpclient.version>3.0.1</dep.commons-httpclient.version>
+    <dep.commons-logging.version>1.1.1</dep.commons-logging.version>
+    <dep.commons-io.version>2.1</dep.commons-io.version>
+    <dep.commons-net.version>3.1</dep.commons-net.version>
+    <dep.commons-lang3.version>3.4</dep.commons-lang3.version>
+    <dep.facebook-swift.version>0.14.0</dep.facebook-swift.version>
+    <dep.fasterxml-jackson.version>2.10.0</dep.fasterxml-jackson.version>
+    <dep.fastutil.version>6.5.4</dep.fastutil.version>
+    <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
+    <dep.guava.version>21.0</dep.guava.version>
+    <dep.jaxb-impl.version>2.2.4-1</dep.jaxb-impl.version>
+    <dep.jersey.version>1.17</dep.jersey.version>
+    <dep.jetty.version>6.1.26</dep.jetty.version>
+    <dep.json.version>20160810</dep.json.version>
+    <dep.junit.version>4.11</dep.junit.version>
+    <dep.jython-standalone.version>2.7.2</dep.jython-standalone.version>
+    <dep.kryo.version>4.0.0</dep.kryo.version>
+    <dep.reflectasm.version>1.11.3</dep.reflectasm.version>
+    <dep.kryo-serializers.version>0.42</dep.kryo-serializers.version>
+    <dep.libthrift.version>0.9.0</dep.libthrift.version>
+    <dep.log4j.version>1.2.17</dep.log4j.version>
+    <dep.mockito.version>1.9.5</dep.mockito.version>
+    <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
+    <dep.netty.version>4.1.36.Final</dep.netty.version>
+    <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
+    <dep.objenesis.version>2.2</dep.objenesis.version>
+    <dep.openhft-compiler.version>2.2.1</dep.openhft-compiler.version>
+    <dep.paranamer.version>2.5.2</dep.paranamer.version>
+    <dep.slf4j.version>1.7.6</dep.slf4j.version>
+    <dep.typetools.version>0.2.1</dep.typetools.version>
+    <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
+    <dep.yourkit-api.version>11.0.10</dep.yourkit-api.version>
+    <dep.zookeeper.version>3.4.5</dep.zookeeper.version>
+
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
+    <munge.symbols>NO_MUNGE_SYMBOLS</munge.symbols>
   </properties>
 
   <build>
@@ -284,8 +382,160 @@ under the License.
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>2.10</version>
+          <configuration>
+            <skip>${giraph.maven.dependency.plugin.skip}</skip>
+            <failOnWarning>true</failOnWarning>
+            <ignoreNonCompile>true</ignoreNonCompile>
+          </configuration>
+          <executions>
+            <execution>
+              <id>default</id>
+              <phase>process-test-classes</phase>
+              <goals>
+                <goal>analyze-only</goal>
+                <goal>analyze-duplicate</goal>
+                <goal>analyze-dep-mgt</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>com.ning.maven.plugins</groupId>
+          <artifactId>maven-duplicate-finder-plugin</artifactId>
+          <version>1.0.4</version>
+          <executions>
+            <execution>
+              <id>default</id>
+              <phase>process-test-classes</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+              <skip>${giraph.maven.duplicate.finder.skip}</skip>
+              <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+              <exceptions>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils-core</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-collections</groupId>
+                      <artifactId>commons-collections</artifactId>
+                    </dependency>
+                  </conflictingDependencies>
+                  <classes>
+                    <class>org.apache.commons.collections.ArrayStack</class>
+                    <class>org.apache.commons.collections.Buffer</class>
+                    <class>org.apache.commons.collections.BufferUnderflowException</class>
+                    <class>org.apache.commons.collections.FastHashMap</class>
+                  </classes>
+                </exception>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils-core</artifactId>
+                    </dependency>
+                  </conflictingDependencies>
+                  <packages>
+                    <package>org.apache.commons.beanutils</package>
+                  </packages>
+                </exception>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-core</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-rdbms</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-connectionpool</artifactId>
+                    </dependency>
+                </conflictingDependencies>
+                <resources>
+                  <resource>plugin.xml</resource>
+                </resources>
+                </exception>
+              </exceptions>
+            <!-- Ruby, jython, hive-exec are difficult -->
+            <ignoredDependencies>
+              <dependency>
+                <groupId>org.jruby</groupId>
+                <artifactId>jruby-complete</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>org.python</groupId>
+                <artifactId>jython-standalone</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>org.apache.hive</groupId>
+                <artifactId>hive-exec</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>asm</groupId>
+                <artifactId>asm</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-core</artifactId>
+              </dependency>
+            </ignoredDependencies>
+            <ignoredResources>
+              <ignoredResource>.*\.html</ignoredResource>
+              <ignoredResource>META-INF/.*</ignoredResource>
+              <ignoredResource>about_files/.*</ignoredResource>
+              <ignoredResource>plugin\.properties</ignoredResource>
+              <ignoredResource>.*\.java</ignoredResource>
+            </ignoredResources>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>com.ning.maven.plugins</groupId>
+          <artifactId>maven-dependency-versions-check-plugin</artifactId>
+          <version>2.0.2</version>
+          <configuration>
+            <skip>${giraph.maven.duplicate.finder.skip}</skip>
+            <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+          </configuration>
+          <executions>
+            <execution>
+              <id>default</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.4</version>
+          <configuration>
+            <tarLongFileMode>gnu</tarLongFileMode>
+          </configuration>
           <executions>
             <execution>
               <id>build-fat-jar</id>
@@ -300,7 +550,7 @@ under the License.
                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                   </manifest>
                   <manifestEntries>
-                    <Build-Jdk>${java.version}</Build-Jdk>
+                    <Build-Jdk>${project.build.targetJdk}</Build-Jdk>
                     <Build-Time>${maven.build.timestamp}</Build-Time>
                     <Git-Commit-Branch>${mvngit.branch}</Git-Commit-Branch>
                     <Git-Commit-Hash>${mvngit.commit.id}</Git-Commit-Hash>
@@ -320,9 +570,9 @@ under the License.
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>2.10</version>
+          <version>2.15</version>
           <configuration>
-            <configLocation>${top.dir}/checkstyle.xml</configLocation>
+            <configLocation>${checkstyle.config.path}</configLocation>
             <consoleOutput>true</consoleOutput>
             <enableRulesSummary>false</enableRulesSummary>
             <headerLocation>${top.dir}/license-header.txt</headerLocation>
@@ -343,29 +593,59 @@ under the License.
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.0</version>
           <configuration>
-            <source>1.6</source>
-            <target>1.6</target>
-          </configuration>
+            <source>${project.build.targetJdk}</source>
+            <target>${project.build.targetJdk}</target>
+            <executable>${project.build.javaHome}/bin/javac</executable>
+            <fork>true</fork> 
+         </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.0.1</version>
+          <version>1.2</version>
           <executions>
             <execution>
-              <id>enforce-maven</id>
+              <id>default</id>
+              <phase>validate</phase>
               <goals>
                 <goal>enforce</goal>
               </goals>
-              <configuration>
-                <rules>
-                  <requireMavenVersion>
-                    <version>3.0.0</version>
-                  </requireMavenVersion>
-                </rules>
-              </configuration>
             </execution>
           </executions>
+          <configuration>
+            <skip>${project.enforcer.skip}</skip>
+            <fail>${project.enforcer.fail}</fail>
+            <failFast>false</failFast>
+            <rules>
+              <!-- The following dependencies are hazardous for builds. -->
+              <bannedDependencies>
+                <excludes>
+                  <!-- clashes with commons-logging:commons-logging -->
+                  <exclude>commons-logging:commons-logging-api</exclude>
+                  <!-- clashes with cglib:cglib-nodep -->
+                  <exclude>cglib:cglib</exclude>
+                  <!-- Use the official version at javax.servlet:javax.servlet-api -->
+                  <exclude>org.eclipse.jetty.orbit:javax.servlet</exclude>
+                  <!-- Renamed airlift modules -->
+                  <exclude>io.airlift:discovery-experimental</exclude>
+                  <exclude>io.airlift:event-experimental</exclude>
+                  <exclude>io.airlift:http-client-experimental</exclude>
+                  <exclude>io.airlift:jmx-http-experimental</exclude>
+                  <exclude>io.airlift:jmx-http-rpc-experimental</exclude>
+                  <exclude>io.airlift:rack-experimental</exclude>
+                  <exclude>io.airlift:rack-launcher-experimental</exclude>
+                  <exclude>io.airlift:rack-packaging-experimental</exclude>
+                  <exclude>io.airlift:rack-server-base-experimental</exclude>
+                </excludes>
+              </bannedDependencies>
+              <requireMavenVersion>
+                <version>${project.maven.version}</version>
+              </requireMavenVersion>
+              <requireJavaVersion>
+                <version>${project.enforcer.minJdk}</version>
+              </requireJavaVersion>
+            </rules>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -378,7 +658,7 @@ under the License.
                 <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
               </manifest>
               <manifestEntries>
-                <Build-Jdk>${java.version}</Build-Jdk>
+                <Build-Jdk>${project.build.targetJdk}</Build-Jdk>
                 <Build-Time>${maven.build.timestamp}</Build-Time>
                 <Git-Commit-Branch>${mvngit.branch}</Git-Commit-Branch>
                 <Git-Commit-Hash>${mvngit.commit.id}</Git-Commit-Hash>
@@ -401,14 +681,38 @@ under the License.
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.9</version>
-          <executions>
-            <execution>
-              <id>attach-javadocs</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
+          <configuration>
+            <javadocExecutable>${project.build.javaHome}/bin/javadoc</javadocExecutable>
+            <!--
+             JDK8 adds lots of strict checking in javadoc, disabling for now.
+            -->
+            <additionalparam>-Xdoclint:none</additionalparam>
+            <!--
+             Don't fail the build if javadoc fails.
+            -->
+            <failOnError>false</failOnError>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.7</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.4.1</version>
+          <configuration>
+            <localCheckout>true</localCheckout>
+            <pushChanges>false</pushChanges>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.scm</groupId>
+              <artifactId>maven-scm-provider-gitexe</artifactId>
+              <version>1.8.1</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -426,69 +730,7 @@ under the License.
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>3.2</version>
-          <configuration>
-            <reportPlugins>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-project-info-reports-plugin</artifactId>
-                <version>2.2</version>
-                <reports>
-                  <report>index</report>
-                  <report>project-team</report>
-                  <report>license</report>
-                  <report>mailing-list</report>
-                  <report>dependencies</report>
-                  <report>dependency-convergence</report>
-                  <report>plugin-management</report>
-                  <report>cim</report>
-                  <report>issue-tracking</report>
-                  <report>scm</report>
-                  <report>summary</report>
-                </reports>
-              </plugin>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>2.6</version>
-              </plugin>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9</version>
-              </plugin>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>2.9</version>
-              </plugin>
-              <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jdepend-maven-plugin</artifactId>
-                <version>2.0-beta-2</version>
-              </plugin>
-              <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>cobertura-maven-plugin</artifactId>
-                <version>2.4</version>
-              </plugin>
-              <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>taglist-maven-plugin</artifactId>
-                <version>2.4</version>
-              </plugin>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jxr-plugin</artifactId>
-                <version>2.1</version>
-              </plugin>
-              <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>2.5.1</version>
-              </plugin>
-           </reportPlugins>
-          </configuration>
+          <version>3.3</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
@@ -515,19 +757,26 @@ under the License.
                 <exclude>.reviewboardrc</exclude>
                 <exclude>.git/**</exclude>
                 <exclude>.gitignore</exclude>
+                <exclude>.arcconfig</exclude>
                 <exclude>*.patch</exclude>
                 <exclude>.idea/**</exclude>
                 <exclude>**/*.iml</exclude>
                 <exclude>**/*.ipr</exclude>
+                <exclude>**/*.json</exclude>
                 <!-- test resources (for Giraph on YARN profile) -->
                 <exclude>**/test/resources/**</exclude>
+                <!-- site images -->
+                <exclude>src/site/resources/images/*.svg</exclude>
+                <exclude>giraph-debugger/src/main/resources/org/apache/giraph/debugger/mock/*.vm</exclude>
+                <exclude>giraph-debugger/src/main/protobuf/*.proto</exclude> 
+                <exclude>giraph-debugger/gui</exclude>
               </excludes>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>2.5.2</version>
+          <version>3.0.4</version>
           <configuration>
             <xmlOutput>true</xmlOutput>
             <findbugsXmlOutput>false</findbugsXmlOutput>
@@ -559,6 +808,15 @@ under the License.
             </execution>
           </executions>
         </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <jvm>${project.build.javaHome}/bin/java</jvm>
+            <forkMode>once</forkMode>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -566,23 +824,160 @@ under the License.
         <groupId>com.github.koraktor</groupId>
         <artifactId>mavanagaiata</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.ning.maven.plugins</groupId>
+        <artifactId>maven-dependency-versions-check-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 
+
+  <reporting>
+    <plugins>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-project-info-reports-plugin</artifactId>
+              <version>2.2</version>
+              <reportSets>
+                <reportSet>
+                  <reports>
+                    <report>index</report>
+                    <report>project-team</report>
+                    <report>license</report>
+                    <report>mailing-list</report>
+                    <report>dependencies</report>
+                    <report>dependency-convergence</report>
+                    <report>plugin-management</report>
+                    <report>cim</report>
+                    <report>issue-tracking</report>
+                    <report>scm</report>
+                    <report>summary</report>
+                  </reports>
+                </reportSet>
+              </reportSets>
+          </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-report-plugin</artifactId>
+              <version>2.6</version>
+          </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <version>2.9</version>
+          </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-checkstyle-plugin</artifactId>
+              <version>2.15</version>
+              <configuration>
+                <configLocation>${checkstyle.config.path}</configLocation>
+                <consoleOutput>true</consoleOutput>
+                <enableRulesSummary>false</enableRulesSummary>
+                <headerLocation>${top.dir}/license-header.txt</headerLocation>
+                <failOnViolation>true</failOnViolation>
+                <includeTestSourceDirectory>false</includeTestSourceDirectory>
+              </configuration>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>jdepend-maven-plugin</artifactId>
+              <version>2.0-beta-2</version>
+              <configuration>
+                <aggregate>true</aggregate>
+              </configuration>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>cobertura-maven-plugin</artifactId>
+              <version>2.4</version>
+          </plugin>
+          <plugin>
+              <!-- JXR must be executed beofre Taglist plugin -->
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jxr-plugin</artifactId>
+              <version>2.3</version>
+              <configuration>
+                  <aggregate>true</aggregate>
+              </configuration>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>taglist-maven-plugin</artifactId>
+              <version>2.4</version>
+              <reportSets>
+                <reportSet>
+                  <!-- defines taglist reports in the modules -->
+                  <id>taglist-report</id>
+                  <reports>
+                    <report>taglist</report>
+                  </reports>
+                </reportSet>
+                <reportSet>
+                  <!-- defines taglist aggregate report -->
+                  <id>taglist-aggregate</id>
+                  <inherited>false</inherited>
+                  <reports>
+                    <report>taglist</report>
+                  </reports>
+                  <configuration>
+                    <aggregate>true</aggregate>
+                  </configuration>
+                </reportSet>
+              </reportSets>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>findbugs-maven-plugin</artifactId>
+              <version>3.0.4</version>
+          </plugin>
+    </plugins>
+  </reporting>
+
   <profiles>
     <profile>
-      <id>hadoop_0.20.203</id>
+      <id>release</id>
       <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
+        <module>giraph-dist</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>hadoop_1</id>
+      <modules>
+        <module>giraph-dist</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <hadoop.version>0.20.203.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <hadoop.version>1.2.1</hadoop.version>
+        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -595,58 +990,32 @@ under the License.
           <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
           <scope>provided</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_1.0</id>
-      <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
-      </modules>
-      <properties>
-        <hadoop.version>1.0.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_non_secure</id>
-      <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
-      </modules>
-      <properties>
-        <hadoop.version>0.20.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-collections</groupId>
-          <artifactId>commons-collections</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jsp-api-2.1</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-compiler</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-runtime</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-json</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>
@@ -654,19 +1023,21 @@ under the License.
     <profile>
       <id>hadoop_facebook</id>
       <modules>
-        <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
-        <module>giraph-hcatalog</module>
+        <module>giraph-block-app-8</module>
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
+        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
         <dependency>
           <groupId>com.facebook.hadoop</groupId>
           <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>provided</scope>
+          <exclusions>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>commons-collections</groupId>
@@ -675,91 +1046,7 @@ under the License.
         <dependency>
           <groupId>commons-httpclient</groupId>
           <artifactId>commons-httpclient</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging-api</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_0.23</id>
-      <properties>
-        <hadoop.version>0.23.1</hadoop.version>
-        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_cdh4.1.2</id>
-      <properties>
-        <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
-        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-hs</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-          <version>${hadoop.version}</version>
+          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>
@@ -771,9 +1058,16 @@ under the License.
       MapReduce classes to perform work. -->
     <profile>
       <id>hadoop_yarn</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
-        <hadoop.version>2.0.3-alpha</hadoop.version>
-        <munge.symbols>PURE_YARN</munge.symbols>
+        <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
+        <munge.symbols>PURE_YARN,STATIC_SASL_SYMBOL</munge.symbols>
+        <!-- TODO: add these checks eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -792,27 +1086,27 @@ under the License.
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-common</artifactId>
-	      <version>${hadoop.version}</version>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-common</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-common</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-nodemanager</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-tests</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-tests</artifactId>
+          <version>${hadoop.version}</version>
           <type>test-jar</type>
         </dependency>
       </dependencies>
@@ -822,78 +1116,31 @@ under the License.
          All profiles below are munge-free: avoid introducing any munge
          flags on any of the following profiles. -->
     <profile>
-      <id>hadoop_2.0.0</id>
-      <properties>
-        <hadoop.version>2.0.0-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.1</id>
-      <properties>
-        <hadoop.version>2.0.1-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.2</id>
-      <properties>
-        <hadoop.version>2.0.2-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-       <id>hadoop_2.0.3</id>
+       <id>hadoop_2</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
        <properties>
-         <hadoop.version>2.0.3-alpha</hadoop.version>
+         <hadoop.version>2.5.1</hadoop.version>
+         <!-- TODO: add these checks eventually -->
+         <project.enforcer.skip>true</project.enforcer.skip>
+         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
+        <dependency>
+          <groupId>commons-configuration</groupId>
+          <artifactId>commons-configuration</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>commons-httpclient</groupId>
+          <artifactId>commons-httpclient</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-common</artifactId>
@@ -910,9 +1157,16 @@ under the License.
      </profile>
 
     <profile>
-      <id>hadoop_trunk</id>
+      <id>hadoop_snapshot</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
+        <!-- TODO: add these checks eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -948,19 +1202,19 @@ under the License.
     <dependencies>
       <!-- compile dependencies. sorted lexicographically. -->
       <dependency>
-        <groupId>com.facebook.giraph.hive</groupId>
-        <artifactId>hive-io-exp-core</artifactId>
-        <version>0.6</version>
+        <groupId>asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>${dep.asm.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>12.0</version>
+        <version>${dep.guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>2.2.0</version>
+        <version>${dep.yammer-metrics.version}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -971,42 +1225,136 @@ under the License.
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>${fasterxml-jackson.version}</version>
+        <version>${dep.fasterxml-jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>${fasterxml-jackson.version}</version>
+        <version>${dep.fasterxml-jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>com.github.spullara.cli-parser</groupId>
         <artifactId>cli-parser</artifactId>
-        <version>1.1</version>
+        <version>${dep.cli-parser.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>2.1</version>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>annotations</artifactId>
+        <version>${dep.google.findbugs.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
         <artifactId>commons-cli</artifactId>
-        <version>1.2</version>
+        <version>${dep.commons-cli.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${dep.commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${dep.commons-io.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${dep.commons-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${dep.commons-lang3.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>2.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.thirdparty.yourkit-api</groupId>
+        <artifactId>yjp-controller-api-redist</artifactId>
+        <version>${dep.yourkit-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.nifty</groupId>
+        <artifactId>nifty-client</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-codec</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-all</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-annotations</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-service</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${dep.log4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>airline</artifactId>
+        <version>${dep.airline.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
-        <version>3.5.3.Final</version>
+        <artifactId>netty-all</artifactId>
+        <version>${dep.netty.version}</version>
       </dependency>
       <dependency>
         <groupId>net.iharder</groupId>
         <artifactId>base64</artifactId>
-        <version>2.3.8</version>
+        <version>${dep.base64.version}</version>
       </dependency>
       <dependency>
         <groupId>it.unimi.dsi</groupId>
         <artifactId>fastutil</artifactId>
-        <version>6.5.3</version>
+        <version>${dep.fastutil.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
@@ -1015,44 +1363,34 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
-        <artifactId>giraph-hcatalog</artifactId>
+        <artifactId>giraph-block-app</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
-        <artifactId>giraph-hive</artifactId>
+        <artifactId>giraph-block-app-8</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.hcatalog</groupId>
-        <artifactId>hcatalog-core</artifactId>
-        <version>0.5.0-incubating</version>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-examples</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>libthrift</artifactId>
+        <version>${dep.libthrift.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.apache.pig</groupId>
-            <artifactId>pig</artifactId>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.apache.hive</groupId>
-        <artifactId>hive-common</artifactId>
-        <version>${hive.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hive</groupId>
-        <artifactId>hive-exec</artifactId>
-        <version>${hive.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hive</groupId>
-        <artifactId>hive-metastore</artifactId>
-        <version>${hive.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.3.3</version>
+        <version>${dep.zookeeper.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.jmx</groupId>
@@ -1063,61 +1401,117 @@ under the License.
             <artifactId>jmxtools</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>javax.jms</groupId>
             <artifactId>jms</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-core-asl</artifactId>
-        <version>${codehaus-jackson.version}</version>
+        <version>${dep.codehaus-jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>${codehaus-jackson.version}</version>
+        <version>${dep.codehaus-jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jodah</groupId>
+        <artifactId>typetools</artifactId>
+        <version>${dep.typetools.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.xml.bind</groupId>
+        <artifactId>jaxb-impl</artifactId>
+        <version>${dep.jaxb-impl.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-core</artifactId>
+        <version>${dep.jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-json</artifactId>
+        <version>${dep.jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty</artifactId>
+        <version>${dep.jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20090211</version>
+        <version>${dep.json.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.python</groupId>
+        <artifactId>jython-standalone</artifactId>
+        <version>${dep.jython-standalone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.esotericsoftware</groupId>
+        <artifactId>kryo</artifactId>
+        <version>${dep.kryo.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.esotericsoftware.reflectasm</groupId>
+        <artifactId>reflectasm</artifactId>
+        <version>${dep.reflectasm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>de.javakaffee</groupId>
+        <artifactId>kryo-serializers</artifactId>
+        <version>${dep.kryo-serializers.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.objenesis</groupId>
+        <artifactId>objenesis</artifactId>
+        <version>${dep.objenesis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.thoughtworks.paranamer</groupId>
+        <artifactId>paranamer</artifactId>
+        <version>${dep.paranamer.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
+        <version>${dep.slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>${slf4j.version}</version>
+        <version>${dep.slf4j.version}</version>
       </dependency>
-
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>compiler</artifactId>
+        <version>${dep.openhft-compiler.version}</version>
+      </dependency>
+      
       <!-- provided dependencies. sorted lexicographically. -->
       <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
-        <version>3.2.1</version>
+        <version>${dep.commons-collections.version}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>commons-net</groupId>
         <artifactId>commons-net</artifactId>
         <scope>provided</scope>
-        <version>3.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.facebook.hadoop</groupId>
-        <artifactId>hadoop-core</artifactId>
-        <version>${facebook-hadoop.version}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.accumulo</groupId>
-        <artifactId>accumulo-core</artifactId>
-        <version>1.4.0</version>
-        <scope>provided</scope>
+        <version>${dep.commons-net.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -1143,44 +1537,62 @@ under the License.
         <version>${hadoop.version}</version>
         <scope>provided</scope>
       </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase</artifactId>
-        <version>${hbase.version}</version>
-        <scope>provided</scope>
-      </dependency>
 
       <!-- runtime dependencies. sorted lexicographically. -->
       <dependency>
         <groupId>commons-configuration</groupId>
         <artifactId>commons-configuration</artifactId>
-        <version>1.6</version>
+        <version>${dep.commons-configuration.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
         <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>commons-httpclient</groupId>
         <artifactId>commons-httpclient</artifactId>
-        <version>3.0.1</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging-api</artifactId>
-        <version>1.0.4</version>
-        <scope>runtime</scope>
+        <version>${dep.commons-httpclient.version}</version>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!-- test dependencies. sorted lexicographically. -->
       <dependency>
         <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-test</artifactId>
-        <version>${facebook-hadoop.version}</version>
+        <version>${hadoop.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.8</version>
+        <version>${dep.junit.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1190,16 +1602,9 @@ under the License.
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase</artifactId>
-        <type>test-jar</type>
-        <version>${hbase.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.8.5</version>
+        <artifactId>mockito-core</artifactId>
+        <version>${dep.mockito.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -1207,7 +1612,7 @@ under the License.
 
   <modules>
     <module>giraph-core</module>
-    <module>giraph-hive</module>
+    <module>giraph-block-app</module>
     <module>giraph-examples</module>
   </modules>
 

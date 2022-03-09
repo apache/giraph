@@ -29,22 +29,22 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * Send a collection of vertices for a partition.
+ * Send a collection of vertices for a partition.  Note that this doesn't
+ * use a cache - might want to optimize in the future.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
+    V extends Writable, E extends Writable> extends
+    WritableRequest<I, V, E> implements WorkerRequest<I, V, E> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
   /** Partition */
-  private Partition<I, V, E, M> partition;
+  private Partition<I, V, E> partition;
 
   /**
    * Constructor used for reflection only
@@ -56,7 +56,7 @@ public class SendVertexRequest<I extends WritableComparable,
    *
    * @param partition Partition to send the request to
    */
-  public SendVertexRequest(Partition<I, V, E, M> partition) {
+  public SendVertexRequest(Partition<I, V, E> partition) {
     this.partition = partition;
   }
 
@@ -77,7 +77,7 @@ public class SendVertexRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E> serverData) {
     serverData.getPartitionStore().addPartition(partition);
   }
 

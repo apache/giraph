@@ -19,18 +19,19 @@ package org.apache.giraph.io;
 
 
 import java.io.IOException;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
+
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -38,7 +39,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
-import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,19 +47,17 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
 
   private RecordReader<LongWritable, Text> rr;
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, Writable> conf;
+      DoubleWritable> conf;
   private TaskAttemptContext tac;
-  private GraphState<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
   @Before
   public void setUp() throws IOException, InterruptedException {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true);
     GiraphConfiguration giraphConf = new GiraphConfiguration();
-    giraphConf.setVertexClass(DummyVertex.class);
+    giraphConf.setComputationClass(DummyComputation.class);
     conf = new ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-        DoubleWritable, Writable>(giraphConf);
-    graphState = mock(GraphState.class);
+        DoubleWritable>(giraphConf);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
   }
@@ -88,7 +86,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-    vr.setConf( conf);
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     try {
@@ -107,7 +105,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-    vr.setConf( conf);
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     try {
@@ -129,10 +127,9 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     vr.initialize(null, tac);
 
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable>
         vertex = vr.getCurrentVertex();
-    setGraphState(vertex, graphState);
-    assertValidVertex(conf, graphState, vertex,
+    assertValidVertex(conf, vertex,
         new LongWritable(42), new DoubleWritable(0.1),
         EdgeFactory.create(new LongWritable(99), new DoubleWritable(0.2)),
         EdgeFactory.create(new LongWritable(2000), new DoubleWritable(0.3)),
@@ -150,20 +147,14 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     vr.setConf(conf);
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable>
         vertex = vr.getCurrentVertex();
-    setGraphState(vertex, graphState);
-    assertValidVertex(conf, graphState, vertex,
+    assertValidVertex(conf, vertex,
         new LongWritable(12345), new DoubleWritable(42.42),
        EdgeFactory.create(new LongWritable(9999999), new DoubleWritable(99.9)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 
-  public static class DummyVertex extends Vertex<LongWritable, DoubleWritable,
-      DoubleWritable, BooleanWritable> {
-    @Override
-    public void compute(Iterable<BooleanWritable> messages) throws IOException {
-      // ignore
-    }
-  }
+  public static class DummyComputation extends NoOpComputation<LongWritable,
+      DoubleWritable, DoubleWritable, BooleanWritable> { }
 }

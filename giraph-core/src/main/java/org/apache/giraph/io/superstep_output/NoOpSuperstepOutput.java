@@ -40,7 +40,7 @@ public class NoOpSuperstepOutput<I extends WritableComparable,
   public SimpleVertexWriter<I, V, E> getVertexWriter() {
     return new SimpleVertexWriter<I, V, E>() {
       @Override
-      public void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
+      public void writeVertex(Vertex<I, V, E> vertex) throws IOException,
           InterruptedException {
       }
     };

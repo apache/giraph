@@ -52,8 +52,7 @@ public class JsonLongDoubleFloatDoubleVertexOutputFormat extends
     TextVertexWriterToEachLine {
     @Override
     public Text convertVertexToLine(
-      Vertex<LongWritable, DoubleWritable,
-        FloatWritable, ?> vertex
+      Vertex<LongWritable, DoubleWritable, FloatWritable> vertex
     ) throws IOException {
       JSONArray jsonVertex = new JSONArray();
       try {

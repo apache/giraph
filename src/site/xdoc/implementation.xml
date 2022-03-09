@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Implementation</title>
+  </properties>
+
+  <body>
+
+<section name="Implementation">
+
+<p>Giraph is an Apache open source project. A Giraph computation runs as a Hadoop job, hence any existing Hadoop user can immediately benefit from Giraph. Workers use ZooKeeper to elect a master that will coordinate computation. The graph is loaded and partitioned across workers. The master then dictates when workers should start computing consecutive supersteps. Once the computation has halted, workers save the output. Checkpoints are initiated at user-defined intervals and are used for automatic application restarts when any worker fails. Any worker can act as the master and one will automatically take over if the current master fails.</p>
+
+<p>Giraph offers several mechanisms that help implement graph algorithms at scale. You can input vertices and edges (see the <a href="io.html">input/output</a> section) from any input source.  We support several Hadoop input formats as well as Hive tables. Aggregators allow applications to compute a global value from contributing values provided by each vertex, see the <a href="aggregators.html">aggregators</a> section. By default vertex and edge values and messages are stored in workers’ memory. However, you can decide to store the values and messages on disk, for example on a Hadoop cluster with limited memory but ample disk space.</p>
+
+</section>
+
+  </body>
+</document>

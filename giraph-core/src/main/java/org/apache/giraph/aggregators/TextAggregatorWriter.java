@@ -44,7 +44,7 @@ public class TextAggregatorWriter
   /** Signal for "write only the final values" frequency */
   public static final int AT_THE_END = -1;
   /** Signal for "write values in every superstep" frequency */
-  public static final int ALWAYS = -1;
+  public static final int ALWAYS = 1;
   /** The frequency of writing:
    *  - NEVER: never write, files aren't created at all
    *  - AT_THE_END: aggregators are written only when the computation is over
@@ -114,7 +114,8 @@ public class TextAggregatorWriter
    */
   private boolean shouldWrite(long superstep) {
     return (frequency == AT_THE_END && superstep == LAST_SUPERSTEP) ||
-        (frequency != NEVER && superstep % frequency == 0);
+        (frequency != NEVER && frequency != AT_THE_END &&
+            superstep % frequency == 0);
   }
 
   @Override

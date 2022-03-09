@@ -17,11 +17,10 @@
  */
 package org.apache.giraph.io.formats;
 
-import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -29,6 +28,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Sequence file vertex input format based on {@link SequenceFileInputFormat}.
@@ -40,11 +42,13 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
  */
 @SuppressWarnings("rawtypes")
 public class SequenceFileVertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+    V extends Writable, E extends Writable, X extends Vertex<I, V, E>>
     extends VertexInputFormat<I, V, E> {
   /** Internal input format */
   protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
     new SequenceFileInputFormat<I, X>();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
@@ -68,7 +72,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
    * @param <X> Value type
    */
   public static class SequenceFileVertexReader<I extends WritableComparable,
-      V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+      V extends Writable, E extends Writable, X extends Vertex<I, V, E>>
       extends VertexReader<I, V, E> {
     /** Internal record reader from {@link SequenceFileInputFormat} */
     private final RecordReader<I, X> recordReader;
@@ -92,7 +96,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
       return recordReader.nextKeyValue();
     }
 
-    @Override public Vertex<I, V, E, ?> getCurrentVertex()
+    @Override public Vertex<I, V, E> getCurrentVertex()
       throws IOException, InterruptedException {
       return recordReader.getCurrentValue();
     }

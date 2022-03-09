@@ -15,10 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -26,35 +24,21 @@ import org.apache.hadoop.io.WritableComparable;
  * Divides the vertices into partitions by their hash code using a simple
  * round-robin hash for great balancing if given a random hash code.
  *
- * @param <I> Vertex index value
+ * @param <I> Vertex id value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
-@SuppressWarnings("rawtypes")
 public class HashPartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements GraphPartitionerFactory<I, V, E, M> {
-  /** Saved configuration */
-  private ImmutableClassesGiraphConfiguration conf;
+    V extends Writable, E extends Writable>
+    extends GraphPartitionerFactory<I, V, E> {
 
   @Override
-  public MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner() {
-    return new HashMasterPartitioner<I, V, E, M>(getConf());
+  public int getPartition(I id, int partitionCount, int workerCount) {
+    return Math.abs(id.hashCode() % partitionCount);
   }
 
   @Override
-  public WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner() {
-    return new HashWorkerPartitioner<I, V, E, M>();
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration conf) {
-    this.conf = conf;
+  public int getWorker(int partition, int partitionCount, int workerCount) {
+    return partition % workerCount;
   }
 }

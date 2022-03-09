@@ -36,29 +36,27 @@ Hadoop versions for use with Giraph:
 
 Secure Hadoop versions:
 
-- Apache Hadoop 0.20.203.0
+- Apache Hadoop 1 (latest version: 1.2.1)
 
   This is the default version used by Giraph: if you do not specify a
-profile with the -P flag, maven will use this version. You may also
-explicitly specify it with "mvn -Phadoop_0.20.203 <goals>".
+  profile with the -P flag, maven will use this version. You may also
+  explicitly specify it with "mvn -Phadoop_1 <goals>".
 
-- Apache Hadoop 1.0.2
+- Apache Hadoop 2 (latest version: 2.5.1)
 
-  You may tell maven to use this version with "mvn -Phadoop_1.0 <goals>".
+  This is the latest version of Hadoop 2 (supporting YARN in addition
+  to MapReduce) Giraph could use. You may tell maven to use this version
+  with "mvn -Phadoop_2 <goals>".
 
-- Apache Hadoop 0.23.1
+- Apache Hadoop Yarn with 2.2.0
 
-  You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
+  You may tell maven to use this version with "mvn -Phadoop_yarn -Dhadoop.version=2.2.0 <goals>".
 
 - Apache Hadoop 3.0.0-SNAPSHOT
 
-  You may tell maven to use this version with "mvn -Phadoop_trunk <goals>".
+  You may tell maven to use this version with "mvn -Phadoop_snapshot <goals>".
 
 Unsecure Hadoop versions:
-
-- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
-
-  You may tell maven to use 0.20.2 with "mvn -Phadoop_non_secure <goals>".
 
 - Facebook Hadoop releases: https://github.com/facebook/hadoop-20, Master branch
 
@@ -77,7 +75,7 @@ at this time.
 Building and testing:
 
 You will need the following:
-- Java 1.6
+- Java 1.8
 - Maven 3 or higher. Giraph uses the munge plugin
   (http://sonatype.github.com/munge-maven-plugin/),
   which requires Maven 3, to support multiple versions of Hadoop. Also, the
@@ -128,6 +126,25 @@ giraph/ which formats needs it will get picked up because it will install
 locally first.
 
   giraph-root/ $ mvn clean install
+
+-------------------------------
+
+Scripting:
+
+Giraph has support for writing user logic in languages other than Java. A Giraph
+job involves at the very least a Computation and Input/Output Formats. There are
+other optional pieces as well like Aggregators and Combiners.
+
+As of this writing we support writing the Computation logic in Jython. The
+Computation class is at the core of the algorithm so it was a natural starting
+point. Eventually it is our goal to allow users to write any / all components of
+their algorithms in any language they desire.
+
+To use Jython with our job launcher, GiraphRunner, pass the path to the script
+as the Computation class argument. Additionally, you should set the -jythonClass
+option to let Giraph know the name of your Jython Computation class. Lastly, you
+will need to set -typesHolder to a class that extends Giraph's TypesHolder so
+that Giraph can infer the types you use. Look at page-rank.py as an example.
 
 -------------------------------
 

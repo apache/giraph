@@ -25,6 +25,8 @@ public enum ConfOptionType {
   BOOLEAN,
   /** class */
   CLASS,
+  /** enum */
+  ENUM,
   /** integer */
   INTEGER,
   /** float */
@@ -32,5 +34,5 @@ public enum ConfOptionType {
   /** long */
   LONG,
   /** string */
-  STRING;
+  STRING
 }

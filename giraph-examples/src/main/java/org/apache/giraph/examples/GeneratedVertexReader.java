@@ -18,13 +18,16 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
 import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.conf.BooleanConfOption;
+import org.apache.giraph.conf.LongConfOption;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import java.io.IOException;
 
 /**
  * Used by GeneratedVertexInputFormat to read some generated data
@@ -39,15 +42,13 @@ public abstract class GeneratedVertexReader<
     E extends Writable>
     extends VertexReader<I, V, E> {
   /** Vertices produced by this reader */
-  public static final String READER_VERTICES =
-    "GeneratedVertexReader.reader_vertices";
-  /** Default vertices produced by this reader */
-  public static final long DEFAULT_READER_VERTICES = 10;
+  public static final LongConfOption READER_VERTICES =
+      new LongConfOption("GeneratedVertexReader.reader_vertices", 10,
+          "Vertices produced by this reader");
   /** Reverse the order of the vertices? */
-  public static final String REVERSE_ID_ORDER =
-    "GeneratedVertexReader.reverseIdOrder";
-  /** Default ordering is not reversed */
-  public static final boolean DEAFULT_REVERSE_ID_ORDER = false;
+  public static final BooleanConfOption REVERSE_ID_ORDER =
+      new BooleanConfOption("GeneratedVertexReader.reverseIdOrder", false,
+          "Reverse the order of the vertices?");
   /** Records read so far */
   protected long recordsRead = 0;
   /** Total records to read (on this split alone) */
@@ -66,12 +67,8 @@ public abstract class GeneratedVertexReader<
   @Override
   public final void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException {
-    totalRecords = getConf().getLong(
-        GeneratedVertexReader.READER_VERTICES,
-        GeneratedVertexReader.DEFAULT_READER_VERTICES);
-    reverseIdOrder = getConf().getBoolean(
-        GeneratedVertexReader.REVERSE_ID_ORDER,
-        GeneratedVertexReader.DEAFULT_REVERSE_ID_ORDER);
+    totalRecords = GeneratedVertexReader.READER_VERTICES.get(getConf());
+    reverseIdOrder = GeneratedVertexReader.REVERSE_ID_ORDER.get(getConf());
     this.inputSplit = (BspInputSplit) inputSplit;
   }
 

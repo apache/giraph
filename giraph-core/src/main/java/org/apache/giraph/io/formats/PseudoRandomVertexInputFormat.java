@@ -18,23 +18,26 @@
 
 package org.apache.giraph.io.formats;
 
-import com.google.common.collect.Sets;
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Sets;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 /**
  * This VertexInputFormat is meant for large scale testing.  It allows the user
@@ -44,6 +47,8 @@ import org.apache.log4j.Logger;
  */
 public class PseudoRandomVertexInputFormat extends
     VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable> {
+  @Override public void checkInputSpecs(Configuration conf) { }
+
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
       final int minSplitCountHint) throws IOException, InterruptedException {
@@ -133,9 +138,9 @@ public class PseudoRandomVertexInputFormat extends
     }
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+    public Vertex<LongWritable, DoubleWritable, DoubleWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+      Vertex<LongWritable, DoubleWritable, DoubleWritable>
       vertex = getConf().createVertex();
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when
@@ -144,9 +149,9 @@ public class PseudoRandomVertexInputFormat extends
       Random rand = new Random(vertexId);
       DoubleWritable vertexValue = new DoubleWritable(rand.nextDouble());
       // In order to save memory and avoid copying, we add directly to a
-      // VertexEdges instance.
-      VertexEdges<LongWritable, DoubleWritable> edges =
-          getConf().createAndInitializeVertexEdges(edgesPerVertex);
+      // OutEdges instance.
+      OutEdges<LongWritable, DoubleWritable> edges =
+          getConf().createAndInitializeOutEdges(edgesPerVertex);
       Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = new LongWritable();

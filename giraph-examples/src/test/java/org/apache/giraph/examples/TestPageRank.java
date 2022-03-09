@@ -64,13 +64,13 @@ public class TestPageRank extends BspCase {
   private void testPageRank(int numComputeThreads)
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimplePageRankVertex.class);
+    conf.setComputationClass(SimplePageRankComputation.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
     conf.setWorkerContextClass(
-        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+        SimplePageRankComputation.SimplePageRankWorkerContext.class);
     conf.setMasterComputeClass(
-        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
+        SimplePageRankComputation.SimplePageRankMasterCompute.class);
     conf.setNumComputeThreads(numComputeThreads);
     // Set enough partitions to generate randomness on the compute side
     if (numComputeThreads != 1) {
@@ -80,11 +80,11 @@ public class TestPageRank extends BspCase {
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double maxPageRank =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMax();
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMax();
       double minPageRank =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMin();
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMin();
       long numVertices =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalSum();
+          SimplePageRankComputation.SimplePageRankWorkerContext.getFinalSum();
       System.out.println(getCallingMethodName() + ": maxPageRank=" +
           maxPageRank + " minPageRank=" +
           minPageRank + " numVertices=" + numVertices + ", " +

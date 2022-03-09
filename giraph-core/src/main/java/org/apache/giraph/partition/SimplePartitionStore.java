@@ -18,14 +18,19 @@
 
 package org.apache.giraph.partition;
 
+import com.google.common.collect.Maps;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import com.google.common.collect.Maps;
-
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A simple in-memory partition store.
@@ -33,57 +38,39 @@ import java.util.concurrent.ConcurrentMap;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class SimplePartitionStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends PartitionStore<I, V, E, M> {
-  /** Map of stored partitions. */
-  private final ConcurrentMap<Integer, Partition<I, V, E, M>> partitions =
-      Maps.newConcurrentMap();
-  /** Configuration. */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
-  /** Context used to report progress */
+    V extends Writable, E extends Writable>
+    implements PartitionStore<I, V, E> {
+  /** Configuration */
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
+  /** Job context (for progress) */
   private final Mapper<?, ?, ?, ?>.Context context;
+  /** Map of stored partitions. */
+  private final ConcurrentMap<Integer, Partition<I, V, E>> partitions =
+      Maps.newConcurrentMap();
+  /** Queue of partitions to be precessed in a superstep */
+  private BlockingQueue<Partition<I, V, E>> partitionQueue;
 
   /**
    * Constructor.
-   *
    * @param conf Configuration
    * @param context Mapper context
    */
-  public SimplePartitionStore(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+  public SimplePartitionStore(ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.context = context;
   }
 
   @Override
-  public void addPartition(Partition<I, V, E, M> partition) {
-    Partition<I, V, E, M> oldPartition = partitions.get(partition.getId());
-    if (oldPartition == null) {
-      oldPartition = partitions.putIfAbsent(partition.getId(), partition);
-      if (oldPartition == null) {
-        return;
-      }
-    }
-    oldPartition.addPartition(partition);
+  public boolean addPartition(Partition<I, V, E> partition) {
+    return partitions.putIfAbsent(partition.getId(), partition) == null;
   }
 
   @Override
-  public Partition<I, V, E, M> getPartition(Integer partitionId) {
-    return partitions.get(partitionId);
-  }
-
-  @Override
-  public Partition<I, V, E, M> removePartition(Integer partitionId) {
+  public Partition<I, V, E> removePartition(Integer partitionId) {
     return partitions.remove(partitionId);
-  }
-
-  @Override
-  public void deletePartition(Integer partitionId) {
-    partitions.remove(partitionId);
   }
 
   @Override
@@ -102,5 +89,84 @@ public class SimplePartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public void putPartition(Partition<I, V, E, M> partition) { }
+  public long getPartitionVertexCount(Integer partitionId) {
+    Partition partition = partitions.get(partitionId);
+    if (partition == null) {
+      return 0;
+    } else {
+      return partition.getVertexCount();
+    }
+  }
+
+  @Override
+  public long getPartitionEdgeCount(Integer partitionId) {
+    Partition partition = partitions.get(partitionId);
+    if (partition == null) {
+      return 0;
+    } else {
+      return partition.getEdgeCount();
+    }
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return partitions.size() == 0;
+  }
+
+  @Override
+  public void startIteration() {
+    checkState(partitionQueue == null || partitionQueue.isEmpty(),
+        "startIteration: It seems that some of " +
+          "of the partitions from previous iteration over partition store are" +
+          " not yet processed.");
+
+    partitionQueue =
+        new ArrayBlockingQueue<Partition<I, V, E>>(getNumPartitions());
+    for (Partition<I, V, E> partition : partitions.values()) {
+      partitionQueue.add(partition);
+    }
+  }
+
+  @Override
+  public Partition<I, V, E> getNextPartition() {
+    return partitionQueue.poll();
+  }
+
+  @Override
+  public void putPartition(Partition<I, V, E> partition) { }
+
+  /**
+   * Get or create a partition.
+   * @param partitionId Partition Id
+   * @return The requested partition (never null)
+   */
+  private Partition<I, V, E> getOrCreatePartition(Integer partitionId) {
+    Partition<I, V, E> oldPartition = partitions.get(partitionId);
+    if (oldPartition == null) {
+      Partition<I, V, E> newPartition =
+          conf.createPartition(partitionId, context);
+      oldPartition = partitions.putIfAbsent(partitionId, newPartition);
+      if (oldPartition == null) {
+        return newPartition;
+      }
+    }
+    return oldPartition;
+  }
+
+  @Override
+  public void addPartitionVertices(Integer partitionId,
+      ExtendedDataOutput extendedDataOutput) {
+    VertexIterator<I, V, E> vertexIterator =
+        new VertexIterator<I, V, E>(extendedDataOutput, conf);
+
+    Partition<I, V, E> partition = getOrCreatePartition(partitionId);
+    partition.addPartitionVertices(vertexIterator);
+    putPartition(partition);
+  }
+
+  @Override
+  public void shutdown() { }
+
+  @Override
+  public void initialize() { }
 }

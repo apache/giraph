@@ -27,14 +27,12 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
-import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
+import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
 
@@ -42,7 +40,7 @@ import java.io.IOException;
  * Client-side Netty pipeline component that allows authentication with a
  * server.
  */
-public class SaslClientHandler extends OneToOneDecoder {
+public class SaslClientHandler extends ChannelInboundHandlerAdapter {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(SaslClientHandler.class);
   /** Configuration */
@@ -58,21 +56,14 @@ public class SaslClientHandler extends OneToOneDecoder {
   }
 
   @Override
-  public void handleUpstream(
-    ChannelHandlerContext ctx, ChannelEvent evt)
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
     throws Exception {
-    if (!(evt instanceof MessageEvent)) {
-      ctx.sendUpstream(evt);
-      return;
-    }
-    MessageEvent e = (MessageEvent) evt;
-    Object originalMessage = e.getMessage();
-    Object decodedMessage = decode(ctx, ctx.getChannel(), originalMessage);
+    WritableRequest decodedMessage = decode(ctx, msg);
     // Generate SASL response to server using Channel-local SASL client.
-    SaslNettyClient saslNettyClient = NettyClient.SASL.get(ctx.getChannel());
+    SaslNettyClient saslNettyClient = ctx.attr(NettyClient.SASL).get();
     if (saslNettyClient == null) {
       throw new Exception("handleUpstream: saslNettyClient was unexpectedly " +
-          "null for channel: " + ctx.getChannel());
+          "null for channel: " + ctx.channel());
     }
     if (decodedMessage.getClass() == SaslCompleteRequest.class) {
       if (LOG.isDebugEnabled()) {
@@ -91,8 +82,8 @@ public class SaslClientHandler extends OneToOneDecoder {
       }
       // Remove SaslClientHandler and replace LengthFieldBasedFrameDecoder
       // from client pipeline.
-      ctx.getPipeline().remove(this);
-      ctx.getPipeline().replace("length-field-based-frame-decoder",
+      ctx.pipeline().remove(this);
+      ctx.pipeline().replace("length-field-based-frame-decoder",
           "fixed-length-frame-decoder",
           new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
       return;
@@ -128,27 +119,34 @@ public class SaslClientHandler extends OneToOneDecoder {
     // server.
     SaslTokenMessageRequest saslResponse =
       new SaslTokenMessageRequest(responseToServer);
-    ctx.getChannel().write(saslResponse);
+    ctx.channel().writeAndFlush(saslResponse);
   }
 
-  @Override
-  protected Object decode(ChannelHandlerContext ctx,
-                          Channel channel, Object msg) throws Exception {
-    if (!(msg instanceof ChannelBuffer)) {
+  /**
+   * Decode the message read by handler
+   *
+   * @param ctx channel handler context
+   * @param msg message to decode into a writable request
+   * @return decoded writablerequest object
+   * @throws Exception
+   */
+  protected WritableRequest decode(ChannelHandlerContext ctx, Object msg)
+    throws Exception {
+    if (!(msg instanceof ByteBuf)) {
       throw new IllegalStateException("decode: Got illegal message " + msg);
     }
     // Decode msg into an object whose class C implements WritableRequest:
     //  C will be either SaslTokenMessage or SaslComplete.
     //
     // 1. Convert message to a stream that can be decoded.
-    ChannelBuffer buffer = (ChannelBuffer) msg;
-    ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
+    ByteBuf buf = (ByteBuf) msg;
+    ByteBufInputStream inputStream = new ByteBufInputStream(buf);
     // 2. Get first byte: message type:
     int enumValue = inputStream.readByte();
     RequestType type = RequestType.values()[enumValue];
     if (LOG.isDebugEnabled()) {
       LOG.debug("decode: Got a response of type " + type + " from server:" +
-        channel.getRemoteAddress());
+        ctx.channel().remoteAddress());
     }
     // 3. Create object of the type determined in step 2.
     Class<? extends WritableRequest> writableRequestClass =
@@ -162,6 +160,7 @@ public class SaslClientHandler extends OneToOneDecoder {
     } catch (IOException e) {
       LOG.error("decode: Exception when trying to read server response: " + e);
     }
+    ReferenceCountUtil.release(buf);
     // serverResponse can now be used in the next stage in pipeline.
     return serverResponse;
   }

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.requests.WorkerRequest;
@@ -35,9 +36,9 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class WorkerRequestServerHandler<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    RequestServerHandler<WorkerRequest<I, V, E, M>> {
+    RequestServerHandler<WorkerRequest<I, V, E>> {
   /** Data that can be accessed for handling requests */
-  private final ServerData<I, V, E, M> serverData;
+  private final ServerData<I, V, E> serverData;
 
   /**
    * Constructor with external server data
@@ -46,33 +47,40 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf                     Configuration
    * @param myTaskInfo               Current task info
+   * @param exceptionHandler         Handles uncaught exceptions
+   * @param flowControl              Reference to the flow control used
    */
-  public WorkerRequestServerHandler(ServerData<I, V, E, M> serverData,
+  public WorkerRequestServerHandler(ServerData<I, V, E> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
-      TaskInfo myTaskInfo) {
-    super(workerRequestReservedMap, conf, myTaskInfo);
+      TaskInfo myTaskInfo,
+      Thread.UncaughtExceptionHandler exceptionHandler,
+      FlowControl flowControl) {
+    super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.serverData = serverData;
+    this.flowControl = flowControl;
   }
 
   @Override
-  public void processRequest(WorkerRequest<I, V, E, M> request) {
+  public void processRequest(WorkerRequest<I, V, E> request) {
     request.doRequest(serverData);
   }
 
   /** Factory for {@link WorkerRequestServerHandler} */
   public static class Factory<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable> implements
+      V extends Writable, E extends Writable> implements
       RequestServerHandler.Factory {
     /** Data that can be accessed for handling requests */
-    private final ServerData<I, V, E, M> serverData;
+    private final ServerData<I, V, E> serverData;
+    /** Flow control used in sending requests */
+    private FlowControl flowControl;
 
     /**
      * Constructor
      *
      * @param serverData Data held by the server
      */
-    public Factory(ServerData<I, V, E, M> serverData) {
+    public Factory(ServerData<I, V, E> serverData) {
       this.serverData = serverData;
     }
 
@@ -80,9 +88,16 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
-        TaskInfo myTaskInfo) {
-      return new WorkerRequestServerHandler<I, V, E,
-          M>(serverData, workerRequestReservedMap, conf, myTaskInfo);
+        TaskInfo myTaskInfo,
+        Thread.UncaughtExceptionHandler exceptionHandler) {
+      return new WorkerRequestServerHandler<I, V, E, Writable>(serverData,
+          workerRequestReservedMap, conf, myTaskInfo, exceptionHandler,
+          flowControl);
+    }
+
+    @Override
+    public void setFlowControl(FlowControl flowControl) {
+      this.flowControl = flowControl;
     }
   }
 }

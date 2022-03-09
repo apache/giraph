@@ -31,8 +31,11 @@
       <googlePlusOne />
       <topBarEnabled>true</topBarEnabled>
       <sideBarEnabled>false</sideBarEnabled>
+      <sourceLineNumbersEnabled>true</sourceLineNumbersEnabled>
     </fluidoSkin>
   </custom>
+
+  
  
   <bannerLeft>
     <src>images/ApacheGiraph.svg</src>
@@ -59,27 +62,47 @@
       <item name="Dependencies" href="dependencies.html" />
       <item name="Reports" href="project-reports.html" collapse="true">
         <item name="Surefire Report" href="surefire-report.html" />
-        <item name="Checkstyle Results" href="checkstyle.html" />
-        <item name="Jdepend" href="jdepend-report.html" />
-        <item name="Cobertura Test Coverage" href="cobertura/index.html" />
-        <item name="Tag List" href="taglist.html" />
-        <item name="Source Xref" href="xref/index.html" />
-        <item name="Test Source Xref" href="xref-test/index.html" />
+        <item name="Checkstyle Results" href="checkstyle-aggregate.html" />
+        <item name="JavaDoc" href="apidocs/index.html" />
+        <item name="Test JavaDoc" href="testapidocs/index.html" />
       </item>
     </menu>
-    
+
     <menu name="User Docs" inherit="top">
-      <item name="Page Rank Example" href="pagerank.html"/>
-      <item name="Javadoc" href="javadoc_modules.html"/>
+      <item name="Introduction" href="intro.html"/>
+      <item name="Related Literature" href="literature.html"/>
+      <item name="Download Releases" href="releases.html"/>
+      <item name="Quick Start" href="quick_start.html"/>
+      <item name="Building and Testing" href="build.html"/>
+      <item name="Options List" href="options.html"/>
+      <item name="Blocks Framework" href="blocks.html"/>
+      <item name="FAQ" href="faq.html"/>
       <item name="Presentations" href="presentations.html"/>
       <item name="External Community Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />
     </menu> 
 
     <menu name="Developer Docs" inherit="top">
-      <item name="How to generate patches" href="generating_patches.html" />
-      <item name="How to build this site" href="build_site.html" />
+      <item name="JavaDoc" href="apidocs/index.html" />
+      <item name="Test JavaDoc" href="testapidocs/index.html" />
+      <item name="Tag List" href="taglist.html" />
+      <item name="Cobertura Test Coverage" href="cobertura/index.html" />
+      <item name="Jdepend" href="giraph-core/jdepend-report.html" />
+      <item name="Source Xref" href="xref/index.html" />
+      <item name="Test Source Xref" href="xref-test/index.html" />
+  
+      <item name="Modules" href="javadoc_modules.html">
+        <item name="Aggregators" href="aggregators.html"/>
+        <item name="Out-of-core" href="ooc.html"/>
+        <item name="Implementation" href="implementation.html"/>
+        <item name="Page Rank Example" href="pagerank.html"/>
+        <item name="Input/Output in Giraph" href="io.html"/>
+        <item name="Hive I/O" href="hive.html"/>
+	<item name="Gora I/O" href="gora.html"/>
+    	<item name="Rexster I/O" href="rexster.html"/>
+      </item>
+      <item name="How to generate patches?" href="generating_patches.html" />
+      <item name="How to release giraph?" href="releasing_giraph.html" />
+      <item name="How to build this site?" href="build_site.html" />
     </menu>
-
-    <menu ref="modules" inherit="top"/>
   </body>
 </project>

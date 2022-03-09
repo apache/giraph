@@ -32,6 +32,6 @@ public class FloatMaxAggregator extends BasicAggregator<FloatWritable> {
 
   @Override
   public FloatWritable createInitialValue() {
-    return new FloatWritable(Float.MIN_VALUE);
+    return new FloatWritable(Float.NEGATIVE_INFINITY);
   }
 }

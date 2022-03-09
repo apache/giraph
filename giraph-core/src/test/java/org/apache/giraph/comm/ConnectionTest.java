@@ -25,8 +25,8 @@ import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -46,17 +46,10 @@ public class ConnectionTest {
   /** Class configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
-  public static class IntVertex extends Vertex<IntWritable,
-            IntWritable, IntWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
-
   @Before
   public void setUp() {
     GiraphConfiguration tmpConfig = new GiraphConfiguration();
-    tmpConfig.setVertexClass(IntVertex.class);
+    tmpConfig.setComputationClass(IntNoOpComputation.class);
     conf = new ImmutableClassesGiraphConfiguration(tmpConfig);
   }
 
@@ -71,17 +64,19 @@ public class ConnectionTest {
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
 
-    ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
     WorkerInfo workerInfo = new WorkerInfo();
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
 
@@ -100,7 +95,7 @@ public class ConnectionTest {
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
 
-    ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
    RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
@@ -108,27 +103,32 @@ public class ConnectionTest {
     WorkerInfo workerInfo1 = new WorkerInfo();
     workerInfo1.setTaskId(1);
     NettyServer server1 =
-        new NettyServer(conf, requestServerHandlerFactory, workerInfo1, context);
+        new NettyServer(conf, requestServerHandlerFactory, workerInfo1,
+            context, new MockExceptionHandler());
     server1.start();
-    workerInfo1.setInetSocketAddress(server1.getMyAddress());
+    workerInfo1.setInetSocketAddress(server1.getMyAddress(), server1.getLocalHostOrIp());
 
     WorkerInfo workerInfo2 = new WorkerInfo();
     workerInfo1.setTaskId(2);
     NettyServer server2 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo2,
-            context);
+            context, new MockExceptionHandler());
     server2.start();
-    workerInfo2.setInetSocketAddress(server2.getMyAddress());
+    workerInfo2.setInetSocketAddress(server2.getMyAddress(), server1.getLocalHostOrIp());
 
     WorkerInfo workerInfo3 = new WorkerInfo();
     workerInfo1.setTaskId(3);
     NettyServer server3 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo3,
-            context);
+            context, new MockExceptionHandler());
     server3.start();
-    workerInfo3.setInetSocketAddress(server3.getMyAddress());
+    workerInfo3.setInetSocketAddress(server3.getMyAddress(), server1.getLocalHostOrIp());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
+    server1.setFlowControl(client.getFlowControl());
+    server2.setFlowControl(client.getFlowControl());
+    server3.setFlowControl(client.getFlowControl());
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo1,
         workerInfo2, workerInfo3);
     client.connectAllAddresses(addresses);
@@ -150,22 +150,26 @@ public class ConnectionTest {
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
 
-    ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
     WorkerInfo workerInfo = new WorkerInfo();
     NettyServer server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
 
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo);
-    NettyClient client1 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client1 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client1.connectAllAddresses(addresses);
-    NettyClient client2 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client2 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client2.connectAllAddresses(addresses);
-    NettyClient client3 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client3 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client3.connectAllAddresses(addresses);
+    server.setFlowControl(client1.getFlowControl());
 
     client1.stop();
     client2.stop();

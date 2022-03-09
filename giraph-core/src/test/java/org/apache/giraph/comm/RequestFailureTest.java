@@ -26,12 +26,15 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.factories.TestMessageValueFactory;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,15 +46,17 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
 
 /**
  * Test all the netty failure scenarios
  */
+@SuppressWarnings("unchecked")
 public class RequestFailureTest {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
   /** Server data */
-  private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+  private ServerData<IntWritable, IntWritable, IntWritable>
   serverData;
   /** Server */
   private NettyServer server;
@@ -60,38 +65,32 @@ public class RequestFailureTest {
   /** Mock context */
   private Context context;
 
-  /**
-   * Only for testing.
-   */
-  public static class TestVertex extends Vertex<IntWritable,
-        IntWritable, IntWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
-
   @Before
   public void setUp() throws IOException {
     // Setup the conf
     GiraphConfiguration tmpConf = new GiraphConfiguration();
-    tmpConf.setVertexClass(TestVertex.class);
+    tmpConf.setComputationClass(IntNoOpComputation.class);
     conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
     context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
+    Counter counter = mock(Counter.class);
+    when(context.getCounter(any(String.class), any(String.class))).thenReturn(
+        counter);
   }
 
   private WritableRequest getRequest() {
     // Data to send
     final int partitionId = 0;
-    PairList<Integer, ByteArrayVertexIdMessages<IntWritable,
+    PairList<Integer, VertexIdMessages<IntWritable,
                 IntWritable>>
         dataToSend = new PairList<Integer,
-        ByteArrayVertexIdMessages<IntWritable, IntWritable>>();
+        VertexIdMessages<IntWritable, IntWritable>>();
     dataToSend.initialize();
     ByteArrayVertexIdMessages<IntWritable,
             IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
+        new ByteArrayVertexIdMessages<IntWritable, IntWritable>(
+            new TestMessageValueFactory<IntWritable>(IntWritable.class));
     vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
@@ -105,19 +104,21 @@ public class RequestFailureTest {
     // Send the request
     SendWorkerMessagesRequest<IntWritable, IntWritable> request =
         new SendWorkerMessagesRequest<IntWritable, IntWritable>(dataToSend);
+    request.setConf(conf);
     return request;
   }
 
-  private void checkResult(int numRequests) throws IOException {
+  private void checkResult(int numRequests) {
     // Check the output
     Iterable<IntWritable> vertices =
-        serverData.getIncomingMessageStore().getDestinationVertices();
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
     int keySum = 0;
     int messageSum = 0;
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
       Iterable<IntWritable> messages =
-          serverData.getIncomingMessageStore().getVertexMessages(vertexId);
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {
           messageSum += message.get();
@@ -148,7 +149,7 @@ public class RequestFailureTest {
   @Test
   public void resendRequest() throws IOException {
     // Force a drop of the first request
-    GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED.set(conf, true);
+    GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED.set(conf, false);
     // One second to finish a request
     GiraphConstants.MAX_REQUEST_MILLISECONDS.set(conf, 1000);
     // Loop every 2 seconds
@@ -160,13 +161,16 @@ public class RequestFailureTest {
   private void checkSendingTwoRequests() throws IOException {
     // Start the service
     serverData = MockUtils.createNewServerData(conf, context);
+    serverData.prepareSuperstep();
     WorkerInfo workerInfo = new WorkerInfo();
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
-    workerInfo.setInetSocketAddress(server.getMyAddress());
-    client = new NettyClient(context, conf, new WorkerInfo());
+    workerInfo.setInetSocketAddress(server.getMyAddress(), server.getLocalHostOrIp());
+    client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
+    server.setFlowControl(client.getFlowControl());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
 

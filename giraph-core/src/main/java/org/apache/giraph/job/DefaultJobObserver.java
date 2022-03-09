@@ -46,7 +46,17 @@ public class DefaultJobObserver implements GiraphJobObserver,
   }
 
   @Override
+  public void jobRunning(Job submittedJob) {
+    // do nothing
+  }
+
+  @Override
   public void jobFinished(Job jobToSubmit, boolean passed) {
+    // do nothing
+  }
+
+  @Override
+  public void jobGotAllMappers(Job job) {
     // do nothing
   }
 }

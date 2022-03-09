@@ -19,6 +19,8 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.graph.GraphTaskManager;
+import org.apache.giraph.ooc.OutOfCoreEngine;
+import org.apache.giraph.ooc.OutOfCoreIOCallable;
 import org.apache.giraph.worker.BspServiceWorker;
 
 import com.google.common.collect.Maps;
@@ -30,11 +32,8 @@ import java.util.Map;
  * Map of a bunch of aggregated metrics
  */
 public class AggregatedMetrics {
-  /** counter for user compute time in milliseconds */
-  public static final String USER_COMPUTE_MS = "user-compute-ms";
-
   /** Mapping from name to aggregated metric */
-  private Map<String, AggregatedMetric> metrics = Maps.newHashMap();
+  private Map<String, AggregatedMetric<?>> metrics = Maps.newHashMap();
 
   /**
    * Add value from hostname for a metric.
@@ -46,9 +45,30 @@ public class AggregatedMetrics {
    */
   public AggregatedMetrics add(String name, long value,
                                String hostnamePartitionId) {
-    AggregatedMetric aggregatedMetric = metrics.get(name);
+    AggregatedMetricLong aggregatedMetric =
+        (AggregatedMetricLong) metrics.get(name);
     if (aggregatedMetric == null) {
-      aggregatedMetric = new AggregatedMetric();
+      aggregatedMetric = new AggregatedMetricLong();
+      metrics.put(name, aggregatedMetric);
+    }
+    aggregatedMetric.addItem(value, hostnamePartitionId);
+    return this;
+  }
+
+  /**
+   * Add value from hostname for a metric.
+   *
+   * @param name String name of metric
+   * @param value double value to track
+   * @param hostnamePartitionId String host it came from
+   * @return this
+   */
+  public AggregatedMetrics add(String name, double value,
+                               String hostnamePartitionId) {
+    AggregatedMetricDouble aggregatedMetric =
+        (AggregatedMetricDouble) metrics.get(name);
+    if (aggregatedMetric == null) {
+      aggregatedMetric = new AggregatedMetricDouble();
       metrics.put(name, aggregatedMetric);
     }
     aggregatedMetric.addItem(value, hostnamePartitionId);
@@ -64,6 +84,8 @@ public class AggregatedMetrics {
    */
   public AggregatedMetrics add(WorkerSuperstepMetrics workerMetrics,
                                String hostname) {
+    add(GraphTaskManager.TIMER_SUPERSTEP_TIME,
+        workerMetrics.getSuperstepTimer(), hostname);
     add(GraphTaskManager.TIMER_COMMUNICATION_TIME,
         workerMetrics.getCommTimer(), hostname);
     add(GraphTaskManager.TIMER_COMPUTE_ALL,
@@ -72,8 +94,12 @@ public class AggregatedMetrics {
         workerMetrics.getTimeToFirstMsg(), hostname);
     add(BspServiceWorker.TIMER_WAIT_REQUESTS,
         workerMetrics.getWaitRequestsTimer(), hostname);
-    add(USER_COMPUTE_MS,
-        workerMetrics.getUserComputeTime(), hostname);
+    add(OutOfCoreIOCallable.BYTES_LOAD_FROM_DISK,
+        workerMetrics.getBytesLoadedFromDisk(), hostname);
+    add(OutOfCoreIOCallable.BYTES_STORE_TO_DISK,
+        workerMetrics.getBytesStoredOnDisk(), hostname);
+    add(OutOfCoreEngine.GRAPH_PERCENTAGE_IN_MEMORY,
+        workerMetrics.getGraphPercentageInMemory(), hostname);
     return this;
   }
 
@@ -85,21 +111,30 @@ public class AggregatedMetrics {
    * @return this
    */
   public AggregatedMetrics print(long superstep, PrintStream out) {
+    AggregatedMetric superstepTime = get(GraphTaskManager.TIMER_SUPERSTEP_TIME);
     AggregatedMetric commTime = get(GraphTaskManager.TIMER_COMMUNICATION_TIME);
     AggregatedMetric computeAll = get(GraphTaskManager.TIMER_COMPUTE_ALL);
     AggregatedMetric timeToFirstMsg =
         get(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG);
     AggregatedMetric waitRequestsMicros = get(
         BspServiceWorker.TIMER_WAIT_REQUESTS);
-    AggregatedMetric userComputeTime = get(USER_COMPUTE_MS);
+    AggregatedMetric bytesLoaded =
+        get(OutOfCoreIOCallable.BYTES_LOAD_FROM_DISK);
+    AggregatedMetric bytesStored =
+        get(OutOfCoreIOCallable.BYTES_STORE_TO_DISK);
+    AggregatedMetric graphInMem =
+        get(OutOfCoreEngine.GRAPH_PERCENTAGE_IN_MEMORY);
 
     out.println();
     out.println("--- METRICS: superstep " + superstep + " ---");
+    printAggregatedMetric(out, "superstep time", "ms", superstepTime);
     printAggregatedMetric(out, "compute all partitions", "ms", computeAll);
-    printAggregatedMetric(out, "user compute time", "ms", userComputeTime);
     printAggregatedMetric(out, "network communication time", "ms", commTime);
     printAggregatedMetric(out, "time to first message", "us", timeToFirstMsg);
     printAggregatedMetric(out, "wait requests time", "us", waitRequestsMicros);
+    printAggregatedMetric(out, "bytes loaded from disk", "bytes", bytesLoaded);
+    printAggregatedMetric(out, "bytes stored to disk", "bytes", bytesStored);
+    printAggregatedMetric(out, "graph in mem", "%", graphInMem);
 
     return this;
   }
@@ -109,17 +144,17 @@ public class AggregatedMetrics {
    *
    * @param out PrintStream to write to
    * @param header String header to print.
-   * @param timeUnit String time unit of metric
+   * @param unit String unit of metric
    * @param aggregatedMetric AggregatedMetric to write
    */
   private void printAggregatedMetric(PrintStream out, String header,
-                                     String timeUnit,
+                                     String unit,
                                      AggregatedMetric aggregatedMetric) {
     if (aggregatedMetric.hasData()) {
       out.println(header);
-      out.println("  mean: " + aggregatedMetric.mean() + " " + timeUnit);
-      printValueFromHost(out, "  slowest: ", timeUnit, aggregatedMetric.max());
-      printValueFromHost(out, "  fastest: ", timeUnit, aggregatedMetric.min());
+      out.println("  mean: " + aggregatedMetric.mean() + " " + unit);
+      printValueFromHost(out, "  smallest: ", unit, aggregatedMetric.min());
+      printValueFromHost(out, "  largest: ", unit, aggregatedMetric.max());
     } else {
       out.println(header + ": NO DATA");
     }
@@ -130,12 +165,12 @@ public class AggregatedMetrics {
    *
    * @param out PrintStream to write to
    * @param prefix String to write at beginning
-   * @param timeUnit String timeUnit of metric
+   * @param unit String unit of metric
    * @param vh ValueWithHostname to write
    */
   private void printValueFromHost(PrintStream out, String prefix,
-                                  String timeUnit, ValueWithHostname vh) {
-    out.println(prefix + vh.getValue() + ' ' + timeUnit +
+                                  String unit, ValueWithHostname vh) {
+    out.println(prefix + vh.getValue() + ' ' + unit +
         " from " + vh.getHostname());
   }
 
@@ -154,7 +189,7 @@ public class AggregatedMetrics {
    *
    * @return Map of all the aggregated metrics.
    */
-  public Map<String, AggregatedMetric> getAll() {
+  public Map<String, AggregatedMetric<?>> getAll() {
     return metrics;
   }
 }

@@ -1,0 +1,55 @@
+  @Test
+  public final void testCompute() {
+    try {
+      $classUnderTestName classUnderTest = ($classUnderTestName) conf.createComputation();
+
+      GraphState graphState = mock(GraphState.class);
+      when(graphState.getSuperstep()).thenReturn($superstepNo#[[l]]#);
+      when(graphState.getTotalNumVertices()).thenReturn($nVertices#[[l]]#);
+      when(graphState.getTotalNumEdges()).thenReturn($nEdges#[[l]]#);
+	
+      WorkerClientRequestProcessor<$vertexIdType, $vertexValueType, $edgeValueType> processor = 
+          mock(WorkerClientRequestProcessor.class);
+	
+      WorkerAggregatorUsage aggr = mock(WorkerAggregatorUsage.class);
+#foreach ($aggr in $aggregators)
+      when(aggr.getAggregatedValue("$aggr.key")).thenReturn($helper.formatWritable($aggr.value));
+#end
+
+      classUnderTest.initialize(graphState, processor, null, aggr, null);
+    
+      Vertex<$vertexIdType, $vertexValueType, $edgeValueType> vertex = conf.createVertex();
+      vertex.initialize($helper.formatWritable($vertexId), $helper.formatWritable($vertexValue));
+      
+#if ($neighbors)
+      ReusableEdge<$vertexIdType, $edgeValueType> edge = conf.createReusableEdge();
+#foreach ($neighbor in $neighbors)
+      edge.setTargetVertexId($helper.formatWritable($neighbor.NbrId));
+#if ($neighbor.edgeValue)
+      edge.setValue($helper.formatWritable($neighbor.edgeValue));
+#end
+      vertex.addEdge(edge);
+#end
+#end
+
+      ArrayList<$inMsgType> inMsgs = new ArrayList<>();
+#foreach ($inMsg in $inMsgs)
+      inMsgs.add($helper.formatWritable($inMsg));   
+#end
+
+      classUnderTest.compute(vertex, inMsgs);
+
+#if ($vertexValueAfter)
+      // assertEquals($vertexValueAfter, vertex.getValue().get(), 0.001f);
+#end
+
+      // verifyZeroInteractions(processor);
+
+#foreach ($outMsg in $outMsgs)
+      // verify(processor, times($outMsg.times)).sendMessageRequest($helper.formatWritable($outMsg.msg.destinationId), $helper.formatWritable($outMsg.msg.Message));
+#end
+      
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }

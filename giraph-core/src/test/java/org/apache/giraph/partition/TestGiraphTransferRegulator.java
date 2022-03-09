@@ -19,10 +19,12 @@ package org.apache.giraph.partition;
 
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.GiraphTransferRegulator;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -44,16 +46,14 @@ public class TestGiraphTransferRegulator {
   /** Job filled in by setup() */
   private GiraphJob job;
   /** Instantiated vertex filled in from setup() */
-  private TestVertex vertex = new TestVertex();
+  private Vertex<IntWritable, FloatWritable, DoubleWritable>
+      vertex = new DefaultVertex<IntWritable, FloatWritable, DoubleWritable>();
 
   /**
    * Dummy vertex.
    */
-  public static class TestVertex extends
-      Vertex<IntWritable, FloatWritable, DoubleWritable, LongWritable> {
-    @Override
-    public void compute(Iterable<LongWritable> messages) throws IOException { }
-  }
+  public static class TestComputation extends NoOpComputation<IntWritable,
+      FloatWritable, DoubleWritable, LongWritable> { }
 
   @Before
   public void setUp() {
@@ -62,7 +62,7 @@ public class TestGiraphTransferRegulator {
     } catch (IOException e) {
       throw new RuntimeException("setUp: Failed", e);
     }
-    job.getConfiguration().setVertexClass(TestVertex.class);
+    job.getConfiguration().setComputationClass(TestComputation.class);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class TestGiraphTransferRegulator {
         .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
-    VertexEdges<IntWritable, DoubleWritable> edges =
+    OutEdges<IntWritable, DoubleWritable> edges =
         new ArrayListEdges<IntWritable, DoubleWritable>();
     edges.initialize(3);
     edges.add(EdgeFactory.create(new IntWritable(2), new DoubleWritable(22)));

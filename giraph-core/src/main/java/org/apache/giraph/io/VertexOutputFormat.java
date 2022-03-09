@@ -20,10 +20,6 @@ package org.apache.giraph.io;
 
 import java.io.IOException;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.OutputCommitter;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -33,6 +29,14 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * directly after the Hadoop OutputFormat.
  * ImmutableClassesGiraphConfiguration is available
  *
+ * It's guaranteed that whatever parameters are set in the configuration are
+ * also going to be available in all method arguments related to this output
+ * format (context in createVertexWriter, checkOutputSpecs and
+ * getOutputCommitter; methods invoked on VertexWriter and OutputCommitter).
+ * So if backing output format relies on some parameters from configuration,
+ * you can safely set them for example in
+ * {@link #setConf(org.apache.giraph.conf.ImmutableClassesGiraphConfiguration)}.
+ *
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
@@ -41,7 +45,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class VertexOutputFormat<
     I extends WritableComparable, V extends Writable,
     E extends Writable> extends
-    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
+    OutputFormat<I, V, E> {
   /**
    * Create a vertex writer for a given split. The framework will call
    * {@link VertexWriter#initialize(TaskAttemptContext)} before
@@ -53,33 +57,5 @@ public abstract class VertexOutputFormat<
    * @throws InterruptedException
    */
   public abstract VertexWriter<I, V, E> createVertexWriter(
-    TaskAttemptContext context) throws IOException, InterruptedException;
-
-  /**
-   * Check for validity of the output-specification for the job.
-   * (Copied from Hadoop OutputFormat)
-   *
-   * <p>This is to validate the output specification for the job when it is
-   * a job is submitted.  Typically checks that it does not already exist,
-   * throwing an exception when it already exists, so that output is not
-   * overwritten.</p>
-   *
-   * @param context information about the job
-   * @throws IOException when output should not be attempted
-   */
-  public abstract void checkOutputSpecs(JobContext context)
-    throws IOException, InterruptedException;
-
-  /**
-   * Get the output committer for this output format. This is responsible
-   * for ensuring the output is committed correctly.
-   * (Copied from Hadoop OutputFormat)
-   *
-   * @param context the task context
-   * @return an output committer
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  public abstract OutputCommitter getOutputCommitter(
     TaskAttemptContext context) throws IOException, InterruptedException;
 }

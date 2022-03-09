@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.partition;
 
+import com.google.common.collect.MapMaker;
+import com.google.common.primitives.Ints;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.WritableUtils;
@@ -24,9 +27,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.collect.MapMaker;
-import com.google.common.primitives.Ints;
-
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -42,12 +43,12 @@ import java.util.concurrent.ConcurrentMap;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
+@NotThreadSafe
 public class ByteArrayPartition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends BasicPartition<I, V, E, M>
-    implements ReusesObjectsPartition<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends BasicPartition<I, V, E>
+    implements ReusesObjectsPartition<I, V, E> {
   /**
    * Vertex map for this range (keyed by index).  Note that the byte[] is a
    * serialized vertex with the first four bytes as the length of the vertex
@@ -55,7 +56,9 @@ public class ByteArrayPartition<I extends WritableComparable,
    */
   private ConcurrentMap<I, byte[]> vertexMap;
   /** Representative vertex */
-  private Vertex<I, V, E, M> representativeVertex;
+  private Vertex<I, V, E> representativeVertex;
+  /** Representative combiner vertex */
+  private Vertex<I, V, E> representativeCombinerVertex;
   /** Use unsafe serialization */
   private boolean useUnsafeSerialization;
 
@@ -73,12 +76,17 @@ public class ByteArrayPartition<I extends WritableComparable,
     representativeVertex.initialize(
         getConf().createVertexId(),
         getConf().createVertexValue(),
-        getConf().createVertexEdges());
+        getConf().createOutEdges());
+    representativeCombinerVertex = getConf().createVertex();
+    representativeCombinerVertex.initialize(
+        getConf().createVertexId(),
+        getConf().createVertexValue(),
+        getConf().createOutEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
   }
 
   @Override
-  public Vertex<I, V, E, M> getVertex(I vertexIndex) {
+  public Vertex<I, V, E> getVertex(I vertexIndex) {
     byte[] vertexData = vertexMap.get(vertexIndex);
     if (vertexData == null) {
       return null;
@@ -89,7 +97,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> putVertex(Vertex<I, V, E, M> vertex) {
+  public Vertex<I, V, E> putVertex(Vertex<I, V, E> vertex) {
     byte[] vertexData =
         WritableUtils.writeVertexToByteArray(
             vertex, useUnsafeSerialization, getConf());
@@ -104,7 +112,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> removeVertex(I vertexIndex) {
+  public Vertex<I, V, E> removeVertex(I vertexIndex) {
     byte[] vertexBytes = vertexMap.remove(vertexIndex);
     if (vertexBytes == null) {
       return null;
@@ -115,19 +123,74 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public void addPartition(Partition<I, V, E, M> partition) {
+  public void addPartition(Partition<I, V, E> partition) {
     // Only work with other ByteArrayPartition instances
     if (!(partition instanceof ByteArrayPartition)) {
       throw new IllegalStateException("addPartition: Cannot add partition " +
           "of type " + partition.getClass());
     }
 
-    ByteArrayPartition<I, V, E, M> byteArrayPartition =
-        (ByteArrayPartition<I, V, E, M>) partition;
+    ByteArrayPartition<I, V, E> byteArrayPartition =
+        (ByteArrayPartition<I, V, E>) partition;
     for (Map.Entry<I, byte[]> entry :
         byteArrayPartition.vertexMap.entrySet()) {
-      vertexMap.put(entry.getKey(), entry.getValue());
+
+      byte[] oldVertexBytes =
+          vertexMap.putIfAbsent(entry.getKey(), entry.getValue());
+      if (oldVertexBytes == null) {
+        continue;
+      }
+
+      // Note that vertex combining is going to be expensive compared to
+      // SimplePartition since here we have to deserialize the vertices,
+      // combine them, and then reserialize them.  If the vertex doesn't exist,
+      // just add the new vertex as a byte[]
+      synchronized (this) {
+        // Combine the vertex values
+        WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
+            representativeVertex, useUnsafeSerialization, getConf());
+        WritableUtils.reinitializeVertexFromByteArray(entry.getValue(),
+            representativeCombinerVertex, useUnsafeSerialization, getConf());
+        combine(representativeVertex, representativeCombinerVertex);
+      }
     }
+  }
+
+  @Override
+  public synchronized boolean putOrCombine(Vertex<I, V, E> vertex) {
+    // Optimistically try to first put and then combine if this fails
+    byte[] vertexData =
+        WritableUtils.writeVertexToByteArray(
+            vertex, useUnsafeSerialization, getConf());
+    byte[] oldVertexBytes = vertexMap.putIfAbsent(vertex.getId(), vertexData);
+    if (oldVertexBytes == null) {
+      return true;
+    }
+
+    WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
+        representativeVertex, useUnsafeSerialization, getConf());
+    combine(representativeVertex, vertex);
+    return false;
+  }
+
+  /**
+   * Combine two vertices together and store the serialized bytes
+   * in the vertex map.
+   *
+   * @param representativeVertex existing vertex
+   * @param representativeCombinerVertex new vertex to combine
+   */
+  private void combine(Vertex<I, V, E> representativeVertex,
+      Vertex<I, V, E> representativeCombinerVertex) {
+    getVertexValueCombiner().combine(representativeVertex.getValue(),
+        representativeCombinerVertex.getValue());
+    // Add the edges to the representative vertex
+    for (Edge<I, E> edge : representativeCombinerVertex.getEdges()) {
+      representativeVertex.addEdge(edge);
+    }
+    vertexMap.put(representativeCombinerVertex.getId(),
+        WritableUtils.writeVertexToByteArray(
+            representativeVertex, useUnsafeSerialization, getConf()));
   }
 
   @Override
@@ -147,7 +210,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public void saveVertex(Vertex<I, V, E, M> vertex) {
+  public void saveVertex(Vertex<I, V, E> vertex) {
     // Reuse the old buffer whenever possible
     byte[] oldVertexData = vertexMap.get(vertex.getId());
     if (oldVertexData != null) {
@@ -194,7 +257,7 @@ public class ByteArrayPartition<I extends WritableComparable,
     representativeVertex.initialize(
         getConf().createVertexId(),
         getConf().createVertexValue(),
-        getConf().createVertexEdges());
+        getConf().createOutEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
     for (int i = 0; i < size; ++i) {
       progress();
@@ -211,7 +274,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Iterator<Vertex<I, V, E, M>> iterator() {
+  public Iterator<Vertex<I, V, E>> iterator() {
     return new RepresentativeVertexIterator();
   }
 
@@ -220,7 +283,7 @@ public class ByteArrayPartition<I extends WritableComparable,
    * the same representative vertex object.
    */
   private class RepresentativeVertexIterator implements
-      Iterator<Vertex<I, V, E, M>> {
+      Iterator<Vertex<I, V, E>> {
     /** Iterator to the vertex values */
     private Iterator<byte[]> vertexDataIterator =
         vertexMap.values().iterator();
@@ -231,7 +294,7 @@ public class ByteArrayPartition<I extends WritableComparable,
     }
 
     @Override
-    public Vertex<I, V, E, M> next() {
+    public Vertex<I, V, E> next() {
       WritableUtils.reinitializeVertexFromByteArray(
           vertexDataIterator.next(), representativeVertex,
           useUnsafeSerialization, getConf());

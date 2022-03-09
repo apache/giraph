@@ -19,10 +19,9 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.utils.CallableFactory;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -33,57 +32,50 @@ import org.apache.hadoop.mapreduce.Mapper;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class VertexInputSplitsCallableFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements CallableFactory<VertexEdgeCount> {
+  /** Vertex input format */
+  private final VertexInputFormat<I, V, E> vertexInputFormat;
   /** Mapper context. */
   private final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph state. */
-  private final GraphState<I, V, E, M> graphState;
   /** Configuration. */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** {@link BspServiceWorker} we're running on. */
-  private final BspServiceWorker<I, V, E, M> bspServiceWorker;
+  private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Handler for input splits */
-  private final InputSplitsHandler splitsHandler;
-  /** {@link ZooKeeperExt} for this worker. */
-  private final ZooKeeperExt zooKeeperExt;
+  private final WorkerInputSplitsHandler splitsHandler;
 
   /**
    * Constructor.
    *
+   * @param vertexInputFormat Vertex input format
    * @param context Mapper context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker Calling {@link BspServiceWorker}
    * @param splitsHandler Handler for input splits
-   * @param zooKeeperExt {@link ZooKeeperExt} for this worker
    */
   public VertexInputSplitsCallableFactory(
+      VertexInputFormat<I, V, E> vertexInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
-      InputSplitsHandler splitsHandler,
-      ZooKeeperExt zooKeeperExt) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
+      WorkerInputSplitsHandler splitsHandler) {
+    this.vertexInputFormat = vertexInputFormat;
     this.context = context;
-    this.graphState = graphState;
     this.configuration = configuration;
     this.bspServiceWorker = bspServiceWorker;
-    this.zooKeeperExt = zooKeeperExt;
     this.splitsHandler = splitsHandler;
   }
 
   @Override
-  public InputSplitsCallable<I, V, E, M> newCallable(int threadId) {
-    return new VertexInputSplitsCallable<I, V, E, M>(
+  public InputSplitsCallable<I, V, E> newCallable(int threadId) {
+    return new VertexInputSplitsCallable<I, V, E>(
+        vertexInputFormat,
         context,
-        graphState,
         configuration,
         bspServiceWorker,
-        splitsHandler,
-        zooKeeperExt);
+        splitsHandler);
   }
 }

@@ -20,6 +20,7 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.io.VertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -41,6 +42,8 @@ import java.util.List;
 public abstract class GeneratedVertexInputFormat<
     I extends WritableComparable, V extends Writable, E extends Writable>
     extends VertexInputFormat<I, V, E> {
+  @Override public void checkInputSpecs(Configuration conf) { }
+
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {

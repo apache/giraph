@@ -19,6 +19,7 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.master.DefaultMasterCompute;
@@ -41,7 +42,7 @@ import java.io.IOException;
  */
 public class VerifyMessage {
   /**
-   * Message that will be sent in {@link VerifyMessageVertex}.
+   * Message that will be sent in {@link VerifyMessageComputation}.
    */
   public static class VerifiableMessage implements Writable {
     /** Superstep sent on */
@@ -93,9 +94,9 @@ public class VerifyMessage {
   /**
    * Send and verify messages.
    */
-  public static class VerifyMessageVertex extends
-      Vertex<LongWritable, IntWritable, FloatWritable,
-      VerifiableMessage> {
+  public static class VerifyMessageComputation extends
+      BasicComputation<LongWritable, IntWritable, FloatWritable,
+          VerifiableMessage> {
     /** Dynamically set number of SUPERSTEPS */
     public static final String SUPERSTEP_COUNT =
         "verifyMessageVertex.superstepCount";
@@ -104,14 +105,15 @@ public class VerifyMessage {
     /** Number of SUPERSTEPS to run (6 by default) */
     private static int SUPERSTEPS = 6;
     /** Class logger */
-    private static Logger LOG = Logger.getLogger(VerifyMessageVertex.class);
+    private static Logger LOG =
+        Logger.getLogger(VerifyMessageComputation.class);
 
     public static long getFinalSum() {
       return FINAL_SUM;
     }
 
     /**
-     * Worker context used with {@link VerifyMessageVertex}.
+     * Worker context used with {@link VerifyMessageComputation}.
      */
     public static class VerifyMessageVertexWorkerContext extends
         WorkerContext {
@@ -138,28 +140,30 @@ public class VerifyMessage {
     }
 
     @Override
-    public void compute(Iterable<VerifiableMessage> messages) {
+    public void compute(
+        Vertex<LongWritable, IntWritable, FloatWritable> vertex,
+        Iterable<VerifiableMessage> messages) throws IOException {
       String sumAggregatorName = LongSumAggregator.class.getName();
       if (getSuperstep() > SUPERSTEPS) {
-        voteToHalt();
+        vertex.voteToHalt();
         return;
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("compute: " + getAggregatedValue(sumAggregatorName));
       }
-      aggregate(sumAggregatorName, new LongWritable(getId().get()));
+      aggregate(sumAggregatorName, new LongWritable(vertex.getId().get()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("compute: sum = " +
             this.<LongWritable>getAggregatedValue(sumAggregatorName).get() +
-            " for vertex " + getId());
+            " for vertex " + vertex.getId());
       }
       float msgValue = 0.0f;
       for (VerifiableMessage message : messages) {
         msgValue += message.value;
         if (LOG.isDebugEnabled()) {
           LOG.debug("compute: got msg = " + message +
-              " for vertex id " + getId() +
-              ", vertex value " + getValue() +
+              " for vertex id " + vertex.getId() +
+              ", vertex value " + vertex.getValue() +
               " on superstep " + getSuperstep());
         }
         if (message.superstep != getSuperstep() - 1) {
@@ -168,44 +172,44 @@ public class VerifyMessage {
                   "the previous superstep, current superstep = " +
                   getSuperstep());
         }
-        if ((message.sourceVertexId != getId().get() - 1) &&
-            (getId().get() != 0)) {
+        if ((message.sourceVertexId != vertex.getId().get() - 1) &&
+            (vertex.getId().get() != 0)) {
           throw new IllegalStateException(
               "compute: Impossible that this message didn't come " +
                   "from the previous vertex and came from " +
                   message.sourceVertexId);
         }
       }
-      int vertexValue = getValue().get();
-      setValue(new IntWritable(vertexValue + (int) msgValue));
+      int vertexValue = vertex.getValue().get();
+      vertex.setValue(new IntWritable(vertexValue + (int) msgValue));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("compute: vertex " + getId() +
-            " has value " + getValue() +
+        LOG.debug("compute: vertex " + vertex.getId() +
+            " has value " + vertex.getValue() +
             " on superstep " + getSuperstep());
       }
-      for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
+      for (Edge<LongWritable, FloatWritable> edge : vertex.getEdges()) {
         FloatWritable newEdgeValue = new FloatWritable(
             edge.getValue().get() + (float) vertexValue);
         Edge<LongWritable, FloatWritable> newEdge =
             EdgeFactory.create(edge.getTargetVertexId(), newEdgeValue);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("compute: vertex " + getId() +
+          LOG.debug("compute: vertex " + vertex.getId() +
               " sending edgeValue " + edge.getValue() +
               " vertexValue " + vertexValue +
               " total " + newEdgeValue +
               " to vertex " + edge.getTargetVertexId() +
               " on superstep " + getSuperstep());
         }
-        addEdge(newEdge);
+        vertex.addEdge(newEdge);
         sendMessage(edge.getTargetVertexId(),
             new VerifiableMessage(
-                getSuperstep(), getId().get(), newEdgeValue.get()));
+                getSuperstep(), vertex.getId().get(), newEdgeValue.get()));
       }
     }
   }
 
   /**
-   * Master compute associated with {@link VerifyMessageVertex}.
+   * Master compute associated with {@link VerifyMessageComputation}.
    * It registers required aggregators.
    */
   public static class VerifyMessageMasterCompute extends

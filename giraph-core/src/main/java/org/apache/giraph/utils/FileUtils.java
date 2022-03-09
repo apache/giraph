@@ -21,6 +21,7 @@ package org.apache.giraph.utils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.log4j.Logger;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Closeables;
@@ -35,6 +36,8 @@ import java.io.Writer;
  * Helper class for filesystem operations during testing
  */
 public class FileUtils {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(FileUtils.class);
 
   /**
    * Utility class should not be instantiatable
@@ -45,15 +48,15 @@ public class FileUtils {
   /**
    * Create a temporary folder that will be removed after the test.
    *
-   * @param vertexClass Used for generating the folder name.
+   * @param computationName Used for generating the folder name.
    * @return File object for the directory.
    */
-  public static File createTestDir(Class<?> vertexClass)
+  public static File createTestDir(String computationName)
     throws IOException {
     String systemTmpDir = System.getProperty("java.io.tmpdir");
     long simpleRandomLong = (long) (Long.MAX_VALUE * Math.random());
     File testTempDir = new File(systemTmpDir, "giraph-" +
-        vertexClass.getSimpleName() + '-' + simpleRandomLong);
+        computationName + '-' + simpleRandomLong);
     if (!testTempDir.mkdir()) {
       throw new IOException("Could not create " + testTempDir);
     }
@@ -85,7 +88,9 @@ public class FileUtils {
   public static File createTempDir(File parent, String name)
     throws IOException {
     File dir = createTestTempFileOrDir(parent, name, true);
-    dir.delete();
+    if (!dir.delete()) {
+      LOG.error("createTempDir: Failed to create directory " + dir);
+    }
     return dir;
   }
 
@@ -124,7 +129,7 @@ public class FileUtils {
         writer.write('\n');
       }
     } finally {
-      Closeables.closeQuietly(writer);
+      Closeables.close(writer, true);
     }
   }
 
@@ -146,9 +151,13 @@ public class FileUtils {
     @Override
     public boolean accept(File f) {
       if (!f.isFile()) {
-        f.listFiles(this);
+        if (f.listFiles(this) == null) {
+          LOG.error("accept: Failed to list files of " + f);
+        }
       }
-      f.delete();
+      if (!f.delete()) {
+        LOG.error("accept: Failed to delete file " + f);
+      }
       return false;
     }
   }

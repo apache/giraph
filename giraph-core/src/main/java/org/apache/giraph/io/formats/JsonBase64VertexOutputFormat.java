@@ -60,7 +60,7 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
   protected class JsonBase64VertexWriter extends TextVertexWriterToEachLine {
 
     @Override
-    protected Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    protected Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException {
       ByteArrayOutputStream outputStream =
           new ByteArrayOutputStream();

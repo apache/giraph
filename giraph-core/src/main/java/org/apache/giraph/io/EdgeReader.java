@@ -19,24 +19,26 @@
 package org.apache.giraph.io;
 
 import java.io.IOException;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.worker.WorkerAggregatorDelegator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
- * Analogous to {@link RecordReader} for edges.  Will read the edges
- * from an input split.
+ * Analogous to org.apache.giraph.bsp.BspRecordReader for edges.
+ * Will read the edges from an input split.
  *
  * @param <I> Vertex id
  * @param <E> Edge data
  */
 @SuppressWarnings("rawtypes")
 public abstract class EdgeReader<I extends WritableComparable,
-    E extends Writable> extends DefaultImmutableClassesGiraphConfigurable<
-        I, Writable, E, Writable> {
+    E extends Writable> extends WorkerAggregatorDelegator<
+        I, Writable, E> {
+
   /**
    * Use the input split and context to setup reading the edges.
    * Guaranteed to be called prior to any other function.

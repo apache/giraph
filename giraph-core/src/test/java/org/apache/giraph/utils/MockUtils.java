@@ -21,14 +21,18 @@ package org.apache.giraph.utils;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.ArrayListEdges;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.edge.ArrayListEdges;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.partition.SimplePartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -55,7 +59,7 @@ public class MockUtils {
     public static class MockedEnvironment<I extends WritableComparable,
             V extends Writable, E extends Writable, M extends Writable> {
 
-        private final GraphState<I, V, E, M> graphState;
+        private final GraphState graphState;
         private final Mapper.Context context;
         private final Configuration conf;
         private final WorkerClientRequestProcessor workerClientRequestProcessor;
@@ -94,6 +98,10 @@ public class MockUtils {
                 (targetVertexId, message);
         }
 
+        public void verifyMessageSentToAllEdges(Vertex<I, V, E> vertex, M message) {
+          Mockito.verify(workerClientRequestProcessor).sendMessageToAllRequest(vertex, message);
+      }
+
         /** assert that the test vertex has sent no message to a particular vertex */
         public void verifyNoMessageSent() {
             Mockito.verifyZeroInteractions(workerClientRequestProcessor);
@@ -101,14 +109,15 @@ public class MockUtils {
     }
 
     /**
-     * prepare a vertex for use in a unit test by setting its internal state and injecting mocked
-     * dependencies,
+     * prepare a vertex and computation for use in a unit test by setting its
+     * internal state and injecting mocked dependencies,
      *
-     * @param vertex
-     * @param superstep the superstep to emulate
+     * @param vertex Vertex
      * @param vertexId initial vertex id
      * @param vertexValue initial vertex value
      * @param isHalted initial halted state of the vertex
+     * @param computation Computation
+     * @param superstep Superstep
      * @param <I> vertex id
      * @param <V> vertex data
      * @param <E> edge data
@@ -116,48 +125,49 @@ public class MockUtils {
      * @return
      * @throws Exception
      */
-    public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable>
-            MockedEnvironment<I, V, E, M> prepareVertex(
-            Vertex<I, V, E, M> vertex, long superstep, I vertexId,
-            V vertexValue, boolean isHalted) throws Exception {
+  public static <I extends WritableComparable, V extends Writable,
+      E extends Writable, M extends Writable>
+  MockedEnvironment<I, V, E, M> prepareVertexAndComputation(
+      Vertex<I, V, E> vertex, I vertexId, V vertexValue, boolean isHalted,
+      Computation<I, V, E, M, M> computation, long superstep) throws
+      Exception {
+    MockedEnvironment<I, V, E, M> env = new MockedEnvironment<I, V, E, M>();
+    Mockito.when(env.getGraphState().getSuperstep()).thenReturn(superstep);
+    Mockito.when(env.getGraphState().getContext())
+        .thenReturn(env.getContext());
+    Mockito.when(env.getContext().getConfiguration())
+        .thenReturn(env.getConfiguration());
+    computation.initialize(env.getGraphState(),
+        env.getWorkerClientRequestProcessor(), null, null);
 
-        MockedEnvironment<I, V, E, M>  env =
-                new MockedEnvironment<I, V, E, M>();
+    GiraphConfiguration giraphConf = new GiraphConfiguration();
+    giraphConf.setComputationClass(computation.getClass());
+    giraphConf.setOutEdgesClass(ArrayListEdges.class);
+    ImmutableClassesGiraphConfiguration<I, V, E> conf =
+        new ImmutableClassesGiraphConfiguration<I, V, E>(giraphConf);
+    computation.setConf(conf);
 
-        Mockito.when(env.getGraphState().getSuperstep()).thenReturn(superstep);
-        Mockito.when(env.getGraphState().getContext())
-                .thenReturn(env.getContext());
-        Mockito.when(env.getContext().getConfiguration())
-                .thenReturn(env.getConfiguration());
-        Mockito.when(env.getGraphState().getWorkerClientRequestProcessor())
-                .thenReturn(env.getWorkerClientRequestProcessor());
-
-        GiraphConfiguration giraphConf = new GiraphConfiguration();
-        giraphConf.setVertexClass(vertex.getClass());
-        ImmutableClassesGiraphConfiguration<I, V, E, M> conf =
-            new ImmutableClassesGiraphConfiguration<I, V, E, M>(giraphConf);
-        vertex.setConf(conf);
-        ArrayListEdges<I, E> edges = new ArrayListEdges<I, E>();
-        edges.setConf((ImmutableClassesGiraphConfiguration<I, Writable, E,
-            Writable>) conf);
-        edges.initialize();
-
-        ReflectionUtils.setField(vertex, "id", vertexId);
-        ReflectionUtils.setField(vertex, "value", vertexValue);
-        ReflectionUtils.setField(vertex, "edges", edges);
-        ReflectionUtils.setField(vertex, "graphState", env.getGraphState());
-        ReflectionUtils.setField(vertex, "halt", isHalted);
-
-        return env;
+    vertex.setConf(conf);
+    vertex.initialize(vertexId, vertexValue);
+    if (isHalted) {
+      vertex.voteToHalt();
     }
 
+    return env;
+  }
+
+  /**
+   * Prepare a mocked CentralizedServiceWorker.
+   *
+   * @param numOfPartitions The number of partitions
+   * @return CentralizedServiceWorker
+   */
   public static CentralizedServiceWorker<IntWritable, IntWritable,
-      IntWritable, IntWritable> mockServiceGetVertexPartitionOwner(final int
+      IntWritable> mockServiceGetVertexPartitionOwner(final int
       numOfPartitions) {
-    CentralizedServiceWorker<IntWritable, IntWritable, IntWritable,
-        IntWritable> service = Mockito.mock(CentralizedServiceWorker.class);
-    Answer<PartitionOwner> answer = new Answer<PartitionOwner>() {
+    CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> service =
+        Mockito.mock(CentralizedServiceWorker.class);
+    Answer<PartitionOwner> answerOwner = new Answer<PartitionOwner>() {
       @Override
       public PartitionOwner answer(InvocationOnMock invocation) throws
           Throwable {
@@ -166,18 +176,43 @@ public class MockUtils {
       }
     };
     Mockito.when(service.getVertexPartitionOwner(
-        Mockito.any(IntWritable.class))).thenAnswer(answer);
+      Mockito.any(IntWritable.class))).thenAnswer(answerOwner);
+
+    Answer<Integer> answerId = new Answer<Integer>() {
+      @Override
+      public Integer answer(InvocationOnMock invocation) throws
+          Throwable {
+        IntWritable vertexId = (IntWritable) invocation.getArguments()[0];
+        return vertexId.get() % numOfPartitions;
+      }
+    };
+    Mockito.when(service.getPartitionId(
+      Mockito.any(IntWritable.class))).thenAnswer(answerId);
     return service;
   }
 
-  public static ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-  createNewServerData(ImmutableClassesGiraphConfiguration conf,
-      Mapper.Context context) {
-    return new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-        Mockito.mock(CentralizedServiceWorker.class),
-        conf,
-        ByteArrayMessagesPerVertexStore.newFactory(
-            MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-        context);
+  /**
+   * Prepare a ServerData object.
+   *
+   * @param conf Configuration
+   * @param context Context
+   * @return ServerData
+   */
+  public static ServerData<IntWritable, IntWritable, IntWritable>
+    createNewServerData(
+    ImmutableClassesGiraphConfiguration conf, Mapper.Context context) {
+    CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> serviceWorker =
+      MockUtils.mockServiceGetVertexPartitionOwner(1);
+    GiraphConstants.MESSAGE_STORE_FACTORY_CLASS.set(conf,
+        ByteArrayMessagesPerVertexStore.newFactory(serviceWorker, conf)
+            .getClass());
+
+    WorkerServer workerServer = Mockito.mock(WorkerServer.class);
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
+      new ServerData<IntWritable, IntWritable, IntWritable>(
+          serviceWorker, workerServer, conf, context);
+    // Here we add a partition to simulate the case that there is one partition.
+    serverData.getPartitionStore().addPartition(new SimplePartition());
+    return serverData;
   }
 }

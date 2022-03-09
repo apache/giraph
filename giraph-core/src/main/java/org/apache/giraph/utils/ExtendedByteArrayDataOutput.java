@@ -140,10 +140,15 @@ public class ExtendedByteArrayDataOutput extends ByteArrayOutputStream
   }
 
   @Override
-  public void skipBytes(int bytesToSkip) {
-    if ((count + bytesToSkip) > buf.length) {
-      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, count + bytesToSkip));
+  public void ensureWritable(int minSize) {
+    if ((count + minSize) > buf.length) {
+      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, count + minSize));
     }
+  }
+
+  @Override
+  public void skipBytes(int bytesToSkip) {
+    ensureWritable(bytesToSkip);
     count += bytesToSkip;
   }
 
@@ -158,6 +163,15 @@ public class ExtendedByteArrayDataOutput extends ByteArrayOutputStream
     buf[position + 1] = (byte) ((value >>> 16) & 0xFF);
     buf[position + 2] = (byte) ((value >>> 8) & 0xFF);
     buf[position + 3] = (byte) ((value >>> 0) & 0xFF);
+  }
+
+  @Override
+  public byte[] toByteArray(int offset, int length) {
+    if (offset + length > count) {
+      throw new IndexOutOfBoundsException(String.format("Offset: %d + " +
+          "Length: %d exceeds the size of buf : %d", offset, length, count));
+    }
+    return Arrays.copyOfRange(buf, offset, length);
   }
 
   @Override

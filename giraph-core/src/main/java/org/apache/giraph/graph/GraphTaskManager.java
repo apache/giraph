@@ -18,14 +18,30 @@
 
 package org.apache.giraph.graph;
 
+import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+import com.sun.management.GarbageCollectionNotificationInfo;
+import com.yammer.metrics.core.Counter;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.bsp.checkpoints.CheckpointStatus;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.conf.ClassConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.master.BspServiceMaster;
-import org.apache.giraph.master.MasterAggregatorUsage;
 import org.apache.giraph.master.MasterThread;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
@@ -33,18 +49,21 @@ import org.apache.giraph.metrics.GiraphTimer;
 import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.ooc.OutOfCoreEngine;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
-import org.apache.giraph.time.SystemTime;
-import org.apache.giraph.time.Time;
+import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.utils.CallableFactory;
+import org.apache.giraph.utils.GcObserver;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.BspServiceWorker;
-import org.apache.giraph.worker.WorkerAggregatorUsage;
+import org.apache.giraph.worker.InputSplitsCallable;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
+import org.apache.giraph.worker.WorkerProgress;
+import org.apache.giraph.writable.kryo.KryoWritableWrapper;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -53,26 +72,14 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.giraph.conf.GiraphConstants.EDGE_VALUE_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.MESSAGE_VALUE_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_ID_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.openmbean.CompositeData;
 
 /**
  * The Giraph-specific business logic for a single BSP
@@ -84,17 +91,27 @@ import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class GraphTaskManager<I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> implements
+  E extends Writable> implements
   ResetSuperstepMetricsObserver {
-  /*if_not[PURE_YARN]
+/*if_not[PURE_YARN]
   static { // Eliminate this? Even MRv1 tasks should not need it here.
     Configuration.addDefaultResource("giraph-site.xml");
   }
-  end[PURE_YARN]*/
+end[PURE_YARN]*/
+  /**
+   * Class which checks if an exception on some thread should cause worker
+   * to fail
+   */
+  public static final ClassConfOption<CheckerIfWorkerShouldFailAfterException>
+  CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS = ClassConfOption.create(
+      "giraph.checkerIfWorkerShouldFailAfterExceptionClass",
+      FailWithEveryExceptionOccurred.class,
+      CheckerIfWorkerShouldFailAfterException.class,
+      "Class which checks if an exception on some thread should cause worker " +
+          "to fail, by default all exceptions cause failure");
   /** Name of metric for superstep time in msec */
   public static final String TIMER_SUPERSTEP_TIME = "superstep-time-ms";
   /** Name of metric for compute on all vertices in msec */
@@ -104,15 +121,15 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       "time-to-first-message-ms";
   /** Name of metric for time from first message till last message flushed */
   public static final String TIMER_COMMUNICATION_TIME = "communication-time-ms";
+  /** Name of metric for time spent doing GC per superstep in msec */
+  public static final String TIMER_SUPERSTEP_GC_TIME = "superstep-gc-time-ms";
 
-  /** Time instance used for timing in this class */
-  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphTaskManager.class);
   /** Coordination service worker */
-  private CentralizedServiceWorker<I, V, E, M> serviceWorker;
+  private CentralizedServiceWorker<I, V, E> serviceWorker;
   /** Coordination service master */
-  private CentralizedServiceMaster<I, V, E, M> serviceMaster;
+  private CentralizedServiceMaster<I, V, E> serviceMaster;
   /** Coordination service master thread */
   private Thread masterThread = null;
   /** The worker should be run exactly once, or else there is a problem. */
@@ -120,14 +137,16 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /** Manages the ZooKeeper servers if necessary (dynamic startup) */
   private ZooKeeperManager zkManager;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Already complete? */
   private boolean done = false;
   /** What kind of functions is this mapper doing? */
   private GraphFunctions graphFunctions = GraphFunctions.UNKNOWN;
   /** Superstep stats */
   private FinishedSuperstepStats finishedSuperstepStats =
-      new FinishedSuperstepStats(0, false, 0, 0, false);
+      new FinishedSuperstepStats(0, false, 0, 0, false, CheckpointStatus.NONE);
+  /** Job progress tracker */
+  private JobProgressTrackerClient jobProgressTracker;
 
   // Per-Job Metrics
   /** Timer for WorkerContext#preApplication() */
@@ -150,12 +169,14 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private GiraphTimerContext communicationTimerContext;
   /** Timer for WorkerContext#preSuperstep() */
   private GiraphTimer wcPreSuperstepTimer;
-  /** Zookeeper host:port list */
-  private String serverPortList;
+  /** Timer to keep aggregated time spent in GC in a superstep */
+  private Counter gcTimeMetric;
   /** The Hadoop Mapper#Context for this job */
-  private Mapper<?, ?, ?, ?>.Context context;
+  private final Mapper<?, ?, ?, ?>.Context context;
   /** is this GraphTaskManager the master? */
   private boolean isMaster;
+  /** Mapper observers */
+  private MapperObserver[] mapperObservers;
 
   /**
    * Default constructor for GiraphTaskManager.
@@ -168,42 +189,81 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * Run the user's input checking code.
+   */
+  private void checkInput() {
+    if (conf.hasEdgeInputFormat()) {
+      conf.createWrappedEdgeInputFormat().checkInputSpecs(conf);
+    }
+    if (conf.hasVertexInputFormat()) {
+      conf.createWrappedVertexInputFormat().checkInputSpecs(conf);
+    }
+  }
+
+  /**
+   * In order for job client to know which ZooKeeper the job is using,
+   * we create a counter with server:port as its name inside of
+   * ZOOKEEPER_SERVER_PORT_COUNTER_GROUP.
+   *
+   * @param serverPortList Server:port list for ZooKeeper used
+   */
+  private void createZooKeeperCounter(String serverPortList) {
+    // Getting the counter will actually create it.
+    context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
+        serverPortList);
+  }
+
+  /**
    * Called by owner of this GraphTaskManager on each compute node
+   *
    * @param zkPathList the path to the ZK jars we need to run the job
    */
   public void setup(Path[] zkPathList)
     throws IOException, InterruptedException {
     context.setStatus("setup: Beginning worker setup.");
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-      context.getConfiguration());
-    determineClassTypes(conf);
+    Configuration hadoopConf = context.getConfiguration();
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E>(hadoopConf);
+    initializeJobProgressTracker();
+    // Setting the default handler for uncaught exceptions.
+    Thread.setDefaultUncaughtExceptionHandler(createUncaughtExceptionHandler());
+    setupMapperObservers();
+    // Write user's graph types (I,V,E,M) back to configuration parameters so
+    // that they are set for quicker access later. These types are often
+    // inferred from the Computation class used.
+    conf.getGiraphTypes().writeIfUnset(conf);
     // configure global logging level for Giraph job
     initializeAndConfigureLogging();
     // init the metrics objects
     setupAndInitializeGiraphMetrics();
+    // Check input
+    checkInput();
+    // Load any scripts that were deployed
+    ScriptLoader.loadScripts(conf);
+    // One time setup for computation factory
+    conf.createComputationFactory().initialize(conf);
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
-    locateZookeeperClasspath(zkPathList);
-    serverPortList = conf.getZookeeperList();
-    if (serverPortList == null && startZooKeeperManager()) {
-      return; // ZK connect/startup failed
+    String serverPortList = conf.getZookeeperList();
+    if (serverPortList.isEmpty()) {
+      if (startZooKeeperManager()) {
+        return; // ZK connect/startup failed
+      }
+    } else {
+      createZooKeeperCounter(serverPortList);
     }
     if (zkManager != null && zkManager.runsZooKeeper()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Chosen to run ZooKeeper...");
       }
     }
-    context.setStatus("setup: Connected to Zookeeper service " +
-      serverPortList);
+    context
+        .setStatus("setup: Connected to Zookeeper service " + serverPortList);
     this.graphFunctions = determineGraphFunctions(conf, zkManager);
-    // Sometimes it takes a while to get multiple ZooKeeper servers up
-    if (conf.getZooKeeperServerCount() > 1) {
-      Thread.sleep(GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT *
-        GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME);
+    if (zkManager != null && this.graphFunctions.isMaster()) {
+      zkManager.cleanupOnExit();
     }
-    int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
-      instantiateBspService(serverPortList, sessionMsecTimeout);
+      instantiateBspService();
     } catch (IOException e) {
       LOG.error("setup: Caught exception just before end of setup", e);
       if (zkManager != null) {
@@ -213,6 +273,29 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         "setup: Offlining servers due to exception...", e);
     }
     context.setStatus(getGraphFunctions().toString() + " starting...");
+  }
+
+  /**
+   * Create and connect a client to JobProgressTrackerService,
+   * or no-op implementation if progress shouldn't be tracked or something
+   * goes wrong
+   */
+  private void initializeJobProgressTracker() {
+    if (!conf.trackJobProgressOnClient()) {
+      jobProgressTracker = new JobProgressTrackerClientNoOp();
+    } else {
+      jobProgressTracker =
+        GiraphConstants.JOB_PROGRESS_TRACKER_CLIENT_CLASS.newInstance(conf);
+      try {
+        jobProgressTracker.init(conf);
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        throw new RuntimeException(
+          "Failed to initialize JobProgressTrackerClient", e);
+      }
+    }
+    jobProgressTracker.mapperStarted();
   }
 
   /**
@@ -227,39 +310,51 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (checkTaskState()) {
       return;
     }
+    preLoadOnWorkerObservers();
+    GiraphTimerContext superstepTimerContext = superstepTimer.time();
     finishedSuperstepStats = serviceWorker.setup();
+    superstepTimerContext.stop();
     if (collectInputSuperstepStats(finishedSuperstepStats)) {
       return;
     }
-    WorkerAggregatorUsage aggregatorUsage =
-      prepareAggregatorsAndGraphState();
+    prepareGraphStateAndWorkerContext();
     List<PartitionStats> partitionStatsList = new ArrayList<PartitionStats>();
     int numComputeThreads = conf.getNumComputeThreads();
 
     // main superstep processing loop
-    do {
+    while (!finishedSuperstepStats.allVerticesHalted()) {
       final long superstep = serviceWorker.getSuperstep();
-      GiraphTimerContext superstepTimerContext =
-        getTimerForThisSuperstep(superstep);
-      GraphState<I, V, E, M> graphState =
-        new GraphState<I, V, E, M>(superstep,
-            finishedSuperstepStats.getVertexCount(),
-            finishedSuperstepStats.getEdgeCount(),
-          context, this, null, aggregatorUsage);
+      superstepTimerContext = getTimerForThisSuperstep(superstep);
+      GraphState graphState = new GraphState(superstep,
+          finishedSuperstepStats.getVertexCount(),
+          finishedSuperstepStats.getEdgeCount(),
+          context);
       Collection<? extends PartitionOwner> masterAssignedPartitionOwners =
-        serviceWorker.startSuperstep(graphState);
+        serviceWorker.startSuperstep();
       if (LOG.isDebugEnabled()) {
         LOG.debug("execute: " + MemoryUtils.getRuntimeMemoryStats());
       }
       context.progress();
       serviceWorker.exchangeVertexPartitions(masterAssignedPartitionOwners);
       context.progress();
-      graphState = checkSuperstepRestarted(
-        aggregatorUsage, superstep, graphState);
+      boolean hasBeenRestarted = checkSuperstepRestarted(superstep);
+
+      GlobalStats globalStats = serviceWorker.getGlobalStats();
+
+      if (hasBeenRestarted) {
+        graphState = new GraphState(superstep,
+            finishedSuperstepStats.getVertexCount(),
+            finishedSuperstepStats.getEdgeCount(),
+            context);
+      } else if (storeCheckpoint(globalStats.getCheckpointStatus())) {
+        break;
+      }
+      serviceWorker.getServerData().prepareResolveMutations();
+      context.progress();
       prepareForSuperstep(graphState);
       context.progress();
-      MessageStoreByPartition<I, M> messageStore =
-        serviceWorker.getServerData().getCurrentMessageStore();
+      MessageStore<I, Writable> messageStore =
+          serviceWorker.getServerData().getCurrentMessageStore();
       int numPartitions = serviceWorker.getPartitionStore().getNumPartitions();
       int numThreads = Math.min(numComputeThreads, numPartitions);
       if (LOG.isInfoEnabled()) {
@@ -271,17 +366,18 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       // execute the current superstep
       if (numPartitions > 0) {
         processGraphPartitions(context, partitionStatsList, graphState,
-          messageStore, numPartitions, numThreads);
+          messageStore, numThreads);
       }
       finishedSuperstepStats = completeSuperstepAndCollectStats(
-        partitionStatsList, superstepTimerContext, graphState);
+        partitionStatsList, superstepTimerContext);
+
       // END of superstep compute loop
-    } while (!finishedSuperstepStats.allVerticesHalted());
+    }
 
     if (LOG.isInfoEnabled()) {
       LOG.info("execute: BSP application done (global vertices marked done)");
     }
-    updateSuperstepGraphState(aggregatorUsage);
+    updateSuperstepGraphState();
     postApplication();
   }
 
@@ -337,6 +433,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     GiraphMetrics.get().addSuperstepResetObserver(this);
     initJobMetrics();
     MemoryUtils.initMetrics();
+    InputSplitsCallable.initMetrics();
   }
 
   /**
@@ -354,22 +451,21 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       done = true;
       return true;
     }
-    zkManager.onlineZooKeeperServers();
-    serverPortList = zkManager.getZooKeeperServerPortString();
+    zkManager.onlineZooKeeperServer();
+    String serverPortList = zkManager.getZooKeeperServerPortString();
+    conf.setZookeeperList(serverPortList);
+    createZooKeeperCounter(serverPortList);
     return false;
   }
 
   /**
    * Utility to place a new, updated GraphState object into the serviceWorker.
-   * @param aggregatorUsage handle to aggregation metadata
    */
-  private void updateSuperstepGraphState(
-    WorkerAggregatorUsage aggregatorUsage) {
+  private void updateSuperstepGraphState() {
     serviceWorker.getWorkerContext().setGraphState(
-      new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
-        finishedSuperstepStats.getVertexCount(),
-          finishedSuperstepStats.getEdgeCount(), context, this, null,
-          aggregatorUsage));
+        new GraphState(serviceWorker.getSuperstep(),
+            finishedSuperstepStats.getVertexCount(),
+            finishedSuperstepStats.getEdgeCount(), context));
   }
 
   /**
@@ -377,16 +473,17 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * end of each superstep processing loop in the <code>execute</code> method.
    * @param partitionStatsList list of stas for each superstep to append to
    * @param superstepTimerContext for job metrics
-   * @param graphState the graph state metadata
    * @return the collected stats at the close of the current superstep.
    */
   private FinishedSuperstepStats completeSuperstepAndCollectStats(
     List<PartitionStats> partitionStatsList,
-    GiraphTimerContext superstepTimerContext,
-    GraphState<I, V, E, M> graphState) {
+    GiraphTimerContext superstepTimerContext) {
+
+    // the superstep timer is stopped inside the finishSuperstep function
+    // (otherwise metrics are not available at the end of the computation
+    //  using giraph.metrics.enable=true).
     finishedSuperstepStats =
-      serviceWorker.finishSuperstep(graphState, partitionStatsList);
-    superstepTimerContext.stop();
+      serviceWorker.finishSuperstep(partitionStatsList, superstepTimerContext);
     if (conf.metricsEnabled()) {
       GiraphMetrics.get().perSuperstep().printSummary(System.err);
     }
@@ -398,10 +495,11 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * operations for the next superstep.
    * @param graphState graph state metadata object
    */
-  private void prepareForSuperstep(GraphState<I, V, E, M> graphState) {
+  private void prepareForSuperstep(GraphState graphState) {
     serviceWorker.prepareSuperstep();
 
     serviceWorker.getWorkerContext().setGraphState(graphState);
+    serviceWorker.getWorkerContext().setupSuperstep(serviceWorker);
     GiraphTimerContext preSuperstepTimer = wcPreSuperstepTimer.time();
     serviceWorker.getWorkerContext().preSuperstep();
     preSuperstepTimer.stop();
@@ -414,15 +512,11 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Prepare aggregators and worker context for superstep cycles.
-   * @return aggregator metadata object
+   * Prepare graph state and worker context for superstep cycles.
    */
-  private WorkerAggregatorUsage prepareAggregatorsAndGraphState() {
-    WorkerAggregatorUsage aggregatorUsage =
-      serviceWorker.getAggregatorHandler();
-    updateSuperstepGraphState(aggregatorUsage);
+  private void prepareGraphStateAndWorkerContext() {
+    updateSuperstepGraphState();
     workerContextPreApp();
-    return aggregatorUsage;
   }
 
   /**
@@ -435,71 +529,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     return graphFunctions;
   }
 
-  /**
-   * Get master aggregator usage, a subset of the functionality
-   *
-   * @return Master aggregator usage interface
-   */
-  public final MasterAggregatorUsage getMasterAggregatorUsage() {
-    return serviceMaster.getAggregatorHandler();
-  }
-
   public final WorkerContext getWorkerContext() {
     return serviceWorker.getWorkerContext();
   }
 
- /**
-   * Set the concrete, user-defined choices about generic methods
-   * (validated earlier in GiraphRunner) into the Configuration.
-   * @param conf the Configuration object for this job run.
-   */
-  public void determineClassTypes(Configuration conf) {
-    ImmutableClassesGiraphConfiguration giraphConf =
-        new ImmutableClassesGiraphConfiguration(conf);
-    Class<? extends Vertex<I, V, E, M>> vertexClass =
-        giraphConf.getVertexClass();
-    List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
-        Vertex.class, vertexClass);
-    Type vertexIndexType = classList.get(0);
-    Type vertexValueType = classList.get(1);
-    Type edgeValueType = classList.get(2);
-    Type messageValueType = classList.get(3);
-    VERTEX_ID_CLASS.set(conf, (Class<WritableComparable>) vertexIndexType);
-    VERTEX_VALUE_CLASS.set(conf, (Class<Writable>) vertexValueType);
-    EDGE_VALUE_CLASS.set(conf, (Class<Writable>) edgeValueType);
-    MESSAGE_VALUE_CLASS.set(conf, (Class<Writable>) messageValueType);
-  }
-
-  /**
-   * Copied from JobConf to get the location of this jar.  Workaround for
-   * things like Oozie map-reduce jobs. NOTE: Pure YARN profile cannot
-   * make use of this, as the jars are unpacked at each container site.
-   *
-   * @param myClass Class to search the class loader path for to locate
-   *        the relevant jar file
-   * @return Location of the jar file containing myClass
-   */
-  private static String findContainingJar(Class<?> myClass) {
-    ClassLoader loader = myClass.getClassLoader();
-    String classFile =
-        myClass.getName().replaceAll("\\.", "/") + ".class";
-    try {
-      for (Enumeration<?> itr = loader.getResources(classFile);
-          itr.hasMoreElements();) {
-        URL url = (URL) itr.nextElement();
-        if ("jar".equals(url.getProtocol())) {
-          String toReturn = url.getPath();
-          if (toReturn.startsWith("file:")) {
-            toReturn = toReturn.substring("file:".length());
-          }
-          toReturn = URLDecoder.decode(toReturn, "UTF-8");
-          return toReturn.replaceAll("!.*$", "");
-        }
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return null;
+  public JobProgressTracker getJobProgressTracker() {
+    return jobProgressTracker;
   }
 
   /**
@@ -509,9 +544,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    *    ZooKeeper.
    * 2) If split master/worker, masters also run ZooKeeper
    *
-   * 3) If split master/worker == true and <code>giraph.zkList</code> is set,
-   *    the master will not instantiate a ZK instance, but will assume
-   *    a quorum is already active on the cluster for Giraph to use.
+   * 3) If split master/worker == true and <code>giraph.zkList</code> is
+   *    externally provided, the master will not instantiate a ZK instance, but
+   *    will assume a quorum is already active on the cluster for Giraph to use.
    *
    * @param conf Configuration to use
    * @param zkManager ZooKeeper manager to help determine whether to run
@@ -523,7 +558,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       ZooKeeperManager zkManager) {
     boolean splitMasterWorker = conf.getSplitMasterWorker();
     int taskPartition = conf.getTaskPartition();
-    boolean zkAlreadyProvided = conf.getZookeeperList() != null;
+    boolean zkAlreadyProvided = conf.isZookeeperExternal();
     GraphFunctions functions = GraphFunctions.UNKNOWN;
     // What functions should this mapper do?
     if (!splitMasterWorker) {
@@ -534,8 +569,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       }
     } else {
       if (zkAlreadyProvided) {
-        int masterCount = conf.getZooKeeperServerCount();
-        if (taskPartition < masterCount) {
+        if (taskPartition == 0) {
           functions = GraphFunctions.MASTER_ONLY;
         } else {
           functions = GraphFunctions.WORKER_ONLY;
@@ -554,30 +588,26 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Instantiate the appropriate BspService object (Master or Worker)
    * for this compute node.
-   * @param serverPortList host:port list for connecting to ZK quorum
-   * @param sessionMsecTimeout configurable session timeout
    */
-  private void instantiateBspService(String serverPortList,
-    int sessionMsecTimeout) throws IOException, InterruptedException {
+  private void instantiateBspService()
+    throws IOException, InterruptedException {
     if (graphFunctions.isMaster()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Starting up BspServiceMaster " +
           "(master thread)...");
       }
-      serviceMaster = new BspServiceMaster<I, V, E, M>(
-        serverPortList, sessionMsecTimeout, context, this);
-      masterThread = new MasterThread<I, V, E, M>(serviceMaster, context);
+      serviceMaster = new BspServiceMaster<I, V, E>(context, this);
+      masterThread = new MasterThread<I, V, E>(serviceMaster, context);
+      masterThread.setUncaughtExceptionHandler(
+          createUncaughtExceptionHandler());
       masterThread.start();
     }
     if (graphFunctions.isWorker()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Starting up BspServiceWorker...");
       }
-      serviceWorker = new BspServiceWorker<I, V, E, M>(
-        serverPortList,
-        sessionMsecTimeout,
-        context,
-        this);
+      serviceWorker = new BspServiceWorker<I, V, E>(context, this);
+      installGCMonitoring();
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Registering health of this worker...");
       }
@@ -585,42 +615,48 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Attempt to locate the local copies of the ZK jar files, assuming
-   * the underlying cluster framework has provided them for us.
-   * @param fileClassPaths the path to the ZK jars on the local cluster.
+   * Install GC monitoring. This method intercepts all GC, log the gc, and
+   * notifies an out-of-core engine (if any is used) about the GC.
    */
-  private void locateZookeeperClasspath(Path[] fileClassPaths)
-    throws IOException {
-    if (!conf.getLocalTestMode()) {
-      String zkClasspath = null;
-      if (fileClassPaths == null) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Distributed cache is empty. Assuming fatjar.");
-        }
-        String jarFile = context.getJar();
-        if (jarFile == null) {
-          jarFile = findContainingJar(getClass());
-        }
-        // Pure YARN profiles will use unpacked resources, so calls
-        // to "findContainingJar()" in that context can return NULL!
-        zkClasspath = null == jarFile ?
-          "./*" : jarFile.replaceFirst("file:", "");
-      } else {
-        StringBuilder sb = new StringBuilder();
-        sb.append(fileClassPaths[0]);
+  private void installGCMonitoring() {
+    final GcObserver[] gcObservers = conf.createGcObservers(context);
+    List<GarbageCollectorMXBean> mxBeans = ManagementFactory
+        .getGarbageCollectorMXBeans();
+    final OutOfCoreEngine oocEngine =
+        serviceWorker.getServerData().getOocEngine();
+    for (GarbageCollectorMXBean gcBean : mxBeans) {
+      NotificationEmitter emitter = (NotificationEmitter) gcBean;
+      NotificationListener listener = new NotificationListener() {
+        @Override
+        public void handleNotification(Notification notification,
+                                       Object handle) {
+          if (notification.getType().equals(GarbageCollectionNotificationInfo
+              .GARBAGE_COLLECTION_NOTIFICATION)) {
+            GarbageCollectionNotificationInfo info =
+                GarbageCollectionNotificationInfo.from(
+                    (CompositeData) notification.getUserData());
 
-        for (int i = 1; i < fileClassPaths.length; i++) {
-          sb.append(":");
-          sb.append(fileClassPaths[i]);
+            if (LOG.isInfoEnabled()) {
+              LOG.info("installGCMonitoring: name = " + info.getGcName() +
+                  ", action = " + info.getGcAction() + ", cause = " +
+                  info.getGcCause() + ", duration = " +
+                  info.getGcInfo().getDuration() + "ms");
+            }
+            if (gcTimeMetric != null) {
+              gcTimeMetric.inc(info.getGcInfo().getDuration());
+            }
+            GiraphMetrics.get().getGcTracker().gcOccurred(info.getGcInfo());
+            for (GcObserver gcObserver : gcObservers) {
+              gcObserver.gcOccurred(info);
+            }
+            if (oocEngine != null) {
+              oocEngine.gcCompleted(info);
+            }
+          }
         }
-        zkClasspath = sb.toString();
-      }
-
-      if (LOG.isInfoEnabled()) {
-        LOG.info("setup: classpath @ " + zkClasspath + " for job " +
-          context.getJobName());
-      }
-      conf.setZooKeeperJar(zkClasspath);
+      };
+      //Add the listener
+      emitter.addNotificationListener(listener, null, null);
     }
   }
 
@@ -650,6 +686,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         appenderEnum.nextElement().setLayout(layout);
       }
     }
+    // Change ZooKeeper logging level to error (info is quite verbose) for
+    // testing only
+    if (conf.getLocalTestMode()) {
+      LogManager.getLogger(org.apache.zookeeper.server.PrepRequestProcessor.
+          class.getName()).setLevel(Level.ERROR);
+    }
   }
 
   /**
@@ -673,6 +715,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         TIMER_TIME_TO_FIRST_MSG, TimeUnit.MICROSECONDS);
     communicationTimer = new GiraphTimer(superstepMetrics,
         TIMER_COMMUNICATION_TIME, TimeUnit.MILLISECONDS);
+    gcTimeMetric = superstepMetrics.getCounter(TIMER_SUPERSTEP_GC_TIME);
     wcPreSuperstepTimer = new GiraphTimer(superstepMetrics,
         "worker-context-pre-superstep", TimeUnit.MILLISECONDS);
   }
@@ -717,42 +760,43 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * @param partitionStatsList to pick up this superstep's processing stats
    * @param graphState the BSP graph state
    * @param messageStore the messages to be processed in this superstep
-   * @param numPartitions the number of data partitions (vertices) to process
    * @param numThreads number of concurrent threads to do processing
    */
   private void processGraphPartitions(final Mapper<?, ?, ?, ?>.Context context,
       List<PartitionStats> partitionStatsList,
-      final GraphState<I, V, E, M> graphState,
-      final MessageStoreByPartition<I, M> messageStore,
-      int numPartitions,
+      final GraphState graphState,
+      final MessageStore<I, Writable> messageStore,
       int numThreads) {
-    final BlockingQueue<Integer> computePartitionIdQueue =
-      new ArrayBlockingQueue<Integer>(numPartitions);
-    for (Integer partitionId :
-      serviceWorker.getPartitionStore().getPartitionIds()) {
-      computePartitionIdQueue.add(partitionId);
+    PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
+    long verticesToCompute = 0;
+    for (Integer partitionId : partitionStore.getPartitionIds()) {
+      verticesToCompute += partitionStore.getPartitionVertexCount(partitionId);
     }
+    WorkerProgress.get().startSuperstep(
+        serviceWorker.getSuperstep(), verticesToCompute,
+        serviceWorker.getPartitionStore().getNumPartitions());
+    partitionStore.startIteration();
 
     GiraphTimerContext computeAllTimerContext = computeAll.time();
     timeToFirstMessageTimerContext = timeToFirstMessage.time();
 
     CallableFactory<Collection<PartitionStats>> callableFactory =
-        new CallableFactory<Collection<PartitionStats>>() {
-          @Override
-          public Callable<Collection<PartitionStats>> newCallable(
-              int callableId) {
-            return new ComputeCallable<I, V, E, M>(
-                context,
-                graphState,
-                messageStore,
-                computePartitionIdQueue,
-                conf,
-                serviceWorker);
-          }
-        };
+      new CallableFactory<Collection<PartitionStats>>() {
+        @Override
+        public Callable<Collection<PartitionStats>> newCallable(
+            int callableId) {
+          return new ComputeCallable<I, V, E, Writable, Writable>(
+              context,
+              graphState,
+              messageStore,
+              conf,
+              serviceWorker);
+        }
+      };
     List<Collection<PartitionStats>> results =
-        ProgressableUtils.getResultsWithNCallables(callableFactory,
-            numThreads, "compute-%d", context);
+        ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+            "compute-%d", context);
+
     for (Collection<PartitionStats> result : results) {
       partitionStatsList.addAll(result);
     }
@@ -762,14 +806,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
 
   /**
    * Handle the event that this superstep is a restart of a failed one.
-   * @param aggregatorUsage aggregator metadata
    * @param superstep current superstep
-   * @param graphState the BSP graph state
    * @return the graph state, updated if this is a restart superstep
    */
-  private GraphState<I, V, E, M> checkSuperstepRestarted(
-    WorkerAggregatorUsage aggregatorUsage, long superstep,
-    GraphState<I, V, E, M> graphState) throws IOException {
+  private boolean checkSuperstepRestarted(long superstep) throws IOException {
     // Might need to restart from another superstep
     // (manually or automatic), or store a checkpoint
     if (serviceWorker.getRestartedSuperstep() == superstep) {
@@ -780,15 +820,25 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         serviceWorker.getRestartedSuperstep());
       finishedSuperstepStats = new FinishedSuperstepStats(0, false,
           vertexEdgeCount.getVertexCount(), vertexEdgeCount.getEdgeCount(),
-          false);
-      graphState = new GraphState<I, V, E, M>(superstep,
-          finishedSuperstepStats.getVertexCount(),
-          finishedSuperstepStats.getEdgeCount(),
-          context, this, null, aggregatorUsage);
-    } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
+          false, CheckpointStatus.NONE);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if it's time to checkpoint and actually does checkpointing
+   * if it is.
+   * @param checkpointStatus master's decision
+   * @return true if we need to stop computation after checkpoint
+   * @throws IOException
+   */
+  private boolean storeCheckpoint(CheckpointStatus checkpointStatus)
+    throws IOException {
+    if (checkpointStatus != CheckpointStatus.NONE) {
       serviceWorker.storeCheckpoint();
     }
-    return graphState;
+    return checkpointStatus == CheckpointStatus.CHECKPOINT_AND_HALT;
   }
 
   /**
@@ -805,6 +855,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         !inputSuperstepStats.mustLoadCheckpoint()) {
       LOG.warn("map: No vertices in the graph, exiting.");
       return true;
+    }
+    if (conf.metricsEnabled()) {
+      GiraphMetrics.get().perSuperstep().printSummary(System.err);
     }
     return false;
   }
@@ -858,6 +911,36 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * Setup mapper observers
+   */
+  public void setupMapperObservers() {
+    mapperObservers = conf.createMapperObservers(context);
+    for (MapperObserver mapperObserver : mapperObservers) {
+      mapperObserver.setup();
+    }
+  }
+
+  /**
+   * Executes preLoad() on worker observers.
+   */
+  private void preLoadOnWorkerObservers() {
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.preLoad();
+      context.progress();
+    }
+  }
+
+  /**
+   * Executes postSave() on worker observers.
+   */
+  private void postSaveOnWorkerObservers() {
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.postSave();
+      context.progress();
+    }
+  }
+
+  /**
    * Called by owner of this GraphTaskManager object on each compute node
    */
   public void cleanup()
@@ -865,6 +948,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (LOG.isInfoEnabled()) {
       LOG.info("cleanup: Starting for " + getGraphFunctions());
     }
+    jobProgressTracker.cleanup();
     if (done) {
       return;
     }
@@ -872,17 +956,46 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (serviceWorker != null) {
       serviceWorker.cleanup(finishedSuperstepStats);
     }
+  }
+
+  /**
+   * Method to send the counter values from the worker to the master,
+   * after all supersteps are done, and finish cleanup
+   */
+  public void sendWorkerCountersAndFinishCleanup() {
+    if (serviceWorker != null) {
+      postSaveOnWorkerObservers();
+      serviceWorker.storeCountersInZooKeeper(true);
+      serviceWorker.closeZooKeeper();
+    }
     try {
       if (masterThread != null) {
         masterThread.join();
+        LOG.info("cleanup: Joined with master thread");
       }
     } catch (InterruptedException e) {
       // cleanup phase -- just log the error
       LOG.error("cleanup: Master thread couldn't join");
     }
     if (zkManager != null) {
-      zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
+      LOG.info("cleanup: Offlining ZooKeeper servers");
+      try {
+        zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
+        // We need this here cause apparently exceptions are eaten by Hadoop
+        // when they come from the cleanup lifecycle and it's useful to know
+        // if something is wrong.
+        //
+        // And since it's cleanup nothing too bad should happen if we don't
+        // propagate and just allow the job to finish normally.
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Throwable e) {
+        // CHECKSTYLE: resume IllegalCatch
+        LOG.error("cleanup: Error offlining zookeeper", e);
+      }
     }
+
+    // Stop tracking metrics
+    GiraphMetrics.get().shutdown();
   }
 
   /**
@@ -893,7 +1006,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (graphFunctions.isZooKeeper()) {
       // ZooKeeper may have had an issue
       if (zkManager != null) {
-        zkManager.logZooKeeperOutput(Level.WARN);
+        zkManager.cleanup();
       }
     }
   }
@@ -907,6 +1020,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       if (graphFunctions.isWorker()) {
         serviceWorker.failureCleanup();
       }
+      // Stop tracking metrics
+      GiraphMetrics.get().shutdown();
     // Checkstyle exception due to needing to get the original
     // exception on failure
     // CHECKSTYLE: stop IllegalCatch
@@ -915,5 +1030,143 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       LOG.error("run: Worker failure failed on another RuntimeException, " +
           "original expection will be rethrown", e1);
     }
+  }
+
+  /**
+   * Creates exception handler that will terminate process gracefully in case
+   * of any uncaught exception.
+   * @return new exception handler object.
+   */
+  public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler() {
+    return new OverrideExceptionHandler(
+        CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS.newInstance(
+            getConf()), getJobProgressTracker());
+  }
+
+  /**
+   * Creates exception handler with the passed implementation of
+   * {@link CheckerIfWorkerShouldFailAfterException}.
+   *
+   * @param checker Instance that checks whether the job should fail.
+   * @return Exception handler.
+   */
+  public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler(
+    CheckerIfWorkerShouldFailAfterException checker) {
+    return new OverrideExceptionHandler(checker, getJobProgressTracker());
+  }
+
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
+    return conf;
+  }
+
+  /**
+   * @return Time spent in GC recorder by the GC listener
+   */
+  public long getSuperstepGCTime() {
+    return (gcTimeMetric == null) ? 0 : gcTimeMetric.count();
+  }
+
+  /**
+   * Returns a list of zookeeper servers to connect to.
+   * If the port is set to 0 and Giraph is starting a single
+   * ZooKeeper server, then Zookeeper will pick its own port.
+   * Otherwise, the ZooKeeper port set by the user will be used.
+   * @return host:port,host:port for each zookeeper
+   */
+  public String getZookeeperList() {
+    if (zkManager != null) {
+      return zkManager.getZooKeeperServerPortString();
+    } else {
+      return conf.getZookeeperList();
+    }
+  }
+
+  /**
+   * Default handler for uncaught exceptions.
+   * It will do the best to clean up and then will terminate current giraph job.
+   */
+  class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
+    /** Checker if worker should fail after a thread gets an exception */
+    private final CheckerIfWorkerShouldFailAfterException checker;
+    /** JobProgressTracker to log problems to */
+    private final JobProgressTracker jobProgressTracker;
+
+    /**
+     * Constructor
+     *
+     * @param checker Checker if worker should fail after a thread gets an
+     *                exception
+     * @param jobProgressTracker JobProgressTracker to log problems to
+     */
+    public OverrideExceptionHandler(
+        CheckerIfWorkerShouldFailAfterException checker,
+        JobProgressTracker jobProgressTracker) {
+      this.checker = checker;
+      this.jobProgressTracker = jobProgressTracker;
+    }
+
+    @Override
+    public void uncaughtException(final Thread t, final Throwable e) {
+      if (!checker.checkIfWorkerShouldFail(t, e)) {
+        LOG.error(
+          "uncaughtException: OverrideExceptionHandler on thread " +
+            t.getName() + ", msg = " +  e.getMessage(), e);
+        return;
+      }
+      try {
+        LOG.fatal(
+            "uncaughtException: OverrideExceptionHandler on thread " +
+                t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
+        byte [] exByteArray = KryoWritableWrapper.convertToByteArray(e);
+        jobProgressTracker.logError(ExceptionUtils.getStackTrace(e),
+                exByteArray);
+        zooKeeperCleanup();
+        workerFailureCleanup();
+      } finally {
+        System.exit(1);
+      }
+    }
+  }
+
+  /**
+   * Interface to check if worker should fail after a thread gets an exception
+   */
+  public interface CheckerIfWorkerShouldFailAfterException {
+    /**
+     * Check if worker should fail after a thread gets an exception
+     *
+     * @param thread Thread which raised the exception
+     * @param exception Exception which occurred
+     * @return True iff worker should fail after this exception
+     */
+    boolean checkIfWorkerShouldFail(Thread thread, Throwable exception);
+  }
+
+  /**
+   * Class to use by default, where each exception causes job failure
+   */
+  public static class FailWithEveryExceptionOccurred
+      implements CheckerIfWorkerShouldFailAfterException {
+    @Override
+    public boolean checkIfWorkerShouldFail(Thread thread, Throwable exception) {
+      return true;
+    }
+  }
+
+  /**
+   * Checks the message of a throwable, and checks whether it is a
+   * "connection reset by peer" type of exception.
+   *
+   * @param throwable Throwable
+   * @return True if the throwable is a "connection reset by peer",
+   * false otherwise.
+   */
+  public static boolean isConnectionFailure(Throwable throwable) {
+    String erroMessage = throwable.getMessage().toLowerCase();
+    if (erroMessage.startsWith("connection reset by peer") ||
+      erroMessage.startsWith("connection timed out")) {
+      return true;
+    }
+    return false;
   }
 }

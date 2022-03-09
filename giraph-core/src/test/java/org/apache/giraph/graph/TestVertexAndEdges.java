@@ -18,6 +18,7 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.Lists;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ArrayListEdges;
@@ -29,13 +30,14 @@ import org.apache.giraph.edge.HashMultimapEdges;
 import org.apache.giraph.edge.LongDoubleArrayEdges;
 import org.apache.giraph.edge.LongDoubleHashMapEdges;
 import org.apache.giraph.edge.MutableEdge;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.DynamicChannelBufferInputStream;
 import org.apache.giraph.utils.DynamicChannelBufferOutputStream;
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.giraph.utils.WritableUtils;
@@ -57,32 +59,29 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test {@link Vertex} functionality across the provided {@link VertexEdges}
+ * Test {@link Vertex} functionality across the provided {@link org.apache.giraph.edge.OutEdges}
  * classes.
  */
 public class TestVertexAndEdges {
   /** Number of repetitions. */
   public static final int REPS = 100;
-  /** {@link org.apache.giraph.edge.VertexEdges} classes to be tested. */
-  private Collection<Class<? extends VertexEdges>> edgesClasses =
+  /** {@link org.apache.giraph.edge.OutEdges} classes to be tested. */
+  private Collection<Class<? extends OutEdges>> edgesClasses =
       Lists.newArrayList();
 
   /**
    * Dummy concrete vertex.
    */
-  public static class TestVertex extends Vertex<LongWritable, FloatWritable,
-        DoubleWritable, LongWritable> {
-    @Override
-    public void compute(Iterable<LongWritable> messages) { }
-  }
+  public static class TestComputation extends NoOpComputation<LongWritable,
+      FloatWritable, DoubleWritable, LongWritable> { }
 
   /**
-   * A basic {@link VertexEdges} implementation that doesn't provide any
+   * A basic {@link org.apache.giraph.edge.OutEdges} implementation that doesn't provide any
    * special functionality. Used to test the default implementations of
    * Vertex#getEdgeValue(), Vertex#getMutableEdges(), etc.
    */
-  public static class TestVertexEdges
-      implements VertexEdges<LongWritable, DoubleWritable> {
+  public static class TestOutEdges
+      implements OutEdges<LongWritable, DoubleWritable> {
     private List<Edge<LongWritable, DoubleWritable>> edgeList;
 
 
@@ -151,7 +150,7 @@ public class TestVertexAndEdges {
 
   @Before
   public void setUp() {
-    edgesClasses.add(TestVertexEdges.class);
+    edgesClasses.add(TestOutEdges.class);
     edgesClasses.add(ByteArrayEdges.class);
     edgesClasses.add(ArrayListEdges.class);
     edgesClasses.add(HashMapEdges.class);
@@ -160,11 +159,11 @@ public class TestVertexAndEdges {
     edgesClasses.add(LongDoubleHashMapEdges.class);
   }
 
-  private Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
-  instantiateVertex(Class<? extends VertexEdges> edgesClass) {
+  protected Vertex<LongWritable, FloatWritable, DoubleWritable>
+  instantiateVertex(Class<? extends OutEdges> edgesClass) {
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
-    giraphConfiguration.setVertexClass(TestVertex.class);
-    giraphConfiguration.setVertexEdgesClass(edgesClass);
+    giraphConfiguration.setComputationClass(TestComputation.class);
+    giraphConfiguration.setOutEdgesClass(edgesClass);
     ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
     return immutableClassesGiraphConfiguration.createVertex();
@@ -175,7 +174,7 @@ public class TestVertexAndEdges {
    */
   @Test
   public void testVertexIdAndValue() {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(ArrayListEdges.class);
     assertNotNull(vertex);
     vertex.initialize(new LongWritable(7), new FloatWritable(3.0f));
@@ -185,34 +184,34 @@ public class TestVertexAndEdges {
     assertEquals(5.5f, vertex.getValue().get(), 0d);
   }
 
-  public static VertexEdges
-  instantiateVertexEdges(Class<? extends VertexEdges> edgesClass) {
+  public static OutEdges
+  instantiateOutEdges(Class<? extends OutEdges> edgesClass) {
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
     // Needed to extract type arguments in ReflectionUtils.
-    giraphConfiguration.setVertexClass(TestVertex.class);
-    giraphConfiguration.setVertexEdgesClass(edgesClass);
+    giraphConfiguration.setComputationClass(TestComputation.class);
+    giraphConfiguration.setOutEdgesClass(edgesClass);
     ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
-    return immutableClassesGiraphConfiguration.createVertexEdges();
+    return immutableClassesGiraphConfiguration.createOutEdges();
   }
 
   /**
-   * Test the provided {@link VertexEdges} implementations for instantiation,
+   * Test the provided {@link org.apache.giraph.edge.OutEdges} implementations for instantiation,
    * initialization, edge addition, and edge removal.
    */
   @Test
   public void testEdges() {
-    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
+    for (Class<? extends OutEdges> edgesClass : edgesClasses) {
       testEdgesClass(edgesClass);
     }
   }
 
-  private void testEdgesClass(Class<? extends VertexEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+  private void testEdgesClass(Class<? extends OutEdges> edgesClass) {
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
-    VertexEdges<LongWritable, DoubleWritable> vertexEdges =
-        instantiateVertexEdges(edgesClass);
-    assertNotNull(vertexEdges);
+    OutEdges<LongWritable, DoubleWritable> outEdges =
+        instantiateOutEdges(edgesClass);
+    assertNotNull(outEdges);
 
     List<Edge<LongWritable, DoubleWritable>> edges = Lists.newLinkedList();
     for (int i = 1000; i > 0; --i) {
@@ -220,8 +219,8 @@ public class TestVertexAndEdges {
           new DoubleWritable(i * 2.0)));
     }
 
-    vertexEdges.initialize(edges);
-    vertex.initialize(new LongWritable(1), new FloatWritable(1), vertexEdges);
+    outEdges.initialize(edges);
+    vertex.initialize(new LongWritable(1), new FloatWritable(1), outEdges);
 
     assertEquals(20.0, vertex.getEdgeValue(new LongWritable(10)).get(), 0.0);
 
@@ -233,7 +232,7 @@ public class TestVertexAndEdges {
     vertex.removeEdges(new LongWritable(500));
     assertEquals(999, vertex.getNumEdges());
     for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
-      assert(edge.getTargetVertexId().get() != 500);
+      assertTrue(edge.getTargetVertexId().get() != 500);
     }
 
     vertex.setEdgeValue(new LongWritable(10), new DoubleWritable(33.0));
@@ -246,19 +245,19 @@ public class TestVertexAndEdges {
    */
   @Test
   public void testMutateEdges() {
-    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
+    for (Class<? extends OutEdges> edgesClass : edgesClasses) {
       testMutateEdgesClass(edgesClass);
     }
   }
 
-  private void testMutateEdgesClass(Class<? extends VertexEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+  private void testMutateEdgesClass(Class<? extends OutEdges> edgesClass) {
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
-    VertexEdges<LongWritable, DoubleWritable> vertexEdges =
-        instantiateVertexEdges(edgesClass);
+    OutEdges<LongWritable, DoubleWritable> outEdges =
+        instantiateOutEdges(edgesClass);
 
-    vertexEdges.initialize();
-    vertex.initialize(new LongWritable(0), new FloatWritable(0), vertexEdges);
+    outEdges.initialize();
+    vertex.initialize(new LongWritable(0), new FloatWritable(0), outEdges);
 
     // Add 10 edges with id i, value i for i = 0..9
     for (int i = 0; i < 10; ++i) {
@@ -309,7 +308,6 @@ public class TestVertexAndEdges {
     int i = 2;
     for (MutableEdge<LongWritable, DoubleWritable> edge :
         vertex.getMutableEdges()) {
-      System.out.println(edge.toString());
       if (i-- == 0) {
         break;
       }
@@ -324,27 +322,47 @@ public class TestVertexAndEdges {
       }
     }
     assertEquals(5, vertex.getNumEdges());
+
+    // Calling size() during iteration shouldn't modify the data structure.
+    int iterations = 0;
+    for (MutableEdge<LongWritable, DoubleWritable> edge : vertex.getMutableEdges()) {
+      edge.setValue(new DoubleWritable(3));
+      assertEquals(5, vertex.getNumEdges());
+      ++iterations;
+    }
+    assertEquals(5, vertex.getNumEdges());
+    assertEquals(5, iterations);
+
+    // If we remove an edge after calling next(), size() should return the
+    // correct number of edges.
+    it = vertex.getMutableEdges().iterator();
+    it.next();
+    it.remove();
+    assertEquals(4, vertex.getNumEdges());
+    it.next();
+    it.remove();
+    assertEquals(3, vertex.getNumEdges());
   }
 
   /**
-   * Test {@link Vertex} and {@link VertexEdges} serialization.
+   * Test {@link Vertex} and {@link org.apache.giraph.edge.OutEdges} serialization.
    * @throws IOException
    */
   @Test
   public void testSerialize() throws IOException {
-    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
-      testSerializeVertexEdgesClass(edgesClass);
-      testDynamicChannelBufferSerializeVertexEdgesClass(edgesClass);
-      testUnsafeSerializeVertexEdgesClass(edgesClass);
+    for (Class<? extends OutEdges> edgesClass : edgesClasses) {
+      testSerializeOutEdgesClass(edgesClass);
+      testDynamicChannelBufferSerializeOutEdgesClass(edgesClass);
+      testUnsafeSerializeOutEdgesClass(edgesClass);
     }
   }
 
-  private Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
-  buildVertex(Class<? extends VertexEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+  protected Vertex<LongWritable, FloatWritable, DoubleWritable>
+  buildVertex(Class<? extends OutEdges> edgesClass) {
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
-    VertexEdges<LongWritable, DoubleWritable> vertexEdges =
-        instantiateVertexEdges(edgesClass);
+    OutEdges<LongWritable, DoubleWritable> outEdges =
+        instantiateOutEdges(edgesClass);
 
     int edgesCount = 200;
     List<Edge<LongWritable, DoubleWritable>> edges =
@@ -354,15 +372,15 @@ public class TestVertexAndEdges {
           new DoubleWritable(i * 2.0)));
     }
 
-    vertexEdges.initialize(edges);
+    outEdges.initialize(edges);
     vertex.initialize(new LongWritable(2), new FloatWritable(3.0f),
-        vertexEdges);
+        outEdges);
     return vertex;
   }
 
-  private void testSerializeVertexEdgesClass(
-      Class<? extends VertexEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+  private void testSerializeOutEdgesClass(
+      Class<? extends OutEdges> edgesClass) {
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -381,7 +399,7 @@ public class TestVertexAndEdges {
         (byteArray.length * 1f * Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
     
     long deserializeNanosStart;
@@ -404,10 +422,10 @@ public class TestVertexAndEdges {
     assertTrue(EdgeIterables.sameEdges(vertex.getEdges(), readVertex.getEdges()));
   }
 
-  private void testDynamicChannelBufferSerializeVertexEdgesClass(
-      Class<? extends VertexEdges> edgesClass)
+  private void testDynamicChannelBufferSerializeOutEdgesClass(
+      Class<? extends OutEdges> edgesClass)
       throws IOException {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -423,14 +441,14 @@ public class TestVertexAndEdges {
           serializeNanosStart);
     }
     serializeNanos /= REPS;
-    System.out.println("testDynamicChannelBufferSerializeVertexEdgesClass: " +
+    System.out.println("testDynamicChannelBufferSerializeOutEdgesClass: " +
         "Serializing took " + serializeNanos + " ns for " +
         outputStream.getDynamicChannelBuffer().writerIndex() + " bytes " +
         (outputStream.getDynamicChannelBuffer().writerIndex() * 1f *
             Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;
@@ -447,7 +465,7 @@ public class TestVertexAndEdges {
       outputStream.getDynamicChannelBuffer().readerIndex(0);
     }
     deserializeNanos /= REPS;
-    System.out.println("testDynamicChannelBufferSerializeVertexEdgesClass: " +
+    System.out.println("testDynamicChannelBufferSerializeOutEdgesClass: " +
         "Deserializing took " + deserializeNanos + " ns for " +
         outputStream.getDynamicChannelBuffer().writerIndex() + " bytes " +
         (outputStream.getDynamicChannelBuffer().writerIndex() * 1f *
@@ -459,10 +477,10 @@ public class TestVertexAndEdges {
     assertTrue(EdgeIterables.sameEdges(vertex.getEdges(), readVertex.getEdges()));
   }
 
-  private void testUnsafeSerializeVertexEdgesClass(
-      Class<? extends VertexEdges> edgesClass)
+  private void testUnsafeSerializeOutEdgesClass(
+      Class<? extends OutEdges> edgesClass)
       throws IOException {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -478,7 +496,7 @@ public class TestVertexAndEdges {
           serializeNanosStart);
     }
     serializeNanos /= REPS;
-    System.out.println("testUnsafeSerializeVertexEdgesClass: " +
+    System.out.println("testUnsafeSerializeOutEdgesClass: " +
         "Serializing took " +
         serializeNanos +
         " ns for " + outputStream.getPos()
@@ -487,7 +505,7 @@ public class TestVertexAndEdges {
             Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;
@@ -503,7 +521,7 @@ public class TestVertexAndEdges {
           deserializeNanosStart);
     }
     deserializeNanos /= REPS;
-    System.out.println("testUnsafeSerializeVertexEdgesClass: " +
+    System.out.println("testUnsafeSerializeOutEdgesClass: " +
         "Deserializing took " +
         deserializeNanos +
         " ns for " + outputStream.getPos() +

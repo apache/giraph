@@ -19,6 +19,7 @@ package org.apache.giraph.conf;
 
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import java.util.List;
@@ -32,17 +33,22 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Constructor
+   *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public StrConfOption(String key, String defaultValue) {
-    super(key);
+  public StrConfOption(String key, String defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
-    AllOptions.add(this);
   }
 
   public String getDefaultValue() {
     return defaultValue;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return Objects.equal(get(conf), defaultValue);
   }
 
   @Override public String getDefaultValueStr() {
@@ -55,6 +61,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return value for key, or defaultValue
    */
@@ -64,6 +71,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Lookup value with user defined defaultValue
+   *
    * @param conf Configuration
    * @param defaultVal default value to use
    * @return value for key, or defaultVal passed in
@@ -74,6 +82,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Get array of values for key
+   *
    * @param conf Configuration
    * @return array of values for key
    */
@@ -83,6 +92,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Get list of values for key
+   *
    * @param conf Configuration
    * @return list of values for key
    */
@@ -92,6 +102,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Set value for key
+   *
    * @param conf Configuration
    * @param value to set
    */
@@ -101,6 +112,7 @@ public class StrConfOption extends AbstractConfOption {
 
   /**
    * Set value if not already present
+   *
    * @param conf Configuration
    * @param value to set
    */

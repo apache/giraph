@@ -24,6 +24,14 @@ import java.io.DataOutput;
  */
 public interface ExtendedDataOutput extends DataOutput {
   /**
+   * Ensure that backing byte structure has at least minSize
+   * additional bytes
+   *
+   * @param minSize additional size required
+   */
+  void ensureWritable(int minSize);
+
+  /**
    * Skip some number of bytes.
    *
    * @param  bytesToSkip Number of bytes to skip
@@ -59,6 +67,15 @@ public interface ExtendedDataOutput extends DataOutput {
    * @return Copied byte array
    */
   byte[] toByteArray();
+
+  /**
+   * Return a copy of slice of byte array
+   *
+   * @param offset offset of array
+   * @param length length of slice
+   * @return byte array
+   */
+  byte[] toByteArray(int offset, int length);
 
   /**
    * Clears the buffer

@@ -18,25 +18,23 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
-import java.io.IOException;
-import java.util.concurrent.ConcurrentMap;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
+
+import javax.net.ssl.SSLException;
 
 import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_RESPONSE_FAILED;
 
 /**
  * Generic handler of responses.
  */
-public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
+public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(ResponseClientHandler.class);
@@ -44,97 +42,87 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
   private static volatile boolean ALREADY_DROPPED_FIRST_RESPONSE = false;
   /** Drop first response (used for simulating failure) */
   private final boolean dropFirstResponse;
-  /** Outstanding worker request map */
-  private final ConcurrentMap<ClientRequestId, RequestInfo>
-  workerIdOutstandingRequestMap;
+  /** Netty client that does the actual I/O and keeps track of open requests */
+  private final NettyClient nettyClient;
+  /** Handler for uncaught exceptions */
+  private final Thread.UncaughtExceptionHandler exceptionHandler;
 
   /**
    * Constructor.
-   *
-   * @param workerIdOutstandingRequestMap Map of worker ids to outstanding
-   *                                      requests
+   * @param nettyClient Client that does the actual I/O
    * @param conf Configuration
+   * @param exceptionHandler Handles uncaught exceptions
    */
   public ResponseClientHandler(
-      ConcurrentMap<ClientRequestId, RequestInfo>
-          workerIdOutstandingRequestMap,
-      Configuration conf) {
-    this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
+    NettyClient nettyClient,
+    Configuration conf,
+    Thread.UncaughtExceptionHandler exceptionHandler) {
+    this.nettyClient = nettyClient;
     dropFirstResponse = NETTY_SIMULATE_FIRST_RESPONSE_FAILED.get(conf);
+    this.exceptionHandler = exceptionHandler;
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent event) {
-    if (!(event.getMessage() instanceof ChannelBuffer)) {
-      throw new IllegalStateException("messageReceived: Got a " +
-          "non-ChannelBuffer message " + event.getMessage());
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
+    throws Exception {
+    if (!(msg instanceof ByteBuf)) {
+      throw new IllegalStateException("channelRead: Got a " +
+          "non-ByteBuf message " + msg);
     }
 
-    ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
-    ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
+    ByteBuf buf = (ByteBuf) msg;
     int senderId = -1;
     long requestId = -1;
     int response = -1;
     try {
-      senderId = inputStream.readInt();
-      requestId = inputStream.readLong();
-      response = inputStream.readByte();
-      inputStream.close();
-    } catch (IOException e) {
+      senderId = buf.readInt();
+      requestId = buf.readLong();
+      response = buf.readInt();
+    } catch (IndexOutOfBoundsException e) {
       throw new IllegalStateException(
-          "messageReceived: Got IOException ", e);
+          "channelRead: Got IndexOutOfBoundsException ", e);
     }
+    ReferenceCountUtil.release(buf);
 
+    boolean shouldDrop = false;
     // Simulate a failed response on the first response (if desired)
     if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
-      LOG.info("messageReceived: Simulating dropped response " + response +
+      LOG.info("channelRead: Simulating dropped response " + response +
           " for request " + requestId);
-      ALREADY_DROPPED_FIRST_RESPONSE = true;
-      synchronized (workerIdOutstandingRequestMap) {
-        workerIdOutstandingRequestMap.notifyAll();
-      }
-      return;
+      setAlreadyDroppedFirstResponse();
+      shouldDrop = true;
     }
 
-    if (response == 1) {
-      LOG.info("messageReceived: Already completed request " + requestId);
-    } else if (response != 0) {
-      throw new IllegalStateException(
-          "messageReceived: Got illegal response " + response);
-    }
+    nettyClient.messageReceived(senderId, requestId, response, shouldDrop);
+  }
 
-    RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
-        new ClientRequestId(senderId, requestId));
-    if (requestInfo == null) {
-      LOG.info("messageReceived: Already received response for request id = " +
-          requestId);
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("messageReceived: Completed " + requestInfo +
-            ".  Waiting on " + workerIdOutstandingRequestMap.size() +
-            " requests");
-      }
-    }
-
-    // Help NettyClient#waitSomeRequests() to finish faster
-    synchronized (workerIdOutstandingRequestMap) {
-      workerIdOutstandingRequestMap.notifyAll();
-    }
+  /**
+   * Set already dropped first response flag
+   */
+  private static void setAlreadyDroppedFirstResponse() {
+    ALREADY_DROPPED_FIRST_RESPONSE = true;
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext ctx,
-                            ChannelStateEvent e) throws Exception {
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (LOG.isDebugEnabled()) {
       LOG.debug("channelClosed: Closed the channel on " +
-          ctx.getChannel().getRemoteAddress());
+          ctx.channel().remoteAddress());
     }
+    ctx.fireChannelInactive();
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-    LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+    throws Exception {
+    // If SSLException, fail the client
+    if (cause instanceof SSLException) {
+      exceptionHandler.uncaughtException(Thread.currentThread(), cause);
+    } else {
+      LOG.warn("exceptionCaught: Channel channelId=" +
+        ctx.channel().hashCode() + " failed with remote address " +
+        ctx.channel().remoteAddress(), cause);
+    }
   }
 }
+

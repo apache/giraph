@@ -21,6 +21,7 @@ package org.apache.giraph.comm.requests;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.Writable;
@@ -37,7 +38,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable> extends
-  WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
+  WritableRequest<I, V, E> implements WorkerRequest<I, V, E> {
   /** Destination partition for these vertices' messages*/
   private int partitionId;
   /** Map of destination vertex ID's to message lists */
@@ -67,7 +68,10 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
     partitionId = input.readInt();
-    vertexIdMessageMap = new ByteArrayVertexIdMessages<I, M>();
+    // At this moment the Computation class have already been replaced with
+    // the new one, and we deal with messages from previous superstep
+    vertexIdMessageMap = new ByteArrayVertexIdMessages<>(
+        getConf().<M>createIncomingMessageValueFactory());
     vertexIdMessageMap.setConf(getConf());
     vertexIdMessageMap.initialize();
     vertexIdMessageMap.readFields(input);
@@ -80,13 +84,9 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
-    try {
-      serverData.getCurrentMessageStore().addPartitionMessages(partitionId,
-          vertexIdMessageMap);
-    } catch (IOException e) {
-      throw new RuntimeException("doRequest: Got IOException ", e);
-    }
+  public void doRequest(ServerData<I, V, E> serverData) {
+    serverData.<M>getCurrentMessageStore().addPartitionMessages(partitionId,
+        vertexIdMessageMap);
   }
 
   @Override

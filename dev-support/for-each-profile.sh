@@ -49,41 +49,28 @@ parse_profiles
 
 echo "Running on profiles: $all_profiles"
 
-failed_profile_file=$TOP_DIR/failed-profile.txt
-if [[ -r "$failed_profile_file" ]]; then
-  echo "Reading $failed_profile_file to restart from last run state."
-  echo "Remove that file if you want a fresh run"
-  failed_profile=$(cat $failed_profile_file)
-  run_profile=false
-else
-  run_profile=true
-fi
+results_file=$TOP_DIR/for-each-profile-results.txt
+
+echo "mvn -P<profile> $@" > $results_file
+echo "======================================================" >> $results_file
 
 for profile in $all_profiles; do
-  if ! $run_profile; then
-    if [[ "${profile}" == "${failed_profile}" ]]; then
-      run_profile=true
-    fi
-  fi
-  if $run_profile; then
-    echo_separator
-    echo "=== $profile ==="
-    echo_separator
+  echo_separator
+  echo "=== $profile ==="
+  echo_separator
 
-    mvn -P$profile $@
-    result=$?
+  args="-P$profile $@"
 
-    if [[ $result -ne 0 ]]; then
-      echo_separator
-      echo "=== Failed on profile: $profile"
-      echo "=== Failed command: mvn -P$profile $@"
-      echo_separator
-      echo $profile > $failed_profile_file
-      exit $result
-    fi
+  mvn $args
+  result=$?
+
+  if [[ $result -ne 0 ]]; then
+    echo_separator
+    echo "=== Failed on profile: $profile"
+    echo "=== Failed command: mvn $args"
+    echo "$profile: FAILED" >> $results_file
+    echo_separator
   else
-    echo_separator
-    echo "=== Skipping profile $profile"
-    echo_separator
+    echo "$profile: SUCCESS" >> $results_file
   fi
 done

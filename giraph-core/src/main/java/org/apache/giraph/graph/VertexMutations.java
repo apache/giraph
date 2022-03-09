@@ -41,15 +41,14 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public class VertexMutations<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> implements VertexChanges<I, V, E, M>,
+    V extends Writable, E extends Writable> implements VertexChanges<I, V, E>,
     Writable, ImmutableClassesGiraphConfigurable {
   /** List of added vertices during the last superstep */
-  private final List<Vertex<I, V, E, M>> addedVertexList = Lists.newArrayList();
+  private final List<Vertex<I, V, E>> addedVertexList =
+      Lists.newArrayList();
   /** Count of remove vertex requests */
   private int removedVertexCount = 0;
   /** List of added edges */
@@ -57,15 +56,15 @@ public class VertexMutations<I extends WritableComparable,
   /** List of removed edges */
   private final List<I> removedEdgeList = Lists.newArrayList();
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
 
   /**
    * Copy the vertex mutations.
    *
    * @return Copied vertex mutations
    */
-  public VertexMutations<I, V, E, M> copy() {
-    VertexMutations<I, V, E, M> copied = new VertexMutations<I, V, E, M>();
+  public VertexMutations<I, V, E> copy() {
+    VertexMutations<I, V, E> copied = new VertexMutations<I, V, E>();
     copied.addedVertexList.addAll(this.addedVertexList);
     copied.removedVertexCount = this.removedVertexCount;
     copied.addedEdgeList.addAll(this.addedEdgeList);
@@ -75,7 +74,7 @@ public class VertexMutations<I extends WritableComparable,
   }
 
   @Override
-  public List<Vertex<I, V, E, M>> getAddedVertexList() {
+  public List<Vertex<I, V, E>> getAddedVertexList() {
     return addedVertexList;
   }
 
@@ -87,7 +86,7 @@ public class VertexMutations<I extends WritableComparable,
 
     int addedVertexListSize = input.readInt();
     for (int i = 0; i < addedVertexListSize; ++i) {
-      Vertex<I, V, E, M> vertex =
+      Vertex<I, V, E> vertex =
           WritableUtils.readVertexFromDataInput(input, getConf());
       addedVertexList.add(vertex);
     }
@@ -109,7 +108,7 @@ public class VertexMutations<I extends WritableComparable,
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeInt(addedVertexList.size());
-    for (Vertex<I, V, E, M> vertex : addedVertexList) {
+    for (Vertex<I, V, E> vertex : addedVertexList) {
       WritableUtils.writeVertexToDataOutput(output, vertex, getConf());
     }
     output.writeInt(removedVertexCount);
@@ -129,7 +128,7 @@ public class VertexMutations<I extends WritableComparable,
    *
    * @param vertex Vertex to be added
    */
-  public void addVertex(Vertex<I, V, E, M> vertex) {
+  public void addVertex(Vertex<I, V, E> vertex) {
     addedVertexList.add(vertex);
   }
 
@@ -178,7 +177,7 @@ public class VertexMutations<I extends WritableComparable,
    *
    * @param vertexMutations Object to be added
    */
-  public void addVertexMutations(VertexMutations<I, V, E, M> vertexMutations) {
+  public void addVertexMutations(VertexMutations<I, V, E> vertexMutations) {
     addedVertexList.addAll(vertexMutations.getAddedVertexList());
     removedVertexCount += vertexMutations.getRemovedVertexCount();
     addedEdgeList.addAll(vertexMutations.getAddedEdgeList());

@@ -26,6 +26,8 @@ public class VertexEdgeCount {
   private final long vertexCount;
   /** Immutable edges */
   private final long edgeCount;
+  /** Immutable mappings */
+  private final long mappingCount;
 
   /**
    * Default constructor.
@@ -33,6 +35,7 @@ public class VertexEdgeCount {
   public VertexEdgeCount() {
     vertexCount = 0;
     edgeCount = 0;
+    mappingCount = 0;
   }
 
   /**
@@ -40,10 +43,12 @@ public class VertexEdgeCount {
    *
    * @param vertexCount Final number of vertices.
    * @param edgeCount Final number of edges.
+   * @param mappingCount Final number of mappings.
    */
-  public VertexEdgeCount(long vertexCount, long edgeCount) {
+  public VertexEdgeCount(long vertexCount, long edgeCount, long mappingCount) {
     this.vertexCount = vertexCount;
     this.edgeCount = edgeCount;
+    this.mappingCount = mappingCount;
   }
 
   public long getVertexCount() {
@@ -52,6 +57,10 @@ public class VertexEdgeCount {
 
   public long getEdgeCount() {
     return edgeCount;
+  }
+
+  public long getMappingCount() {
+    return mappingCount;
   }
 
   /**
@@ -64,7 +73,8 @@ public class VertexEdgeCount {
       VertexEdgeCount vertexEdgeCount) {
     return new VertexEdgeCount(
         vertexCount + vertexEdgeCount.getVertexCount(),
-        edgeCount + vertexEdgeCount.getEdgeCount());
+        edgeCount + vertexEdgeCount.getEdgeCount(),
+        mappingCount + vertexEdgeCount.getMappingCount());
   }
 
   /**
@@ -78,11 +88,13 @@ public class VertexEdgeCount {
       long vertexCount, long edgeCount) {
     return new VertexEdgeCount(
         this.vertexCount + vertexCount,
-        this.edgeCount + edgeCount);
+        this.edgeCount + edgeCount,
+        this.mappingCount + mappingCount);
   }
 
   @Override
   public String toString() {
-    return "(v=" + getVertexCount() + ", e=" + getEdgeCount() + ")";
+    return "(v=" + getVertexCount() + ", e=" + getEdgeCount() +
+        (mappingCount > 0 ? ", m=" + mappingCount : "") + ")";
   }
 }

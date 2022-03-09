@@ -21,8 +21,11 @@ package org.apache.giraph;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.counters.GiraphHadoopCounter;
 import org.apache.giraph.counters.GiraphStats;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
+import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexOutputFormat;
+
+
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.io.DoubleWritable;
@@ -47,11 +50,12 @@ public class TestMaxSuperstep extends BspCase {
    * Simple test vertex class that will run forever (voteToHalt is never
    * called).
    */
-  public static class InfiniteLoopVertex extends Vertex<LongWritable,
-      DoubleWritable, FloatWritable, DoubleWritable> {
+  public static class InfiniteLoopComputation extends BasicComputation<
+      LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
     @Override
-    public void compute(Iterable<DoubleWritable> messages) throws IOException {
-      // Do nothing, run forever!
+    public void compute(
+        Vertex<LongWritable, DoubleWritable, FloatWritable> vertex,
+        Iterable<DoubleWritable> messages) throws IOException {
     }
   }
 
@@ -67,7 +71,7 @@ public class TestMaxSuperstep extends BspCase {
   public void testMaxSuperstep()
           throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(InfiniteLoopVertex.class);
+    conf.setComputationClass(InfiniteLoopComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf,

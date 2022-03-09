@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+	  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Input/Output in Giraph</title>
+  </properties>
+
+  <body>
+    <section name="Overview">
+      <p>
+        Any real-world Giraph application reads input data from some sort of (usually distributed) storage, runs several computation supersteps, and then writes back the output. The input data contains a representation of the graph and, often, some metadata on the vertices or edges. The output data often consists of final vertex values, but can also contain the graph itself, possibly modified.          
+      </p>
+      <p>
+        For example, in a standard PageRank implementation, the input will contain the edges in the graph, and the output will consist of the final PageRank values for all vertices.
+      </p>
+      <p>
+        Giraph itself doesn't dictate a specific form of storage. Instead, the user implements a generic API which converts the preferred type of data to and from Giraph's main classes (<code>Vertex</code> and <code>Edge</code>). For example, one can build on top of Hadoop's TextInputFormat in order to read the graph from plain text files stored in HDFS. Giraph provides several examples of text-based formats (see the <code>org.apache.giraph.io.formats</code> package in <code>giraph-core</code>) and libraries to read from other types of storage (<code>giraph-hive</code>, <code>giraph-hbase</code>, etc...).
+      </p>
+    </section>
+    <section name="Main interfaces">
+      <p>
+        <br>
+          Giraph's I/O builds on top of Hadoop's input/output format API. This allows us to easily incorporate existing Hadoop formats.
+        </br>
+        There are two main ways the input graph may be layed out: the directed edges may be grouped by source vertex (i.e., represented as an adjacency list), or they may appear in arbitrary order (as is often the case with relational storage, where each record corresponds to an edge). In the first case, any metadata for the vertex can be read together with its out-edges. This is achieved by implementing <code>VertexInputFormat</code>. In the second case, edges will be read by means of an <code>EdgeInputFormat</code>. If there is additional data for the vertices, it will be read separately by a <code>VertexValueInputFormat</code>.
+      </p>
+      <p>
+        To summarize, <code>VertexInputFormat</code> is usually used by itself, whereas <code>EdgeInputFormat</code> may be used in combination with <code>VertexValueInputFormat</code>.
+      </p>
+      <p>
+        Output can be done both on a per-vertex and a per-edge basis: a <code>VertexOutputFormat</code> will specify what data to write for each vertex while <code>EdgeOutputFormat</code> will specify what data to write for each edge. This usually means (some function of) the vertex value, but nothing prevents us from writing back the edges instead.
+      </p>
+      <p>
+        Let's have a quick look at the base classes:
+        <ul>
+          <li>
+            <code>VertexInputFormat&lt;I, V, E&gt;</code>: the <code>getSplits()</code> method returns a list of <i>logical</i> splits of the input data, given a hint provided by the infrastructure (usually the total number of input threads across all workers). The <code>createVertexReader()</code> method returns a <code>VertexReader</code> for the given split.
+          </li>
+          <li>
+            <code>VertexReader&lt;I, V, E&gt;</code>: this is where the user defines how to create vertices from an input split. The interface is similar to Hadoop's <code>RecordReader</code>: the infrastructure will call <code>getCurrentVertex()</code> to read vertices, until <code>nextVertex()</code> returns false, meaning the input split is finished.
+          </li>
+          <li>
+            <code>VertexValueInputFormat&lt;I, V&gt;</code>: similar to the above, but creates a <code>VertexValueReader</code> instead.
+          </li>
+          <li>
+            <code>VertexValueReader&lt;I, V&gt;</code>: here we are not reading edges, so the methods to define are <code>getCurrentVertexId()</code> and <code>getCurrentVertexValue()</code>.
+          </li>
+          <li>
+            <code>EdgeInputFormat&lt;I, E&gt;</code>: as usual, splits the input via <code>getSplits()</code> and creates an <code>EdgeReader</code> via <code>createEdgeReader()</code>.
+          </li>
+          <li>
+            <code>EdgeReader&lt;I, E&gt;</code>: the main methods are <code>getCurrentSourceId()</code>, which returns the source vertex id, and <code>getCurrentEdge()</code>, which returns an <code>Edge&lt;I, E&gt;</code> (i.e., the target vertex id, possibly with an edge value).
+          </li>
+          <li>
+            <code>VertexOutputFormat&lt;I, V, E&gt;</code>: modeled based on the Hadoop <code>OutputFormat</code> class, this class is intended for output vertices and related edges after the computation. The <code>createVertexWriter</code> returns a <code>VertexWriter</code> to save the vertices. Additionally <code>getOutputCommiter</code> returns an <code>OutputCommiter</code> used to guarantee that the output process is correctly committed and <code>checkOutputSpecs</code> is used to check that the correct setup before running the computation.
+          </li>
+          <li>
+            <code>VertexWriter&lt;I, V, E&gt;</code>: this is where the user defines how to write vertices and possibly edges. The infrastructure just provides an <code>initialize</code> and a <code>close</code> method to deal with the initial and final part of the output. It also inherits <code>SimpleVertexWriter#writeVertex</code> which is the main function used to actually save the vertices.
+          </li>
+          <li>
+            <code>EdgeOutputFormat&lt;I, V, E&gt;</code>: modeled similar to <code>VertexOutputFormat</code>, this class is intended for output edges after the computation. The <code>createEdgeWriter</code> returns a <code>EdgeWriter</code> to save the edges. Additionally <code>getOutputCommiter</code> returns an <code>OutputCommiter</code> used to guarantee that the output process is correctly committed and <code>checkOutputSpecs</code> is used to check that the correct setup before running the computation.
+          </li>
+          <li>
+            <code>EdgeWriter&lt;I, V, E&gt;</code>: this class is similar to <code>VertexWriter</code> providing initialization and closing facilities. It is inteded to save edges and the main function that needs to be extended by the user for such purpose is <code>writeEdge</code>.
+          </li>
+        </ul>
+      </p>
+    </section>
+  </body>
+</document>

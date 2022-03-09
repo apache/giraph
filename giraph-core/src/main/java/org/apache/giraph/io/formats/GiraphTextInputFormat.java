@@ -30,9 +30,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 
 /**
- * Provides functionality similar to {@link org.apache.hadoop
- * .mapreduce.lib.input.TextInputFormat}, but allows for different data
- * sources (vertex and edge data).
+ * Provides functionality similar to
+ * {@link org.apache.hadoop.mapreduce.lib.input.TextInputFormat},
+ * but allows for different data sources (vertex and edge data).
  */
 public class GiraphTextInputFormat
     extends GiraphFileInputFormat<LongWritable, Text> {

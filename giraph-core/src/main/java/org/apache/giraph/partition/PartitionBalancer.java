@@ -22,6 +22,8 @@ import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Objects;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -184,6 +186,17 @@ public class PartitionBalancer {
       return (int)
           (getValue() - ((WorkerInfoAssignments) other).getValue());
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof WorkerInfoAssignments &&
+          compareTo((WorkerInfoAssignments) obj) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(value);
+    }
   }
 
   /**
@@ -296,14 +309,12 @@ public class PartitionBalancer {
    * @param myWorkerInfo Worker info
    * @param masterSetPartitionOwners Master set partition owners, received
    *        prior to beginning the superstep
-   * @param partitionStore Partition store for the given worker
    * @return Information for the partition exchange.
    */
   public static PartitionExchange updatePartitionOwners(
       List<PartitionOwner> partitionOwnerList,
       WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore partitionStore) {
+      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
     partitionOwnerList.clear();
     partitionOwnerList.addAll(masterSetPartitionOwners);
 

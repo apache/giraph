@@ -31,8 +31,8 @@ import java.util.Iterator;
  * Helper class that wraps the current out-edges and inserts them into a new
  * data structure as they are iterated over.
  * Used by Vertex to provide a mutable iterator when the chosen
- * {@link VertexEdges} doesn't offer a specialized one.
- * The edges are "unwrapped" back to the chosen {@link VertexEdges} data
+ * {@link OutEdges} doesn't offer a specialized one.
+ * The edges are "unwrapped" back to the chosen {@link OutEdges} data
  * structure as soon as possible: either when the iterator is exhausted,
  * or after compute() if iteration has been terminated early.
  *
@@ -40,13 +40,15 @@ import java.util.Iterator;
  * @param <E> Edge value
  */
 public class MutableEdgesWrapper<I extends WritableComparable,
-    E extends Writable> implements VertexEdges<I, E> {
+    E extends Writable> implements OutEdges<I, E> {
   /** New edges data structure (initially empty). */
-  private final VertexEdges<I, E> newEdges;
+  private final OutEdges<I, E> newEdges;
   /** Iterator over the old edges. */
   private final Iterator<Edge<I, E>> oldEdgesIterator;
   /** Last edge that was returned during iteration. */
   private MutableEdge<I, E> currentEdge;
+  /** Number of edges. */
+  private int numEdges;
 
   /**
    * Private constructor: instantiation happens through the {@code wrap()}
@@ -55,10 +57,11 @@ public class MutableEdgesWrapper<I extends WritableComparable,
    * @param oldEdges Current out-edges
    * @param newEdges New (empty) edges data structure
    */
-  private MutableEdgesWrapper(VertexEdges<I, E> oldEdges,
-                              VertexEdges<I, E> newEdges) {
+  private MutableEdgesWrapper(OutEdges<I, E> oldEdges,
+                              OutEdges<I, E> newEdges) {
     oldEdgesIterator = oldEdges.iterator();
     this.newEdges = newEdges;
+    numEdges = oldEdges.size();
   }
 
   /**
@@ -72,19 +75,19 @@ public class MutableEdgesWrapper<I extends WritableComparable,
    */
   public static <I extends WritableComparable, E extends Writable>
   MutableEdgesWrapper<I, E> wrap(
-      VertexEdges<I, E> edges,
-      ImmutableClassesGiraphConfiguration<I, ?, E, ?> conf) {
+      OutEdges<I, E> edges,
+      ImmutableClassesGiraphConfiguration<I, ?, E> conf) {
     MutableEdgesWrapper<I, E> wrapper = new MutableEdgesWrapper<I, E>(
-        edges, conf.createAndInitializeVertexEdges(edges.size()));
+        edges, conf.createAndInitializeOutEdges(edges.size()));
     return wrapper;
   }
 
   /**
    * Moves all the remaining edges to the new data structure, and returns it.
    *
-   * @return The new {@link VertexEdges} data structure.
+   * @return The new {@link OutEdges} data structure.
    */
-  public VertexEdges<I, E> unwrap() {
+  public OutEdges<I, E> unwrap() {
     if (currentEdge != null) {
       newEdges.add(currentEdge);
       currentEdge = null;
@@ -96,11 +99,11 @@ public class MutableEdgesWrapper<I extends WritableComparable,
   }
 
   /**
-   * Get the new {@link VertexEdges} data structure.
+   * Get the new {@link OutEdges} data structure.
    *
    * @return New edges
    */
-  public VertexEdges<I, E> getNewEdges() {
+  public OutEdges<I, E> getNewEdges() {
     return newEdges;
   }
 
@@ -129,6 +132,14 @@ public class MutableEdgesWrapper<I extends WritableComparable,
    */
   public void setCurrentEdge(MutableEdge<I, E> edge) {
     currentEdge = edge;
+  }
+
+  /**
+   * Decrement the number of edges (to account for a deletion from the mutable
+   * iterator).
+   */
+  public void decrementEdges() {
+    --numEdges;
   }
 
   @Override
@@ -161,7 +172,7 @@ public class MutableEdgesWrapper<I extends WritableComparable,
 
   @Override
   public int size() {
-    return unwrap().size();
+    return numEdges;
   }
 
   @Override

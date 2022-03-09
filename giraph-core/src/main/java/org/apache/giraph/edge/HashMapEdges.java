@@ -19,19 +19,20 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.Maps;
+
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link VertexEdges} implementation backed by a {@link HashMap}.
+ * {@link OutEdges} implementation backed by a {@link HashMap}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
  * but uses more space.
@@ -40,24 +41,15 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMapEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements StrictRandomAccessVertexEdges<I, E>,
-    MutableVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements StrictRandomAccessOutEdges<I, E>,
+    MutableOutEdges<I, E> {
   /** Map from target vertex id to edge value. */
   private HashMap<I, E> edgeMap;
 
   @Override
   public void initialize(Iterable<Edge<I, E>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-map with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(((Collection<Edge<I, E>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<I, E> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

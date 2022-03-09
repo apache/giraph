@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.conf;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
 import com.google.common.base.Objects;
@@ -33,16 +34,39 @@ public abstract class AbstractConfOption
   /** Key for configuration */
   private final String key;
 
+  /** Configuration option description */
+  private final String description;
+
   /**
    * Constructor
+   *
    * @param key configuration key
+   * @param description configuration description
    */
-  public AbstractConfOption(String key) {
+  public AbstractConfOption(String key, String description) {
     this.key = key;
+    this.description = description;
   }
 
   public String getKey() {
     return key;
+  }
+
+  /**
+   * @return the description
+   */
+  public String getDescription() {
+    return description;
+  }
+
+  /**
+   * Check if option is set in configuration
+   *
+   * @param conf Configuration
+   * @return true if option is set
+   */
+  public boolean contains(Configuration conf) {
+    return conf.get(key) != null;
   }
 
   @Override public int compareTo(AbstractConfOption o) {
@@ -79,13 +103,23 @@ public abstract class AbstractConfOption
   }
 
   /**
+   * Check if the value set is the same as the default value
+   *
+   * @param conf Configuration
+   * @return true if value set is default value
+   */
+  public abstract boolean isDefaultValue(Configuration conf);
+
+  /**
    * Get string representation of default value
+   *
    * @return String
    */
   public abstract String getDefaultValueStr();
 
   /**
    * Get type this option holds
+   *
    * @return ConfOptionType
    */
   public abstract ConfOptionType getType();

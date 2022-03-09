@@ -18,29 +18,27 @@
 
 package org.apache.giraph.job;
 
-import org.apache.giraph.combiner.Combiner;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_EDGES_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_RESOLVER_CLASS;
+import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
+
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.DefaultVertexValueFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.DefaultVertexValueFactory;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-
-import java.lang.reflect.Type;
-import java.util.List;
-
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_EDGES_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_RESOLVER_CLASS;
 
 /**
  * GiraphConfigurationValidator attempts to verify the consistency of
@@ -51,10 +49,12 @@ import static org.apache.giraph.conf.GiraphConstants.VERTEX_RESOLVER_CLASS;
  * @param <I> the Vertex ID type
  * @param <V> the Vertex Value type
  * @param <E> the Edge Value type
- * @param <M> the Message type
+ * @param <M1> the incoming Message type
+ * @param <M2> the outgoing Message type
  */
 public class GiraphConfigurationValidator<I extends WritableComparable,
-  V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable, M1 extends Writable,
+    M2 extends Writable> {
   /**
    * Class logger object.
    */
@@ -67,30 +67,21 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   private static final int VALUE_PARAM_INDEX = 1;
   /** E param vertex index in classList */
   private static final int EDGE_PARAM_INDEX = 2;
-  /** M param vertex index in classList */
-  private static final int MSG_PARAM_INDEX = 3;
   /** M param vertex combiner index in classList */
   private static final int MSG_COMBINER_PARAM_INDEX = 1;
   /** E param edge input format index in classList */
   private static final int EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX = 1;
   /** E param vertex edges index in classList */
-  private static final int EDGE_PARAM_VERTEX_EDGES_INDEX = 1;
+  private static final int EDGE_PARAM_OUT_EDGES_INDEX = 1;
   /** V param vertex value factory index in classList */
   private static final int VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX = 0;
-
-  /** Vertex Index Type */
-  private Type vertexIndexType;
-  /** Vertex Index Type */
-  private Type vertexValueType;
-  /** Vertex Index Type */
-  private Type edgeValueType;
-  /** Vertex Index Type */
-  private Type messageValueType;
+  /** V param vertex value combiner index in classList */
+  private static final int VALUE_PARAM_VERTEX_VALUE_COMBINER_INDEX = 0;
 
   /**
    * The Configuration object for use in the validation test.
    */
-  private ImmutableClassesGiraphConfiguration conf;
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor to execute the validation test, throws
@@ -103,6 +94,42 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   }
 
   /**
+   * Get vertex id type
+   *
+   * @return vertex id type
+   */
+  private Class<? extends WritableComparable> vertexIndexType() {
+    return conf.getGiraphTypes().getVertexIdClass();
+  }
+
+  /**
+   * Get vertex value type
+   *
+   * @return vertex value type
+   */
+  private Class<? extends Writable> vertexValueType() {
+    return conf.getGiraphTypes().getVertexValueClass();
+  }
+
+  /**
+   * Get edge value type
+   *
+   * @return edge value type
+   */
+  private Class<? extends Writable> edgeValueType() {
+    return conf.getGiraphTypes().getEdgeValueClass();
+  }
+
+  /**
+   * Get outgoing message value type
+   *
+   * @return outgoing message value type
+   */
+  private Class<? extends Writable> outgoingMessageValueType() {
+    return conf.getOutgoingMessageValueClass();
+  }
+
+  /**
    * Make sure that all registered classes have matching types.  This
    * is a little tricky due to type erasure, cannot simply get them from
    * the class type arguments.  Also, set the vertex index, vertex value,
@@ -110,20 +137,14 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
    */
   public void validateConfiguration() {
     checkConfiguration();
-    Class<? extends Vertex<I, V, E, M>> vertexClass =
-      conf.getVertexClass();
-    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
-      Vertex.class, vertexClass);
-    vertexIndexType = classList.get(ID_PARAM_INDEX);
-    vertexValueType = classList.get(VALUE_PARAM_INDEX);
-    edgeValueType = classList.get(EDGE_PARAM_INDEX);
-    messageValueType = classList.get(MSG_PARAM_INDEX);
-    verifyVertexEdgesGenericTypes();
+    verifyOutEdgesGenericTypes();
     verifyVertexInputFormatGenericTypes();
     verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
+    verifyEdgeOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
-    verifyVertexCombinerGenericTypes();
+    verifyVertexValueCombinerGenericTypes();
+    verifyMessageCombinerGenericTypes();
     verifyVertexValueFactoryGenericTypes();
   }
 
@@ -146,10 +167,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
       throw new IllegalArgumentException("checkConfiguration: No valid " +
           GiraphConstants.MIN_WORKERS);
     }
-    if (conf.getVertexClass() == null) {
-      throw new IllegalArgumentException("checkConfiguration: Null " +
-          GiraphConstants.VERTEX_CLASS.getKey());
-    }
+    conf.createComputationFactory().checkConfiguration(conf);
     if (conf.getVertexInputFormatClass() == null &&
         conf.getEdgeInputFormatClass() == null) {
       throw new IllegalArgumentException("checkConfiguration: One of " +
@@ -165,7 +183,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
             VERTEX_RESOLVER_CLASS.getDefaultClass().getCanonicalName());
       }
     }
-    if (conf.getVertexEdgesClass() == null) {
+    if (conf.getOutEdgesClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
             VERTEX_EDGES_CLASS.getKey() + ", defaulting to " +
@@ -175,44 +193,27 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   }
 
   /**
-   * Verify matching generic types for a specific VertexEdges class.
+   * Verify matching generic types for a specific OutEdges class.
    *
-   * @param vertexEdgesClass {@link VertexEdges} class to check
+   * @param outEdgesClass {@link org.apache.giraph.edge.OutEdges} class to check
    */
-  private void verifyVertexEdgesGenericTypesClass(
-      Class<? extends VertexEdges<I, E>> vertexEdgesClass) {
-    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
-        VertexEdges.class, vertexEdgesClass);
-    // VertexEdges implementations can be generic, in which case there are no
-    // types to check.
-    if (classList.isEmpty()) {
-      return;
-    }
-    if (classList.get(ID_PARAM_INDEX) != null &&
-        !vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex index types don't match, " +
-              "vertex - " + vertexIndexType +
-              ", vertex edges - " + classList.get(ID_PARAM_INDEX));
-    }
-    if (classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX) != null &&
-        !edgeValueType.equals(classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Edge value types don't match, " +
-              "vertex - " + edgeValueType +
-              ", vertex edges - " +
-              classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX));
-    }
+  private void verifyOutEdgesGenericTypesClass(
+      Class<? extends OutEdges<I, E>> outEdgesClass) {
+    Class<?>[] classList = getTypeArguments(OutEdges.class, outEdgesClass);
+    checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+        OutEdges.class, "vertex index");
+    checkAssignable(classList, EDGE_PARAM_OUT_EDGES_INDEX, edgeValueType(),
+        OutEdges.class, "edge value");
   }
 
-  /** Verify matching generic types in VertexEdges. */
-  private void verifyVertexEdgesGenericTypes() {
-    Class<? extends VertexEdges<I, E>> vertexEdgesClass =
-        conf.getVertexEdgesClass();
-    Class<? extends VertexEdges<I, E>> inputVertexEdgesClass =
-        conf.getInputVertexEdgesClass();
-    verifyVertexEdgesGenericTypesClass(vertexEdgesClass);
-    verifyVertexEdgesGenericTypesClass(inputVertexEdgesClass);
+  /** Verify matching generic types in OutEdges. */
+  private void verifyOutEdgesGenericTypes() {
+    Class<? extends OutEdges<I, E>> outEdgesClass =
+        conf.getOutEdgesClass();
+    Class<? extends OutEdges<I, E>> inputOutEdgesClass =
+        conf.getInputOutEdgesClass();
+    verifyOutEdgesGenericTypesClass(outEdgesClass);
+    verifyOutEdgesGenericTypesClass(inputOutEdgesClass);
   }
 
   /** Verify matching generic types in VertexInputFormat. */
@@ -220,33 +221,14 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
       conf.getVertexInputFormatClass();
     if (vertexInputFormatClass != null) {
-      List<Class<?>> classList =
-          ReflectionUtils.getTypeArguments(
-              VertexInputFormat.class, vertexInputFormatClass);
-      if (classList.get(ID_PARAM_INDEX) == null) {
-        LOG.warn("Input format vertex index type is not known");
-      } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex index types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", vertex input format - " + classList.get(ID_PARAM_INDEX));
-      }
-      if (classList.get(VALUE_PARAM_INDEX) == null) {
-        LOG.warn("Input format vertex value type is not known");
-      } else if (!vertexValueType.equals(classList.get(VALUE_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex value types don't match, " +
-                "vertex - " + vertexValueType +
-                ", vertex input format - " + classList.get(VALUE_PARAM_INDEX));
-      }
-      if (classList.get(EDGE_PARAM_INDEX) == null) {
-        LOG.warn("Input format edge value type is not known");
-      } else if (!edgeValueType.equals(classList.get(EDGE_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Edge value types don't match, " +
-                "vertex - " + edgeValueType +
-                ", vertex input format - " + classList.get(EDGE_PARAM_INDEX));
-      }
+      Class<?>[] classList =
+          getTypeArguments(VertexInputFormat.class, vertexInputFormatClass);
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          VertexInputFormat.class, "vertex index");
+      checkAssignable(classList, VALUE_PARAM_INDEX, vertexValueType(),
+          VertexInputFormat.class, "vertex value");
+      checkAssignable(classList, EDGE_PARAM_INDEX, edgeValueType(),
+          VertexInputFormat.class, "edge value");
     }
   }
 
@@ -255,85 +237,76 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     Class<? extends EdgeInputFormat<I, E>> edgeInputFormatClass =
         conf.getEdgeInputFormatClass();
     if (edgeInputFormatClass != null) {
-      List<Class<?>> classList =
-          ReflectionUtils.getTypeArguments(
-              EdgeInputFormat.class, edgeInputFormatClass);
-      if (classList.get(ID_PARAM_INDEX) == null) {
-        LOG.warn("Input format vertex index type is not known");
-      } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Vertex index types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", edge input format - " + classList.get(ID_PARAM_INDEX));
-      }
-      if (classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX) == null) {
-        LOG.warn("Input format edge value type is not known");
-      } else if (!edgeValueType.equals(
-          classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX))) {
-        throw new IllegalArgumentException(
-            "checkClassTypes: Edge value types don't match, " +
-                "vertex - " + edgeValueType +
-                ", edge input format - " +
-                classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX));
-      }
+      Class<?>[] classList =
+          getTypeArguments(EdgeInputFormat.class, edgeInputFormatClass);
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          EdgeInputFormat.class, "vertex index");
+      checkAssignable(classList, EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX,
+          edgeValueType(), EdgeInputFormat.class, "edge value");
     }
   }
 
-  /** If there is a combiner type, verify its generic params match the job. */
-  private void verifyVertexCombinerGenericTypes() {
-    Class<? extends Combiner<I, M>> vertexCombinerClass =
-      conf.getCombinerClass();
-    if (vertexCombinerClass != null) {
-      List<Class<?>> classList =
-        ReflectionUtils.getTypeArguments(
-          Combiner.class, vertexCombinerClass);
-      if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-          "checkClassTypes: Vertex index types don't match, " +
-            "vertex - " + vertexIndexType +
-            ", vertex combiner - " + classList.get(ID_PARAM_INDEX));
-      }
-      if (!messageValueType.equals(classList.get(MSG_COMBINER_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-          "checkClassTypes: Message value types don't match, " +
-            "vertex - " + messageValueType +
-            ", vertex combiner - " + classList.get(MSG_COMBINER_PARAM_INDEX));
-      }
+  /**
+   * If there is a vertex value combiner type, verify its
+   * generic params match the job.
+   */
+  private void verifyVertexValueCombinerGenericTypes() {
+    Class<? extends VertexValueCombiner<V>> vertexValueCombiner =
+        conf.getVertexValueCombinerClass();
+    if (vertexValueCombiner != null) {
+      Class<?>[] classList =
+          getTypeArguments(VertexValueCombiner.class, vertexValueCombiner);
+      checkAssignable(classList, VALUE_PARAM_VERTEX_VALUE_COMBINER_INDEX,
+          vertexValueType(), VertexValueCombiner.class, "vertex value");
     }
   }
 
-  /** Verify that the output format's generic params match the job. */
+  /**
+   * If there is a message combiner type, verify its
+   * generic params match the job.
+   */
+  private void verifyMessageCombinerGenericTypes() {
+    MessageCombiner<I, M2> messageCombiner =
+      conf.createOutgoingMessageCombiner();
+    if (messageCombiner != null) {
+      Class<?>[] classList =
+          getTypeArguments(MessageCombiner.class, messageCombiner.getClass());
+      checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(),
+          MessageCombiner.class, "vertex index");
+      checkEquals(classList, MSG_COMBINER_PARAM_INDEX,
+          outgoingMessageValueType(), MessageCombiner.class, "message value");
+    }
+  }
+
+  /** Verify that the vertex output format's generic params match the job. */
   private void verifyVertexOutputFormatGenericTypes() {
+    Class<? extends EdgeOutputFormat<I, V, E>>
+      edgeOutputFormatClass = conf.getEdgeOutputFormatClass();
+    if (conf.hasEdgeOutputFormat()) {
+      Class<?>[] classList =
+        getTypeArguments(EdgeOutputFormat.class, edgeOutputFormatClass);
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          VertexOutputFormat.class, "vertex index");
+      checkAssignable(classList, VALUE_PARAM_INDEX, vertexValueType(),
+          VertexOutputFormat.class, "vertex value");
+      checkAssignable(classList, EDGE_PARAM_INDEX, edgeValueType(),
+          VertexOutputFormat.class, "edge value");
+    }
+  }
+
+  /** Verify that the edge output format's generic params match the job. */
+  private void verifyEdgeOutputFormatGenericTypes() {
     Class<? extends VertexOutputFormat<I, V, E>>
       vertexOutputFormatClass = conf.getVertexOutputFormatClass();
-    if (vertexOutputFormatClass != null) {
-      List<Class<?>> classList =
-        ReflectionUtils.getTypeArguments(
-          VertexOutputFormat.class, vertexOutputFormatClass);
-      if (classList.get(ID_PARAM_INDEX) == null) {
-        LOG.warn("Output format vertex index type is not known");
-      } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-          "checkClassTypes: Vertex index types don't match, " +
-            "vertex - " + vertexIndexType +
-            ", vertex output format - " + classList.get(ID_PARAM_INDEX));
-      }
-      if (classList.get(VALUE_PARAM_INDEX) == null) {
-        LOG.warn("Output format vertex value type is not known");
-      } else if (!vertexValueType.equals(classList.get(VALUE_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-          "checkClassTypes: Vertex value types don't match, " +
-            "vertex - " + vertexValueType +
-            ", vertex output format - " + classList.get(VALUE_PARAM_INDEX));
-      }
-      if (classList.get(EDGE_PARAM_INDEX) == null) {
-        LOG.warn("Output format edge value type is not known");
-      } else if (!edgeValueType.equals(classList.get(EDGE_PARAM_INDEX))) {
-        throw new IllegalArgumentException(
-          "checkClassTypes: Edge value types don't match, " +
-            "vertex - " + edgeValueType +
-            ", vertex output format - " + classList.get(EDGE_PARAM_INDEX));
-      }
+    if (conf.hasVertexOutputFormat()) {
+      Class<?>[] classList =
+        getTypeArguments(VertexOutputFormat.class, vertexOutputFormatClass);
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          VertexOutputFormat.class, "vertex index");
+      checkAssignable(classList, VALUE_PARAM_INDEX, vertexValueType(),
+          VertexOutputFormat.class, "vertex value");
+      checkAssignable(classList, EDGE_PARAM_INDEX, edgeValueType(),
+          VertexOutputFormat.class, "edge value");
     }
   }
 
@@ -344,60 +317,72 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     if (DefaultVertexValueFactory.class.equals(vvfClass)) {
       return;
     }
-    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
-        VertexValueFactory.class, vvfClass);
-    if (classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX) != null &&
-        !vertexValueType.equals(
-            classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX))) {
-      throw new IllegalArgumentException(
-          "checkClassTypes: Vertex value types don't match, " +
-              "vertex - " + vertexValueType +
-              ", vertex value factory - " +
-              classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX));
+    Class<?>[] classList = getTypeArguments(VertexValueFactory.class, vvfClass);
+    checkEquals(classList, VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX,
+        vertexValueType(), VertexValueFactory.class, "vertex value");
+  }
+
+  /**
+   * If there is a vertex resolver,
+   * validate the generic parameter types.
+   * */
+  private void verifyVertexResolverGenericTypes() {
+    Class<? extends VertexResolver<I, V, E>>
+        vrClass = conf.getVertexResolverClass();
+    if (DefaultVertexResolver.class.equals(vrClass)) {
+      return;
+    }
+    Class<?>[] classList =
+        getTypeArguments(VertexResolver.class, vrClass);
+    checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(),
+        VertexResolver.class, "vertex index");
+    checkEquals(classList, VALUE_PARAM_INDEX, vertexValueType(),
+        VertexResolver.class, "vertex value");
+    checkEquals(classList, EDGE_PARAM_INDEX, edgeValueType(),
+        VertexResolver.class, "edge value");
+  }
+
+  /**
+   * Check that the type from computation equals the type from the class.
+   *
+   * @param classList classes from type
+   * @param index array index of class to check
+   * @param classFromComputation class from computation
+   * @param klass Class type we're checking, only used for printing name
+   * @param typeName Name of type we're checking
+   */
+  private static void checkEquals(Class<?>[] classList, int index,
+      Class<?> classFromComputation, Class klass, String typeName) {
+    if (classList[index] == null) {
+      LOG.warn(klass.getSimpleName() + " " + typeName + " type is not known");
+    } else if (!classList[index].equals(classFromComputation)) {
+      throw new IllegalStateException(
+          "checkClassTypes: " + typeName + " types not equal, " +
+              "computation - " + classFromComputation +
+              ", " + klass.getSimpleName() + " - " +
+              classList[index]);
     }
   }
 
-  /** If there is a vertex resolver,
-   * validate the generic parameter types. */
-  private void verifyVertexResolverGenericTypes() {
-    Class<? extends VertexResolver<I, V, E, M>>
-      vrClass = conf.getVertexResolverClass();
-    if (!DefaultVertexResolver.class.isAssignableFrom(vrClass)) {
-      return;
-    }
-    Class<? extends DefaultVertexResolver<I, V, E, M>>
-      dvrClass =
-        (Class<? extends DefaultVertexResolver<I, V, E, M>>) vrClass;
-    List<Class<?>> classList =
-      ReflectionUtils.getTypeArguments(
-          DefaultVertexResolver.class, dvrClass);
-    if (classList.get(ID_PARAM_INDEX) != null &&
-      !vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Vertex index types don't match, " +
-          "vertex - " + vertexIndexType +
-          ", vertex resolver - " + classList.get(ID_PARAM_INDEX));
-    }
-    if (classList.get(VALUE_PARAM_INDEX) != null &&
-      !vertexValueType.equals(classList.get(VALUE_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Vertex value types don't match, " +
-          "vertex - " + vertexValueType +
-          ", vertex resolver - " + classList.get(VALUE_PARAM_INDEX));
-    }
-    if (classList.get(EDGE_PARAM_INDEX) != null &&
-      !edgeValueType.equals(classList.get(EDGE_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Edge value types don't match, " +
-          "vertex - " + edgeValueType +
-          ", vertex resolver - " + classList.get(EDGE_PARAM_INDEX));
-    }
-    if (classList.get(MSG_PARAM_INDEX) != null &&
-      !messageValueType.equals(classList.get(MSG_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Message value types don't match, " +
-          "vertex - " + messageValueType +
-          ", vertex resolver - " + classList.get(MSG_PARAM_INDEX));
+  /**
+   * Check that the type from computation is assignable to type from the class.
+   *
+   * @param classList classes from type
+   * @param index array index of class to check
+   * @param classFromComputation class from computation
+   * @param klass Class type we're checking, only used for printing name
+   * @param typeName Name of type we're checking
+   */
+  private static void checkAssignable(Class<?>[] classList, int index,
+      Class<?> classFromComputation, Class klass, String typeName) {
+    if (classList[index] == null) {
+      LOG.warn(klass.getSimpleName() + " " + typeName + " type is not known");
+    } else if (!classList[index].isAssignableFrom(classFromComputation)) {
+      throw new IllegalStateException(
+          "checkClassTypes: " + typeName + " types not assignable, " +
+              "computation - " + classFromComputation +
+              ", " + klass.getSimpleName() + " - " +
+              classList[EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX]);
     }
   }
 }

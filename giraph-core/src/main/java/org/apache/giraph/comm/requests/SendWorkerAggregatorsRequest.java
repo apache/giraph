@@ -18,14 +18,14 @@
 
 package org.apache.giraph.comm.requests;
 
+import java.io.IOException;
+
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-
-import java.io.DataInput;
-import java.io.IOException;
 
 /**
  * Request to send partial aggregated values for current superstep (values
@@ -52,24 +52,27 @@ public class SendWorkerAggregatorsRequest extends
 
   @Override
   public void doRequest(ServerData serverData) {
-    DataInput input = getDataInput();
+    UnsafeByteArrayInputStream input = getUnsafeByteArrayInput();
     OwnerAggregatorServerData aggregatorData =
         serverData.getOwnerAggregatorData();
     try {
-      int numAggregators = input.readInt();
-      for (int i = 0; i < numAggregators; i++) {
-        String aggregatorName = input.readUTF();
-        if (aggregatorName.equals(
-            AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
-          LongWritable count = new LongWritable(0);
-          count.readFields(input);
-          aggregatorData.receivedRequestCountFromWorker(count.get(),
+      int num = input.readInt();
+      for (int i = 0; i < num; i++) {
+        String name = input.readUTF();
+        GlobalCommType type = GlobalCommType.values()[input.readByte()];
+        if (type == GlobalCommType.SPECIAL_COUNT) {
+          LongWritable value = new LongWritable();
+          value.readFields(input);
+          aggregatorData.receivedRequestCountFromWorker(
+              value.get(),
               getSenderTaskId());
+        } else if (type == GlobalCommType.REDUCED_VALUE) {
+          Writable value = aggregatorData.createInitialValue(name);
+          value.readFields(input);
+          aggregatorData.reduce(name, value);
         } else {
-          Writable aggregatedValue =
-              aggregatorData.createAggregatorInitialValue(aggregatorName);
-          aggregatedValue.readFields(input);
-          aggregatorData.aggregate(aggregatorName, aggregatedValue);
+          throw new IllegalStateException(
+              "SendWorkerAggregatorsRequest received " + type);
         }
       }
     } catch (IOException e) {

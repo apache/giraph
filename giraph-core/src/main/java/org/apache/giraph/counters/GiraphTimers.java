@@ -23,8 +23,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,23 +36,27 @@ public class GiraphTimers extends HadoopCountersBase {
   /** Counter group name for the giraph timers */
   public static final String GROUP_NAME = "Giraph Timers";
   /** Counter name for setup msec */
-  public static final String SETUP_MS_NAME = "Setup (milliseconds)";
+  public static final String SETUP_MS_NAME = "Setup (ms)";
   /** Counter name for total msec */
-  public static final String TOTAL_MS_NAME = "Total (milliseconds)";
+  public static final String TOTAL_MS_NAME = "Total (ms)";
   /** Counter name for shutdown msec */
-  public static final String SHUTDOWN_MS_NAME = "Shutdown (milliseconds)";
+  public static final String SHUTDOWN_MS_NAME = "Shutdown (ms)";
+  /** Counter name for initialize msec */
+  public static final String INITIALIZE_MS_NAME = "Initialize (ms)";
 
   /** Singleton instance for everyone to use */
   private static GiraphTimers INSTANCE;
 
   /** Setup time in msec */
   private static final int SETUP_MS = 0;
-  /** Total time in msec */
+  /** Total time in msec (doesn't include initialize time) */
   private static final int TOTAL_MS = 1;
   /** Shutdown time in msec */
   private static final int SHUTDOWN_MS = 2;
+  /** Total time it takes to get minimum machines */
+  private static final int INITIALIZE_MS = 3;
   /** How many whole job counters we have */
-  private static final int NUM_COUNTERS = 3;
+  private static final int NUM_COUNTERS = 4;
 
   /** superstep time in msec */
   private final Map<Long, GiraphHadoopCounter> superstepMsec;
@@ -69,6 +75,7 @@ public class GiraphTimers extends HadoopCountersBase {
     jobCounters[SETUP_MS] = getCounter(SETUP_MS_NAME);
     jobCounters[TOTAL_MS] = getCounter(TOTAL_MS_NAME);
     jobCounters[SHUTDOWN_MS] = getCounter(SHUTDOWN_MS_NAME);
+    jobCounters[INITIALIZE_MS] = getCounter(INITIALIZE_MS_NAME);
     superstepMsec = Maps.newHashMap();
   }
 
@@ -103,25 +110,29 @@ public class GiraphTimers extends HadoopCountersBase {
    * Get counter for superstep time in milliseconds
    *
    * @param superstep Integer superstep number.
+   * @param computationName Name of the computation for display (may be null)
    * @return Counter for setup time in milliseconds
    */
-  public GiraphHadoopCounter getSuperstepMs(long superstep) {
+  public GiraphHadoopCounter getSuperstepMs(long superstep,
+                                            String computationName) {
     GiraphHadoopCounter counter = superstepMsec.get(superstep);
     if (counter == null) {
       String counterPrefix;
       if (superstep == -1) {
         counterPrefix = "Input superstep";
       } else {
-        counterPrefix = "Superstep " + superstep;
+        counterPrefix = "Superstep " + superstep +
+            (computationName == null ? "" : " " + computationName);
       }
-      counter = getCounter(counterPrefix + " (milliseconds)");
+      counter = getCounter(counterPrefix + " (ms)");
       superstepMsec.put(superstep, counter);
     }
     return counter;
   }
 
   /**
-   * Get counter for total time in milliseconds.
+   * Get counter for total time in milliseconds (doesn't include initialize
+   * time).
    *
    * @return Counter for total time in milliseconds.
    */
@@ -136,6 +147,16 @@ public class GiraphTimers extends HadoopCountersBase {
    */
   public GiraphHadoopCounter getShutdownMs() {
     return jobCounters[SHUTDOWN_MS];
+  }
+
+  /**
+   * Get counter for initializing the process,
+   * having to wait for a minimum number of processes to be available
+   * before setup step
+   * @return Counter for initializing in milliseconds
+   */
+  public GiraphHadoopCounter getInitializeMs() {
+    return jobCounters[INITIALIZE_MS];
   }
 
   /**
@@ -160,5 +181,31 @@ public class GiraphTimers extends HadoopCountersBase {
   public Iterator<GiraphHadoopCounter> iterator() {
     return Iterators.concat(jobCounters().iterator(),
         superstepCounters().values().iterator());
+  }
+
+  /**
+   * Get a map of counter names and values for the given superstep
+   * Counters include Setup, Initialise, Shutdown, Total, and time for
+   * the given superstep
+   * @param superstep superstep for which to fetch the GiraphTimer
+   * @return Map of counter names and values
+   */
+  public List<CustomCounter> getCounterList(long superstep) {
+    List<CustomCounter> countersList = new ArrayList<>();
+    for (GiraphHadoopCounter counter: jobCounters) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, counter.getName(),
+              CustomCounter.Aggregation.SUM, counter.getValue());
+      countersList.add(customCounter);
+    }
+    GiraphHadoopCounter giraphHadoopCounter = superstepMsec.get(superstep);
+    if (giraphHadoopCounter != null) {
+      CustomCounter customCounter = new CustomCounter(
+              GROUP_NAME, giraphHadoopCounter.getName(),
+              CustomCounter.Aggregation.SUM,
+              giraphHadoopCounter.getValue());
+      countersList.add(customCounter);
+    }
+    return countersList;
   }
 }

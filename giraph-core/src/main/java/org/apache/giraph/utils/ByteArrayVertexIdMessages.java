@@ -15,15 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+package org.apache.giraph.utils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Stores vertex id and message pairs in a single byte array.
@@ -33,37 +34,39 @@ import java.io.IOException;
  */
 @SuppressWarnings("unchecked")
 public class ByteArrayVertexIdMessages<I extends WritableComparable,
-    M extends Writable> extends ByteArrayVertexIdData<I, M> {
+  M extends Writable> extends ByteArrayVertexIdData<I, M>
+  implements VertexIdMessages<I, M> {
+  /** Message value class */
+  private final MessageValueFactory<M> messageValueFactory;
   /** Add the message size to the stream? (Depends on the message store) */
   private boolean useMessageSizeEncoding = false;
 
   /**
+   * Constructor
+   *
+   * @param messageValueFactory Class for messages
+   */
+  public ByteArrayVertexIdMessages(
+      MessageValueFactory<M> messageValueFactory) {
+    this.messageValueFactory = messageValueFactory;
+  }
+
+  /**
    * Set whether message sizes should be encoded.  This should only be a
    * possibility when not combining.  When combining, all messages need to be
-   * deserializd right away, so this won't help.
+   * de-serialized right away, so this won't help.
    */
   private void setUseMessageSizeEncoding() {
-    if (!getConf().useCombiner()) {
+    if (!getConf().useOutgoingMessageCombiner()) {
       useMessageSizeEncoding = getConf().useMessageSizeEncoding();
     } else {
       useMessageSizeEncoding = false;
     }
   }
 
-  /**
-   * Cast the {@link ImmutableClassesGiraphConfiguration} so it can be used
-   * to generate message objects.
-   *
-   * @return Casted configuration
-   */
-  @Override
-  public ImmutableClassesGiraphConfiguration<I, ?, ?, M> getConf() {
-    return (ImmutableClassesGiraphConfiguration<I, ?, ?, M>) super.getConf();
-  }
-
   @Override
   public M createData() {
-    return getConf().createMessageValue();
+    return messageValueFactory.newInstance();
   }
 
   @Override
@@ -88,45 +91,72 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
     setUseMessageSizeEncoding();
   }
 
-  /**
-   * Get specialized iterator that will instiantiate the vertex id and
-   * message of this object.
-   *
-   * @return Special iterator that reuses vertex ids and messages unless
-   *         specified
-   */
-  public VertexIdMessageIterator getVertexIdMessageIterator() {
-    return new VertexIdMessageIterator();
+  @Override
+  public ByteStructVertexIdMessageIterator<I, M> getVertexIdMessageIterator() {
+    return new ByteStructVertexIdMessageIterator<>(this);
   }
 
-  /**
-   * Special iterator that reuses vertex ids and message objects so that the
-   * lifetime of the object is only until next() is called.
-   */
-  public class VertexIdMessageIterator extends VertexIdDataIterator {
-    /**
-     * Get the current message.
-     *
-     * @return Current message
-     */
-    public M getCurrentMessage() {
-      return getCurrentData();
+  @Override
+  public void add(I vertexId, M message) {
+    if (!useMessageSizeEncoding) {
+      super.add(vertexId, message);
+    } else {
+      try {
+        vertexId.write(extendedDataOutput);
+        writeMessageWithSize(message);
+      } catch (IOException e) {
+        throw new IllegalStateException("add: IOException occurred");
+      }
+    }
+  }
+
+  @Override
+  public void add(byte[] serializedId, int idPos, M message) {
+    if (!useMessageSizeEncoding) {
+      super.add(serializedId, idPos, message);
+    } else {
+      try {
+        extendedDataOutput.write(serializedId, 0, idPos);
+        writeMessageWithSize(message);
+      } catch (IOException e) {
+        throw new IllegalStateException("add: IOException occurred");
+      }
     }
   }
 
   /**
-   * Get specialized iterator that will instiantiate the vertex id and
-   * message of this object.  It will only produce message bytes, not actual
-   * messages and expects a different encoding.
+   * Write a size of the message and message
    *
-   * @return Special iterator that reuses vertex ids (unless released) and
-   *         copies message bytes
+   * @param message Message to write
    */
-  public VertexIdMessageBytesIterator getVertexIdMessageBytesIterator() {
+  private void writeMessageWithSize(M message) throws IOException {
+    int pos = extendedDataOutput.getPos();
+    extendedDataOutput.skipBytes(4);
+    writeData(extendedDataOutput, message);
+    extendedDataOutput.writeInt(
+        pos, extendedDataOutput.getPos() - pos - 4);
+  }
+
+  @Override
+  public ByteStructVertexIdMessageBytesIterator<I, M>
+  getVertexIdMessageBytesIterator() {
     if (!useMessageSizeEncoding) {
       return null;
     }
-    return new VertexIdMessageBytesIterator();
+    return new ByteStructVertexIdMessageBytesIterator<I, M>(this) {
+      @Override
+      public void writeCurrentMessageBytes(DataOutput dataOutput) {
+        try {
+          dataOutput.write(extendedDataOutput.getByteArray(),
+            messageOffset, messageBytes);
+        } catch (NegativeArraySizeException e) {
+          VerboseByteStructMessageWrite.handleNegativeArraySize(vertexId);
+        } catch (IOException e) {
+          throw new IllegalStateException("writeCurrentMessageBytes: Got " +
+              "IOException", e);
+        }
+      }
+    };
   }
 
   @Override
@@ -139,60 +169,5 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   public void readFields(DataInput dataInput) throws IOException {
     useMessageSizeEncoding = dataInput.readBoolean();
     super.readFields(dataInput);
-  }
-
-  /**
-   * Special iterator that reuses vertex ids and messages bytes so that the
-   * lifetime of the object is only until next() is called.
-   *
-   * Vertex id ownership can be released if desired through
-   * releaseCurrentVertexId().  This optimization allows us to cut down
-   * on the number of objects instantiated and garbage collected.  Messages
-   * can only be copied to an ExtendedDataOutput object
-   *
-   * Not thread-safe.
-   */
-  public class VertexIdMessageBytesIterator extends VertexIdDataIterator {
-    /** Last message offset */
-    private int messageOffset = -1;
-    /** Number of bytes in the last message */
-    private int messageBytes = -1;
-
-    /**
-     * Moves to the next element in the iteration.
-     */
-    @Override
-    public void next() {
-      if (vertexId == null) {
-        vertexId = getConf().createVertexId();
-      }
-
-      try {
-        vertexId.readFields(extendedDataInput);
-        messageBytes = extendedDataInput.readInt();
-        messageOffset = extendedDataInput.getPos();
-        if (extendedDataInput.skipBytes(messageBytes) != messageBytes) {
-          throw new IllegalStateException("next: Failed to skip " +
-              messageBytes);
-        }
-      } catch (IOException e) {
-        throw new IllegalStateException("next: IOException", e);
-      }
-    }
-
-    /**
-     * Write the current message to an ExtendedDataOutput object
-     *
-     * @param dataOutput Where the current message will be written to
-     */
-    public void writeCurrentMessageBytes(
-        ExtendedDataOutput dataOutput) {
-      try {
-        dataOutput.write(getByteArray(), messageOffset, messageBytes);
-      } catch (IOException e) {
-        throw new IllegalStateException("writeCurrentMessageBytes: Got " +
-            "IOException", e);
-      }
-    }
   }
 }

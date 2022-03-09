@@ -19,6 +19,8 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexValueCombiner;
+import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -34,35 +36,34 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public abstract class BasicPartition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements Partition<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements Partition<I, V, E> {
   /** Configuration from the worker */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition id */
   private int id;
   /** Context used to report progress */
   private Progressable progressable;
-  /** Partition context */
-  private PartitionContext partitionContext;
+  /** Vertex value combiner */
+  private VertexValueCombiner<V> vertexValueCombiner;
 
   @Override
   public void initialize(int partitionId, Progressable progressable) {
     setId(partitionId);
     setProgressable(progressable);
-    partitionContext = conf.createPartitionContext();
+    vertexValueCombiner = conf.createVertexValueCombiner();
   }
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration) {
     conf = configuration;
   }
 
   @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
   }
 
@@ -77,11 +78,6 @@ public abstract class BasicPartition<I extends WritableComparable,
   }
 
   @Override
-  public PartitionContext getPartitionContext() {
-    return partitionContext;
-  }
-
-  @Override
   public void progress() {
     if (progressable != null) {
       progressable.progress();
@@ -93,6 +89,21 @@ public abstract class BasicPartition<I extends WritableComparable,
     this.progressable = progressable;
   }
 
+  public VertexValueCombiner<V> getVertexValueCombiner() {
+    return vertexValueCombiner;
+  }
+
+  @Override
+  public void addPartitionVertices(VertexIterator<I, V, E> vertexIterator) {
+    while (vertexIterator.hasNext()) {
+      vertexIterator.next();
+      // Release the vertex if it was put, otherwise reuse as an optimization
+      if (putOrCombine(vertexIterator.getVertex())) {
+        vertexIterator.releaseVertex();
+      }
+    }
+  }
+
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeInt(id);
@@ -101,6 +112,5 @@ public abstract class BasicPartition<I extends WritableComparable,
   @Override
   public void readFields(DataInput input) throws IOException {
     id = input.readInt();
-    partitionContext = conf.createPartitionContext();
   }
 }

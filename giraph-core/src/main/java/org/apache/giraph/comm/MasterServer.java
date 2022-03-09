@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.comm.flow_control.FlowControl;
+
 import java.net.InetSocketAddress;
 
 /**
@@ -32,7 +34,21 @@ public interface MasterServer {
   InetSocketAddress getMyAddress();
 
   /**
+   * Get server host or IP
+   *
+   * @return Server host or IP
+   */
+  String getLocalHostOrIp();
+
+  /**
    * Shuts down.
    */
   void close();
+
+  /**
+   * Inform the server about the flow control policy used in sending requests
+   *
+   * @param flowControl reference to flow control policy
+   */
+  void setFlowControl(FlowControl flowControl);
 }

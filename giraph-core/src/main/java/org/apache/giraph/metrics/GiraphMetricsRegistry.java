@@ -258,18 +258,6 @@ public class GiraphMetricsRegistry {
   }
 
   /**
-   * Create a new {@link Timer} from the description and registers it under the
-   * given group and name.
-   *
-   * @param timerDesc TimerDesc describing the timer
-   * @return new {@link Timer}
-   */
-  public Timer getTimer(TimerDesc timerDesc) {
-    return getTimer(timerDesc.getName(), timerDesc.getDurationUnit(),
-        timerDesc.getTimeUnit());
-  }
-
-  /**
    * Creates a new {@link Timer} and registers it under the given
    * group and name.
    *
@@ -286,8 +274,8 @@ public class GiraphMetricsRegistry {
    * Get a Gauge that is already present in the MetricsRegistry
    *
    * @param name String name of Gauge
-   * @param <T> value type Gauge returns
-   * @return Gauge<T> from MetricsRegistry
+   * @param <T> type of gauge
+   * @return Gauge, from MetricsRegistry
    */
   public <T> Gauge<T> getExistingGauge(String name) {
     Metric metric = registry.allMetrics().get(makeMetricName(name));
@@ -302,5 +290,12 @@ public class GiraphMetricsRegistry {
    */
   protected MetricName makeMetricName(String name) {
     return new MetricName(groupName, type, name);
+  }
+
+  /**
+   * Nothing will be captured after this is called.
+   */
+  public void shutdown() {
+    registry.shutdown();
   }
 }

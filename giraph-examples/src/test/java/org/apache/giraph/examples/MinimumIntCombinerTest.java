@@ -20,24 +20,26 @@ package org.apache.giraph.examples;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.combiner.MinimumIntCombiner;
+import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.combiner.MinimumIntMessageCombiner;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.WritableComparable;
 import org.junit.Test;
 
 public class MinimumIntCombinerTest {
 
   @Test
   public void testCombiner() throws Exception {
-    Combiner<IntWritable, IntWritable> combiner =
-        new MinimumIntCombiner();
+    MessageCombiner<WritableComparable, IntWritable>
+        messageCombiner =
+        new MinimumIntMessageCombiner();
 
     IntWritable vertexId = new IntWritable(1);
-    IntWritable result = combiner.createInitialMessage();
-    combiner.combine(vertexId, result, new IntWritable(39947466));
-    combiner.combine(vertexId, result, new IntWritable(199));
-    combiner.combine(vertexId, result, new IntWritable(42));
-    combiner.combine(vertexId, result, new IntWritable(19998888));
+    IntWritable result = messageCombiner.createInitialMessage();
+    messageCombiner.combine(vertexId, result, new IntWritable(39947466));
+    messageCombiner.combine(vertexId, result, new IntWritable(199));
+    messageCombiner.combine(vertexId, result, new IntWritable(42));
+    messageCombiner.combine(vertexId, result, new IntWritable(19998888));
     assertEquals(42, result.get());
   }
 }

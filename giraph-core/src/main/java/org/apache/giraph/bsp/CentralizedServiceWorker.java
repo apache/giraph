@@ -18,27 +18,30 @@
 
 package org.apache.giraph.bsp;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.comm.messages.PartitionSplitInfo;
+import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.FinishedSuperstepStats;
-import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
-import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.worker.WorkerAggregatorHandler;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.worker.WorkerInputSplitsHandler;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * All workers should have access to this centralized service to
@@ -47,12 +50,11 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceWorker<I extends WritableComparable,
-  V extends Writable, E extends Writable, M extends Writable>
-  extends CentralizedService<I, V, E, M> {
+  V extends Writable, E extends Writable>
+  extends CentralizedService<I, V, E>, PartitionSplitInfo<I> {
   /**
    * Setup (must be called prior to any other function)
    *
@@ -73,7 +75,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return Worker client
    */
-  WorkerClient<I, V, E, M> getWorkerClient();
+  WorkerClient<I, V, E> getWorkerClient();
 
   /**
    * Get the worker context.
@@ -97,7 +99,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return The partition store for this worker.
    */
-  PartitionStore<I, V, E, M> getPartitionStore();
+  PartitionStore<I, V, E> getPartitionStore();
 
   /**
    *  Both the vertices and the messages need to be checkpointed in order
@@ -121,24 +123,23 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * Take all steps prior to actually beginning the computation of a
    * superstep.
    *
-   * @param graphState Current graph state
    * @return Collection of all the partition owners from the master for this
    *         superstep.
    */
-  Collection<? extends PartitionOwner> startSuperstep(
-      GraphState<I, V, E, M> graphState);
+  Collection<? extends PartitionOwner> startSuperstep();
 
   /**
    * Worker is done with its portion of the superstep.  Report the
    * worker level statistics after the computation.
    *
-   * @param graphState Current graph state
    * @param partitionStatsList All the partition stats for this worker
+   * @param superstepTimerContext superstep timer context only given when the
+   *      function needs to stop the timer, otherwise null.
    * @return Stats of the superstep completion
    */
   FinishedSuperstepStats finishSuperstep(
-      GraphState<I, V, E, M> graphState,
-      List<PartitionStats> partitionStatsList);
+      List<PartitionStats> partitionStatsList,
+      GiraphTimerContext superstepTimerContext);
 
   /**
    * Get the partition id that a vertex id would belong to.
@@ -146,7 +147,8 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @param vertexId Vertex id
    * @return Partition id
    */
-  Integer getPartitionId(I vertexId);
+  @Override
+  int getPartitionId(I vertexId);
 
   /**
    * Whether a partition with given id exists on this worker.
@@ -183,19 +185,12 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
       Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
   /**
-   * Get master info
-   *
-   * @return Master info
-   */
-  MasterInfo getMasterInfo();
-
-  /**
    * Get the GraphTaskManager that this service is using.  Vertices need to know
    * this.
    *
    * @return the GraphTaskManager instance for this compute node
    */
-  GraphTaskManager<I, V, E, M> getGraphTaskManager();
+  GraphTaskManager<I, V, E> getGraphTaskManager();
 
   /**
    * Operations that will be called if there is a failure by a worker.
@@ -207,7 +202,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return Server data
    */
-  ServerData<I, V, E, M> getServerData();
+  ServerData<I, V, E> getServerData();
 
   /**
    * Get worker aggregator handler
@@ -239,4 +234,41 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    */
   void cleanup(FinishedSuperstepStats finishedSuperstepStats)
     throws IOException, InterruptedException;
+
+  /**
+   * Loads Global stats from zookeeper.
+   * @return global stats stored in zookeeper for
+   * previous superstep.
+   */
+  GlobalStats getGlobalStats();
+
+  /**
+   * Get input splits handler used during input
+   *
+   * @return Input splits handler
+   */
+  WorkerInputSplitsHandler getInputSplitsHandler();
+
+  /**
+   * Received addresses and partitions assignments from master.
+   *
+   * @param addressesAndPartitions Addresses and partitions assignment
+   */
+  void addressesAndPartitionsReceived(
+      AddressesAndPartitionsWritable addressesAndPartitions);
+
+  /**
+   * Store the counter values in the zookeeper after every superstep
+   * and also after all supersteps are done. This is called before closing
+   * the zookeeper. We need to call this method after calling cleanup on the
+   * worker, since some counters are updated during cleanup
+   * @param allSuperstepsDone boolean value whether all the supersteps
+   *                          are completed
+   */
+  void storeCountersInZooKeeper(boolean allSuperstepsDone);
+
+  /**
+   * Close zookeeper
+   */
+  void closeZooKeeper();
 }

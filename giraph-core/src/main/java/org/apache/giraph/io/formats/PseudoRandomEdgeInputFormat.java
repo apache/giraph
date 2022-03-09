@@ -28,6 +28,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -42,6 +43,8 @@ import org.apache.log4j.Logger;
  */
 public class PseudoRandomEdgeInputFormat
     extends EdgeInputFormat<LongWritable, DoubleWritable> {
+  @Override public void checkInputSpecs(Configuration conf) { }
+
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
                                           final int minSplitCountHint)
@@ -72,7 +75,7 @@ public class PseudoRandomEdgeInputFormat
     /** Current vertex id. */
     private LongWritable currentVertexId = new LongWritable(-1);
     /** Edges read for the current vertex. */
-    private int currentVertexEdgesRead = 0;
+    private int currentOutEdgesRead = 0;
     /** Target vertices of edges for current vertex. */
     private Set<LongWritable> currentVertexDestVertices = Sets.newHashSet();
     /** Random number generator for the current vertex (for consistency
@@ -131,20 +134,20 @@ public class PseudoRandomEdgeInputFormat
     public boolean nextEdge() throws IOException, InterruptedException {
       return totalSplitVertices > verticesRead + 1 ||
           (totalSplitVertices == verticesRead + 1 &&
-              edgesPerVertex > currentVertexEdgesRead);
+              edgesPerVertex > currentOutEdgesRead);
     }
 
     @Override
     public LongWritable getCurrentSourceId() throws IOException,
         InterruptedException {
-      if (currentVertexEdgesRead == edgesPerVertex) {
+      if (currentOutEdgesRead == edgesPerVertex) {
         ++verticesRead;
         currentVertexId = new LongWritable(-1);
       }
 
       if (currentVertexId.get() == -1) {
         currentVertexId.set(startingVertexId + verticesRead);
-        currentVertexEdgesRead = 0;
+        currentOutEdgesRead = 0;
         // Seed on the vertex id to keep the vertex data the same when
         // on different number of workers, but other parameters are the
         // same.
@@ -162,7 +165,7 @@ public class PseudoRandomEdgeInputFormat
         destVertexId.set(localEdgesHelper.generateDestVertex(
             currentVertexId.get(), random));
       } while (currentVertexDestVertices.contains(destVertexId));
-      ++currentVertexEdgesRead;
+      ++currentOutEdgesRead;
       currentVertexDestVertices.add(destVertexId);
       if (LOG.isTraceEnabled()) {
         LOG.trace("getCurrentEdge: Return edge (" + currentVertexId + ", " +
@@ -178,7 +181,7 @@ public class PseudoRandomEdgeInputFormat
 
     @Override
     public float getProgress() throws IOException, InterruptedException {
-      return (verticesRead * edgesPerVertex + currentVertexEdgesRead) *
+      return (verticesRead * edgesPerVertex + currentOutEdgesRead) *
           100.0f / (totalSplitVertices * edgesPerVertex);
     }
   }

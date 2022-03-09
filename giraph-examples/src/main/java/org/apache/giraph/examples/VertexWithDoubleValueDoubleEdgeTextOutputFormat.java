@@ -39,12 +39,13 @@ public class VertexWithDoubleValueDoubleEdgeTextOutputFormat extends
   }
 
   /**
-   * Vertex writer used with {@link VertexWithComponentTextOutputFormat}.
+   * Vertex writer used with
+   * {@link VertexWithDoubleValueDoubleEdgeTextOutputFormat}.
    */
   public class VertexWithDoubleValueWriter extends TextVertexWriter {
     @Override
     public void writeVertex(
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?> vertex)
+      Vertex<LongWritable, DoubleWritable, DoubleWritable> vertex)
       throws IOException, InterruptedException {
       StringBuilder output = new StringBuilder();
       output.append(vertex.getId().get());

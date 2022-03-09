@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# giraph-debug -- a script for launching Giraph jar with our debugger
+# 
+# To debug your Giraph computation, simply run:
+# 
+#     giraph-debug [DEBUG_OPTIONS] [DEBUG_CONFIG_CLASS] \
+#         JAR_FILE org.apache.giraph.GiraphRunner [HADOOP_OPTS] \
+#         COMPUTATION_CLASS GIRAPH_RUNNER_ARGS...
+# 
+# Instead of running GiraphRunner with the hadoop jar command:
+# 
+#     hadoop jar \
+#         JAR_FILE org.apache.giraph.GiraphRunner [HADOOP_OPTS] \
+#         COMPUTATION_CLASS GIRAPH_RUNNER_ARGS...
+# 
+# DEBUG_OPTIONS can be a set of the following options:
+#     -S SUPERSTEP_NO   To debug only the given supersteps
+#     -V VERTEX_ID      To debug only the given vertices
+#     -R #              To debug a certain number of random vertices
+#     -N                To also debug the neighbors of the given vertices
+#     -E                To disable the exceptions from being captured
+#     -m #              To limit the maximum number of captured vertices
+#     -M #              To limit the maximum number of captured violations
+#     -C CLASS          Name of Computation classes to debug
+#                       (if MasterCompute uses many)
+#     -f                Force instrumentation, don't use cached one
+# 
+# For VERTEX_ID, only LongWritable and IntWritable are supported.  All
+# supersteps will be captured if none were specified, and only the specified
+# vertices will be captured.
+# 
+# If the DEBUG_OPTIONS are insufficient, a custom code that can specify more
+# complex conditions for capturing traces can be written and passed as
+# DEBUG_CONFIG_CLASS, which extends
+# org.apache.giraph.debugger.DebugConfig.
+# 
+# By default all trace data for debugging will be stored under
+# /giraph-debug-trace/ at HDFS.  To change this path set the environment
+# variable TRACE_ROOT to the desired path.
+# 
+# 
+# To list available traces for a Giraph job, run the following command:
+# 
+#     giraph-debug list JOB_ID
+# 
+# It will show a list of TRACE_IDs.
+# 
+# 
+# To browse what has been captured in an individual trace, run:
+# 
+#     giraph-debug dump JOB_ID SUPERSTEP VERTEX_ID
+# 
+# 
+# To generate a JUnit test case for a vertex Computation from a trace, run:
+# 
+#     giraph-debug mktest JOB_ID SUPERSTEP VERTEX_ID TEST_NAME
+# 
+# To generate a JUnit test case for a MasterCompute from a trace, run:
+# 
+#     giraph-debug mktest-master JOB_ID SUPERSTEP TEST_NAME
+# 
+# It will generate TEST_NAME.java and other necessary files as TEST_NAME.*.
+# 
+# 
+# To launch the debugger GUI, run:
+# 
+#     giraph-debug gui [PORT]
+# 
+# and open the URL in your web browser.
+# 
+#
+# Author: Jaeho Shin <netj@cs.stanford.edu>
+# Created: 2014-05-09
+set -eu
+
+# some defaults
+: ${TRACE_ROOT:=/user/$USER/giraph-debug-traces} # HDFS path to where the traces are stored
+: ${CLASSNAME_SUFFIX:=Original}       # A suffix for user computation class used by instrumenter
+: ${JARCACHE_HDFS:=$TRACE_ROOT/jars}         # HDFS path to where the jars are cached
+: ${JARCACHE_LOCAL:=~/.giraph-debugger/jars} # local path to where the jars are cached
+DEFAULT_DEBUG_CONFIG=org.apache.giraph.debugger.DebugConfig
+
+msg() { echo >&2 "giraph-debug:" "$@"; }
+error() { local msg=; for msg; do echo >&2 "$msg"; done; false; }
+usage() {
+    sed -n '2,/^#$/ s/^# //p' <"$0"
+    [ $# -eq 0 ] || error "$@"
+}
+
+# show usage unless we have enough arguments
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
+
+Here=$(cd "$(dirname "$0")" && pwd -P)
+cps=("$Here"/target/giraph-debugger-*-jar-with-dependencies.jar)
+[ -e "${cps[0]}" ] || cps=("$Here"/target/classes)
+CLASSPATH="${CLASSPATH:+$CLASSPATH:}$(IFS=:; echo "${cps[*]}"):$(hadoop classpath)"
+javaOpts=(
+    -D"giraph.debugger.traceRootAtHDFS=$TRACE_ROOT" # pass the TRACE_ROOT at HDFS
+    -D"giraph.debugger.jarCacheLocal=$JARCACHE_LOCAL"
+    -D"giraph.debugger.jarCacheAtHDFS=$JARCACHE_HDFS"
+)
+exec_java() { exec java -cp "$CLASSPATH" "${javaOpts[@]}" "$@"; }
+exec_java_command_line() {
+    local jobId=${2:-}
+    if [ -n "$jobId" ] &&
+        jarFileSig=$(hadoop fs -cat "$TRACE_ROOT"/"$jobId"/jar.signature); then
+        # get a copy of the job's jar in local cache if necessary
+        mkdir -p "$JARCACHE_LOCAL"
+        jarFileCachedLocal="$JARCACHE_LOCAL"/"$jarFileSig".jar
+        [ -e "$jarFileCachedLocal" ] ||
+            hadoop fs -get "$JARCACHE_HDFS"/"$jarFileSig".jar "$jarFileCachedLocal"
+        CLASSPATH="$CLASSPATH:$jarFileCachedLocal"
+    fi
+    exec_java org.apache.giraph.debugger.CommandLine "$@"
+}
+
+# handle modes other than launching GiraphJob first
+case $1 in
+    gui)
+        GUI_PORT=${2:-8000}
+        msg "Starting Debugger GUI at http://$HOSTNAME:$GUI_PORT/"
+        exec_java \
+            -D"giraph.debugger.guiPort=$GUI_PORT" \
+            org.apache.giraph.debugger.gui.Server
+        ;;
+
+    ls|list)
+        shift
+        if [ $# -gt 0 ]; then
+            JobId=$1; shift
+            exec_java_command_line list \
+                "$JobId" "$@"
+        else
+            set -o pipefail
+            hadoop fs -ls "$TRACE_ROOT" |
+            grep -v "$JARCACHE_HDFS" |
+            tail -n +2 | sed 's:.*/:list  :'
+            exit $?
+        fi
+        ;;
+
+    dump|mktest)
+        Mode=$1; shift
+        [ $# -gt 0 ] || usage "JOB_ID is missing"
+        JobId=$1
+        [ $# -gt 1 ] || usage "SUPERSTEP is missing"
+        Superstep=$2
+        [ $# -gt 2 ] || usage "VERTEX_ID is missing"
+        VertexId=$3
+        case $Mode in
+            mktest*)
+                [ $# -gt 3 ] || usage "TEST_NAME prefix for output is missing"
+                TestName=$4
+        esac
+        exec_java_command_line $Mode "$@"
+        ;;
+
+    dump-master|mktest-master)
+        Mode=$1; shift
+        [ $# -gt 0 ] || usage "JOB_ID is missing"
+        JobId=$1
+        [ $# -gt 1 ] || usage "SUPERSTEP is missing"
+        Superstep=$2
+        case $Mode in
+            mktest*)
+                [ $# -gt 2 ] || usage "TEST_NAME prefix for output is missing"
+                TestName=$3
+        esac
+        exec_java_command_line $Mode "$@"
+        ;;
+
+
+    *)
+        # otherwise, instrument and launch the job
+esac
+
+# parse options first
+SuperstepsToDebug=()
+VerticesToDebug=()
+ComputationClasses=()
+NoDebugNeighbors=true
+CaptureExceptions=true
+UseCachedJars=true
+NumVerticesToLog=
+NumViolationsToLog=
+NumRandomVerticesToDebug=
+while getopts "S:V:C:NEm:M:R:f" o; do
+    case $o in
+        S) SuperstepsToDebug+=("$OPTARG") ;;
+        V) VerticesToDebug+=("$OPTARG") ;;
+        C) ComputationClasses+=("$OPTARG") ;;
+        N) NoDebugNeighbors=false ;;
+        E) CaptureExceptions=false ;;
+        f) UseCachedJars=false ;;
+        m) NumVerticesToLog=$OPTARG ;;
+        M) NumViolationsToLog=$OPTARG ;;
+        R) NumRandomVerticesToDebug=$OPTARG ;;
+        *)
+            error "$o: Unrecognized option"
+    esac
+done
+shift $(($OPTIND - 1))
+
+# parse arguments
+[ $# -gt 2 ] ||
+    usage "giraph-debug $1: Unrecognized mode"
+debugConfigClassName=$1; shift
+if [ -f "$debugConfigClassName" ]; then
+    # the DebugConfig class name is optional, and
+    # we use the default DebugConfig if the first argument seems to be a jar file
+    jarFile=$debugConfigClassName
+    debugConfigClassName=$DEFAULT_DEBUG_CONFIG
+else
+    jarFile=$1; shift
+    [ -f "$jarFile" ] ||
+        error "$jarFile: Not an existing jar file"
+fi
+giraphRunnerClass=$1
+case $giraphRunnerClass in
+    org.apache.giraph.GiraphRunner) ;;
+    *)
+        error \
+            "Error: Unrecognized way to start Giraph job: $giraphRunnerClass" \
+            "" \
+            "Only the following form is supported:" \
+            "    giraph-debug [DEBUG_OPTIONS] [DEBUG_CONFIG_CLASS] JAR_FILE org.apache.giraph.GiraphRunner COMPUTATION_CLASS GIRAPH_RUNNER_ARG..." \
+            #
+esac
+# skip hadoop jar options
+hadoopJarOpts=(
+    $giraphRunnerClass
+    "${javaOpts[@]}"
+)
+while shift; do
+    case $1 in
+        -conf|-D|-fs|-jt|-files|-libjars|-archives)
+            hadoopJarOpts+=("$1"); shift ;;
+        -D?*) ;;
+        *) break
+    esac
+    hadoopJarOpts+=("$1")
+done
+origClassName=$1; shift
+
+# parse GiraphRunner arguments to find if there's a MasterCompute class
+find_master_compute() {
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -mc) shift;
+                echo "$1"
+                return
+                ;;
+            *) shift 2  # XXX assuming other GiraphRunner options always have arguments
+        esac
+    done
+}
+masterComputeClassName=$(find_master_compute "$@")
+
+# pass DebugConfig options via GiraphRunner's -ca (custom argument) options
+#  the class name for debug configuration
+set -- "$@" -ca "giraph.debugger.configClass=$debugConfigClassName"
+#  superstepsToDebug
+[ ${#SuperstepsToDebug[@]} -eq 0 ] ||
+    set -- "$@" -ca "giraph.debugger.superstepsToDebug=$(IFS=:; echo "${SuperstepsToDebug[*]}")"
+#  verticesToDebug
+if [ ${#VerticesToDebug[@]} -gt 0 ]; then
+    set -- "$@" -ca "giraph.debugger.debugAllVertices=false" \
+        -ca "giraph.debugger.verticesToDebug=$(IFS=:; echo "${VerticesToDebug[*]}")"
+elif [ x"$debugConfigClassName" = x"$DEFAULT_DEBUG_CONFIG" ]; then
+    # debug all vertices if none were specified and default DebugConfig is being used
+    set -- "$@" -ca "giraph.debugger.debugAllVertices=true"
+fi
+[ -z "$NumRandomVerticesToDebug" ] ||
+    set -- "$@" -ca "giraph.debugger.debugAllVertices=false" \
+        -ca "giraph.debugger.numRandomVerticesToDebug=$NumRandomVerticesToDebug"
+#  debugNeighbors
+$NoDebugNeighbors ||
+    set -- "$@" -ca "giraph.debugger.debugNeighbors=true"
+#  don't capture exceptions
+$CaptureExceptions ||
+    set -- "$@" -ca "giraph.debugger.captureExceptions=false"
+#  limit number of captures
+[ -z "$NumVerticesToLog" ] ||
+    set -- "$@" -ca "giraph.debugger.numVerticesToLog=$NumVerticesToLog"
+[ -z "$NumViolationsToLog" ] ||
+    set -- "$@" -ca "giraph.debugger.numViolationsToLog=$NumViolationsToLog"
+
+# set up environment
+export HADOOP_CLASSPATH="${HADOOP_CLASSPATH:+$HADOOP_CLASSPATH:}$jarFile"
+
+# first, instrument the given class
+jarFileSig=$(
+    {
+        echo "$origClassName"
+        echo "$masterComputeClassName"
+        cat "$jarFile"
+    } | (sha1sum || shasum) 2>/dev/null
+)
+jarFileSig=${jarFileSig%%[[:space:]]*}
+instrumentedClassName="$origClassName"
+instrumentedJarFileCached="$JARCACHE_LOCAL/$jarFileSig-instrumented.jar"
+if $UseCachedJars && [ "$instrumentedJarFileCached" -nt "$jarFile" ] &&
+    [ "$instrumentedJarFileCached" -nt "${cps[0]}" ]; then
+    # pick up the previously instrumented jar
+    instrumentedJarFile=$instrumentedJarFileCached
+    msg "Using previously instrumented jar: $instrumentedJarFile"
+else
+    tmpDir=$(mktemp -d "${TMPDIR:-/tmp}/giraph-debug.XXXXXX")
+    trap 'rm -rf "$tmpDir"' EXIT
+    instrumentedJarFile="$tmpDir/$(basename "$jarFile" .jar)-instrumented.jar"
+    instrumenterArgs=("$origClassName"  "$tmpDir"/classes.instrumented  $masterComputeClassName)
+    [ ${#ComputationClasses[@]} -eq 0 ] || instrumenterArgs+=("${ComputationClasses[@]}")
+    java -cp "$HADOOP_CLASSPATH${CLASSPATH:+:$CLASSPATH}" \
+        -D"giraph.debugger.classNameSuffix=$CLASSNAME_SUFFIX" \
+        org.apache.giraph.debugger.instrumenter.InstrumentGiraphClasses \
+            "${instrumenterArgs[@]}"
+
+    # And, create a new jar that contains all the instrumented code
+    msg "Creating instrumented jar: $instrumentedJarFile"
+    #  (To make sure giraph-debugger classes are included in the final
+    #   instrumented jar, we update giraph-debugger jar with user's jar contents
+    #   and the instrumented code.)
+    if [ -d "${cps[0]}" ]; then
+        jar cf "$instrumentedJarFile" "${cps[0]}"
+    else
+        cp -f "${cps[0]}" "$instrumentedJarFile"
+    fi
+    # To embed giraph-debugger classes, we need to extract user's jar.
+    # TODO This is very inefficient.  We should definitely figure out how to send
+    # multiple jars without manipulating them.
+    (
+    mkdir -p "$tmpDir"/classes.orig
+    jarFile="$(cd "$(dirname "$jarFile")" && pwd)/$(basename "$jarFile")"
+    cd "$tmpDir"/classes.orig/
+    jar xf "$jarFile"
+    )
+    jar uf "$instrumentedJarFile" -C "$tmpDir"/classes.orig         .
+    jar uf "$instrumentedJarFile" -C "$tmpDir"/classes.instrumented .
+    # cache the instrumentedJarFile for repeated debugging
+    ( set +e
+    msg "Caching instrumented jar: $instrumentedJarFileCached"
+    mkdir -p "$(dirname "$instrumentedJarFileCached")"
+    cp -f "$instrumentedJarFile" "$instrumentedJarFileCached"
+    )
+fi
+runJar=$instrumentedJarFile
+# TODO can we create a thin new jar and send it with -libjars to shadow the original classes?
+#jar cf "$instrumentedJarFile" -C "$tmpDir"/classes .
+#runJar=$jarFile
+#hadoopJarOpts+=(-libjars "$instrumentedJarFile")
+
+# keep the submitted jar file around, in order to read the captured traces later
+jarFileCachedLocal="$JARCACHE_LOCAL"/"$jarFileSig".jar
+jarFileCachedHDFS="$JARCACHE_HDFS"/"$jarFileSig".jar
+msg "Caching job jar locally: $jarFileCachedLocal"
+[ -e "$jarFileCachedLocal" ] || {
+    mkdir -p "$(dirname "$jarFileCachedLocal")"
+    ln -f "$jarFile" "$jarFileCachedLocal" 2>/dev/null ||
+        cp -f "$jarFile" "$jarFileCachedLocal"
+}
+msg "Caching job jar at HDFS: $jarFileCachedHDFS"
+hadoop fs -test -e "$jarFileCachedHDFS" || {
+    hadoop fs -mkdir "$(dirname "$jarFileCachedHDFS")" 2>/dev/null || true
+    hadoop fs -put "$jarFile" "$jarFileCachedHDFS"
+}
+# let AbstractInterceptingComputation record the jar signature under the job trace dir
+hadoopJarOpts+=(-D"giraph.debugger.jarSignature=$jarFileSig")
+
+# submit a job to run the new instrumented jar with the original
+HADOOP_CLASSPATH="$runJar:$HADOOP_CLASSPATH" \
+exec \
+hadoop jar "$runJar" "${hadoopJarOpts[@]}" \
+    "$instrumentedClassName" "$@"

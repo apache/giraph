@@ -19,6 +19,7 @@
 package org.apache.giraph.io.formats;
 
 import java.io.IOException;
+
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
@@ -29,7 +30,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_OUTPUT_FORMAT_SUBDIR;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -43,10 +45,14 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 public abstract class TextVertexOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends VertexOutputFormat<I, V, E> {
-
   /** Uses the TextOutputFormat to do everything */
-  protected TextOutputFormat<Text, Text> textOutputFormat =
-      new TextOutputFormat<Text, Text>();
+  protected GiraphTextOutputFormat textOutputFormat =
+    new GiraphTextOutputFormat() {
+      @Override
+      protected String getSubdir() {
+        return VERTEX_OUTPUT_FORMAT_SUBDIR.get(getConf());
+      }
+    };
 
   @Override
   public void checkOutputSpecs(JobContext context)
@@ -158,8 +164,7 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
      * @throws IOException
      *           exception that can be thrown while writing
      */
-    protected abstract Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    protected abstract Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException;
   }
-
 }

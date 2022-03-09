@@ -20,17 +20,19 @@ package org.apache.giraph.edge;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * {@link VertexEdges} implementation with long ids and null edge values,
+ * {@link OutEdges} implementation with long ids and null edge values,
  * backed by a {@link LongOpenHashSet}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
@@ -38,24 +40,16 @@ import java.util.Iterator;
  * {@link LongNullArrayEdges}.
  */
 public class LongNullHashSetEdges
-    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
-    MutableVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
+    MutableOutEdges<LongWritable, NullWritable>,
+    StrictRandomAccessOutEdges<LongWritable, NullWritable>,
+    Trimmable {
   /** Hash set of target vertex ids. */
   private LongOpenHashSet neighbors;
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-map with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(
-          ((Collection<Edge<LongWritable, NullWritable>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, NullWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override
@@ -133,5 +127,27 @@ public class LongNullHashSetEdges
     for (int i = 0; i < numEdges; ++i) {
       neighbors.add(in.readLong());
     }
+  }
+
+  @Override
+  public NullWritable getEdgeValue(LongWritable targetVertexId) {
+    if (neighbors.contains(targetVertexId.get())) {
+      return NullWritable.get();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public void setEdgeValue(LongWritable targetVertexId,
+    NullWritable edgeValue) {
+    // No operation.
+    // Only set value for an existing edge.
+    // If the edge exist, the Null value is already there.
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
   }
 }

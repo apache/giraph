@@ -55,8 +55,7 @@ public class BspInputFormat extends InputFormat<Text, Text> {
     // if this is a YARN job, separate ZK should already be running
     boolean isYarnJob = GiraphConstants.IS_PURE_YARN_JOB.get(conf);
     if (splitMasterWorker && !isYarnJob) {
-      int zkServers = GiraphConstants.ZOOKEEPER_SERVER_COUNT.get(conf);
-      maxTasks += zkServers;
+      maxTasks += 1;
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("getMaxTasks: Max workers = " + maxWorkers +

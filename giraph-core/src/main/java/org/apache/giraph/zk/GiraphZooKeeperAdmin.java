@@ -19,6 +19,7 @@ package org.apache.giraph.zk;
 
 
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
@@ -76,17 +77,18 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    */
   @Override
   public int run(String[] args) {
-    final int zkPort = ZOOKEEPER_SERVER_PORT.get(getConf());
-    final String zkBasePath = getConf().get(
+    final GiraphConfiguration giraphConf = new GiraphConfiguration(getConf());
+    final int zkPort = ZOOKEEPER_SERVER_PORT.get(giraphConf);
+    final String zkBasePath = giraphConf.get(
       GiraphConstants.BASE_ZNODE_KEY, "") + BspService.BASE_DIR;
     final String[] zkServerList;
-    try {
-      zkServerList = getConf()
-        .get(GiraphConstants.ZOOKEEPER_LIST).split(",");
-    } catch (NullPointerException npe) {
+    String zkServerListStr = giraphConf.getZookeeperList();
+    if (zkServerListStr.isEmpty()) {
       throw new IllegalStateException("GiraphZooKeeperAdmin requires a list " +
         "of ZooKeeper servers to clean.");
     }
+    zkServerList = zkServerListStr.split(",");
+
     out.println("[GIRAPH-ZKADMIN] Attempting to clean Zookeeper " +
       "hosts at: " + Arrays.deepToString(zkServerList));
     out.println("[GIRAPH-ZKADMIN] Connecting on port: " + zkPort);
@@ -128,6 +130,8 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    * Cleans the ZooKeeper quorum of in-memory failed/killed job fragments.
    * @param zooKeeper the connected ZK instance (session) to delete from.
    * @param zkBasePath the base node to begin erasing from.
+   * @throws KeeperException
+   * @throws InterruptedException
    */
   public void doZooKeeperCleanup(ZooKeeperExt zooKeeper, String zkBasePath)
     throws KeeperException, InterruptedException {
@@ -151,6 +155,7 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    * @param zkServerList the CSV-style list of hostnames of Zk quorum members.
    * @param zkPort the port the quorum is listening on.
    * @return the formatted zkConnectList for use in the ZkExt constructor.
+   * @throws UnknownHostException
    */
   private String formatZkServerList(String[] zkServerList, int zkPort)
     throws UnknownHostException {
@@ -165,6 +170,7 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
 
   /** Entry point from shell script
    * @param args the command line arguments
+   * @throws Exception
    */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(new GiraphZooKeeperAdmin(), args));

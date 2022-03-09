@@ -22,15 +22,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
@@ -41,25 +42,20 @@ import static org.mockito.Mockito.*;
 public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
   /** Test configuration */
   private ImmutableClassesGiraphConfiguration<Text,
-      DoubleWritable, DoubleWritable, Writable> conf;
+      DoubleWritable, DoubleWritable> conf;
 
   /**
    * Dummy class to allow ImmutableClassesGiraphConfiguration to be created.
    */
-  public static class DummyVertex extends Vertex<Text, DoubleWritable,
-      DoubleWritable, DoubleWritable> {
-    @Override
-    public void compute(Iterable<DoubleWritable> messages) throws IOException {
-      // Do nothing
-    }
-  }
+  public static class DummyComputation extends NoOpComputation<Text,
+      DoubleWritable, DoubleWritable, DoubleWritable> { }
 
   @Before
   public void setUp() {
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
-    giraphConfiguration.setVertexClass(DummyVertex.class);
+    giraphConfiguration.setComputationClass(DummyComputation.class);
     conf = new ImmutableClassesGiraphConfiguration<Text,
-        DoubleWritable, DoubleWritable, Writable>(giraphConfiguration);
+        DoubleWritable, DoubleWritable>(giraphConfiguration);
   }
 
   protected AdjacencyListTextVertexWriter createVertexWriter(
@@ -104,7 +100,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
     Vertex vertex = mock(Vertex.class);
     when(vertex.getId()).thenReturn(new Text("San Francisco"));
     when(vertex.getValue()).thenReturn(new DoubleWritable(0d));
-    when(vertex.getTotalNumEdges()).thenReturn(2l);
     List<Edge<Text, DoubleWritable>> cities = Lists.newArrayList();
     Collections.addAll(cities,
         EdgeFactory.create(new Text("Los Angeles"), new DoubleWritable(347.16)),
@@ -112,7 +107,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     when(vertex.getEdges()).thenReturn(cities);
 
-    RecordWriter<Text,Text> tw = mock(RecordWriter.class);
+    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.setConf(conf);
     writer.initialize(tac);
@@ -133,7 +128,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
     Vertex vertex = mock(Vertex.class);
     when(vertex.getId()).thenReturn(new Text("San Francisco"));
     when(vertex.getValue()).thenReturn(new DoubleWritable(0d));
-    when(vertex.getTotalNumEdges()).thenReturn(2l);
     List<Edge<Text, DoubleWritable>> cities = Lists.newArrayList();
     Collections.addAll(cities,
         EdgeFactory.create(new Text("Los Angeles"), new DoubleWritable(347.16)),
@@ -141,7 +135,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     when(vertex.getEdges()).thenReturn(cities);
 
-    RecordWriter<Text,Text> tw = mock(RecordWriter.class);
+    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.setConf(conf);
     writer.initialize(tac);

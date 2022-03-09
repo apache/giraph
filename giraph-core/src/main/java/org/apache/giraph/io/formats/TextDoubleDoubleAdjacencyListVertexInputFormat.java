@@ -21,7 +21,6 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -29,10 +28,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * Class to read graphs stored as adjacency lists with ids represented by
  * Strings and values as doubles.  This is a good inputformat for reading
  * graphs where the id types do not matter and can be stashed in a String.
- *
- * @param <M> Message type.
  */
-public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
+public class TextDoubleDoubleAdjacencyListVertexInputFormat
     extends AdjacencyListTextVertexInputFormat<Text, DoubleWritable,
             DoubleWritable>  {
 
@@ -50,7 +47,8 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
       AdjacencyListTextVertexReader {
 
     /**
-     * Constructor with {@link LineSanitizer}.
+     * Constructor with
+     * {@link AdjacencyListTextVertexInputFormat.LineSanitizer}.
      *
      * @param lineSanitizer the sanitizer to use for reading
      */
@@ -66,13 +64,13 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
 
     @Override
     public DoubleWritable decodeValue(String s) {
-      return new DoubleWritable(Double.valueOf(s));
+      return new DoubleWritable(Double.parseDouble(s));
     }
 
     @Override
     public Edge<Text, DoubleWritable> decodeEdge(String s1, String s2) {
       return EdgeFactory.create(new Text(s1),
-          new DoubleWritable(Double.valueOf(s2)));
+          new DoubleWritable(Double.parseDouble(s2)));
     }
   }
 

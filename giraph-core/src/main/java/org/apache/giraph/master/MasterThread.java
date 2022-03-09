@@ -23,6 +23,7 @@ import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.counters.GiraphTimers;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import static org.apache.giraph.conf.GiraphConstants.SPLIT_MASTER_WORKER;
 import static org.apache.giraph.conf.GiraphConstants.USE_SUPERSTEP_COUNTERS;
 
 /**
@@ -43,21 +45,22 @@ import static org.apache.giraph.conf.GiraphConstants.USE_SUPERSTEP_COUNTERS;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class MasterThread<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> extends Thread {
+    E extends Writable> extends Thread {
   /** Counter group name for the Giraph timers */
   public static final String GIRAPH_TIMERS_COUNTER_GROUP_NAME = "Giraph Timers";
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(MasterThread.class);
   /** Reference to shared BspService */
-  private CentralizedServiceMaster<I, V, E, M> bspServiceMaster = null;
+  private CentralizedServiceMaster<I, V, E> bspServiceMaster = null;
   /** Context (for counters) */
   private final Context context;
   /** Use superstep counters? */
   private final boolean superstepCounterOn;
+  /** Are master and worker split or not? */
+  private final boolean splitMasterWorker;
   /** Setup seconds */
   private double setupSecs = 0d;
   /** Superstep timer (in seconds) map */
@@ -71,13 +74,14 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
    *        been called.
    * @param context Context from the Mapper.
    */
-  public MasterThread(CentralizedServiceMaster<I, V, E, M> bspServiceMaster,
+  public MasterThread(CentralizedServiceMaster<I, V, E> bspServiceMaster,
       Context context) {
     super(MasterThread.class.getName());
     this.bspServiceMaster = bspServiceMaster;
     this.context = context;
     GiraphTimers.init(context);
     superstepCounterOn = USE_SUPERSTEP_COUNTERS.get(context.getConfiguration());
+    splitMasterWorker = SPLIT_MASTER_WORKER.get(context.getConfiguration());
   }
 
   /**
@@ -93,27 +97,41 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     // 3. Run all supersteps until complete
     try {
       long startMillis = System.currentTimeMillis();
+      long initializeMillis = 0;
       long endMillis = 0;
       bspServiceMaster.setup();
+      SuperstepState superstepState = SuperstepState.INITIAL;
+
       if (bspServiceMaster.becomeMaster()) {
+        // First call to checkWorkers waits for all pending resources.
+        // If these resources are still available at subsequent calls it just
+        // reads zookeeper for the list of healthy workers.
+        bspServiceMaster.checkWorkers();
+        initializeMillis = System.currentTimeMillis();
+        GiraphTimers.getInstance().getInitializeMs().increment(
+            initializeMillis - startMillis);
         // Attempt to create InputSplits if necessary. Bail out if that fails.
         if (bspServiceMaster.getRestartedSuperstep() !=
             BspService.UNSET_SUPERSTEP ||
-            (bspServiceMaster.createVertexInputSplits() != -1 &&
+            (bspServiceMaster.createMappingInputSplits() != -1 &&
+                bspServiceMaster.createVertexInputSplits() != -1 &&
                 bspServiceMaster.createEdgeInputSplits() != -1)) {
-          long setupMillis = System.currentTimeMillis() - startMillis;
+          long setupMillis = System.currentTimeMillis() - initializeMillis;
           GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
           setupSecs = setupMillis / 1000.0d;
-          SuperstepState superstepState = SuperstepState.INITIAL;
-          long cachedSuperstep = BspService.UNSET_SUPERSTEP;
-          while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
+          while (!superstepState.isExecutionComplete()) {
             long startSuperstepMillis = System.currentTimeMillis();
-            cachedSuperstep = bspServiceMaster.getSuperstep();
-            GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
+            long cachedSuperstep = bspServiceMaster.getSuperstep();
+            // If master and worker are running together, worker will call reset
+            if (splitMasterWorker) {
+              GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
+            }
+            Class<? extends Computation> computationClass =
+                bspServiceMaster.getMasterCompute().getComputation();
             superstepState = bspServiceMaster.coordinateSuperstep();
             long superstepMillis = System.currentTimeMillis() -
                 startSuperstepMillis;
-            superstepSecsMap.put(Long.valueOf(cachedSuperstep),
+            superstepSecsMap.put(cachedSuperstep,
                 superstepMillis / 1000.0d);
             if (LOG.isInfoEnabled()) {
               LOG.info("masterThread: Coordination of superstep " +
@@ -124,9 +142,12 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
                   bspServiceMaster.getSuperstep());
             }
             if (superstepCounterOn) {
-              GiraphTimers.getInstance().getSuperstepMs(cachedSuperstep).
-                increment(superstepMillis);
+              String computationName = (computationClass == null) ?
+                  null : computationClass.getSimpleName();
+              GiraphTimers.getInstance().getSuperstepMs(cachedSuperstep,
+                  computationName).increment(superstepMillis);
             }
+            bspServiceMaster.addGiraphTimersAndSendCounters(cachedSuperstep);
 
             bspServiceMaster.postSuperstep();
 
@@ -140,7 +161,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           bspServiceMaster.setJobState(ApplicationState.FINISHED, -1, -1);
         }
       }
-      bspServiceMaster.cleanup();
+      bspServiceMaster.cleanup(superstepState);
       if (!superstepSecsMap.isEmpty()) {
         GiraphTimers.getInstance().getShutdownMs().
           increment(System.currentTimeMillis() - endMillis);
@@ -165,12 +186,14 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               (System.currentTimeMillis() - endMillis) /
               1000.0d + " seconds.");
           LOG.info("total: Took " +
-              ((System.currentTimeMillis() - startMillis) /
+              ((System.currentTimeMillis() - initializeMillis) /
               1000.0d) + " seconds.");
         }
         GiraphTimers.getInstance().getTotalMs().
-          increment(System.currentTimeMillis() - startMillis);
+          increment(System.currentTimeMillis() - initializeMillis);
       }
+      bspServiceMaster.addGiraphTimersAndSendCounters(
+              bspServiceMaster.getSuperstep());
       bspServiceMaster.postApplication();
       // CHECKSTYLE: stop IllegalCatchCheck
     } catch (Exception e) {

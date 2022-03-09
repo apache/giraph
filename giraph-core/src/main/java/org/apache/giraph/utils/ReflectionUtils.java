@@ -18,18 +18,12 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.lang.reflect.Modifier;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.apache.giraph.conf.ContextSettable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.jodah.typetools.TypeResolver;
 
 /**
  * Helper methods to get type arguments to generic classes.  Courtesy of
@@ -43,29 +37,23 @@ public class ReflectionUtils {
   private ReflectionUtils() { }
 
   /**
-   * Get the underlying class for a type, or null if the type is
-   * a variable type.
+   * Get package path to the object given. Used with resources.
    *
-   * @param type the type
-   * @return the underlying class
+   * @param object the Object to check
+   * @return Path to package of object
    */
-  public static Class<?> getClass(Type type) {
-    if (type instanceof Class) {
-      return (Class<?>) type;
-    } else if (type instanceof ParameterizedType) {
-      return getClass(((ParameterizedType) type).getRawType());
-    } else if (type instanceof GenericArrayType) {
-      Type componentType =
-          ((GenericArrayType) type).getGenericComponentType();
-      Class<?> componentClass = getClass(componentType);
-      if (componentClass != null) {
-        return Array.newInstance(componentClass, 0).getClass();
-      } else {
-        return null;
-      }
-    } else {
-      return null;
-    }
+  public static String getPackagePath(Object object) {
+    return getPackagePath(object.getClass());
+  }
+
+  /**
+   * Get package path to the class given. Used with resources.
+   *
+   * @param klass Class to check
+   * @return Path to package of class
+   */
+  public static String getPackagePath(Class klass) {
+    return klass.getPackage().getName().replaceAll("\\.", "/");
   }
 
   /**
@@ -77,94 +65,29 @@ public class ReflectionUtils {
    * @param childClass the child class
    * @return a list of the raw classes for the actual type arguments.
    */
-  public static <T> List<Class<?>> getTypeArguments(
+  public static <T> Class<?>[] getTypeArguments(
       Class<T> baseClass, Class<? extends T> childClass) {
-    Map<Type, Type> resolvedTypes = new HashMap<Type, Type>();
-    Type type = childClass;
-    // start walking up the inheritance hierarchy until we hit baseClass
-    while (! getClass(type).equals(baseClass)) {
-      if (type instanceof Class) {
-        Type newType = ((Class<?>) type).getGenericSuperclass();
-        if (newType == null) {
-          // we have reached an interface, so we stop here
-          break;
-        } else {
-          // there is no useful information for us in raw types,
-          // so just keep going.
-          type = newType;
-        }
-
-      } else {
-        ParameterizedType parameterizedType = (ParameterizedType) type;
-        Class<?> rawType = (Class<?>) parameterizedType.getRawType();
-
-        Type[] actualTypeArguments =
-            parameterizedType.getActualTypeArguments();
-        TypeVariable<?>[] typeParameters = rawType.getTypeParameters();
-        for (int i = 0; i < actualTypeArguments.length; i++) {
-          resolvedTypes.put(typeParameters[i],
-              actualTypeArguments[i]);
-        }
-
-        if (!rawType.equals(baseClass)) {
-          type = rawType.getGenericSuperclass();
-        }
-      }
-    }
-
-    // finally, for each actual type argument provided to baseClass,
-    // determine (if possible) the raw class for that type argument.
-    Type[] actualTypeArguments;
-    if (type instanceof Class) {
-      actualTypeArguments = ((Class<?>) type).getTypeParameters();
-    } else {
-      actualTypeArguments =
-          ((ParameterizedType) type).getActualTypeArguments();
-    }
-    List<Class<?>> typeArgumentsAsClasses = new ArrayList<Class<?>>();
-    // resolve types by chasing down type variables.
-    for (Type baseType: actualTypeArguments) {
-      while (resolvedTypes.containsKey(baseType)) {
-        baseType = resolvedTypes.get(baseType);
-      }
-      typeArgumentsAsClasses.add(getClass(baseType));
-    }
-    return typeArgumentsAsClasses;
+    return TypeResolver.resolveArguments(childClass, baseClass);
   }
 
   /**
-   * Try to directly set a (possibly private) field on an Object.
+   * Instantiate a class, wrap exceptions
    *
-   * @param target Target to set the field on.
-   * @param fieldname Name of field.
-   * @param value Value to set on target.
+   * @param theClass Class to instantiate
+   * @param <T> Type to instantiate
+   * @return Newly instantiated object
    */
-  public static void setField(Object target, String fieldname, Object value)
-    throws NoSuchFieldException, IllegalAccessException {
-    Field field = findDeclaredField(target.getClass(), fieldname);
-    field.setAccessible(true);
-    field.set(target, value);
-  }
-
-  /**
-   * Find a declared field in a class or one of its super classes
-   *
-   * @param inClass Class to search for declared field.
-   * @param fieldname Field name to search for
-   * @return Field or will throw.
-   * @throws NoSuchFieldException When field not found.
-   */
-  private static Field findDeclaredField(Class<?> inClass, String fieldname)
-    throws NoSuchFieldException {
-    while (!Object.class.equals(inClass)) {
-      for (Field field : inClass.getDeclaredFields()) {
-        if (field.getName().equalsIgnoreCase(fieldname)) {
-          return field;
-        }
-      }
-      inClass = inClass.getSuperclass();
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(Class<T> theClass) {
+    try {
+      return theClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new IllegalStateException(
+          "newInstance: Couldn't instantiate " + theClass.getName(), e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(
+          "newInstance: Illegal access " + theClass.getName(), e);
     }
-    throw new NoSuchFieldException();
   }
 
   /**
@@ -179,7 +102,7 @@ public class ReflectionUtils {
   public static <T> T newInstance(
       Class<T> theClass,
       ImmutableClassesGiraphConfiguration configuration) {
-    T result = null;
+    T result;
     try {
       result = theClass.newInstance();
     } catch (InstantiationException e) {
@@ -189,9 +112,73 @@ public class ReflectionUtils {
       throw new IllegalStateException(
           "newInstance: Illegal access " + theClass.getName(), e);
     }
-    if (configuration != null) {
-      configuration.configureIfPossible(result);
+    ConfigurationUtils.configureIfPossible(result, configuration);
+    return result;
+  }
+
+  /**
+   * Instantiate classes that are ImmutableClassesGiraphConfigurable,
+   * and optionally set context on them if they are ContextSettable
+   *
+   * @param theClass Class to instantiate
+   * @param configuration Giraph configuration, may be null
+   * @param context Mapper context
+   * @param <T> Type to instantiate
+   * @return Newly instantiated object with configuration and context set if
+   * possible
+   */
+  public static <T> T newInstance(
+      Class<T> theClass,
+      ImmutableClassesGiraphConfiguration configuration,
+      Mapper<?, ?, ?, ?>.Context context) {
+    T result = newInstance(theClass, configuration);
+    if (result instanceof ContextSettable) {
+      ((ContextSettable) result).setContext(context);
     }
     return result;
+  }
+
+  /**
+   * Verify that found type matches the expected type. If types don't match an
+   * {@link IllegalStateException} will be thrown.
+   *
+   * @param concreteChild Concrete child type
+   * @param parent Parent type
+   * @param typeDesc String description of the type (for exception description)
+   * @param mainClass Class in which the actual type was found (for exception
+   *                  description)
+   */
+  public static void verifyTypes(Class<?> concreteChild, Class<?> parent,
+      String typeDesc, Class<?> mainClass) {
+    // unknown means object
+    if (parent == TypeResolver.Unknown.class) {
+      parent = Object.class;
+    }
+
+    verifyConcrete(concreteChild, typeDesc);
+
+    if (!parent.isAssignableFrom(concreteChild)) {
+      throw new IllegalStateException("verifyTypes: " + typeDesc + " types " +
+          "don't match, in " + mainClass.getName() + " " + concreteChild +
+          " expected, but " + parent + " found");
+    }
+  }
+
+  /**
+   * Verify that given type is a concrete type that can be instantiated.
+   *
+   * @param concrete type to check
+   * @param typeDesc String description of the type (for exception description)
+   */
+  public static void verifyConcrete(
+      Class<?> concrete, String typeDesc) {
+    if (concrete.isInterface()) {
+      throw new IllegalStateException("verifyTypes: " +
+          "Type " + typeDesc + " must be concrete class " + concrete);
+    }
+    if (Modifier.isAbstract(concrete.getModifiers())) {
+      throw new IllegalStateException("verifyTypes: " +
+          "Type " + typeDesc + "can't be abstract class" + concrete);
+    }
   }
 }
