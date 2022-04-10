@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.func;
 
 import java.io.Serializable;
 
@@ -23,14 +23,14 @@ ${generated_message}
 
 /**
  * Primitive specialization of Function:
- * (${type.lower}) -&gt; ${type.lower}
+ * (${type1.lower}) -&gt; ${type2.lower}
  */
-public interface ${type.camel}2${type.camel}Function extends Serializable {
+public interface ${type1.camel}2${type2.camel}Function extends Serializable {
   /**
    * Returns the result of applying this function to given {@code input}.
    *
    * @param input input
    * @return result
    */
-  ${type.lower} apply(${type.lower} input);
+  ${type2.lower} apply(${type1.lower} input);
 }

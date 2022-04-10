@@ -17,9 +17,9 @@
  */
 package org.apache.giraph.types.ops;
 
-import org.apache.giraph.types.ops.collections.Basic2ObjectMap.BasicLong2ObjectOpenHashMap;
-import org.apache.giraph.types.ops.collections.BasicSet.BasicLongOpenHashSet;
 import org.apache.giraph.types.ops.collections.array.WLongArrayList;
+import org.apache.giraph.types.ops.collections.map.BasicLong2ObjectOpenHashMap;
+import org.apache.giraph.types.ops.collections.set.BasicLongOpenHashSet;
 import org.apache.giraph.types.ops.collections.WritableWriter;
 import org.apache.hadoop.io.LongWritable;
 

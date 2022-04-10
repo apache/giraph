@@ -69,16 +69,22 @@ public class GeneratePrimitiveClasses {
     private final boolean id;
     private final boolean floating;
     private final boolean hasWritable;
+    private final boolean opNeedCast;
+    private final boolean hasBigFastutil;
 
     private PrimitiveType(String name) {
       this.name = name;
       this.nameLower = name.toLowerCase();
       this.boxed = "Int".equals(name) ? "Integer" : name;
       this.numeric = !"Boolean".equals(name);
-      this.id = "Int".equals(name) || "Long".equals(name);
+      this.id =
+          "Int".equals(name) || "Long".equals(name) || "Short".equals(name) || "Byte".equals(name);
       this.floating = "Float".equals(name) || "Double".equals(name);
-      // For some reason there is no ShortWritable in current Hadoop version
-      this.hasWritable = !"Short".equals(name);
+      // For some reason there is no ShortWritable in current Hadoop version, so we use a copy
+      this.hasWritable = true;
+      this.opNeedCast = "Short".equals(name) || "Byte".equals(name);
+      this.hasBigFastutil =
+          "Int".equals(name) || "Long".equals(name) || "Float".equals(name) || "Double".equals(name);
     }
 
     public String getName() {
@@ -112,6 +118,14 @@ public class GeneratePrimitiveClasses {
     public boolean hasWritable() {
       return hasWritable;
     }
+
+    public boolean isOpNeedCast() {
+      return opNeedCast;
+    }
+
+    public boolean hasBigFastutil() {
+      return hasBigFastutil;
+    }
   }
 
   public static void main(String[] args) throws Exception {
@@ -122,7 +136,7 @@ public class GeneratePrimitiveClasses {
     cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 
     String[] primitiveFunctions = {
-      "%sConsumer", "%sPredicate", "Obj2%sFunction", "%s2ObjFunction", "%s2%sFunction"
+      "%sConsumer", "%sPredicate", "Obj2%sFunction", "%s2ObjFunction"
     };
 
     for (String function: primitiveFunctions) {
@@ -155,6 +169,10 @@ public class GeneratePrimitiveClasses {
       }
     }
 
+    EnumSet<PrimitiveType> mainIds = EnumSet.of(PrimitiveType.INT, PrimitiveType.LONG);
+    EnumSet<PrimitiveType> mainTypes = EnumSet.of(
+        PrimitiveType.INT, PrimitiveType.LONG, PrimitiveType.FLOAT, PrimitiveType.DOUBLE);
+
     generateForAll(
         cfg,
         writableSet,
@@ -175,6 +193,18 @@ public class GeneratePrimitiveClasses {
 
     generateForAll(
         cfg,
+        ids,
+        "BasicTypeOpenHashSet.java",
+        "src/main/java/org/apache/giraph/types/ops/collections/set/Basic%sOpenHashSet.java");
+
+    generateForAll(
+        cfg,
+        ids,
+        "BasicType2ObjectOpenHashMap.java",
+        "src/main/java/org/apache/giraph/types/ops/collections/map/Basic%s2ObjectOpenHashMap.java");
+
+    generateForAll(
+        cfg,
         writableSet,
         writableSet,
         "TypeTypeConsumer.java",
@@ -189,21 +219,28 @@ public class GeneratePrimitiveClasses {
 
     generateForAll(
         cfg,
-        ids,
+        writableSet,
+        writableSet,
+        "Type2TypeFunction.java",
+        "src/main/java/org/apache/giraph/function/primitive/func/%s2%sFunction.java");
+
+    generateForAll(
+        cfg,
+        mainIds,
         numerics,
         "Type2TypeMapEntryIterable.java",
         "src/main/java/org/apache/giraph/types/heaps/%s2%sMapEntryIterable.java");
 
     generateForAll(
         cfg,
-        ids,
+        mainIds,
         numerics,
         "FixedCapacityType2TypeMinHeap.java",
         "src/main/java/org/apache/giraph/types/heaps/FixedCapacity%s%sMinHeap.java");
 
     generateForAll(
         cfg,
-        ids,
+        mainIds,
         numerics,
         "TestFixedCapacityType2TypeMinHeap.java",
         "src/test/java/org/apache/giraph/types/heaps/TestFixedCapacity%s%sMinHeap.java");

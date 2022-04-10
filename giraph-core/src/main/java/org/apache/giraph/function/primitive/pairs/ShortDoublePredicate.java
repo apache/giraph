@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.function.primitive;
+package org.apache.giraph.function.primitive.pairs;
 
 import java.io.Serializable;
 
@@ -24,14 +24,15 @@ import java.io.Serializable;
 
 /**
  * Primitive specialization of Function:
- * (long) -&gt; long
+ * (short, double) -&gt; boolean
  */
-public interface Long2LongFunction extends Serializable {
+public interface ShortDoublePredicate extends Serializable {
   /**
-   * Returns the result of applying this function to given {@code input}.
+   * Returns the result of applying this predicate to {@code input}.
    *
-   * @param input input
+   * @param input1 First input
+   * @param input2 Second input
    * @return result
    */
-  long apply(long input);
+  boolean apply(short input1, double input2);
 }
