@@ -80,6 +80,9 @@ public class PageRankIteration<I extends WritableComparable,
   /** Convergence threshold */
   private final float convergenceThreshold;
 
+  /** Whether one-to-many messaging is enabled */
+  private final boolean isOneToManyMessagingEnabled;
+
   /** Sums the errors for each vertex */
   private ReducerHandle<DoubleWritable, DoubleWritable> superstepErrorSum;
   /** Maximum of the errors for each vertex */
@@ -131,6 +134,8 @@ public class PageRankIteration<I extends WritableComparable,
     dampingFactor = PageRankSettings.getDampingFactor(conf);
     convergenceType = PageRankSettings.getConvergenceType(conf);
     convergenceThreshold = PageRankSettings.getConvergenceThreshold(conf);
+    isOneToManyMessagingEnabled =
+      PageRankSettings.isOneToManyMessagingEnabled(conf);
   }
 
 
@@ -287,6 +292,8 @@ public class PageRankIteration<I extends WritableComparable,
 
   @Override
   protected boolean allowOneMessageToManyIdsEncoding() {
-    return edgeValueGetter.allVertexEdgesTheSame();
+    return edgeValueGetter.allVertexEdgesTheSame() &&
+      isOneToManyMessagingEnabled;
   }
+
 }
