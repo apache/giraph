@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.piece.AbstractPiece;
-import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.function.vertex.SupplierFromVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
@@ -122,12 +121,17 @@ public class FilteringPiece<I extends WritableComparable, V extends Writable,
           super.vertexSend(vertex);
         }
       }
+
+      @Override
+      public boolean isVertexNoOp() {
+        return toCallSend == null;
+      }
     };
   }
 
   @Override
   protected DelegateWorkerReceiveFunctions delegateWorkerReceiveFunctions(
-      ArrayList<VertexReceiver<I, V, E, M>> workerReceiveFunctions,
+      ArrayList<InnerVertexReceiver> workerReceiveFunctions,
       BlockWorkerReceiveApi<I> workerApi, S executionStage) {
     return new DelegateWorkerReceiveFunctions(workerReceiveFunctions) {
       @Override
@@ -135,6 +139,11 @@ public class FilteringPiece<I extends WritableComparable, V extends Writable,
         if (toCallReceive == null || toCallReceive.get(vertex)) {
           super.vertexReceive(vertex, messages);
         }
+      }
+
+      @Override
+      public boolean isVertexNoOp() {
+        return toCallReceive == null;
       }
     };
   }

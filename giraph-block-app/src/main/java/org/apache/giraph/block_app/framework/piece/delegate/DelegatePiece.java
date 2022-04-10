@@ -96,7 +96,7 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
   }
 
   protected DelegateWorkerReceiveFunctions delegateWorkerReceiveFunctions(
-      ArrayList<VertexReceiver<I, V, E, M>> workerReceiveFunctions,
+      ArrayList<InnerVertexReceiver> workerReceiveFunctions,
       BlockWorkerReceiveApi<I> workerApi, S executionStage) {
     return new DelegateWorkerReceiveFunctions(workerReceiveFunctions);
   }
@@ -115,13 +115,13 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
   }
 
   @Override
-  public InnerVertexReceiver getVertexReceiver(
+  public InnerVertexReceiver getWrappedVertexReceiver(
       BlockWorkerReceiveApi<I> workerApi, S executionStage) {
-    ArrayList<VertexReceiver<I, V, E, M>> workerReceiveFunctions =
+    ArrayList<InnerVertexReceiver> workerReceiveFunctions =
         new ArrayList<>(innerPieces.size());
     for (AbstractPiece<I, V, E, M, WV, WM, S> innerPiece : innerPieces) {
       workerReceiveFunctions.add(
-          innerPiece.getVertexReceiver(workerApi, executionStage));
+          innerPiece.getWrappedVertexReceiver(workerApi, executionStage));
     }
     return delegateWorkerReceiveFunctions(
         workerReceiveFunctions, workerApi, executionStage);
@@ -146,6 +146,16 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
     }
 
     @Override
+    public boolean isVertexNoOp() {
+      for (InnerVertexSender functions : workerSendFunctions) {
+        if (functions != null && !functions.isVertexNoOp()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
     public void postprocess() {
       for (InnerVertexSender functions : workerSendFunctions) {
         if (functions != null) {
@@ -157,11 +167,11 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
 
   /** Delegating WorkerReceivePiece */
   protected class DelegateWorkerReceiveFunctions extends InnerVertexReceiver {
-    private final ArrayList<VertexReceiver<I, V, E, M>>
+    private final ArrayList<InnerVertexReceiver>
     workerReceiveFunctions;
 
     public DelegateWorkerReceiveFunctions(
-        ArrayList<VertexReceiver<I, V, E, M>> workerReceiveFunctions) {
+        ArrayList<InnerVertexReceiver> workerReceiveFunctions) {
       this.workerReceiveFunctions = workerReceiveFunctions;
     }
 
@@ -173,6 +183,16 @@ public class DelegatePiece<I extends WritableComparable, V extends Writable,
           functions.vertexReceive(vertex, messages);
         }
       }
+    }
+
+    @Override
+    public boolean isVertexNoOp() {
+      for (InnerVertexReceiver functions : workerReceiveFunctions) {
+        if (functions != null && !functions.isVertexNoOp()) {
+          return false;
+        }
+      }
+      return true;
     }
 
     @Override

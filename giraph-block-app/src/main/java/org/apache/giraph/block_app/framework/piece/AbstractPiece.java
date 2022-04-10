@@ -146,12 +146,21 @@ public abstract class AbstractPiece<I extends WritableComparable,
   // getVertexSender(BlockWorkerSendApi<I, V, E, M> workerApi, S executionStage)
 
   /**
-   * Add automatic handling of reducers to getVertexSender.
+   * Add automatic handling of reducers to getVertexSender and vertex no-op
+   * check.
    *
    * Only for Framework internal use.
    */
   public abstract InnerVertexSender getWrappedVertexSender(
       final BlockWorkerSendApi<I, V, E, M> workerApi, S executionStage);
+
+  /**
+   * Add vertex no-op check.
+   *
+   * Only for Framework internal use.
+   */
+  public abstract InnerVertexReceiver getWrappedVertexReceiver(
+      final BlockWorkerReceiveApi<I> workerApi, S executionStage);
 
   /**
    * Override to have worker context send computation.
@@ -184,25 +193,6 @@ public abstract class AbstractPiece<I extends WritableComparable,
   public void workerContextReceive(
       BlockWorkerContextReceiveApi workerContextApi, S executionStage,
       WV workerValue, List<WM> workerMessages) {
-  }
-
-  /**
-   * Override to do vertex receive processing.
-   *
-   * Creates handler that defines what should be executed on worker
-   * for each vertex during receive phase.
-   *
-   * This logic executed last.
-   * This function is called once on each worker on each thread, in parallel,
-   * on their copy of Piece object to create functions handler.
-   *
-   * If returned object implements Postprocessor interface, then corresponding
-   * postprocess() function is going to be called once, after all vertices
-   * corresponding thread needed to process are done.
-   */
-  public VertexReceiver<I, V, E, M> getVertexReceiver(
-      BlockWorkerReceiveApi<I> workerApi, S executionStage) {
-    return null;
   }
 
   /**
@@ -242,6 +232,16 @@ public abstract class AbstractPiece<I extends WritableComparable,
       implements VertexSender<I, V, E>, VertexPostprocessor {
     @Override
     public void postprocess() { }
+
+    /**
+     * Return true iff vertexSend function is empty
+     *
+     * @return True iff vertexSend function is empty,
+     * so we know we don't have to iterate through vertices
+     */
+    public boolean isVertexNoOp() {
+      return false;
+    }
   }
 
   /** Inner class to provide clean use without specifying types */
@@ -249,6 +249,16 @@ public abstract class AbstractPiece<I extends WritableComparable,
       implements VertexReceiver<I, V, E, M>, VertexPostprocessor {
     @Override
     public void postprocess() { }
+
+    /**
+     * Return true iff vertexReceive function is empty
+     *
+     * @return True iff vertexReceive function is empty,
+     * so we know we don't have to iterate through vertices
+     */
+    public boolean isVertexNoOp() {
+      return false;
+    }
   }
 
   // Internal implementation
