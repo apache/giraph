@@ -339,7 +339,7 @@ under the License.
     <dep.kryo.version>4.0.0</dep.kryo.version>
     <dep.reflectasm.version>1.11.3</dep.reflectasm.version>
     <dep.kryo-serializers.version>0.42</dep.kryo-serializers.version>
-    <dep.libthrift.version>0.9.0</dep.libthrift.version>
+    <dep.libthrift.version>0.14.0</dep.libthrift.version>
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
     <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
