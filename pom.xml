@@ -352,7 +352,7 @@ under the License.
     <dep.typetools.version>0.2.1</dep.typetools.version>
     <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
     <dep.yourkit-api.version>11.0.10</dep.yourkit-api.version>
-    <dep.zookeeper.version>3.4.5</dep.zookeeper.version>
+    <dep.zookeeper.version>3.4.14</dep.zookeeper.version>
 
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
     <munge.symbols>NO_MUNGE_SYMBOLS</munge.symbols>
