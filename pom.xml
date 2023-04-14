@@ -323,7 +323,7 @@ under the License.
     <dep.commons-httpclient.version>3.0.1</dep.commons-httpclient.version>
     <dep.commons-logging.version>1.1.1</dep.commons-logging.version>
     <dep.commons-io.version>2.1</dep.commons-io.version>
-    <dep.commons-net.version>3.1</dep.commons-net.version>
+    <dep.commons-net.version>3.9.0</dep.commons-net.version>
     <dep.commons-lang3.version>3.4</dep.commons-lang3.version>
     <dep.facebook-swift.version>0.14.0</dep.facebook-swift.version>
     <dep.fasterxml-jackson.version>2.10.0</dep.fasterxml-jackson.version>
